@@ -25,7 +25,7 @@
 (defn -reduce [this cur coll]
   "Add current quality information to the collected list."
   (if-not (nil? cur)
-    (flatten [coll cur])
+    (vec (flatten [coll cur]))
     coll))
 
 (defn -onTraversalDone [this result]
