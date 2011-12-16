@@ -12,8 +12,8 @@ Requires Java 1.6 and [Leiningen][3].
 
     $ lein deps
     $ lein uberjar
-    $ java -jar bcbio.variation-0.0.1-standalone.jar -T VcfSimpleStats
-      -R test/data/hg19.fa --variant test/data/gatk-calls.vcf
+    $ java -jar bcbio.variation-0.0.1-SNAPSHOT-standalone.jar -T VcfSimpleStats
+      -R test/data/hg19.fa --variant test/data/gatk-calls.vcf --out test.png
 
 [3]: https://github.com/technomancy/leiningen
 
