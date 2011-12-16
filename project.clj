@@ -7,5 +7,6 @@
                  [incanter/incanter-charts "1.3.0-SNAPSHOT"]]
   :dev-dependencies [[midje "1.3.0"]]
   :java-source-path "src/java"
+  :omit-source true
   :aot [bcbio.variation.vcfwalker bcbio.variation.core]
   :main bcbio.variation.core)
