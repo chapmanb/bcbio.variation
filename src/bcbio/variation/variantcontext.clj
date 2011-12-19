@@ -10,6 +10,7 @@
   "Top level map of useful details from a genotype."
   {:sample-name (.getSampleName g)
    :qual (.getPhredScaledQual g)
+   :type (-> g .getType .name)
    :attributes (into {} (.getAttributes g))
    :alleles (vec (.getAlleles g))
    :genotype g})
@@ -20,7 +21,7 @@
    :start (.getStart vc)
    :end (.getEnd vc)
    :ref-allele (.getReference vc)
-   :type (.getType vc)
+   :type (-> vc .getType .name)
    :filters (set (.getFilters vc))
    :attributes (into {} (.getAttributes vc))
    :genotypes (map from-genotype
