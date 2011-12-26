@@ -4,3 +4,5 @@ pom.xml
 /classes/
 .lein-failures
 .lein-deps-sum
+test/data/*.idx
+test/data/gatk-calls-combine*

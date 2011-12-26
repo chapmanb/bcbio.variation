@@ -9,6 +9,7 @@
 
 (ns bcbio.variation.compare
   (:import [org.broadinstitute.sting.gatk CommandLineGATK])
+  (:use [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template]])
   (:require [fs.core :as fs]))
 
 (defn file-root [fname]
@@ -40,6 +41,29 @@
       (if-not (fs/exists? out-file)
         (run-gatk "CombineVariants" args))
       out-file)))
+
+(defn- vc-by-match-category [in-file]
+  "Lazy stream of VariantContexts categorized by concordant/discordant matching."
+  (letfn [(genotype-alleles [g]
+            (vec (map #(.toString %) (:alleles g))))
+          (is-concordant? [vc]
+            (= (-> (map genotype-alleles (:genotypes vc))
+                   set
+                   count)
+               1))]
+    (for [vc (parse-vcf in-file)]
+      [(if (is-concordant? vc) :concordant :discordant)
+       vc])))
+
+(defn split-variants-by-match [vcf1 vcf2 ref]
+  "Provide concordant and discordant variants for two variant files."
+  (let [combo-file (combine-variants vcf1 vcf2 ref)
+        out-map {:concordant (add-file-part combo-file "concordant")
+                 :discordant (add-file-part combo-file "discordant")}]
+    (if-not (fs/exists? (:concordant out-map))
+      (write-vcf-w-template combo-file out-map (vc-by-match-category combo-file)
+                            ref))
+    out-map))
 
 (defn variant-comparison [vcf1 vcf2 ref]
   "Compare two variant files with GenotypeConcordance in VariantEval"
