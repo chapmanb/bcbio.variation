@@ -22,31 +22,36 @@
   "Add file extender: base.txt -> base-part.txt"
   (format "%s-%s%s" (file-root fname) part (fs/extension fname)))
 
+(defn- run-gatk [program args]
+  (let [std-args ["-T" program "--phone_home" "NO_ET"]]
+    (CommandLineGATK/start (CommandLineGATK.)
+                           (into-array (concat std-args args)))))
+
 (defn combine-variants [vcf1 vcf2 ref]
   "Combine two variant files with GATK CombineVariants."
   (letfn [(unique-name [f]
             (-> f fs/base-name file-root))]
     (let [out-file (add-file-part vcf1 "combine")
-          args ["-T" "CombineVariants" "-R" ref
+          args ["-R" ref
                 (str "--variant:" (unique-name vcf1)) vcf1
                 (str "--variant:" (unique-name vcf2)) vcf2
                 "-o" out-file
-                "-genotypeMergeOptions" "PRIORITIZE"
-                "-priority" (str (unique-name vcf1) "," (unique-name vcf2))]]
+                "--genotypemergeoption" "UNIQUIFY"]]
       (if-not (fs/exists? out-file)
-        (CommandLineGATK/main (into-array args)))
+        (run-gatk "CombineVariants" args))
       out-file)))
 
 (defn variant-comparison [vcf1 vcf2 ref]
   "Compare two variant files with GenotypeConcordance in VariantEval"
   (let [out-file (str (file-root vcf1) ".eval")
-        args ["-T" "VariantEval" "-R" ref
+        args ["-R" ref
               "--out" out-file
               "--eval" vcf1
               "--comp" vcf2
-              "--evalModule" "GenotypeConcordance"]]
+              "--evalModule" "GenotypeConcordance"
+              "--stratificationModule" "Sample"]]
       (if-not (fs/exists? out-file)
-        (CommandLineGATK/main (into-array args)))
+        (run-gatk "VariantEval" args))
       out-file))
 
 (defn -main [vcf1 vcf2 bam ref])

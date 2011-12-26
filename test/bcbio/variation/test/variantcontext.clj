@@ -3,7 +3,7 @@
         [bcbio.variation.variantcontext])
   (:require [fs.core :as fs]))
 
-(let [data-dir (str (fs/file "." "test" "data"))
+let [data-dir (str (fs/file "." "test" "data"))
       vcf-file (str (fs/file data-dir "gatk-calls.vcf"))
       vc (first (parse-vcf vcf-file))]
   (facts "Parsing VCF file to VariantContext"
