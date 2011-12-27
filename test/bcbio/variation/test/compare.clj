@@ -8,13 +8,15 @@
       ref (str (fs/file data-dir "hg19.fa"))
       vcf1 (str (fs/file data-dir "gatk-calls.vcf"))
       vcf2 (str (fs/file data-dir "freebayes-calls.vcf"))
+      sample "Test1"
       combo-out (add-file-part vcf1 "combine")
       compare-out (str (file-root vcf1) ".eval")
       match-out {:concordant (add-file-part combo-out "concordant")
                  :discordant (add-file-part combo-out "discordant")}
-      select-out (doall (map #(str (fs/file data-dir %)) ["gatk-freebayes-concordance.vcf"
-                                                          "gatk-freebayes-discordance.vcf"
-                                                          "freebayes-gatk-discordance.vcf"]))]
+      select-out (doall (map #(str (fs/file data-dir (format "%s-%s.vcf" sample %)))
+                             ["gatk-freebayes-concordance"
+                              "gatk-freebayes-discordance"
+                              "freebayes-gatk-discordance"]))]
   (against-background [(before :facts (vec (map #(if (fs/exists? %)
                                                    (fs/delete %))
                                                 (concat
@@ -22,7 +24,8 @@
                                                  (vals match-out)
                                                  select-out))))]
     (facts "Variant comparison with GATK"
-      (select-by-concordance "gatk" vcf1 "freebayes" vcf2 ref) => select-out
+      (select-by-concordance sample {:name "gatk" :file vcf1}
+                             {:name "freebayes" :file vcf2} ref) => select-out
       (combine-variants vcf1 vcf2 ref) => combo-out
       (variant-comparison vcf1 vcf2 ref) => compare-out
       (split-variants-by-match vcf1 vcf2 ref) => match-out)))

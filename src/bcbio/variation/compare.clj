@@ -9,8 +9,11 @@
 
 (ns bcbio.variation.compare
   (:import [org.broadinstitute.sting.gatk CommandLineGATK])
-  (:use [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template]])
-  (:require [fs.core :as fs]))
+  (:use [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template]]
+        [bcbio.variation.stats :only [vcf-stats print-summary-table]]
+        [clojure.math.combinatorics :only [combinations]])
+  (:require [fs.core :as fs]
+            [clj-yaml.core :as yaml]))
 
 ;; Utility functions for processing file names
 
@@ -46,30 +49,32 @@
         (run-gatk "CombineVariants" args))
       out-file)))
 
-(defn variant-comparison [vcf1 vcf2 ref]
+(defn variant-comparison [vcf1 vcf2 ref & {:keys [out-base]
+                                           :or {out-base nil}}]
   "Compare two variant files with GenotypeConcordance in VariantEval"
-  (let [out-file (str (file-root vcf1) ".eval")
+  (let [out-file (str (file-root (if (nil? out-base) vcf1 out-base)) ".eval")
         args ["-R" ref
               "--out" out-file
               "--eval" vcf1
               "--comp" vcf2
               "--evalModule" "GenotypeConcordance"
               "--stratificationModule" "Sample"]]
-      (if-not (fs/exists? out-file)
-        (run-gatk "VariantEval" args))
-      out-file))
+    (if-not (fs/exists? out-file)
+      (run-gatk "VariantEval" args))
+    out-file))
 
-(defn select-by-concordance [name1 vcf1 name2 vcf2 ref]
+(defn select-by-concordance [sample call1 call2 ref]
   "Variant comparison producing 3 files: concordant and both directions discordant"
-  (let [base-dir (fs/parent vcf1)]
+  (let [base-dir (fs/parent (:file call1))]
     (doall
-     (for [[n1 f1 n2 f2 cmp-type] [[name1 vcf1 name2 vcf2 "concordance"]
-                                   [name1 vcf1 name2 vcf2 "discordance"]
-                                   [name2 vcf2 name1 vcf1 "discordance"]]]
-       (let [out-file (str (fs/file base-dir (format "%s-%s-%s.vcf" n1 n2 cmp-type)))
+     (for [[c1 c2 cmp-type] [[call1 call2 "concordance"]
+                             [call1 call2 "discordance"]
+                             [call2 call1 "discordance"]]]
+       (let [out-file (str (fs/file base-dir (format "%s-%s-%s-%s.vcf"
+                                                     sample (:name c1) (:name c2) cmp-type)))
              args ["-R" ref
-                   "--variant" f1
-                   (str "--" cmp-type) f2
+                   "--variant" (:file c1)
+                   (str "--" cmp-type) (:file c2)
                    "--out" out-file]]
          (if-not (fs/exists? out-file)
            (run-gatk "SelectVariants" args))
@@ -100,4 +105,13 @@
                             ref))
     out-map))
 
-(defn -main [vcf1 vcf2 bam ref])
+(defn -main [config-file]
+  (let [config (-> config-file slurp yaml/parse-string)]
+    (doseq [exp (:experiments config)]
+      (doseq [[c1 c2] (combinations (:calls exp) 2)]
+        (let [c-files (select-by-concordance (:sample exp) c1 c2 (:ref exp))]
+          (variant-comparison (:file c1) (:file c2) (:ref exp)
+                              :out-base (first c-files))
+          (doseq [f c-files]
+            (println (fs/base-name f))
+            (print-summary-table (vcf-stats f))))))))

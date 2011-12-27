@@ -45,4 +45,4 @@
     (map #(apply summary-stats %) (sort-by first raw-stats))))
 
 (defn print-summary-table [stats]
-  (print (doric/table header stats)))
+  (println (doric/table header stats)))
