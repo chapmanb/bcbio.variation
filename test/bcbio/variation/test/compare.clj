@@ -1,7 +1,8 @@
 (ns bcbio.variation.test.compare
   (:use [midje.sweet]
         [bcbio.variation.compare]
-        [bcbio.variation.stats])
+        [bcbio.variation.stats]
+        [bcbio.variation.report])
   (:require [fs.core :as fs]))
 
 (let [data-dir (str (fs/file "." "test" "data"))
@@ -28,6 +29,8 @@
                              {:name "freebayes" :file vcf2} ref) => select-out
       (combine-variants vcf1 vcf2 ref) => combo-out
       (variant-comparison vcf1 vcf2 ref) => compare-out
+      (-> (concordance-report-metrics compare-out sample)
+          first :percent_non_reference_sensitivity) => "72.73"
       (split-variants-by-match vcf1 vcf2 ref) => match-out)))
 
 (let [data-dir (str (fs/file "." "test" "data"))

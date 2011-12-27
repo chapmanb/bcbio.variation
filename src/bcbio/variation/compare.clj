@@ -11,6 +11,7 @@
   (:import [org.broadinstitute.sting.gatk CommandLineGATK])
   (:use [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template]]
         [bcbio.variation.stats :only [vcf-stats print-summary-table]]
+        [bcbio.variation.report :only [concordance-report-metrics]]
         [clojure.math.combinatorics :only [combinations]])
   (:require [fs.core :as fs]
             [clj-yaml.core :as yaml]))
@@ -109,9 +110,14 @@
   (let [config (-> config-file slurp yaml/parse-string)]
     (doseq [exp (:experiments config)]
       (doseq [[c1 c2] (combinations (:calls exp) 2)]
-        (let [c-files (select-by-concordance (:sample exp) c1 c2 (:ref exp))]
-          (variant-comparison (:file c1) (:file c2) (:ref exp)
-                              :out-base (first c-files))
+        (let [c-files (select-by-concordance (:sample exp) c1 c2 (:ref exp))
+              eval-file (variant-comparison (:file c1) (:file c2) (:ref exp)
+                                            :out-base (first c-files))
+              metrics (first (concordance-report-metrics eval-file (:sample exp)))]
           (doseq [f c-files]
             (println (fs/base-name f))
-            (print-summary-table (vcf-stats f))))))))
+            (print-summary-table (vcf-stats f)))
+          (println "Non-reference discrepancy rate"
+                   (:percent_non_reference_discrepancy_rate metrics))
+          (println "Non-reference sensitivity"
+                   (:percent_non_reference_sensitivity metrics)))))))
