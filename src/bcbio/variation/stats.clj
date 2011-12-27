@@ -4,16 +4,25 @@
 
 (ns bcbio.variation.stats
   (:use [bcbio.variation.variantcontext :only [parse-vcf]])
-  (:require [incanter.stats :as istats]))
+  (:require [incanter.stats :as istats]
+            [doric.core :as doric]))
 
 (defn- to-float [x]
   (try
     (Float/parseFloat x)
     (catch Exception e x)))
 
+(def header [{:name :metric}
+             {:name :count}
+             {:name :min :format #(format "%.2f" %)}
+             {:name :pct25 :format #(format "%.2f" %)}
+             {:name :median :format #(format "%.2f" %)}
+             {:name :pct75 :format #(format "%.2f" %)}
+             {:name :max :format #(format "%.2f" %)}])
+
 (defn summary-stats [key vals]
   "Provide summary statistics on a list of values."
-  (zipmap [:metric :count :min :pct25 :median :pct75 :max]
+  (zipmap (map :name header)
           (concat [key (count vals)]
                   (istats/quantile vals))))
 
@@ -34,3 +43,6 @@
   "Collect summary statistics associated with variant calls."
   (let [raw-stats (raw-vcf-stats vcf-file)]
     (map #(apply summary-stats %) (sort-by first raw-stats))))
+
+(defn print-summary-table [stats]
+  (print (doric/table header stats)))
