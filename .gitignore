@@ -5,4 +5,7 @@ pom.xml
 .lein-failures
 .lein-deps-sum
 test/data/*.idx
+test/data/*.eval
 test/data/gatk-calls-combine*
+test/data/*concordance.vcf
+test/data/*discordance.vcf

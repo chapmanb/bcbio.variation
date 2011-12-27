@@ -12,6 +12,8 @@
   (:use [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template]])
   (:require [fs.core :as fs]))
 
+;; Utility functions for processing file names
+
 (defn file-root [fname]
   "Retrieve file name without extension: /path/to/fname.txt -> /path/to/fname"
   (let [i (.lastIndexOf fname ".")]
@@ -28,6 +30,8 @@
     (CommandLineGATK/start (CommandLineGATK.)
                            (into-array (concat std-args args)))))
 
+;; GATK walker based variance assessment
+
 (defn combine-variants [vcf1 vcf2 ref]
   "Combine two variant files with GATK CombineVariants."
   (letfn [(unique-name [f]
@@ -41,6 +45,37 @@
       (if-not (fs/exists? out-file)
         (run-gatk "CombineVariants" args))
       out-file)))
+
+(defn variant-comparison [vcf1 vcf2 ref]
+  "Compare two variant files with GenotypeConcordance in VariantEval"
+  (let [out-file (str (file-root vcf1) ".eval")
+        args ["-R" ref
+              "--out" out-file
+              "--eval" vcf1
+              "--comp" vcf2
+              "--evalModule" "GenotypeConcordance"
+              "--stratificationModule" "Sample"]]
+      (if-not (fs/exists? out-file)
+        (run-gatk "VariantEval" args))
+      out-file))
+
+(defn select-by-concordance [name1 vcf1 name2 vcf2 ref]
+  "Variant comparison producing 3 files: concordant and both directions discordant"
+  (let [base-dir (fs/parent vcf1)]
+    (doall
+     (for [[n1 f1 n2 f2 cmp-type] [[name1 vcf1 name2 vcf2 "concordance"]
+                                   [name1 vcf1 name2 vcf2 "discordance"]
+                                   [name2 vcf2 name1 vcf1 "discordance"]]]
+       (let [out-file (str (fs/file base-dir (format "%s-%s-%s.vcf" n1 n2 cmp-type)))
+             args ["-R" ref
+                   "--variant" f1
+                   (str "--" cmp-type) f2
+                   "--out" out-file]]
+         (if-not (fs/exists? out-file)
+           (run-gatk "SelectVariants" args))
+         out-file)))))
+
+;; Custom parsing and combinations using GATK VariantContexts
 
 (defn- vc-by-match-category [in-file]
   "Lazy stream of VariantContexts categorized by concordant/discordant matching."
@@ -64,18 +99,5 @@
       (write-vcf-w-template combo-file out-map (vc-by-match-category combo-file)
                             ref))
     out-map))
-
-(defn variant-comparison [vcf1 vcf2 ref]
-  "Compare two variant files with GenotypeConcordance in VariantEval"
-  (let [out-file (str (file-root vcf1) ".eval")
-        args ["-R" ref
-              "--out" out-file
-              "--eval" vcf1
-              "--comp" vcf2
-              "--evalModule" "GenotypeConcordance"
-              "--stratificationModule" "Sample"]]
-      (if-not (fs/exists? out-file)
-        (run-gatk "VariantEval" args))
-      out-file))
 
 (defn -main [vcf1 vcf2 bam ref])
