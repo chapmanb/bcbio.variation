@@ -4,7 +4,8 @@
                  [org.clojars.chapmanb/gatk "1.3"]
                  [fs "1.0.0"]
                  [incanter/incanter-core "1.3.0-SNAPSHOT"]
-                 [incanter/incanter-charts "1.3.0-SNAPSHOT"]]
+                 [incanter/incanter-charts "1.3.0-SNAPSHOT"]
+                 [doric "0.7.0-SNAPSHOT"]]
   :dev-dependencies [[midje "1.3.0"]]
   :java-source-path "src/java"
   :omit-source true

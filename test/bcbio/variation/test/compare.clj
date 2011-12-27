@@ -1,6 +1,7 @@
 (ns bcbio.variation.test.compare
   (:use [midje.sweet]
-        [bcbio.variation.compare])
+        [bcbio.variation.compare]
+        [bcbio.variation.stats])
   (:require [fs.core :as fs]))
 
 (let [data-dir (str (fs/file "." "test" "data"))
@@ -20,6 +21,12 @@
       (combine-variants vcf1 vcf2 ref) => combo-out
       (variant-comparison vcf1 vcf2 ref) => compare-out
       (split-variants-by-match vcf1 vcf2 ref) => match-out)))
+
+(let [data-dir (str (fs/file "." "test" "data"))
+      vcf1 (str (fs/file data-dir "gatk-calls.vcf"))]
+  (facts "Accumulate statistics associated with variations."
+    (first (vcf-stats vcf1)) => {:max 2.0, :pct75 2.0, :median 2.0, :pct25 2.0, :min 2.0,
+                                 :count 10, :metric "AC"}))
 
 (facts "Manipulating file paths"
   (add-file-part "test.txt" "add") => "test-add.txt"
