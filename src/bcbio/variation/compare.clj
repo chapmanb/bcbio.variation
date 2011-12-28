@@ -129,6 +129,7 @@
         (doseq [exp (:experiments config)]
           (println "* " (:sample exp))
           (doseq [[c1 c2] (combinations (:calls exp) 2)]
+            (println (format "** %s and %s " (:name c1) (:name c2)))
             (let [c-files (select-by-concordance (:sample exp) c1 c2 (:ref exp)
                                                  :out-dir (:outdir config))
                   eval-file (variant-comparison (:sample exp) (:file c1) (:file c2)
