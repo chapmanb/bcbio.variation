@@ -28,8 +28,8 @@
       (select-by-concordance sample {:name "gatk" :file vcf1}
                              {:name "freebayes" :file vcf2} ref) => select-out
       (combine-variants vcf1 vcf2 ref) => combo-out
-      (variant-comparison vcf1 vcf2 ref) => compare-out
-      (-> (concordance-report-metrics compare-out sample)
+      (variant-comparison sample vcf1 vcf2 ref) => compare-out
+      (-> (concordance-report-metrics sample compare-out)
           first :percent_non_reference_sensitivity) => "72.73"
       (split-variants-by-match vcf1 vcf2 ref) => match-out)))
 

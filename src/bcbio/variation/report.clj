@@ -3,7 +3,7 @@
 (ns bcbio.variation.report
   (:import [org.broadinstitute.sting.gatk.report GATKReport]))
 
-(defn concordance-report-metrics [in-file sample]
+(defn concordance-report-metrics [sample in-file]
   (letfn [(sample-in-row? [x]
             (and (= (:row x) sample)
                  (= (:Sample x) sample)

@@ -50,14 +50,15 @@
         (run-gatk "CombineVariants" args))
       out-file)))
 
-(defn variant-comparison [vcf1 vcf2 ref & {:keys [out-base]
-                                           :or {out-base nil}}]
+(defn variant-comparison [sample vcf1 vcf2 ref & {:keys [out-base]
+                                                  :or {out-base nil}}]
   "Compare two variant files with GenotypeConcordance in VariantEval"
   (let [out-file (str (file-root (if (nil? out-base) vcf1 out-base)) ".eval")
         args ["-R" ref
               "--out" out-file
               "--eval" vcf1
               "--comp" vcf2
+              "--sample" sample
               "--evalModule" "GenotypeConcordance"
               "--stratificationModule" "Sample"]]
     (if-not (fs/exists? out-file)
@@ -74,6 +75,7 @@
        (let [out-file (str (fs/file base-dir (format "%s-%s-%s-%s.vcf"
                                                      sample (:name c1) (:name c2) cmp-type)))
              args ["-R" ref
+                   "--sample_name" sample
                    "--variant" (:file c1)
                    (str "--" cmp-type) (:file c2)
                    "--out" out-file]]
@@ -111,9 +113,9 @@
     (doseq [exp (:experiments config)]
       (doseq [[c1 c2] (combinations (:calls exp) 2)]
         (let [c-files (select-by-concordance (:sample exp) c1 c2 (:ref exp))
-              eval-file (variant-comparison (:file c1) (:file c2) (:ref exp)
-                                            :out-base (first c-files))
-              metrics (first (concordance-report-metrics eval-file (:sample exp)))]
+              eval-file (variant-comparison (:sample exp) (:file c1) (:file c2)
+                                            (:ref exp) :out-base (first c-files))
+              metrics (first (concordance-report-metrics (:sample exp) eval-file))]
           (doseq [f c-files]
             (println (fs/base-name f))
             (print-summary-table (vcf-stats f)))
