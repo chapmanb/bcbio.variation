@@ -8,9 +8,18 @@ This is a Clojure API to parse and analyze [VCF files][2].
 
 ## Usage
 
+### Load required libraries
+
 Requires Java 1.6 and [Leiningen][3].
 
     $ lein deps
+
+### Generate summary of concordance between variant calls
+
+    # lein run :compare config/method-comparison.yaml
+
+### Run GATK walker for variant statistics
+
     $ lein uberjar
     $ java -jar bcbio.variation-0.0.1-SNAPSHOT-standalone.jar -T VcfSimpleStats
       -R test/data/hg19.fa --variant test/data/gatk-calls.vcf --out test.png
