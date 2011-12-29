@@ -34,7 +34,9 @@
               (assoc collect k (cons (to-float v) (get collect k [])))
               collect))
           (collect-vc [collect vc]
-            (reduce collect-attributes collect (:attributes vc)))
+            (assoc (reduce collect-attributes collect (:attributes vc))
+              "QUAL" (cons (-> vc :genotypes first :qual)
+                           (get collect "QUAL" []))))
           (passes-filter? [vc]
             (= (count (:filters vc)) 0))]
     (reduce collect-vc {} (filter passes-filter?

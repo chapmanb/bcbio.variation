@@ -39,6 +39,9 @@
 (let [data-dir (str (fs/file "." "test" "data"))
       vcf1 (str (fs/file data-dir "gatk-calls.vcf"))]
   (facts "Accumulate statistics associated with variations."
+    (map :metric (vcf-stats vcf1)) => ["AC" "AF" "AN" "BaseQRankSum" "DP" "Dels" "FS"
+                                       "HRun" "HaplotypeScore" "MQ" "MQ0" "MQRankSum"
+                                       "QD" "QUAL" "ReadPosRankSum"]
     (first (vcf-stats vcf1)) => {:max 2.0, :pct75 2.0, :median 2.0, :pct25 2.0, :min 2.0,
                                  :count 10, :metric "AC"}
     (write-summary-table (vcf-stats vcf1)) => nil))
