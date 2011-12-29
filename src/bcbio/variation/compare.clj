@@ -10,8 +10,9 @@
 (ns bcbio.variation.compare
   (:import [org.broadinstitute.sting.gatk CommandLineGATK])
   (:use [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template]]
-        [bcbio.variation.stats :only [vcf-stats print-summary-table]]
-        [bcbio.variation.report :only [concordance-report-metrics]]
+        [bcbio.variation.stats :only [vcf-stats write-summary-table]]
+        [bcbio.variation.report :only [concordance-report-metrics
+                                       write-concordance-metrics]]
         [clojure.math.combinatorics :only [combinations]]
         [clojure.java.io])
   (:require [fs.core :as fs]
@@ -120,27 +121,21 @@
       (writer (str (fs/file (:outdir config)
                             (format "%s-summary.txt"
                                     (file-root (fs/base-name config-file)))))))
-    *out*))
+    (writer System/out)))
 
 (defn -main [config-file]
   (let [config (-> config-file slurp yaml/parse-string)]
     (with-open [w (get-summary-writer config config-file)]
-      (binding [*out* w]
-        (doseq [exp (:experiments config)]
-          (println "* " (:sample exp))
-          (doseq [[c1 c2] (combinations (:calls exp) 2)]
-            (println (format "** %s and %s " (:name c1) (:name c2)))
-            (let [c-files (select-by-concordance (:sample exp) c1 c2 (:ref exp)
-                                                 :out-dir (:outdir config))
-                  eval-file (variant-comparison (:sample exp) (:file c1) (:file c2)
-                                                (:ref exp) :out-base (first c-files))
-                  metrics (first (concordance-report-metrics (:sample exp) eval-file))]
-              (doseq [f c-files]
-                (println (fs/base-name f))
-                (print-summary-table (vcf-stats f)))
-              (println "Overall genotype concordance"
-                       (:percent_overall_genotype_concordance metrics))
-              (println "Non-reference discrepancy rate"
-                       (:percent_non_reference_discrepancy_rate metrics))
-              (println "Non-reference sensitivity"
-                       (:percent_non_reference_sensitivity metrics)))))))))
+      (doseq [exp (:experiments config)]
+        (.write w (format "* %s\n" (:sample exp)))
+        (doseq [[c1 c2] (combinations (:calls exp) 2)]
+          (.write w (format "** %s and %s\n" (:name c1) (:name c2)))
+          (let [c-files (select-by-concordance (:sample exp) c1 c2 (:ref exp)
+                                               :out-dir (:outdir config))
+                eval-file (variant-comparison (:sample exp) (:file c1) (:file c2)
+                                              (:ref exp) :out-base (first c-files))
+                metrics (first (concordance-report-metrics (:sample exp) eval-file))]
+            (doseq [f c-files]
+              (.write w (format "%s\n" (fs/base-name f)))
+              (write-summary-table (vcf-stats f) :wrtr w))
+            (write-concordance-metrics metrics w)))))))

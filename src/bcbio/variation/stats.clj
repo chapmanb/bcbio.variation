@@ -3,7 +3,8 @@
 ;; statistics to use for filtering.
 
 (ns bcbio.variation.stats
-  (:use [bcbio.variation.variantcontext :only [parse-vcf]])
+  (:use [clojure.java.io]
+        [bcbio.variation.variantcontext :only [parse-vcf]])
   (:require [incanter.stats :as istats]
             [doric.core :as doric]))
 
@@ -44,5 +45,6 @@
   (let [raw-stats (raw-vcf-stats vcf-file)]
     (map #(apply summary-stats %) (sort-by first raw-stats))))
 
-(defn print-summary-table [stats]
-  (println (doric/table header stats)))
+(defn write-summary-table [stats & {:keys [wrtr]
+                                    :or {wrtr (writer System/out)}}]
+  (.write wrtr (str (doric/table header stats) "\n")))

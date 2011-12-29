@@ -15,3 +15,11 @@
               (for [i (range (count (.values (first cols))))]
                 (zipmap headers
                         (map #(nth (vec (.values %)) i) cols)))))))
+
+(defn write-concordance-metrics [metrics wrtr]
+  (.write wrtr (format "Overall genotype concordance   %s\n"
+                    (:percent_overall_genotype_concordance metrics)))
+  (.write wrtr (format "Non-reference discrepancy rate %s\n"
+                       (:percent_non_reference_discrepancy_rate metrics)))
+  (.write wrtr (format "Non-reference sensitivity      %s\n"
+                       (:percent_non_reference_sensitivity metrics))))

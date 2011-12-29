@@ -38,7 +38,7 @@
   (facts "Accumulate statistics associated with variations."
     (first (vcf-stats vcf1)) => {:max 2.0, :pct75 2.0, :median 2.0, :pct25 2.0, :min 2.0,
                                  :count 10, :metric "AC"}
-    (print-summary-table (vcf-stats vcf1)) => nil))
+    (write-summary-table (vcf-stats vcf1)) => nil))
 
 (facts "Manipulating file paths"
   (add-file-part "test.txt" "add") => "test-add.txt"
