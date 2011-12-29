@@ -2,6 +2,7 @@
 experiments:
   - sample: Test1
     ref: test/data/hg19.fa
+    intervals: test/data/target-regions.bed
     calls:
       - name: gatk
         file: test/data/gatk-calls.vcf

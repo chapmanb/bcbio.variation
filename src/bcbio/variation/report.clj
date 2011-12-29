@@ -4,6 +4,7 @@
   (:import [org.broadinstitute.sting.gatk.report GATKReport]))
 
 (defn concordance-report-metrics [sample in-file]
+  "Retrieve high level concordance metrics from GATK VariantEval report."
   (letfn [(sample-in-row? [x]
             (and (= (:row x) sample)
                  (= (:Sample x) sample)

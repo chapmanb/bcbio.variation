@@ -7,6 +7,7 @@
 
 (let [data-dir (str (fs/file "." "test" "data"))
       ref (str (fs/file data-dir "hg19.fa"))
+      intervals (str (fs/file data-dir "target-regions.bed"))
       vcf1 (str (fs/file data-dir "gatk-calls.vcf"))
       vcf2 (str (fs/file data-dir "freebayes-calls.vcf"))
       sample "Test1"
@@ -26,9 +27,11 @@
                                                  select-out))))]
     (facts "Variant comparison with GATK"
       (select-by-concordance sample {:name "gatk" :file vcf1}
-                             {:name "freebayes" :file vcf2} ref) => select-out
+                             {:name "freebayes" :file vcf2} ref
+                             :interval-file intervals) => select-out
       (combine-variants vcf1 vcf2 ref) => combo-out
-      (variant-comparison sample vcf1 vcf2 ref) => compare-out
+      (variant-comparison sample vcf1 vcf2 ref
+                          :interval-file intervals) => compare-out
       (-> (concordance-report-metrics sample compare-out)
           first :percent_non_reference_sensitivity) => "72.73"
       (split-variants-by-match vcf1 vcf2 ref) => match-out)))

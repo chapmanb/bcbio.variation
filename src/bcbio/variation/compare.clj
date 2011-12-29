@@ -52,23 +52,27 @@
         (run-gatk "CombineVariants" args))
       out-file)))
 
-(defn variant-comparison [sample vcf1 vcf2 ref & {:keys [out-base]
-                                                  :or {out-base nil}}]
+(defn variant-comparison [sample vcf1 vcf2 ref & {:keys [out-base interval-file]
+                                                  :or {out-base nil
+                                                       interval-file nil}}]
   "Compare two variant files with GenotypeConcordance in VariantEval"
   (let [out-file (str (file-root (if (nil? out-base) vcf1 out-base)) ".eval")
-        args ["-R" ref
-              "--out" out-file
-              "--eval" vcf1
-              "--comp" vcf2
-              "--sample" sample
-              "--evalModule" "GenotypeConcordance"
-              "--stratificationModule" "Sample"]]
+        args (concat
+              ["-R" ref
+               "--out" out-file
+               "--eval" vcf1
+               "--comp" vcf2
+               "--sample" sample
+               "--evalModule" "GenotypeConcordance"
+               "--stratificationModule" "Sample"]
+              (if-not (nil? interval-file) ["-L:bed" interval-file] []))]
     (if-not (fs/exists? out-file)
       (run-gatk "VariantEval" args))
     out-file))
 
-(defn select-by-concordance [sample call1 call2 ref & {:keys [out-dir]
-                                                       :or {out-dir nil}}]
+(defn select-by-concordance [sample call1 call2 ref & {:keys [out-dir interval-file]
+                                                       :or {out-dir nil
+                                                            interval-file nil}}]
   "Variant comparison producing 3 files: concordant and both directions discordant"
   (let [base-dir (if (nil? out-dir) (fs/parent (:file call1)) out-dir)]
     (if-not (fs/exists? base-dir)
@@ -79,11 +83,13 @@
                              [call2 call1 "discordance"]]]
        (let [out-file (str (fs/file base-dir (format "%s-%s-%s-%s.vcf"
                                                      sample (:name c1) (:name c2) cmp-type)))
-             args ["-R" ref
-                   "--sample_name" sample
-                   "--variant" (:file c1)
-                   (str "--" cmp-type) (:file c2)
-                   "--out" out-file]]
+             args (concat
+                   ["-R" ref
+                    "--sample_name" sample
+                    "--variant" (:file c1)
+                    (str "--" cmp-type) (:file c2)
+                    "--out" out-file]
+                   (if-not (nil? interval-file) ["-L:bed" interval-file] []))]
          (if-not (fs/exists? out-file)
            (run-gatk "SelectVariants" args))
          out-file)))))
@@ -131,9 +137,11 @@
         (doseq [[c1 c2] (combinations (:calls exp) 2)]
           (.write w (format "** %s and %s\n" (:name c1) (:name c2)))
           (let [c-files (select-by-concordance (:sample exp) c1 c2 (:ref exp)
-                                               :out-dir (:outdir config))
+                                               :out-dir (:outdir config)
+                                               :interval-file (:intervals exp))
                 eval-file (variant-comparison (:sample exp) (:file c1) (:file c2)
-                                              (:ref exp) :out-base (first c-files))
+                                              (:ref exp) :out-base (first c-files)
+                                              :interval-file (:intervals exp))
                 metrics (first (concordance-report-metrics (:sample exp) eval-file))]
             (doseq [f c-files]
               (.write w (format "%s\n" (fs/base-name f)))
