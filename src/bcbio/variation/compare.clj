@@ -14,7 +14,8 @@
         [bcbio.variation.report :only [concordance-report-metrics
                                        write-concordance-metrics]]
         [clojure.math.combinatorics :only [combinations]]
-        [clojure.java.io])
+        [clojure.java.io]
+        [clojure.string :only [join]])
   (:require [fs.core :as fs]
             [clj-yaml.core :as yaml]))
 
@@ -119,31 +120,62 @@
                             ref))
     out-map))
 
-(defn- get-summary-writer [config config-file]
+(defn- get-summary-writer [config config-file ext]
   (if-not (nil? (:outdir config))
     (do
       (if-not (fs/exists? (:outdir config))
         (fs/mkdirs (:outdir config)))
       (writer (str (fs/file (:outdir config)
-                            (format "%s-summary.txt"
-                                    (file-root (fs/base-name config-file)))))))
+                            (format "%s-%s"
+                                    (file-root (fs/base-name config-file)) ext)))))
     (writer System/out)))
 
+(def top-level-header [:sample :call1 :call2 :genotype_concordance :nonref_discrepency
+                       :nonref_sensitivity :concordant :discordant1 :discordant2])
+
+(defn- top-level-metrics [x]
+  "Provide one-line summary of similarity metrics for a VCF comparison."
+  (letfn [(passes-filter? [vc]
+            (= (count (:filters vc)) 0))
+           (count-variants [f]
+             (count (filter passes-filter? (parse-vcf f))))]
+    {:sample (:sample x)
+     :call1 (-> x :c1 :name)
+     :call2 (-> x :c2 :name)
+     :genotype_concordance (-> x :metrics :percent_overall_genotype_concordance)
+     :nonref_discrepency (-> x :metrics :percent_non_reference_discrepancy_rate)
+     :nonref_sensitivity (-> x :metrics :percent_non_reference_sensitivity)
+     :concordant (count-variants (first (:c-files x)))
+     :discordant1 (count-variants (second (:c-files x)))
+     :discordant2 (count-variants (nth (:c-files x) 2))}))
+
+(defn- compare-two-vcf [c1 c2 exp config]
+  "Compare two VCF files base on the supplied configuration."
+  (let [c-files (select-by-concordance (:sample exp) c1 c2 (:ref exp)
+                                       :out-dir (:outdir config)
+                                       :interval-file (:intervals exp))
+        eval-file (variant-comparison (:sample exp) (:file c1) (:file c2)
+                                      (:ref exp) :out-base (first c-files)
+                                      :interval-file (:intervals exp))
+        metrics (first (concordance-report-metrics (:sample exp) eval-file))
+        out {:c-files c-files :metrics metrics :c1 c1 :c2 c2 :sample (:sample exp)}]
+    (assoc out :summary (top-level-metrics out))))
+
 (defn -main [config-file]
-  (let [config (-> config-file slurp yaml/parse-string)]
-    (with-open [w (get-summary-writer config config-file)]
-      (doseq [exp (:experiments config)]
-        (.write w (format "* %s\n" (:sample exp)))
-        (doseq [[c1 c2] (combinations (:calls exp) 2)]
-          (.write w (format "** %s and %s\n" (:name c1) (:name c2)))
-          (let [c-files (select-by-concordance (:sample exp) c1 c2 (:ref exp)
-                                               :out-dir (:outdir config)
-                                               :interval-file (:intervals exp))
-                eval-file (variant-comparison (:sample exp) (:file c1) (:file c2)
-                                              (:ref exp) :out-base (first c-files)
-                                              :interval-file (:intervals exp))
-                metrics (first (concordance-report-metrics (:sample exp) eval-file))]
-            (doseq [f c-files]
-              (.write w (format "%s\n" (fs/base-name f)))
-              (write-summary-table (vcf-stats f) :wrtr w))
-            (write-concordance-metrics metrics w)))))))
+  (let [config (-> config-file slurp yaml/parse-string)
+        comparisons (flatten
+                     (for [exp (:experiments config)]
+                       (for [[c1 c2] (combinations (:calls exp) 2)]
+                         (compare-two-vcf c1 c2 exp config))))]
+    (with-open [w (get-summary-writer config config-file "summary.txt")]
+      (doseq [x comparisons]
+        (.write w (format "* %s : %s vs %s\n" (:sample x)
+                          (-> x :c1 :name) (-> x :c2 :name)))
+        (doseq [f (:c-files x)]
+          (.write w (format "** %s\n" (fs/base-name f)))
+          (write-summary-table (vcf-stats f) :wrtr w))
+        (write-concordance-metrics (:metrics x) w)))
+    (with-open [w (get-summary-writer config config-file "summary.csv")]
+      (.write w (format "%s\n" (join "," (map name top-level-header))))
+      (doseq [vals (map :summary comparisons)]
+        (.write w (format "%s\n" (join "," (map #(% vals) top-level-header))))))))
