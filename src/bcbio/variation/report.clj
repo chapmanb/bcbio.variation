@@ -8,7 +8,8 @@
   (letfn [(sample-in-row? [x]
             (and (= (:row x) sample)
                  (= (:Sample x) sample)
-                 (= (:Novelty x) "all")))]
+                 (= (:Novelty x) "all")
+                 (= (:Filter x) "called")))]
     (let [table (-> (GATKReport. in-file) (.getTable "GenotypeConcordance.simplifiedStats"))
           cols (rest (.getColumns table))
           headers (map #(-> % (.getColumnName) keyword) cols)]

@@ -33,7 +33,7 @@
       (variant-comparison sample vcf1 vcf2 ref
                           :interval-file intervals) => compare-out
       (-> (concordance-report-metrics sample compare-out)
-          first :percent_non_reference_sensitivity) => "72.73"
+          first :percent_non_reference_sensitivity) => "88.89"
       (split-variants-by-match vcf1 vcf2 ref) => match-out)))
 
 (let [data-dir (str (fs/file "." "test" "data"))

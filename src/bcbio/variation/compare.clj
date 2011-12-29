@@ -65,7 +65,8 @@
                "--comp" vcf2
                "--sample" sample
                "--evalModule" "GenotypeConcordance"
-               "--stratificationModule" "Sample"]
+               "--stratificationModule" "Sample"
+               "--stratificationModule" "Filter"]
               (if-not (nil? interval-file) ["-L:bed" interval-file] []))]
     (if-not (fs/exists? out-file)
       (run-gatk "VariantEval" args))
