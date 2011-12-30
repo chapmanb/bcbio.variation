@@ -1,8 +1,9 @@
 (defproject bcbio.variation "0.0.1-SNAPSHOT"
-  :description "Manipluate VCF files using the GATK library."
+  :description "Clojure API for variation data, built on GATK"
   :dependencies [[org.clojure/clojure "1.3.0"]
                  [org.clojure/math.combinatorics "0.0.2"]
                  [org.clojars.chapmanb/gatk "1.3"]
+                 [org.clojars.chapmanb/picard "1.55"]
                  [incanter/incanter-core "1.3.0-SNAPSHOT"]
                  [incanter/incanter-charts "1.3.0-SNAPSHOT"]
                  [fs "1.0.0"]

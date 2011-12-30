@@ -9,3 +9,5 @@ test/data/*.eval
 test/data/gatk-calls-combine*
 test/data/*concordance.vcf
 test/data/*discordance.vcf
+test/data/*.bai
+test/data/*-callable*

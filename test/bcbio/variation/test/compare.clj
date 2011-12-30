@@ -2,7 +2,8 @@
   (:use [midje.sweet]
         [bcbio.variation.compare]
         [bcbio.variation.stats]
-        [bcbio.variation.report])
+        [bcbio.variation.report]
+        [bcbio.variation.callable])
   (:require [fs.core :as fs]))
 
 (let [data-dir (str (fs/file "." "test" "data"))
@@ -10,7 +11,9 @@
       intervals (str (fs/file data-dir "target-regions.bed"))
       vcf1 (str (fs/file data-dir "gatk-calls.vcf"))
       vcf2 (str (fs/file data-dir "freebayes-calls.vcf"))
+      align-bam (str (fs/file data-dir "aligned-reads.bam"))
       sample "Test1"
+      callable-out (format "%s-callable.bed" (file-root align-bam))
       combo-out (add-file-part vcf1 "combine")
       compare-out (str (file-root vcf1) ".eval")
       match-out {:concordant (add-file-part combo-out "concordant")
@@ -22,10 +25,10 @@
   (against-background [(before :facts (vec (map #(if (fs/exists? %)
                                                    (fs/delete %))
                                                 (concat
-                                                 [combo-out compare-out]
+                                                 [combo-out compare-out callable-out]
                                                  (vals match-out)
                                                  select-out))))]
-    (facts "Variant comparison with GATK"
+    (facts "Variant comparison and assessment with GATK"
       (select-by-concordance sample {:name "gatk" :file vcf1}
                              {:name "freebayes" :file vcf2} ref
                              :interval-file intervals) => select-out
@@ -34,7 +37,8 @@
                           :interval-file intervals) => compare-out
       (-> (concordance-report-metrics sample compare-out)
           first :percent_non_reference_sensitivity) => "88.89"
-      (split-variants-by-match vcf1 vcf2 ref) => match-out)))
+      (split-variants-by-match vcf1 vcf2 ref) => match-out
+      (identify-callable align-bam ref) => callable-out)))
 
 (let [data-dir (str (fs/file "." "test" "data"))
       vcf1 (str (fs/file data-dir "gatk-calls.vcf"))]

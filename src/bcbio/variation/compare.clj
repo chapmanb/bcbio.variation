@@ -32,7 +32,7 @@
   "Add file extender: base.txt -> base-part.txt"
   (format "%s-%s%s" (file-root fname) part (fs/extension fname)))
 
-(defn- run-gatk [program args]
+(defn run-gatk [program args]
   (let [std-args ["-T" program "--phone_home" "NO_ET"]]
     (CommandLineGATK/start (CommandLineGATK.)
                            (into-array (concat std-args args)))))
