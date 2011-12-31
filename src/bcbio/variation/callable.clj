@@ -2,17 +2,8 @@
 ;; Help differentiate positions where we can not assess variation
 
 (ns bcbio.variation.callable
-  (:import [net.sf.samtools SAMFileReader]
-           [net.sf.picard.sam BuildBamIndex])
-  (:use [bcbio.variation.compare :only [run-gatk file-root]]
-        [clojure.java.io])
+  (:use [bcbio.variation.compare :only [run-gatk file-root index-bam]])
   (:require [fs.core :as fs]))
-
-(defn index-bam [in-bam]
-  (let [index-file (str in-bam ".bai")]
-    (if-not (fs/exists? index-file)
-      (BuildBamIndex/createIndex (SAMFileReader. (file in-bam)) (file index-file)))
-    index-file))
 
 (defn identify-callable [align-bam ref]
   "Identify callable bases from the provided alignment file."

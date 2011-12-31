@@ -8,7 +8,9 @@
 ;;   detailed investigation
 
 (ns bcbio.variation.compare
-  (:import [org.broadinstitute.sting.gatk CommandLineGATK])
+  (:import [org.broadinstitute.sting.gatk CommandLineGATK]
+           [net.sf.samtools SAMFileReader]
+           [net.sf.picard.sam BuildBamIndex])
   (:use [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template]]
         [bcbio.variation.stats :only [vcf-stats write-summary-table]]
         [bcbio.variation.report :only [concordance-report-metrics
@@ -20,6 +22,11 @@
             [clj-yaml.core :as yaml]))
 
 ;; Utility functions for processing file names
+
+(defn needs-run? [fname]
+  "Check if an output file needs a run: does not exist or empty file"
+  (or (not (fs/exists? fname))
+       (= 0 (fs/size fname))))
 
 (defn file-root [fname]
   "Retrieve file name without extension: /path/to/fname.txt -> /path/to/fname"
@@ -36,6 +43,12 @@
   (let [std-args ["-T" program "--phone_home" "NO_ET"]]
     (CommandLineGATK/start (CommandLineGATK.)
                            (into-array (concat std-args args)))))
+
+(defn index-bam [in-bam]
+  (let [index-file (str in-bam ".bai")]
+    (if-not (fs/exists? index-file)
+      (BuildBamIndex/createIndex (SAMFileReader. (file in-bam)) (file index-file)))
+    index-file))
 
 ;; GATK walker based variance assessment
 

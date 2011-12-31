@@ -3,7 +3,8 @@
         [bcbio.variation.compare]
         [bcbio.variation.stats]
         [bcbio.variation.report]
-        [bcbio.variation.callable])
+        [bcbio.variation.callable]
+        [bcbio.variation.annotation])
   (:require [fs.core :as fs]))
 
 (let [data-dir (str (fs/file "." "test" "data"))
@@ -14,6 +15,7 @@
       align-bam (str (fs/file data-dir "aligned-reads.bam"))
       sample "Test1"
       callable-out (format "%s-callable.bed" (file-root align-bam))
+      annotated-out (add-file-part vcf2 "annotated")
       combo-out (add-file-part vcf1 "combine")
       compare-out (str (file-root vcf1) ".eval")
       match-out {:concordant (add-file-part combo-out "concordant")
@@ -25,7 +27,7 @@
   (against-background [(before :facts (vec (map #(if (fs/exists? %)
                                                    (fs/delete %))
                                                 (concat
-                                                 [combo-out compare-out callable-out]
+                                                 [combo-out compare-out callable-out annotated-out]
                                                  (vals match-out)
                                                  select-out))))]
     (facts "Variant comparison and assessment with GATK"
@@ -38,7 +40,8 @@
       (-> (concordance-report-metrics sample compare-out)
           first :percent_non_reference_sensitivity) => "88.89"
       (split-variants-by-match vcf1 vcf2 ref) => match-out
-      (identify-callable align-bam ref) => callable-out)))
+      (identify-callable align-bam ref) => callable-out
+      (add-variant-annotations vcf2 align-bam ref) => annotated-out)))
 
 (let [data-dir (str (fs/file "." "test" "data"))
       vcf1 (str (fs/file data-dir "gatk-calls.vcf"))]
