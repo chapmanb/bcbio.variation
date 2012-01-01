@@ -8,9 +8,6 @@
 ;;   detailed investigation
 
 (ns bcbio.variation.compare
-  (:import [org.broadinstitute.sting.gatk CommandLineGATK]
-           [net.sf.samtools SAMFileReader]
-           [net.sf.picard.sam BuildBamIndex])
   (:use [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template]]
         [bcbio.variation.stats :only [vcf-stats write-summary-table]]
         [bcbio.variation.report :only [concordance-report-metrics
@@ -19,58 +16,31 @@
         [clojure.java.io]
         [clojure.string :only [join]])
   (:require [fs.core :as fs]
-            [clj-yaml.core :as yaml]))
-
-;; Utility functions for processing file names
-
-(defn needs-run? [fname]
-  "Check if an output file needs a run: does not exist or empty file"
-  (or (not (fs/exists? fname))
-       (= 0 (fs/size fname))))
-
-(defn file-root [fname]
-  "Retrieve file name without extension: /path/to/fname.txt -> /path/to/fname"
-  (let [i (.lastIndexOf fname ".")]
-    (if (pos? i)
-      (subs fname 0 i)
-      fname)))
-
-(defn add-file-part [fname part]
-  "Add file extender: base.txt -> base-part.txt"
-  (format "%s-%s%s" (file-root fname) part (fs/extension fname)))
-
-(defn run-gatk [program args]
-  (let [std-args ["-T" program "--phone_home" "NO_ET"]]
-    (CommandLineGATK/start (CommandLineGATK.)
-                           (into-array (concat std-args args)))))
-
-(defn index-bam [in-bam]
-  (let [index-file (str in-bam ".bai")]
-    (if-not (fs/exists? index-file)
-      (BuildBamIndex/createIndex (SAMFileReader. (file in-bam)) (file index-file)))
-    index-file))
+            [clj-yaml.core :as yaml]
+            [bcbio.run.itx :as itx]
+            [bcbio.run.broad :as broad]))
 
 ;; GATK walker based variance assessment
 
 (defn combine-variants [vcf1 vcf2 ref]
   "Combine two variant files with GATK CombineVariants."
   (letfn [(unique-name [f]
-            (-> f fs/base-name file-root))]
-    (let [out-file (add-file-part vcf1 "combine")
+            (-> f fs/base-name itx/file-root))]
+    (let [out-file (itx/add-file-part vcf1 "combine")
           args ["-R" ref
                 (str "--variant:" (unique-name vcf1)) vcf1
                 (str "--variant:" (unique-name vcf2)) vcf2
                 "-o" out-file
                 "--genotypemergeoption" "UNIQUIFY"]]
       (if-not (fs/exists? out-file)
-        (run-gatk "CombineVariants" args))
+        (broad/run-gatk "CombineVariants" args))
       out-file)))
 
 (defn variant-comparison [sample vcf1 vcf2 ref & {:keys [out-base interval-file]
                                                   :or {out-base nil
                                                        interval-file nil}}]
   "Compare two variant files with GenotypeConcordance in VariantEval"
-  (let [out-file (str (file-root (if (nil? out-base) vcf1 out-base)) ".eval")
+  (let [out-file (str (itx/file-root (if (nil? out-base) vcf1 out-base)) ".eval")
         args (concat
               ["-R" ref
                "--out" out-file
@@ -82,7 +52,7 @@
                "--stratificationModule" "Filter"]
               (if-not (nil? interval-file) ["-L:bed" interval-file] []))]
     (if-not (fs/exists? out-file)
-      (run-gatk "VariantEval" args))
+      (broad/run-gatk "VariantEval" args))
     out-file))
 
 (defn select-by-concordance [sample call1 call2 ref & {:keys [out-dir interval-file]
@@ -106,7 +76,7 @@
                     "--out" out-file]
                    (if-not (nil? interval-file) ["-L:bed" interval-file] []))]
          (if-not (fs/exists? out-file)
-           (run-gatk "SelectVariants" args))
+           (broad/run-gatk "SelectVariants" args))
          out-file)))))
 
 ;; Custom parsing and combinations using GATK VariantContexts
@@ -127,8 +97,8 @@
 (defn split-variants-by-match [vcf1 vcf2 ref]
   "Provide concordant and discordant variants for two variant files."
   (let [combo-file (combine-variants vcf1 vcf2 ref)
-        out-map {:concordant (add-file-part combo-file "concordant")
-                 :discordant (add-file-part combo-file "discordant")}]
+        out-map {:concordant (itx/add-file-part combo-file "concordant")
+                 :discordant (itx/add-file-part combo-file "discordant")}]
     (if-not (fs/exists? (:concordant out-map))
       (write-vcf-w-template combo-file out-map (vc-by-match-category combo-file)
                             ref))
@@ -141,7 +111,7 @@
         (fs/mkdirs (:outdir config)))
       (writer (str (fs/file (:outdir config)
                             (format "%s-%s"
-                                    (file-root (fs/base-name config-file)) ext)))))
+                                    (itx/file-root (fs/base-name config-file)) ext)))))
     (writer System/out)))
 
 (def top-level-header [:sample :call1 :call2 :genotype_concordance :nonref_discrepency

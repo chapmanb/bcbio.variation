@@ -1,5 +1,6 @@
 (ns bcbio.variation.test.compare
   (:use [midje.sweet]
+        [bcbio.run.itx]
         [bcbio.variation.compare]
         [bcbio.variation.stats]
         [bcbio.variation.report]
