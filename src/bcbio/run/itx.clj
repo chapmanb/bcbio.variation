@@ -18,6 +18,15 @@
     (not-every? true?
                 (map file-non-empty? (flatten fnames)))))
 
+(defn subs-kw-files [args file-info]
+  "Substitute any keywords in the arguments from file information map."
+  (letfn [(maybe-sub-kw [x]
+            (if (and (keyword? x)
+                     (contains? file-info x))
+              (get file-info x)
+              x))]
+    (map maybe-sub-kw args)))
+
 ;; Utility functions for generating new file names from existing ones
 
 (defn file-root [fname]

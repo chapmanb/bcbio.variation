@@ -26,24 +26,23 @@
   "Combine two variant files with GATK CombineVariants."
   (letfn [(unique-name [f]
             (-> f fs/base-name itx/file-root))]
-    (let [out-file (itx/add-file-part vcf1 "combine")
+    (let [file-info {:out-vcf (itx/add-file-part vcf1 "combine")}
           args ["-R" ref
                 (str "--variant:" (unique-name vcf1)) vcf1
                 (str "--variant:" (unique-name vcf2)) vcf2
-                "-o" out-file
+                "-o" :out-vcf
                 "--genotypemergeoption" "UNIQUIFY"]]
-      (if-not (fs/exists? out-file)
-        (broad/run-gatk "CombineVariants" args))
-      out-file)))
+      (broad/run-gatk "CombineVariants" args file-info {:out [:out-vcf]})
+      (:out-vcf file-info))))
 
 (defn variant-comparison [sample vcf1 vcf2 ref & {:keys [out-base interval-file]
                                                   :or {out-base nil
                                                        interval-file nil}}]
   "Compare two variant files with GenotypeConcordance in VariantEval"
-  (let [out-file (str (itx/file-root (if (nil? out-base) vcf1 out-base)) ".eval")
+  (let [file-info {:out-eval (str (itx/file-root (if (nil? out-base) vcf1 out-base)) ".eval")}
         args (concat
               ["-R" ref
-               "--out" out-file
+               "--out" :out-eval
                "--eval" vcf1
                "--comp" vcf2
                "--sample" sample
@@ -51,9 +50,8 @@
                "--stratificationModule" "Sample"
                "--stratificationModule" "Filter"]
               (if-not (nil? interval-file) ["-L:bed" interval-file] []))]
-    (if-not (fs/exists? out-file)
-      (broad/run-gatk "VariantEval" args))
-    out-file))
+    (broad/run-gatk "VariantEval" args file-info {:out [:out-eval]})
+    (:out-eval file-info)))
 
 (defn select-by-concordance [sample call1 call2 ref & {:keys [out-dir interval-file]
                                                        :or {out-dir nil
@@ -66,18 +64,18 @@
      (for [[c1 c2 cmp-type] [[call1 call2 "concordance"]
                              [call1 call2 "discordance"]
                              [call2 call1 "discordance"]]]
-       (let [out-file (str (fs/file base-dir (format "%s-%s-%s-%s.vcf"
-                                                     sample (:name c1) (:name c2) cmp-type)))
+       (let [file-info {:out-vcf (str (fs/file base-dir
+                                               (format "%s-%s-%s-%s.vcf"
+                                                       sample (:name c1) (:name c2) cmp-type)))}
              args (concat
                    ["-R" ref
                     "--sample_name" sample
                     "--variant" (:file c1)
                     (str "--" cmp-type) (:file c2)
-                    "--out" out-file]
+                    "--out" :out-vcf]
                    (if-not (nil? interval-file) ["-L:bed" interval-file] []))]
-         (if-not (fs/exists? out-file)
-           (broad/run-gatk "SelectVariants" args))
-         out-file)))))
+         (broad/run-gatk "SelectVariants" args file-info {:out [:out-vcf]})
+         (:out-vcf file-info))))))
 
 ;; Custom parsing and combinations using GATK VariantContexts
 
