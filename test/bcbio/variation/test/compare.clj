@@ -52,8 +52,3 @@
     (first (vcf-stats vcf1)) => {:max 2.0, :pct75 2.0, :median 2.0, :pct25 2.0, :min 2.0,
                                  :count 10, :metric "AC"}
     (write-summary-table (vcf-stats vcf1)) => nil))
-
-(facts "Manipulating file paths"
-  (add-file-part "test.txt" "add") => "test-add.txt"
-  (add-file-part "/full/test.txt" "new") => "/full/test-new.txt"
-  (file-root "/full/test.txt") => "/full/test")
