@@ -12,3 +12,5 @@ test/data/*discordance.vcf
 test/data/*.bai
 test/data/*-callable*
 test/data/*-annotated.vcf
+test/data/*-fullcombine*vcf
+test/data/*-mincombine*vcf

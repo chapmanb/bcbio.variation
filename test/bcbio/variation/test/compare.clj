@@ -1,11 +1,12 @@
 (ns bcbio.variation.test.compare
   (:use [midje.sweet]
         [bcbio.run.itx]
+        [bcbio.variation.annotation]
+        [bcbio.variation.callable]
+        [bcbio.variation.combine]
         [bcbio.variation.compare]
         [bcbio.variation.stats]
-        [bcbio.variation.report]
-        [bcbio.variation.callable]
-        [bcbio.variation.annotation])
+        [bcbio.variation.report])
   (:require [fs.core :as fs]))
 
 (let [data-dir (str (fs/file "." "test" "data"))
@@ -19,6 +20,8 @@
       annotated-out (add-file-part vcf2 "annotated")
       combo-out (add-file-part vcf1 "combine")
       compare-out (str (file-root vcf1) ".eval")
+      combine-out [(add-file-part vcf1 "fullcombine-wrefs")
+                   (add-file-part vcf2 "fullcombine-wrefs")]
       match-out {:concordant (add-file-part combo-out "concordant")
                  :discordant (add-file-part combo-out "discordant")}
       select-out (doall (map #(str (fs/file data-dir (format "%s-%s.vcf" sample %)))
@@ -29,13 +32,14 @@
                                                    (fs/delete %))
                                                 (concat
                                                  [combo-out compare-out callable-out annotated-out]
+                                                 combine-out
                                                  (vals match-out)
                                                  select-out))))]
     (facts "Variant comparison and assessment with GATK"
       (select-by-concordance sample {:name "gatk" :file vcf1}
                              {:name "freebayes" :file vcf2} ref
                              :interval-file intervals) => select-out
-      (combine-variants vcf1 vcf2 ref) => combo-out
+      (combine-variants [vcf1 vcf2] ref) => combo-out
       (variant-comparison sample vcf1 vcf2 ref
                           :interval-file intervals) => compare-out
       (-> (concordance-report-metrics sample compare-out)
@@ -47,7 +51,9 @@
         (is-callable? "chrM" 252 252) => false
         (is-callable? "chrM" 5100 5200) => false
         (is-callable? "chrM" 16 15) => false)
-      (add-variant-annotations vcf2 align-bam ref) => annotated-out)))
+      (add-variant-annotations vcf2 align-bam ref) => annotated-out)
+    (facts "Create merged VCF files for comparison"
+      (create-merged [vcf1 vcf2] [align-bam align-bam] ref) => combine-out)))
 
 (let [data-dir (str (fs/file "." "test" "data"))
       vcf1 (str (fs/file data-dir "gatk-calls.vcf"))]

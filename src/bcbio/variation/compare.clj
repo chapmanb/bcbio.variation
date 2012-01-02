@@ -12,6 +12,7 @@
         [bcbio.variation.stats :only [vcf-stats write-summary-table]]
         [bcbio.variation.report :only [concordance-report-metrics
                                        write-concordance-metrics]]
+        [bcbio.variation.combine :only [combine-variants]]
         [clojure.math.combinatorics :only [combinations]]
         [clojure.java.io]
         [clojure.string :only [join]])
@@ -21,19 +22,6 @@
             [bcbio.run.broad :as broad]))
 
 ;; GATK walker based variance assessment
-
-(defn combine-variants [vcf1 vcf2 ref]
-  "Combine two variant files with GATK CombineVariants."
-  (letfn [(unique-name [f]
-            (-> f fs/base-name itx/file-root))]
-    (let [file-info {:out-vcf (itx/add-file-part vcf1 "combine")}
-          args ["-R" ref
-                (str "--variant:" (unique-name vcf1)) vcf1
-                (str "--variant:" (unique-name vcf2)) vcf2
-                "-o" :out-vcf
-                "--genotypemergeoption" "UNIQUIFY"]]
-      (broad/run-gatk "CombineVariants" args file-info {:out [:out-vcf]})
-      (:out-vcf file-info))))
 
 (defn variant-comparison [sample vcf1 vcf2 ref & {:keys [out-base interval-file]
                                                   :or {out-base nil
@@ -94,7 +82,7 @@
 
 (defn split-variants-by-match [vcf1 vcf2 ref]
   "Provide concordant and discordant variants for two variant files."
-  (let [combo-file (combine-variants vcf1 vcf2 ref)
+  (let [combo-file (combine-variants [vcf1 vcf2] ref)
         out-map {:concordant (itx/add-file-part combo-file "concordant")
                  :discordant (itx/add-file-part combo-file "discordant")}]
     (if-not (fs/exists? (:concordant out-map))
@@ -136,7 +124,7 @@
      :discordant2 (count-variants (nth (:c-files x) 2))}))
 
 (defn- compare-two-vcf [c1 c2 exp config]
-  "Compare two VCF files base on the supplied configuration."
+  "Compare two VCF files based on the supplied configuration."
   (let [c-files (select-by-concordance (:sample exp) c1 c2 (:ref exp)
                                        :out-dir (:outdir config)
                                        :interval-file (:intervals exp))

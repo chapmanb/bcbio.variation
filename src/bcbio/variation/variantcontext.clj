@@ -26,7 +26,7 @@
    :filters (set (.getFilters vc))
    :attributes (into {} (.getAttributes vc))
    :genotypes (map from-genotype
-                   (-> vc .getGenotypes .values vec))
+                   (-> vc .getGenotypes .toArray vec))
    :vc vc})
 
 (defn- vcf-iterator [iter]
