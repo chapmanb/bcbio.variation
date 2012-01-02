@@ -12,10 +12,11 @@
   "Run a GATK commandline in an idempotent file-safe transaction."
   (if (itx/needs-run? (map #(% file-info) (get map-info :out [])))
     (let [std-args ["-T" program "--phone_home" "NO_ET"]]
-      (CommandLineGATK/start (CommandLineGATK.)
-                             (into-array (itx/subs-kw-files
-                                          (concat std-args args)
-                                          file-info))))))
+      (itx/with-tx-files [tx-file-info file-info (get map-info :out [])]
+        (CommandLineGATK/start (CommandLineGATK.)
+                               (into-array (itx/subs-kw-files
+                                            (concat std-args args)
+                                            tx-file-info)))))))
 
 (defn index-bam [in-bam]
   "Generate BAM index, skipping if already present."
