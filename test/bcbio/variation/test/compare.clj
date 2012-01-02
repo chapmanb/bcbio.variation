@@ -42,6 +42,11 @@
           first :percent_non_reference_sensitivity) => "88.89"
       (split-variants-by-match vcf1 vcf2 ref) => match-out
       (identify-callable align-bam ref) => callable-out
+      (let [is-callable? (callable-checker align-bam ref)]
+        (is-callable? "chrM" 16 17) => true
+        (is-callable? "chrM" 252 252) => false
+        (is-callable? "chrM" 5100 5200) => false
+        (is-callable? "chrM" 16 15) => false)
       (add-variant-annotations vcf2 align-bam ref) => annotated-out)))
 
 (let [data-dir (str (fs/file "." "test" "data"))

@@ -102,6 +102,10 @@
                             ref))
     out-map))
 
+;; Top-level: process a directory of variant calls from multiple
+;; sources, generating a summary of concordance plus detailed metrics
+;; differences for tweaking filters.
+
 (defn- get-summary-writer [config config-file ext]
   (if-not (nil? (:outdir config))
     (do
