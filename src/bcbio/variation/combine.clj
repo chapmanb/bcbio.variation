@@ -33,7 +33,7 @@
                         "--rod_priority_list" (join "," (map unique-name vcfs))]
                        (flatten (map #(list (str "--variant:" (unique-name %)) %) vcfs))
                        (case merge-type
-                             :full ["--genotypemergeoption" "REQUIRE_UNIQUE"]
+                             :full ["--genotypemergeoption" "PRIORITIZE"]
                              :unique ["--genotypemergeoption" "UNIQUIFY"]
                              :minimal ["--sites_only" "--minimalVCF"]))]
       (if-not (fs/exists? base-dir)
