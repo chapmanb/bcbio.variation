@@ -36,7 +36,12 @@
                "--eval" vcf1
                "--comp" vcf2
                "--sample" sample
+               "--doNotUseAllStandardModules"
+               "--evalModule" "CompOverlap"
+               "--evalModule" "CountVariants"
                "--evalModule" "GenotypeConcordance"
+               "--evalModule" "TiTvVariantEvaluator"
+               "--evalModule" "ValidationReport"
                "--stratificationModule" "Sample"
                "--stratificationModule" "Filter"]
               (if-not (nil? interval-file) ["-L:bed" interval-file] []))]
