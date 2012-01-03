@@ -10,14 +10,18 @@
             [bcbio.run.itx :as itx]
             [bcbio.run.broad :as broad]))
 
-(defn identify-callable [align-bam ref]
+(defn identify-callable [align-bam ref & {:keys [out-dir] :or {out-dir nil}}]
   "Identify callable bases from the provided alignment file."
-  (let [file-info {:out-bed (format "%s-callable.bed" (itx/file-root align-bam))
-                   :out-summary (format "%s-callable-summary.txt" (itx/file-root align-bam))}
+  (let [base-dir (if (nil? out-dir) (fs/parent align-bam) out-dir)
+        base-fname (str (file base-dir (-> align-bam fs/base-name itx/file-root)))
+        file-info {:out-bed (format "%s-callable.bed" base-fname)
+                   :out-summary (format "%s-callable-summary.txt" base-fname)}
         args ["-R" ref
               "-I" align-bam
               "--out" :out-bed
               "--summary" :out-summary]]
+    (if-not (fs/exists? base-dir)
+      (fs/mkdirs base-dir))
     (broad/index-bam align-bam)
     (broad/run-gatk "CallableLoci" args file-info {:out [:out-bed :out-summary]})
     (:out-bed file-info)))
@@ -31,15 +35,15 @@
      :score (.getScore f)
      :strand (.getStrand f)}))
 
-(defn callable-interval-tree [align-bam ref]
+(defn callable-interval-tree [align-bam ref & {:keys [out-dir] :or {out-dir nil}}]
   "Retrieve an IntervalTree to retrieve information on callability in a region."
-  (let [bed-file (identify-callable align-bam ref)
+  (let [bed-file (identify-callable align-bam ref :out-dir out-dir)
         batch-size 500
         idx (IndexFactory/createIntervalIndex (file bed-file) (BEDCodec.) batch-size)]
     (BasicFeatureSource. bed-file idx (BEDCodec.))))
 
-(defn callable-checker [align-bam ref]
-  (let [source (callable-interval-tree align-bam ref)]
+(defn callable-checker [align-bam ref & {:keys [out-dir] :or {out-dir nil}}]
+  (let [source (callable-interval-tree align-bam ref :out-dir out-dir)]
     (letfn [(is-callable? [space start end]
               (> (count (filter #(= (:name %) "CALLABLE")
                                 (features-in-region source space start end)))

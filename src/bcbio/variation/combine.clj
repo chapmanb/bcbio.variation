@@ -41,10 +41,10 @@
       (broad/run-gatk "CombineVariants" args file-info {:out [:out-vcf]})
       (:out-vcf file-info))))
 
-(defn convert-no-calls [in-vcf align-bam ref]
+(defn convert-no-calls [in-vcf align-bam ref & {:keys [out-dir] :or {out-dir nil}}]
   "Convert no-calls into callable reference and real no-calls."
   (let [out-file (itx/add-file-part in-vcf "wrefs")
-        is-callable? (callable-checker align-bam ref)]
+        is-callable? (callable-checker align-bam ref :out-dir out-dir)]
     (letfn [(ref-genotype [g vc]
               (doto (-> vc :vc .getGenotypes GenotypesContext/copy)
                 (.replace
@@ -71,8 +71,7 @@
         (write-vcf-w-template in-vcf {:out out-file} (convert-vcs in-vcf) ref))
       out-file)))
 
-(defn select-by-sample [sample call ref & {:keys [out-dir]
-                                           :or {out-dir nil}}]
+(defn select-by-sample [sample call ref & {:keys [out-dir] :or {out-dir nil}}]
   "Select only the sample of interest from input VCF files."
   (let [base-dir (if (nil? out-dir) (fs/parent (:file call)) out-dir)
         file-info {:out-vcf (str (fs/file base-dir
@@ -91,9 +90,9 @@
   "Create merged VCF files with no-call/ref-calls for each of the inputs."
   (letfn [(merge-vcf [vcf all-vcf align-bam ref]
             (let [ready-vcf (combine-variants [vcf all-vcf] ref
-                                              :merge-type :full :out-dir out-dir)]
-              (convert-no-calls ready-vcf align-bam ref)))]
-    (let [merged (combine-variants vcfs ref :merge-type :minimal :out-dir out-dir)]
+                                              :merge-type :full)]
+              (convert-no-calls ready-vcf align-bam ref :out-dir out-dir)))]
+    (let [merged (combine-variants vcfs ref :merge-type :minimal)]
       (map (fn [[v b]] (merge-vcf v merged b ref))
            (map vector vcfs align-bams)))))
 
