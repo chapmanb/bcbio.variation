@@ -11,3 +11,4 @@ experiments:
         file: test/data/gatk-calls.vcf
       - name: freebayes
         file: test/data/freebayes-calls.vcf
+        annotate: true

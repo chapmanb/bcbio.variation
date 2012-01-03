@@ -133,8 +133,10 @@
                          (:calls exp))
         merged-vcfs (create-merged sample-vcfs align-bams (:ref exp)
                                    :out-dir (:outdir config))
-        final-vcfs (map (fn [[v b]] (add-variant-annotations v b (:ref exp)))
-                        (map vector merged-vcfs align-bams))]
+        final-vcfs (map (fn [[v b c]] (if (get c :annotate false)
+                                        (add-variant-annotations v b (:ref exp))
+                                        v))
+                        (map vector merged-vcfs align-bams (:calls exp)))]
     (map (fn [[c v]] (assoc c :file v))
          (map vector (:calls exp) final-vcfs))))
 
