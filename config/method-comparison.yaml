@@ -9,6 +9,7 @@ experiments:
     calls:
       - name: gatk
         file: test/data/gatk-calls.vcf
+        refcalls: false
       - name: freebayes
         file: test/data/freebayes-calls.vcf
         annotate: true

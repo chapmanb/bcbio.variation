@@ -53,7 +53,7 @@
         (is-callable? "chrM" 16 15) => false)
       (add-variant-annotations vcf2 align-bam ref) => annotated-out)
     (facts "Create merged VCF files for comparison"
-      (create-merged [vcf1 vcf2] [align-bam align-bam] ref) => combine-out)))
+      (create-merged [vcf1 vcf2] [align-bam align-bam] [true true] ref) => combine-out)))
 
 (let [data-dir (str (fs/file "." "test" "data"))
       vcf1 (str (fs/file data-dir "gatk-calls.vcf"))]

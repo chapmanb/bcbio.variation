@@ -85,14 +85,14 @@
     (broad/run-gatk "SelectVariants" args file-info {:out [:out-vcf]})
     (:out-vcf file-info)))
 
-(defn create-merged [vcfs align-bams ref & {:keys [out-dir]
-                                            :or {out-dir nil}}]
+(defn create-merged [vcfs align-bams do-merges ref & {:keys [out-dir]
+                                                      :or {out-dir nil}}]
   "Create merged VCF files with no-call/ref-calls for each of the inputs."
   (letfn [(merge-vcf [vcf all-vcf align-bam ref]
             (let [ready-vcf (combine-variants [vcf all-vcf] ref
                                               :merge-type :full)]
               (convert-no-calls ready-vcf align-bam ref :out-dir out-dir)))]
     (let [merged (combine-variants vcfs ref :merge-type :minimal)]
-      (map (fn [[v b]] (merge-vcf v merged b ref))
-           (map vector vcfs align-bams)))))
+      (map (fn [[v b merge?]] (if merge? (merge-vcf v merged b ref) v))
+           (map vector vcfs align-bams do-merges)))))
 
