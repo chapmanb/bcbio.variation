@@ -12,7 +12,8 @@
         [bcbio.variation.stats :only [vcf-stats write-summary-table]]
         [bcbio.variation.report :only [concordance-report-metrics
                                        write-concordance-metrics]]
-        [bcbio.variation.combine :only [combine-variants]]
+        [bcbio.variation.combine :only [combine-variants create-merged]]
+        [bcbio.variation.annotation :only [add-variant-annotations]]
         [clojure.math.combinatorics :only [combinations]]
         [clojure.java.io]
         [clojure.string :only [join]])
@@ -123,6 +124,17 @@
      :discordant1 (count-variants (second (:c-files x)))
      :discordant2 (count-variants (nth (:c-files x) 2))}))
 
+(defn- prepare-vcf-calls [exp config]
+  "Prepare merged and annotated VCF files for an experiment."
+  (let [align-bams (map #(get % :align (:align exp)) (:calls exp))
+        merged-vcfs (create-merged (map :file (:calls exp))
+                                   align-bams (:ref exp)
+                                   :out-dir (get config :outdir-prep (:outdir config)))
+        final-vcfs (map (fn [[v b]] (add-variant-annotations v b (:ref exp)))
+                        (map vector merged-vcfs align-bams))]
+    (map (fn [[c v]] (assoc c :file v))
+         (map vector (:calls exp) final-vcfs))))
+
 (defn- compare-two-vcf [c1 c2 exp config]
   "Compare two VCF files based on the supplied configuration."
   (let [c-files (select-by-concordance (:sample exp) c1 c2 (:ref exp)
@@ -139,7 +151,7 @@
   (let [config (-> config-file slurp yaml/parse-string)
         comparisons (flatten
                      (for [exp (:experiments config)]
-                       (for [[c1 c2] (combinations (:calls exp) 2)]
+                       (for [[c1 c2] (combinations (prepare-vcf-calls exp config) 2)]
                          (compare-two-vcf c1 c2 exp config))))]
     (with-open [w (get-summary-writer config config-file "summary.txt")]
       (doseq [x comparisons]

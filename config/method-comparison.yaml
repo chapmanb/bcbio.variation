@@ -1,8 +1,11 @@
 ---
+outdir: test/data
+outdir-prep: test/data/prep
 experiments:
   - sample: Test1
     ref: test/data/hg19.fa
     intervals: test/data/target-regions.bed
+    align: test/data/aligned-reads.bam
     calls:
       - name: gatk
         file: test/data/gatk-calls.vcf
