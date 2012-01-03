@@ -12,7 +12,8 @@
         [bcbio.variation.stats :only [vcf-stats write-summary-table]]
         [bcbio.variation.report :only [concordance-report-metrics
                                        write-concordance-metrics]]
-        [bcbio.variation.combine :only [combine-variants create-merged]]
+        [bcbio.variation.combine :only [combine-variants create-merged
+                                        select-by-sample]]
         [bcbio.variation.annotation :only [add-variant-annotations]]
         [clojure.math.combinatorics :only [combinations]]
         [clojure.java.io]
@@ -127,9 +128,10 @@
 (defn- prepare-vcf-calls [exp config]
   "Prepare merged and annotated VCF files for an experiment."
   (let [align-bams (map #(get % :align (:align exp)) (:calls exp))
-        merged-vcfs (create-merged (map :file (:calls exp))
-                                   align-bams (:ref exp)
-                                   :out-dir (get config :outdir-prep (:outdir config)))
+        sample-vcfs (map #(select-by-sample (:sample exp) % (:ref exp)
+                                            :out-dir (get config :outdir-prep (:outdir config)))
+                         (:calls exp))
+        merged-vcfs (create-merged sample-vcfs align-bams (:ref exp))
         final-vcfs (map (fn [[v b]] (add-variant-annotations v b (:ref exp)))
                         (map vector merged-vcfs align-bams))]
     (map (fn [[c v]] (assoc c :file v))
