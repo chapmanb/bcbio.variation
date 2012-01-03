@@ -71,15 +71,18 @@
         (write-vcf-w-template in-vcf {:out out-file} (convert-vcs in-vcf) ref))
       out-file)))
 
-(defn select-by-sample [sample call ref & {:keys [out-dir] :or {out-dir nil}}]
+(defn select-by-sample [sample call ref & {:keys [out-dir intervals]
+                                           :or {out-dir nil
+                                                intervals nil}}]
   "Select only the sample of interest from input VCF files."
   (let [base-dir (if (nil? out-dir) (fs/parent (:file call)) out-dir)
         file-info {:out-vcf (str (fs/file base-dir
                                           (format "%s-%s.vcf" sample (:name call))))}
-        args ["-R" ref
-              "--sample_name" sample
-              "--variant" (:file call)
-              "--out" :out-vcf]]
+        args (concat ["-R" ref
+                      "--sample_name" sample
+                      "--variant" (:file call)
+                      "--out" :out-vcf]
+                     (if-not (nil? intervals) ["-L" intervals] []))]
     (if-not (fs/exists? base-dir)
       (fs/mkdirs base-dir))
     (broad/run-gatk "SelectVariants" args file-info {:out [:out-vcf]})

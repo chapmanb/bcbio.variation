@@ -134,6 +134,7 @@
   "Prepare merged and annotated VCF files for an experiment."
   (let [align-bams (map #(get % :align (:align exp)) (:calls exp))
         sample-vcfs (map #(select-by-sample (:sample exp) % (:ref exp)
+                                            :intervals (:intervals exp)
                                             :out-dir (get config :outdir-prep (:outdir config)))
                          (:calls exp))
         merged-vcfs (create-merged sample-vcfs align-bams (map #(get % :refcalls true) (:calls exp))
