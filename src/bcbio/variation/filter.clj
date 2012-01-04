@@ -5,14 +5,15 @@
   (:require [bcbio.run.broad :as broad]
             [bcbio.run.itx :as itx]))
 
-(defn variant-filter [in-vcf filters ref]
+(defn variant-filter [in-vcf jexl-filters ref]
   "Perform hard variant filtering with supplied JEXL expression criteria."
-  (letfn [(filter-args [f]
-            ["--filterName" (str (first (split f #" " 1)) "Filter")
-             "--filterExpression" f])]
+  (letfn [(jexl-args [x]
+            ["--filterName" (str (first (split x #"\s+")) "Filter")
+             "--filterExpression" x])]
     (let [file-info {:out-vcf (itx/add-file-part in-vcf "filter")}
           args (concat ["-R" ref
                         "--variant" in-vcf
-                        "-o" :out-vct]
-                       (map filter-args filters))]
-      (broad/run-gatk "VariantFiltration" args file-info {:out [:out-vcf]}))))
+                        "-o" :out-vcf]
+                       (flatten (map jexl-args jexl-filters)))]
+      (broad/run-gatk "VariantFiltration" args file-info {:out [:out-vcf]})
+      (:out-vcf file-info))))

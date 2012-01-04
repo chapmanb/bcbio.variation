@@ -14,5 +14,6 @@ test/data/*-callable*
 test/data/*-annotated.vcf
 test/data/*-fullcombine*vcf
 test/data/*-mincombine*vcf
+test/data/*-filter*vcf
 test/data/method-comparison-summary*
 test/data/prep/

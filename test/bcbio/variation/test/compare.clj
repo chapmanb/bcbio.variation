@@ -5,6 +5,7 @@
         [bcbio.variation.callable]
         [bcbio.variation.combine]
         [bcbio.variation.compare]
+        [bcbio.variation.filter]
         [bcbio.variation.stats]
         [bcbio.variation.report])
   (:require [fs.core :as fs]))
@@ -20,6 +21,7 @@
       annotated-out (add-file-part vcf2 "annotated")
       combo-out (add-file-part vcf1 "combine")
       compare-out (str (file-root vcf1) ".eval")
+      filter-out (add-file-part vcf1 "filter")
       combine-out [(add-file-part vcf1 "fullcombine-wrefs")
                    (add-file-part vcf2 "fullcombine-wrefs")]
       match-out {:concordant (add-file-part combo-out "concordant")
@@ -31,7 +33,8 @@
   (against-background [(before :facts (vec (map #(if (fs/exists? %)
                                                    (fs/delete %))
                                                 (concat
-                                                 [combo-out compare-out callable-out annotated-out]
+                                                 [combo-out compare-out callable-out
+                                                  annotated-out filter-out]
                                                  combine-out
                                                  (vals match-out)
                                                  select-out))))]
@@ -53,7 +56,9 @@
         (is-callable? "chrM" 16 15) => false)
       (add-variant-annotations vcf2 align-bam ref) => annotated-out)
     (facts "Create merged VCF files for comparison"
-      (create-merged [vcf1 vcf2] [align-bam align-bam] [true true] ref) => combine-out)))
+      (create-merged [vcf1 vcf2] [align-bam align-bam] [true true] ref) => combine-out)
+    (facts "Filter variant calls avoiding false positives."
+      (variant-filter vcf1 ["QD < 2.0" "MQ < 40.0"] ref) => filter-out)))
 
 (let [data-dir (str (fs/file "." "test" "data"))
       vcf1 (str (fs/file data-dir "gatk-calls.vcf"))]
