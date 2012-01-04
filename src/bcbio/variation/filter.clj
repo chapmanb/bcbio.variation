@@ -13,7 +13,8 @@
     (let [file-info {:out-vcf (itx/add-file-part in-vcf "filter")}
           args (concat ["-R" ref
                         "--variant" in-vcf
-                        "-o" :out-vcf]
+                        "-o" :out-vcf
+                        "-l" "ERROR"]
                        (flatten (map jexl-args jexl-filters)))]
       (broad/run-gatk "VariantFiltration" args file-info {:out [:out-vcf]})
       (:out-vcf file-info))))
