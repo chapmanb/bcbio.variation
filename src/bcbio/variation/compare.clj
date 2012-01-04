@@ -113,23 +113,28 @@
     (writer System/out)))
 
 (def top-level-header [:sample :call1 :call2 :genotype_concordance :nonref_discrepency
-                       :nonref_sensitivity :concordant :discordant1 :discordant2])
+                       :nonref_sensitivity :concordant :nonref_concordant
+                       :discordant1 :discordant2])
 
 (defn- top-level-metrics [x]
   "Provide one-line summary of similarity metrics for a VCF comparison."
   (letfn [(passes-filter? [vc]
             (= (count (:filters vc)) 0))
-           (count-variants [f]
-             (count (filter passes-filter? (parse-vcf f))))]
+          (nonref-passes-filter? [vc]
+            (and (passes-filter? vc)
+                 (every? #(contains? #{"HET" "HOM_VAR"} (:type %)) (:genotypes vc))))
+           (count-variants [f check?]
+             (count (filter check? (parse-vcf f))))]
     {:sample (:sample x)
      :call1 (-> x :c1 :name)
      :call2 (-> x :c2 :name)
      :genotype_concordance (-> x :metrics :percent_overall_genotype_concordance)
      :nonref_discrepency (-> x :metrics :percent_non_reference_discrepancy_rate)
      :nonref_sensitivity (-> x :metrics :percent_non_reference_sensitivity)
-     :concordant (count-variants (first (:c-files x)))
-     :discordant1 (count-variants (second (:c-files x)))
-     :discordant2 (count-variants (nth (:c-files x) 2))}))
+     :concordant (count-variants (first (:c-files x)) passes-filter?)
+     :nonref_concordant (count-variants (first (:c-files x)) nonref-passes-filter?)
+     :discordant1 (count-variants (second (:c-files x)) passes-filter?)
+     :discordant2 (count-variants (nth (:c-files x) 2) passes-filter?)}))
 
 (defn- prepare-vcf-calls [exp config]
   "Prepare merged and annotated VCF files for an experiment."
