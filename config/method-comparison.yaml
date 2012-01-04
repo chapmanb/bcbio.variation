@@ -13,3 +13,9 @@ experiments:
       - name: freebayes
         file: test/data/freebayes-calls.vcf
         annotate: true
+        filters:
+          - HRun > 5.0
+          - QD < 2.0
+          - FS > 60.0
+          - MQRankSum < -12.5
+                

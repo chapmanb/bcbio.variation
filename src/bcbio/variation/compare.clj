@@ -15,6 +15,7 @@
         [bcbio.variation.combine :only [combine-variants create-merged
                                         select-by-sample]]
         [bcbio.variation.annotation :only [add-variant-annotations]]
+        [bcbio.variation.filter :only [variant-filter]]
         [clojure.math.combinatorics :only [combinations]]
         [clojure.java.io]
         [clojure.string :only [join]])
@@ -139,12 +140,16 @@
                          (:calls exp))
         merged-vcfs (create-merged sample-vcfs align-bams (map #(get % :refcalls true) (:calls exp))
                                    (:ref exp) :out-dir (:outdir config))
-        final-vcfs (map (fn [[v b c]] (if (get c :annotate false)
+        ann-vcfs (map (fn [[v b c]] (if (get c :annotate false)
                                         (add-variant-annotations v b (:ref exp))
                                         v))
-                        (map vector merged-vcfs align-bams (:calls exp)))]
+                      (map vector merged-vcfs align-bams (:calls exp)))
+        filter-vcfs (map (fn [[v c]] (if-not (nil? (:filters c))
+                                       (variant-filter v (:filters c) (:ref exp))
+                                       v))
+                         (map vector ann-vcfs (:calls exp)))]
     (map (fn [[c v]] (assoc c :file v))
-         (map vector (:calls exp) final-vcfs))))
+         (map vector (:calls exp) filter-vcfs))))
 
 (defn- compare-two-vcf [c1 c2 exp config]
   "Compare two VCF files based on the supplied configuration."
