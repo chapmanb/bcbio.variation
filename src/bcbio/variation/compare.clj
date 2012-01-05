@@ -18,7 +18,8 @@
         [bcbio.variation.filter :only [variant-filter]]
         [clojure.math.combinatorics :only [combinations]]
         [clojure.java.io]
-        [clojure.string :only [join]])
+        [clojure.string :only [join]]
+        [ordered.map :only [ordered-map]])
   (:require [fs.core :as fs]
             [clj-yaml.core :as yaml]
             [bcbio.run.itx :as itx]
@@ -123,9 +124,10 @@
           (nonref-passes-filter? [vc]
             (and (passes-filter? vc)
                  (every? #(contains? #{"HET" "HOM_VAR"} (:type %)) (:genotypes vc))))
-           (count-variants [f check?]
-             (count (filter check? (parse-vcf f))))]
-    {:sample (:sample x)
+          (count-variants [f check?]
+            (count (filter check? (parse-vcf f))))]
+    (ordered-map
+     :sample (:sample x)
      :call1 (-> x :c1 :name)
      :call2 (-> x :c2 :name)
      :genotype_concordance (-> x :metrics :percent_overall_genotype_concordance)
@@ -134,7 +136,7 @@
      :concordant (count-variants (first (:c-files x)) passes-filter?)
      :nonref_concordant (count-variants (first (:c-files x)) nonref-passes-filter?)
      :discordant1 (count-variants (second (:c-files x)) passes-filter?)
-     :discordant2 (count-variants (nth (:c-files x) 2) passes-filter?)}))
+     :discordant2 (count-variants (nth (:c-files x) 2) passes-filter?))))
 
 (defn- prepare-vcf-calls [exp config]
   "Prepare merged and annotated VCF files for an experiment."
@@ -168,12 +170,18 @@
         out {:c-files c-files :metrics metrics :c1 c1 :c2 c2 :sample (:sample exp)}]
     (assoc out :summary (top-level-metrics out))))
 
+(defn finalize-comparisons [cmps exp config]
+  "Finalize all comparisons with finished initial pass data."
+  (println cmps)
+  cmps)
+
 (defn -main [config-file]
   (let [config (-> config-file slurp yaml/parse-string)
         comparisons (flatten
                      (for [exp (:experiments config)]
-                       (for [[c1 c2] (combinations (prepare-vcf-calls exp config) 2)]
-                         (compare-two-vcf c1 c2 exp config))))]
+                       (let [cmps (for [[c1 c2] (combinations (prepare-vcf-calls exp config) 2)]
+                                    (compare-two-vcf c1 c2 exp config))]
+                         (finalize-comparisons cmps exp config))))]
     (with-open [w (get-summary-writer config config-file "summary.txt")]
       (doseq [x comparisons]
         (.write w (format "* %s : %s vs %s\n" (:sample x)
@@ -183,6 +191,7 @@
           (write-summary-table (vcf-stats f) :wrtr w))
         (write-concordance-metrics (:metrics x) w)))
     (with-open [w (get-summary-writer config config-file "summary.csv")]
-      (.write w (format "%s\n" (join "," (map name top-level-header))))
-      (doseq [vals (map :summary comparisons)]
-        (.write w (format "%s\n" (join "," (map #(% vals) top-level-header))))))))
+      (doseq [[i x] (map-indexed vector (map :summary comparisons))]
+        (if (= i 0)
+          (.write w (format "%s\n" (join "," (map name (keys x))))))
+        (.write w (format "%s\n" (join "," (vals x))))))))

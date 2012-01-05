@@ -8,7 +8,8 @@
                  [incanter/incanter-charts "1.3.0-SNAPSHOT"]
                  [fs "1.0.0"]
                  [clj-yaml "0.3.1"]
-                 [doric "0.7.0-SNAPSHOT"]]
+                 [doric "0.7.0-SNAPSHOT"]
+                 [ordered "1.0.0"]]
   :dev-dependencies [[midje "1.3.0"]]
   :java-source-path "src/java"
   :omit-source true
