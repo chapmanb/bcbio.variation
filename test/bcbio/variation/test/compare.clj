@@ -1,4 +1,5 @@
 (ns bcbio.variation.test.compare
+  (:import [org.broadinstitute.sting.utils.exceptions UserException$BadInput])
   (:use [midje.sweet]
         [bcbio.run.itx]
         [bcbio.variation.annotation]
@@ -47,7 +48,6 @@
                           :interval-file intervals) => compare-out
       (-> (concordance-report-metrics sample compare-out)
           first :percent_non_reference_sensitivity) => "88.89"
-      (split-variants-by-match vcf1 vcf2 ref) => match-out
       (identify-callable align-bam ref) => callable-out
       (let [is-callable? (callable-checker align-bam ref)]
         (is-callable? "chrM" 16 17) => true
@@ -58,7 +58,13 @@
     (facts "Create merged VCF files for comparison"
       (create-merged [vcf1 vcf2] [align-bam align-bam] [true true] ref) => combine-out)
     (facts "Filter variant calls avoiding false positives."
-      (variant-filter vcf1 ["QD < 2.0" "MQ < 40.0"] ref) => filter-out)))
+      (variant-filter vcf1 ["QD < 2.0" "MQ < 40.0"] ref) => filter-out
+      (split-variants-by-match vcf1 vcf2 ref) => match-out
+      (variant-recalibration-filter vcf1 [{:file (:concordant match-out)
+                                           :name "concordant"
+                                           :prior 10.0}]
+                                    ref) => (throws UserException$BadInput
+                                                    (contains "annotations with zero variance")))))
 
 (let [data-dir (str (fs/file "." "test" "data"))
       vcf1 (str (fs/file data-dir "gatk-calls.vcf"))]

@@ -11,7 +11,6 @@
   (let [file-info {:out-vcf (itx/add-file-part in-vcf "annotated")}
         annotations ["BaseQualityRankSumTest" "DepthOfCoverage" "FisherStrand"
                      "GCContent" "HaplotypeScore" "HomopolymerRun"
-                     "InbreedingCoeff"
                      "MappingQualityRankSumTest" "MappingQualityZero"
                      "QualByDepth" "ReadPosRankSumTest" "RMSMappingQuality"]
         args (concat ["-R" ref

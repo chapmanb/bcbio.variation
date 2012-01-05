@@ -32,11 +32,12 @@
                       "-recalFile" :out-recal
                       "-tranchesFile" :out-tranch
                       "-rscriptFile" :out-r]
-                     (flatten (map #(["-an" %]) annotations))
-                     (flatten (map #([(str "-resource:" (:name %)
-                                           ",known=true,training=true,truth=true,prior="
-                                           (:prior %))
-                                      (:file %)]))))]
+                     (flatten (map (fn [x] ["-an" x]) annotations))
+                     (flatten (map (fn [x] [(str "-resource:" (:name x)
+                                                 ",known=true,training=true,truth=true,prior="
+                                                 (:prior x))
+                                            (:file x)])
+                                   training-vcfs)))]
     (broad/run-gatk "VariantRecalibrator" args file-info {:out [:out-recal :out-tranch]})
     file-info))
 
