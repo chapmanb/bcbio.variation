@@ -54,16 +54,15 @@
             (maybe-callable-vc [vc]
               {:pre (= 1 (count (:genotypes vc)))}
               (let [g (-> vc :genotypes first)]
-                {:vc
-                 (if (.isNoCall (-> g :alleles first))
-                   (if (is-callable? (:chr vc) (:start vc) (:end vc))
-                     (-> (VariantContextBuilder. (:vc vc))
-                         (.genotypes (ref-genotype g vc))
-                         (.make))
-                     (-> (VariantContextBuilder. (:vc vc))
-                         (.filters #{"NotCallable"})
-                         (.make)))
-                   (:vc vc))}))
+                (if (.isNoCall (-> g :alleles first))
+                  (if (is-callable? (:chr vc) (:start vc) (:end vc))
+                    (-> (VariantContextBuilder. (:vc vc))
+                        (.genotypes (ref-genotype g vc))
+                        (.make))
+                    (-> (VariantContextBuilder. (:vc vc))
+                        (.filters #{"NotCallable"})
+                        (.make)))
+                  (:vc vc))))
             (convert-vcs [in-file]
               (for [vc (parse-vcf in-file)]
                 [:out (maybe-callable-vc vc)]))]

@@ -15,7 +15,7 @@
         [bcbio.variation.combine :only [combine-variants create-merged
                                         select-by-sample]]
         [bcbio.variation.annotation :only [add-variant-annotations]]
-        [bcbio.variation.filter :only [variant-filter]]
+        [bcbio.variation.filter :only [variant-filter pipeline-recalibration]]
         [clojure.math.combinatorics :only [combinations]]
         [clojure.java.io]
         [clojure.string :only [join]]
@@ -87,7 +87,7 @@
                1))]
     (for [vc (parse-vcf in-file)]
       [(if (is-concordant? vc) :concordant :discordant)
-       vc])))
+       (:vc vc)])))
 
 (defn split-variants-by-match [vcf1 vcf2 ref]
   "Provide concordant and discordant variants for two variant files."
@@ -112,10 +112,6 @@
                             (format "%s-%s"
                                     (itx/file-root (fs/base-name config-file)) ext)))))
     (writer System/out)))
-
-(def top-level-header [:sample :call1 :call2 :genotype_concordance :nonref_discrepency
-                       :nonref_sensitivity :concordant :nonref_concordant
-                       :discordant1 :discordant2])
 
 (defn- top-level-metrics [x]
   "Provide one-line summary of similarity metrics for a VCF comparison."
@@ -166,14 +162,23 @@
         eval-file (variant-comparison (:sample exp) (:file c1) (:file c2)
                                       (:ref exp) :out-base (first c-files)
                                       :interval-file (:intervals exp))
-        metrics (first (concordance-report-metrics (:sample exp) eval-file))
-        out {:c-files c-files :metrics metrics :c1 c1 :c2 c2 :sample (:sample exp)}]
-    (assoc out :summary (top-level-metrics out))))
+        metrics (first (concordance-report-metrics (:sample exp) eval-file))]
+    {:c-files c-files :metrics metrics :c1 c1 :c2 c2 :sample (:sample exp)}))
 
 (defn finalize-comparisons [cmps exp config]
   "Finalize all comparisons with finished initial pass data."
-  (println cmps)
-  cmps)
+  (letfn [(add-summary [x]
+            (assoc x :summary (top-level-metrics x)))]
+    (let [finalize-fns {"recal-filter" pipeline-recalibration}
+          cmps-by-name (reduce (fn [m x] (assoc m [(-> x :c1 :name)
+                                                   (-> x :c2 :name)] x))
+                               (ordered-map)
+                               cmps)]
+      (for [finalizer (:finalize exp)]
+        ((get finalize-fns (:method finalizer))
+         (get cmps-by-name (:target finalizer))
+         (:ref exp)))
+      (map add-summary (vals cmps-by-name)))))
 
 (defn -main [config-file]
   (let [config (-> config-file slurp yaml/parse-string)

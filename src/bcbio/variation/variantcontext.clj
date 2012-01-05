@@ -65,4 +65,4 @@
         (doseq [out-vcf (vals writer-map)]
           (.writeHeader out-vcf tmpl-header))
         (doseq [[category vc] vc-iter]
-          (.add (get writer-map category) (:vc vc)))))))
+          (.add (get writer-map category) vc))))))

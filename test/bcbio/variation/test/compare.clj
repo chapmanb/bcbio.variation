@@ -23,6 +23,7 @@
       combo-out (add-file-part vcf1 "combine")
       compare-out (str (file-root vcf1) ".eval")
       filter-out (add-file-part vcf1 "filter")
+      nofilter-out (add-file-part filter-out "nofilter")
       combine-out [(add-file-part vcf1 "fullcombine-wrefs")
                    (add-file-part vcf2 "fullcombine-wrefs")]
       match-out {:concordant (add-file-part combo-out "concordant")
@@ -35,7 +36,7 @@
                                                    (fs/delete %))
                                                 (concat
                                                  [combo-out compare-out callable-out
-                                                  annotated-out filter-out]
+                                                  annotated-out filter-out nofilter-out]
                                                  combine-out
                                                  (vals match-out)
                                                  select-out))))]
@@ -59,6 +60,7 @@
       (create-merged [vcf1 vcf2] [align-bam align-bam] [true true] ref) => combine-out)
     (facts "Filter variant calls avoiding false positives."
       (variant-filter vcf1 ["QD < 2.0" "MQ < 40.0"] ref) => filter-out
+      (remove-cur-filters filter-out ref) => nofilter-out
       (split-variants-by-match vcf1 vcf2 ref) => match-out
       (variant-recalibration-filter vcf1 [{:file (:concordant match-out)
                                            :name "concordant"

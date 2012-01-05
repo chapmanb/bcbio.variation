@@ -1,7 +1,10 @@
 ;; Filter variant calls according to supplied criteria.
 
 (ns bcbio.variation.filter
-  (:use [clojure.string :only [split]])
+  (:import [org.broadinstitute.sting.utils.variantcontext
+            VariantContextBuilder])
+  (:use [clojure.string :only [split]]
+        [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template]])
   (:require [bcbio.run.broad :as broad]
             [bcbio.run.itx :as itx]))
 
@@ -59,3 +62,23 @@
   probability and name."
   (let [recal-files (variant-recalibration in-vcf training-vcfs ref)]
     (apply-recalibration in-vcf recal-files ref)))
+
+(defn remove-cur-filters [in-vcf ref]
+  "Remove any filter information in the supplied file."
+  (letfn [(remove-vc-filter [vc]
+            [:out (-> (VariantContextBuilder. (:vc vc))
+                      (.passFilters)
+                      (.make))])]
+    (let [out-file (itx/add-file-part in-vcf "nofilter")]
+      (write-vcf-w-template in-vcf {:out out-file}
+                            (map remove-vc-filter (parse-vcf in-vcf))
+                            ref)
+      out-file)))
+
+(defn pipeline-recalibration [target ref]
+  "Perform variant recalibration and filtration as part of processing pipeline."
+  (let [in-vcf (remove-cur-filters (-> target :c1 :file) ref)
+        train-info {:file (-> target :c-files first)
+                    :name "concordant"
+                    :prior 10.0}]
+    (variant-recalibration-filter in-vcf train-info ref)))

@@ -6,10 +6,6 @@ experiments:
     ref: test/data/hg19.fa
     intervals: test/data/target-regions.bed
     align: test/data/aligned-reads.bam
-    finalize:
-      - method: recal-filter
-        target: [gatk, freebayes]
-        support: [gatk, freebayes]
     calls:
       - name: gatk
         file: test/data/gatk-calls.vcf
@@ -22,4 +18,7 @@ experiments:
           - QD < 2.0
           - FS > 60.0
           - MQRankSum < -12.5
+    finalize:
+      - method: recal-filter
+        target: [gatk, freebayes]
                 
