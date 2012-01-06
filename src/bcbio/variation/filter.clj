@@ -41,7 +41,6 @@
                                                  (:prior x))
                                             (:file x)])
                                    training-vcfs)))]
-    (println args)
     (broad/run-gatk "VariantRecalibrator" args file-info {:out [:out-recal :out-tranch]})
     file-info))
 
