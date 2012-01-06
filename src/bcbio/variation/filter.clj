@@ -25,16 +25,18 @@
 (defn- variant-recalibration [in-vcf training-vcfs ref]
   "Perform the variant recalibration step with input training VCF files.
   training-vcfs is a list of {:file vcf-file :name name-to-use :prior probability}"
-  (let [annotations ["FS" "HaplotypeScore" "HRun" "MQ" "MQRankSum" "ReadPosRankSum" "QD"]
+  (let [annotations ["MQRankSum" "ReadPosRankSum"]
         base-out (itx/file-root in-vcf)
         file-info {:out-recal (str base-out ".recal")
                    :out-tranch (str base-out ".tranches")
-                   :out-r (str base-out "-plots.R")}
+                   :out-r (str base-out "-recalplots.R")}
         args (concat ["-R" ref
                       "-input" in-vcf
                       "-recalFile" :out-recal
                       "-tranchesFile" :out-tranch
-                      "-rscriptFile" :out-r]
+                      "-rscriptFile" :out-r
+                      "--percentBadVariants" "0.03"
+                      "--maxGaussians" "4"]
                      (flatten (map (fn [x] ["-an" x]) annotations))
                      (flatten (map (fn [x] [(str "-resource:" (:name x)
                                                  ",known=true,training=true,truth=true,prior="
@@ -75,12 +77,15 @@
                             ref)
       out-file)))
 
-(defn pipeline-recalibration [target ref]
+(defn pipeline-recalibration [target support ref]
   "Perform variant recalibration and filtration as part of processing pipeline."
   (let [in-vcf (remove-cur-filters (-> target :c1 :file) ref)
-        train-info [{:file (-> target :c-files first)
+        hard-filters ["FS > 60.0" "HRun > 5.0" "QD < 2.0" "HaplotypeScore > 13.0"]
+        train-info [{:file (-> support :c-files first)
                       :name "concordant"
                      :prior 10.0}]]
     (-> target
-        (assoc-in [:c1 :file] (variant-recalibration-filter in-vcf train-info ref))
+        (assoc-in [:c1 :file] (-> in-vcf
+                                  (variant-recalibration-filter train-info ref)
+                                  (variant-filter hard-filters ref)))
         (assoc-in [:c1 :mod] "recal"))))

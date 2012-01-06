@@ -178,7 +178,9 @@
             (update-w-finalizer [cur-cmps finalizer]
               "Update the current comparisons with a defined finalizer."
               (let [updated-cmp ((get finalize-fns (:method finalizer))
-                                 (get cmps-by-name (:target finalizer)) (:ref exp))]
+                                 (get cmps-by-name (:target finalizer))
+                                 (get cmps-by-name (get finalizer :support (:target finalizer)))
+                                 (:ref exp))]
                 (assoc cur-cmps (:target finalizer)
                        (compare-two-vcf (:c1 updated-cmp) (:c2 updated-cmp) exp config))))]
       (map add-summary (vals (reduce update-w-finalizer cmps-by-name (:finalize exp)))))))
