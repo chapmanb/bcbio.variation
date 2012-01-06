@@ -18,7 +18,7 @@ experiments:
           - QD < 2.0
           - FS > 60.0
           - MQRankSum < -12.5
-    finalize:
-      - method: recal-filter
-        target: [gatk, freebayes]
+    #finalize:
+    #  - method: recal-filter
+    #    target: [gatk, freebayes]
                 

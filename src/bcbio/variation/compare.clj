@@ -62,8 +62,9 @@
                              [call1 call2 "discordance"]
                              [call2 call1 "discordance"]]]
        (let [file-info {:out-vcf (str (fs/file base-dir
-                                               (format "%s-%s-%s-%s.vcf"
-                                                       sample (:name c1) (:name c2) cmp-type)))}
+                                               (format "%s-%s%s-%s%s-%s.vcf"
+                                                       sample (:name c1) (get c1 :mod "")
+                                                       (:name c2) (get c2 :mod "") cmp-type)))}
              args (concat
                    ["-R" ref
                     "--sample_name" sample
@@ -167,18 +168,20 @@
 
 (defn finalize-comparisons [cmps exp config]
   "Finalize all comparisons with finished initial pass data."
-  (letfn [(add-summary [x]
-            (assoc x :summary (top-level-metrics x)))]
-    (let [finalize-fns {"recal-filter" pipeline-recalibration}
-          cmps-by-name (reduce (fn [m x] (assoc m [(-> x :c1 :name)
-                                                   (-> x :c2 :name)] x))
-                               (ordered-map)
-                               cmps)]
-      (for [finalizer (:finalize exp)]
-        ((get finalize-fns (:method finalizer))
-         (get cmps-by-name (:target finalizer))
-         (:ref exp)))
-      (map add-summary (vals cmps-by-name)))))
+  (let [finalize-fns {"recal-filter" pipeline-recalibration}
+        cmps-by-name (reduce (fn [m x] (assoc m [(-> x :c1 :name)
+                                                 (-> x :c2 :name)] x))
+                             (ordered-map)
+                             cmps)]
+    (letfn [(add-summary [x]
+              (assoc x :summary (top-level-metrics x)))
+            (update-w-finalizer [cur-cmps finalizer]
+              "Update the current comparisons with a defined finalizer."
+              (let [updated-cmp ((get finalize-fns (:method finalizer))
+                                 (get cmps-by-name (:target finalizer)) (:ref exp))]
+                (assoc cur-cmps (:target finalizer)
+                       (compare-two-vcf (:c1 updated-cmp) (:c2 updated-cmp) exp config))))]
+      (map add-summary (vals (reduce update-w-finalizer cmps-by-name (:finalize exp)))))))
 
 (defn -main [config-file]
   (let [config (-> config-file slurp yaml/parse-string)

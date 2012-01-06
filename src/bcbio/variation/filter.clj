@@ -41,6 +41,7 @@
                                                  (:prior x))
                                             (:file x)])
                                    training-vcfs)))]
+    (println args)
     (broad/run-gatk "VariantRecalibrator" args file-info {:out [:out-recal :out-tranch]})
     file-info))
 
@@ -78,7 +79,10 @@
 (defn pipeline-recalibration [target ref]
   "Perform variant recalibration and filtration as part of processing pipeline."
   (let [in-vcf (remove-cur-filters (-> target :c1 :file) ref)
-        train-info {:file (-> target :c-files first)
-                    :name "concordant"
-                    :prior 10.0}]
-    (variant-recalibration-filter in-vcf train-info ref)))
+        train-info [{:file (-> target :c-files first)
+                      :name "concordant"
+                     :prior 10.0}]]
+    (-> target
+        (assoc-in [:c1 :file] in-vcf)
+        ;(assoc-in [:c1 :file] (variant-recalibration-filter in-vcf train-info ref))
+        (assoc-in [:c1 :mod] "recal"))))
