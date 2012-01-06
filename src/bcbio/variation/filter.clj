@@ -83,6 +83,5 @@
                       :name "concordant"
                      :prior 10.0}]]
     (-> target
-        (assoc-in [:c1 :file] in-vcf)
-        ;(assoc-in [:c1 :file] (variant-recalibration-filter in-vcf train-info ref))
+        (assoc-in [:c1 :file] (variant-recalibration-filter in-vcf train-info ref))
         (assoc-in [:c1 :mod] "recal"))))
