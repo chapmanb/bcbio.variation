@@ -10,7 +10,7 @@
                  [clj-yaml "0.3.1"]
                  [doric "0.7.0-SNAPSHOT"]
                  [ordered "1.0.0"]]
-  :dev-dependencies [[midje "1.3.0"]]
+  :dev-dependencies [[midje "1.3.0" :exclusions [org.clojure/clojure]]]
   :java-source-path "src/java"
   :omit-source true
   :aot [bcbio.variation.vcfwalker bcbio.variation.core]
