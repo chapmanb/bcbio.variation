@@ -16,7 +16,7 @@ Requires Java 1.6 and [Leiningen][3].
 
 ### Generate summary of concordance between variant calls
 
-    # lein run :compare config/method-comparison.yaml
+    $ lein run :compare config/method-comparison.yaml
 
 ### Run GATK walker for variant statistics
 
