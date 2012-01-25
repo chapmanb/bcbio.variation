@@ -10,6 +10,7 @@
             Genotype VariantContextBuilder GenotypesContext])
   (:use [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template]]
         [bcbio.variation.callable :only [callable-checker]]
+        [bcbio.variation.complex :only [normalize-mnps]]
         [clojure.string :only [join]])
   (:require [fs.core :as fs]
             [bcbio.run.itx :as itx]
@@ -98,3 +99,16 @@
       (map (fn [[v b merge?]] (if merge? (merge-vcf v merged b ref) v))
            (map vector vcfs align-bams do-merges)))))
 
+
+(defn gatk-normalize [call ref out-dir]
+  "Prepare call information for VCF comparisons by normalizing through GATK.
+  Handles:
+   1. Combining multiple input files
+   2. Splitting combined MNPs into phased SNPs"
+  (letfn [(merge-call-files [call]
+            (combine-variants (:file call) ref
+                              :merge-type :full :out-dir out-dir))]
+    (let [merge-file (if (coll? (:file call))
+                       (merge-call-files call)
+                       (:file call))]
+      (assoc call :file (normalize-mnps merge-file ref out-dir)))))

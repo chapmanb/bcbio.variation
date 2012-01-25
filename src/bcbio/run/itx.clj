@@ -68,6 +68,12 @@
       (subs fname 0 i)
       fname)))
 
-(defn add-file-part [fname part]
+(defn add-file-part
   "Add file extender: base.txt -> base-part.txt"
-  (format "%s-%s%s" (file-root fname) part (fs/extension fname)))
+  ([fname part]
+     (add-file-part fname part nil))
+  ([fname part out-dir]
+     (let [out-fname (format "%s-%s%s" (file-root fname) part (fs/extension fname))]
+       (if-not (nil? out-dir)
+         (str (fs/file out-dir (fs/base-name out-fname)))
+         out-fname))))

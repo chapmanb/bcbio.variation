@@ -6,7 +6,7 @@
                  [org.clojars.chapmanb/picard "1.58"]
                  [incanter/incanter-core "1.3.0-SNAPSHOT"]
                  [incanter/incanter-charts "1.3.0-SNAPSHOT"]
-                 [fs "1.0.0"]
+                 [fs "1.1.2"]
                  [clj-yaml "0.3.1"]
                  [doric "0.7.0-SNAPSHOT"]
                  [ordered "1.0.0"]]

@@ -67,8 +67,11 @@
         (split-mnp vc)
         (:vc vc))))))
 
-(defn normalize-mnps [in-file ref]
+(defn normalize-mnps
   "Convert MNPs into single variants."
-  (let [out-file (itx/add-file-part in-file "nomnp")]
-    (write-vcf-w-template in-file {:out out-file} (get-split-mnps in-file) ref)
-    out-file))
+  ([in-file ref]
+     (normalize-mnps in-file ref nil))
+  ([in-file ref out-dir]
+     (let [out-file (itx/add-file-part in-file "nomnp" out-dir)]
+       (write-vcf-w-template in-file {:out out-file} (get-split-mnps in-file) ref)
+       out-file)))
