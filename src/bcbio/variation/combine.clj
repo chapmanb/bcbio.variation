@@ -10,7 +10,7 @@
             Genotype VariantContextBuilder GenotypesContext])
   (:use [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template]]
         [bcbio.variation.callable :only [callable-checker]]
-        [bcbio.variation.complex :only [normalize-mnps]]
+        [bcbio.variation.complex :only [normalize-variants]]
         [clojure.string :only [join]])
   (:require [fs.core :as fs]
             [bcbio.run.itx :as itx]
@@ -111,4 +111,4 @@
     (let [merge-file (if (coll? (:file call))
                        (merge-call-files call)
                        (:file call))]
-      (assoc call :file (normalize-mnps merge-file ref out-dir)))))
+      (assoc call :file (normalize-variants merge-file ref out-dir)))))
