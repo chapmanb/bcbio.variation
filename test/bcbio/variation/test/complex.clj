@@ -11,5 +11,5 @@
       ref (str (fs/file data-dir "hg19.fa"))
       vcf (str (fs/file data-dir "freebayes-calls-indels.vcf"))
       nomnp-out (itx/add-file-part vcf "nomnp")]
-  (future-facts "Deal with multi-nucleotide polymorphisms"
+  (facts "Deal with multi-nucleotide polymorphisms"
     (normalize-variants vcf ref) => nomnp-out))

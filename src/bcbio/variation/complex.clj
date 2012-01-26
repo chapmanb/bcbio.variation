@@ -10,12 +10,14 @@
 
 ;; Multi-nucleotide polymorphisms (MNPs): Split into single variant primitives.
 
+(defn- has-variant-base? [alleles i]
+  "Do a set of alleles have any variants at a position."
+  (> (count (set (map #(nth % i nil) alleles)))
+     1))
+
 (defn- split-alleles [vc genotype]
   "Split alleles for a MNP genotype into single call for each."
-  (letfn [(has-variant-base? [alleles i]
-            (> (count (set (map #(nth % i) alleles)))
-               1))
-          (extract-variants [alleles i]
+  (letfn [(extract-variants [alleles i]
             (let [ref-allele (nth (first alleles) i)
                   cur-alleles (map #(Allele/create (str (nth % i))
                                                    (= ref-allele (nth % i)))
@@ -46,7 +48,7 @@
   (let [pos (+ (:offset allele-info) (.getStart vc))]
     (-> (VariantContextBuilder. vc)
         (.start pos)
-        (.stop pos)
+        (.stop (+ pos (get allele-info :size 0)))
         (.genotypes (genotype-w-alleles vc (:alleles allele-info) (> i 0)))
         (.alleles (set (cons (:ref-allele allele-info) (:alleles allele-info))))
         (.make))))
@@ -60,11 +62,29 @@
 
 ;; Handle indels creating a normalized representation for comparison.
 
-(defn- strip-indel [vc]
-  "Remove extra variant bases "
-  (-> vc
-      ;(VariantContextUtils/createVariantContextWithPaddedAlleles true)
-      (VariantContextUtils/createVariantContextWithTrimmedAlleles)))
+(defn- maybe-strip-indel
+  "Remove extra variant bases if necessary from 5' end of indels."
+  [vc]
+  {:pre [(= 1 (count (:genotypes vc)))]}
+  (letfn [(strip-indel [vc i alleles]
+            (let [start-pos (- i 1)
+                  ref-allele (subs (first alleles) start-pos)
+                  cur-alleles (map #(Allele/create (subs % start-pos)
+                                                   (= ref-allele (subs % start-pos)))
+                                   alleles)]
+              (new-split-vc vc 0 {:offset i
+                                  :size (- (count ref-allele) 1)
+                                  :ref-allele (first cur-alleles)
+                                  :alleles (rest cur-alleles)})))]
+    (let [orig-alleles (map #(.getBaseString %) (cons (:ref-allele vc)
+                                                      (-> vc :genotypes first :alleles)))
+          first-var-i (first (filter #(has-variant-base? orig-alleles %)
+                                     (range (apply max (map count orig-alleles)))))]
+      (if (= first-var-i 0)
+        (:vc vc)
+        (strip-indel (:vc vc) first-var-i orig-alleles)))))
+
+;; Process entire files, normalizing more complex variations
 
 (defn- get-normalized-vcs [in-file]
   "Lazy list of variant context with MNPs split into single genotypes and indels stripped."
@@ -73,7 +93,7 @@
     (for [vc (parse-vcf in-file)]
       (condp = (:type vc)
         "MNP" (split-mnp vc)
-        "INDEL" (strip-indel (:vc vc))
+        "INDEL" (maybe-strip-indel vc)
         (:vc vc))))))
 
 (defn normalize-variants
