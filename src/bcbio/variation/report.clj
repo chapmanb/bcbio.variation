@@ -1,7 +1,9 @@
 ;; Parse and provide detailed information from GATKReport output
 
 (ns bcbio.variation.report
-  (:import [org.broadinstitute.sting.gatk.report GATKReport]))
+  (:import [org.broadinstitute.sting.gatk.report GATKReport])
+  (:use [ordered.map :only [ordered-map]])
+  (:require [doric.core :as doric]))
 
 (defn concordance-report-metrics [sample in-file]
   "Retrieve high level concordance metrics from GATK VariantEval report."
@@ -19,9 +21,14 @@
                         (map #(nth (vec (.values %)) i) cols)))))))
 
 (defn write-concordance-metrics [metrics wrtr]
-  (.write wrtr (format "Overall genotype concordance   %s\n"
-                    (:percent_overall_genotype_concordance metrics)))
-  (.write wrtr (format "Non-reference discrepancy rate %s\n"
-                       (:percent_non_reference_discrepancy_rate metrics)))
-  (.write wrtr (format "Non-reference sensitivity      %s\n"
-                       (:percent_non_reference_sensitivity metrics))))
+  (let [to-write {:genotype_concordance "Overall genotype concordance"
+                  :nonref_discrepency "Non-reference discrepancy rate"
+                  :nonref_sensitivity "Non-reference sensitivity"
+                  :concordant "Concordant count"
+                  :nonref_concordant "Non-reference concordant count"
+                  :discordant1 (str "Discordant: " (:call1 metrics))
+                  :discordant2 (str "Discordant: " (:call2 metrics))}]
+    (.write wrtr (str (doric/table [:metric :value]
+                                   (map (fn [[k v]] {:metric v :value (get metrics k)})
+                                        to-write))
+                      "\n"))))

@@ -201,7 +201,7 @@
         (doseq [f (:c-files x)]
           (.write w (format "** %s\n" (fs/base-name f)))
           (write-summary-table (vcf-stats f) :wrtr w))
-        (write-concordance-metrics (:metrics x) w)))
+        (write-concordance-metrics (:summary x) w)))
     (with-open [w (get-summary-writer config config-file "summary.csv")]
       (doseq [[i x] (map-indexed vector (map :summary comparisons))]
         (if (= i 0)
