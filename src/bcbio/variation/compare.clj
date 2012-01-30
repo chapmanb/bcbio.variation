@@ -11,7 +11,8 @@
   (:use [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template]]
         [bcbio.variation.stats :only [vcf-stats write-summary-table]]
         [bcbio.variation.report :only [concordance-report-metrics
-                                       write-concordance-metrics]]
+                                       write-concordance-metrics
+                                       top-level-metrics]]
         [bcbio.variation.combine :only [combine-variants create-merged
                                         select-by-sample gatk-normalize]]
         [bcbio.variation.annotation :only [add-variant-annotations]]
@@ -114,27 +115,6 @@
                                     (itx/file-root (fs/base-name config-file)) ext)))))
     (writer System/out)))
 
-(defn- top-level-metrics [x]
-  "Provide one-line summary of similarity metrics for a VCF comparison."
-  (letfn [(passes-filter? [vc]
-            (= (count (:filters vc)) 0))
-          (nonref-passes-filter? [vc]
-            (and (passes-filter? vc)
-                 (every? #(contains? #{"HET" "HOM_VAR"} (:type %)) (:genotypes vc))))
-          (count-variants [f check?]
-            (count (filter check? (parse-vcf f))))]
-    (ordered-map
-     :sample (:sample x)
-     :call1 (-> x :c1 :name)
-     :call2 (-> x :c2 :name)
-     :genotype_concordance (-> x :metrics :percent_overall_genotype_concordance)
-     :nonref_discrepency (-> x :metrics :percent_non_reference_discrepancy_rate)
-     :nonref_sensitivity (-> x :metrics :percent_non_reference_sensitivity)
-     :concordant (count-variants (first (:c-files x)) passes-filter?)
-     :nonref_concordant (count-variants (first (:c-files x)) nonref-passes-filter?)
-     :discordant1 (count-variants (second (:c-files x)) passes-filter?)
-     :discordant2 (count-variants (nth (:c-files x) 2) passes-filter?))))
-
 (defn- prepare-vcf-calls [exp config]
   "Prepare merged and annotated VCF files for an experiment."
   (let [align-bams (map #(get % :align (:align exp)) (:calls exp))
@@ -206,4 +186,5 @@
       (doseq [[i x] (map-indexed vector (map :summary comparisons))]
         (if (= i 0)
           (.write w (format "%s\n" (join "," (map name (keys x))))))
-        (.write w (format "%s\n" (join "," (vals x))))))))
+        (.write w (format "%s\n" (join "," (for [v ( vals x)]
+                                             (if (map? v) (:total v) v)))))))))

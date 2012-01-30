@@ -105,6 +105,8 @@
   Handles:
    1. Combining multiple input files
    2. Splitting combined MNPs into phased SNPs"
+  (if-not (fs/exists? out-dir)
+    (fs/mkdirs out-dir))
   (letfn [(merge-call-files [call]
             (combine-variants (:file call) ref
                               :merge-type :full :out-dir out-dir))]
