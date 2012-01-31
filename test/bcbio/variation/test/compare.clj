@@ -7,6 +7,7 @@
         [bcbio.variation.combine]
         [bcbio.variation.compare]
         [bcbio.variation.filter]
+        [bcbio.variation.phasing]
         [bcbio.variation.stats]
         [bcbio.variation.report])
   (:require [fs.core :as fs]))
@@ -77,3 +78,8 @@
     (first (vcf-stats vcf1)) => {:max 2.0, :pct75 2.0, :median 2.0, :pct25 2.0, :min 2.0,
                                  :count 10, :metric "AC"}
     (write-summary-table (vcf-stats vcf1)) => nil))
+
+(let [data-dir (str (fs/file "." "test" "data"))
+      pvcf (str (fs/file data-dir "phasing-calls.vcf"))]
+  (facts "Handle haplotype phasing specified in VCF output files."
+    (count (parse-phased-haplotypes pvcf)) =future=> 3))
