@@ -7,7 +7,7 @@ chr22	13	.	T	A	29	PASS	.	GT	0|1
 chr22	14	.	G	A	29	PASS	.	GT	0|1
 chr22	15	.	G	A	29	PASS	.	GT	0/1
 chr22	16	.	A	C	29	PASS	.	GT	0/1
-chr22	17	.	T	A	29	PASS	.	GT	0|1
+chr22	17	.	T	A	29	PASS	.	GT	0/1
 chr22	18	.	A	C	29	PASS	.	GT	0|1
 chr22	19	.	A	C	29	PASS	.	GT	0|1
 chr22	20	.	T	A	29	PASS	.	GT	0|1

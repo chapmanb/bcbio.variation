@@ -39,6 +39,12 @@
   (let [idx (IndexFactory/createIndex (file in-file) (VCFCodec.))]
     (BasicFeatureSource. (.getAbsolutePath (file in-file)) idx (VCFCodec.))))
 
+(defn get-vcf-retriever [in-file]
+  "Indexed VCF file to retrieve iterator for items in a region."
+  (let [base (vcf-source in-file)]
+    (fn [chr start end]
+      (vcf-iterator (.query base chr start end)))))
+
 (defn parse-vcf [in-file]
   "Lazy iterator of VariantContext information from VCF file."
   (vcf-iterator (.iterator (vcf-source in-file))))

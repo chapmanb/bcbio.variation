@@ -80,6 +80,14 @@
     (write-summary-table (vcf-stats vcf1)) => nil))
 
 (let [data-dir (str (fs/file "." "test" "data"))
-      pvcf (str (fs/file data-dir "phasing-calls.vcf"))]
+      pvcf (str (fs/file data-dir "phasing-calls.vcf"))
+      ref-vcf (str (fs/file data-dir "phasing-reference.vcf"))]
   (facts "Handle haplotype phasing specified in VCF output files."
-    (count (parse-phased-haplotypes pvcf)) =future=> 3))
+    (let [haps (parse-phased-haplotypes pvcf)]
+      (count haps) => 4
+      (count (first haps)) => 5
+      (-> haps first first :start) => 10
+      (count (second haps)) => 1
+      (-> haps (nth 2) first :start) => 16))
+  (facts "Parse haploid reference genotypes for haplotype comparisons"
+    (parse-haploid-reference ref-vcf) =future=> nil))
