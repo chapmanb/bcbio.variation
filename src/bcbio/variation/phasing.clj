@@ -46,7 +46,10 @@
        (sort-by first)
        ffirst))
 
-(defn- get-alleles [vc]
+(defn- get-alleles
+  "Retrieve alleles for a single genotype variant context."
+  [vc]
+  {:pre [(= 1 (count (:genotypes vc)))]}
   (-> vc :genotypes first :alleles))
 
 (defn- matching-allele
@@ -88,10 +91,20 @@
      (every? is-snp? vcs) :snp
      :else :unknown)))
 
+(defn- nomatch-het-alt? [vc ref-vcs]
+  "Determine if the variant has a non-matching heterozygous alternative allele."
+  (let [match-allele-i (matching-allele vc ref-vcs)
+        no-match-alleles (remove nil? (map-indexed
+                                       (fn [i x] (if-not (= i match-allele-i) x))
+                                       (get-alleles vc)))]
+    (and (= "HET" (-> vc :genotypes first :type))
+         (not-every? #(.isReference %) no-match-alleles))))
+
 (defn- comparison-metrics [vc ref-vcs i]
   "Provide metrics for comparison of haploid allele to reference calls."
   {:comparison (cmp-allele-to-ref vc ref-vcs i)
    :variant-type (get-variant-type (cons vc ref-vcs))
+   :nomatch-het-alt (nomatch-het-alt? vc ref-vcs)
    :vc (:vc vc)})
 
 (defn- score-phased-region [vcs ref-fetch]

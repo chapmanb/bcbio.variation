@@ -92,7 +92,8 @@
   (facts "Compare phased calls to haploid reference genotypes."
     (let [cmps (score-phased-calls pvcf ref-vcf)]
       (map :variant-type (first cmps)) => [:snp :snp :indel :snp :snp]
-      (map :comparison (last cmps)) => [:concordant :phasing-error :concordant :discordant])))
+      (map :comparison (last cmps)) => [:concordant :phasing-error :concordant :discordant]
+      (map :nomatch-het-alt (first cmps)) => [true false true false true])))
 
 (facts "Determine the highest count of items in a list"
   (highest-count []) => nil
