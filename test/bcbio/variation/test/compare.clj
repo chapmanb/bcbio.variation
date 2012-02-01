@@ -89,5 +89,14 @@
       (-> haps first first :start) => 10
       (count (second haps)) => 1
       (-> haps (nth 2) first :start) => 16))
-  (facts "Parse haploid reference genotypes for haplotype comparisons"
-    (parse-haploid-reference ref-vcf) =future=> nil))
+  (facts "Compare phased calls to haploid reference genotypes."
+    (let [cmps (score-phased-calls pvcf ref-vcf)]
+      (map :variant-type (first cmps)) => [:snp :snp :indel :snp :snp]
+      (map :comparison (last cmps)) => [:concordant :phasing-error :concordant :discordant])))
+
+(facts "Determine the highest count of items in a list"
+  (highest-count []) => nil
+  (highest-count ["a" "a"]) => "a"
+  (highest-count ["a" "b" "b"]) => "b"
+  (highest-count ["a" "a" "b" "b"]) => "a"
+  (highest-count ["b" "b" "a" "a"]) => "a")
