@@ -43,9 +43,10 @@
     (BasicFeatureSource. bed-file idx (BEDCodec.))))
 
 (defn callable-checker [align-bam ref & {:keys [out-dir] :or {out-dir nil}}]
-  (let [source (callable-interval-tree align-bam ref :out-dir out-dir)]
-    (letfn [(is-callable? [space start end]
-              (> (count (filter #(= (:name %) "CALLABLE")
-                                (features-in-region source space start end)))
-                 0))]
-      is-callable?)))
+  (if (nil? align-bam) (fn [& _] true)
+      (let [source (callable-interval-tree align-bam ref :out-dir out-dir)]
+        (letfn [(is-callable? [space start end]
+                  (> (count (filter #(= (:name %) "CALLABLE")
+                                    (features-in-region source space start end)))
+                     0))]
+          is-callable?))))

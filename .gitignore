@@ -18,3 +18,4 @@ test/data/*-filter*vcf
 test/data/*-nomnp*vcf
 test/data/method-comparison-summary*
 test/data/prep/
+test/data/grading/

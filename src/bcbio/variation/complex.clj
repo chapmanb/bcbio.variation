@@ -80,7 +80,7 @@
                                                       (-> vc :genotypes first :alleles)))
           first-var-i (first (filter #(has-variant-base? orig-alleles %)
                                      (range (apply max (map count orig-alleles)))))]
-      (if (= first-var-i 0)
+      (if (or (nil? first-var-i) (= first-var-i 0))
         (:vc vc)
         (strip-indel (:vc vc) first-var-i orig-alleles)))))
 

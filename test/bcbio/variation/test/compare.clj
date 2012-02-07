@@ -80,7 +80,7 @@
     (write-summary-table (vcf-stats vcf1)) => nil))
 
 (let [data-dir (str (fs/file "." "test" "data"))
-      pvcf (str (fs/file data-dir "phasing-calls.vcf"))
+      pvcf (str (fs/file data-dir "phasing-contestant.vcf"))
       ref-vcf (str (fs/file data-dir "phasing-reference.vcf"))]
   (facts "Handle haplotype phasing specified in VCF output files."
     (let [haps (parse-phased-haplotypes pvcf)]

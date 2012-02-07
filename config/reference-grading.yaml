@@ -1,0 +1,13 @@
+---
+outdir: test/data/grading
+outdir-prep: test/data/grading/prep
+experiments:
+  - sample: NA00001
+    ref: test/data/hg19.fa
+    intervals: test/data/phasing-reference-regions.bed
+    calls:
+      - name: reference
+        file: test/data/phasing-reference.vcf
+      - name: contestant
+        file: test/data/phasing-contestant.vcf
+        intervals: test/data/phasing-contestant-regions.bed
