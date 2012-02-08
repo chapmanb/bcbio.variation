@@ -125,7 +125,7 @@
                                             :out-dir out-dir)
                          start-vcfs)
         merged-vcfs (create-merged sample-vcfs align-bams (map #(get % :refcalls true) (:calls exp))
-                                   (:ref exp) :out-dir (:outdir config))
+                                   (:ref exp) :out-dir (:outdir config) :intervals (:intervals exp))
         ann-vcfs (map (fn [[v b c]] (if (get c :annotate false)
                                         (add-variant-annotations v b (:ref exp))
                                         v))

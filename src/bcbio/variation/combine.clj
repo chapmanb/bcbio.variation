@@ -16,9 +16,10 @@
             [bcbio.run.itx :as itx]
             [bcbio.run.broad :as broad]))
 
-(defn combine-variants [vcfs ref & {:keys [merge-type out-dir]
+(defn combine-variants [vcfs ref & {:keys [merge-type out-dir intervals]
                                     :or {merge-type :unique
-                                         out-dir nil}}]
+                                         out-dir nil
+                                         intervals nil}}]
   "Combine two variant files with GATK CombineVariants."
   (letfn [(unique-name [f]
             (-> f fs/base-name itx/file-root))]
@@ -33,6 +34,7 @@
                         "-o" :out-vcf
                         "--rod_priority_list" (join "," (map unique-name vcfs))]
                        (flatten (map #(list (str "--variant:" (unique-name %)) %) vcfs))
+                       (if-not (nil? intervals) ["-L", intervals] [])
                        (case merge-type
                              :full ["--genotypemergeoption" "PRIORITIZE"]
                              :unique ["--genotypemergeoption" "UNIQUIFY"]
@@ -88,17 +90,17 @@
     (broad/run-gatk "SelectVariants" args file-info {:out [:out-vcf]})
     (:out-vcf file-info)))
 
-(defn create-merged [vcfs align-bams do-merges ref & {:keys [out-dir]
-                                                      :or {out-dir nil}}]
+(defn create-merged [vcfs align-bams do-merges ref & {:keys [out-dir intervals]
+                                                      :or {out-dir nil
+                                                           intervals nil}}]
   "Create merged VCF files with no-call/ref-calls for each of the inputs."
   (letfn [(merge-vcf [vcf all-vcf align-bam ref]
             (let [ready-vcf (combine-variants [vcf all-vcf] ref
                                               :merge-type :full)]
               (convert-no-calls ready-vcf align-bam ref :out-dir out-dir)))]
-    (let [merged (combine-variants vcfs ref :merge-type :minimal)]
+    (let [merged (combine-variants vcfs ref :merge-type :minimal :intervals intervals)]
       (map (fn [[v b merge?]] (if merge? (merge-vcf v merged b ref) v))
            (map vector vcfs align-bams do-merges)))))
-
 
 (defn gatk-normalize [call ref out-dir]
   "Prepare call information for VCF comparisons by normalizing through GATK.
