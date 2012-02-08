@@ -3,6 +3,7 @@
 (ns bcbio.variation.report
   (:import [org.broadinstitute.sting.gatk.report GATKReport])
   (:use [ordered.map :only [ordered-map]]
+        [clojure.math.combinatorics :only [cartesian-product]]
         [bcbio.variation.variantcontext :only [parse-vcf]])
   (:require [doric.core :as doric]))
 
@@ -50,6 +51,39 @@
      :discordant1 (all-vrn-counts (second (:c-files x)))
      :discordant2 (all-vrn-counts (nth (:c-files x) 2)))))
 
+(defn calc-accuracy [metrics]
+  "Calculate an overall accuracy score from input metrics.
+  The accuracy logic is:
+  (#correctly aligned bases / (#correctly aligned bases +
+                               1*(simple substitutions and indels) +
+                               2*(larger errors)))."
+  (letfn [(get-penalty [[error-type call-type]]
+            (case call-type
+              :snp 1
+              :indel 2))]
+    (let [error-items (cartesian-product [:discordant :phasing-error] [:snp :indel])
+          error-score (apply + (map #(* (get-in metrics %) (get-penalty %)) error-items))]
+      (float
+       (/ (:total-bases metrics)
+          (+ (:total-bases metrics) error-score))))))
+
+(defn write-scoring-table [metrics wrtr]
+  "Summary table of high level variables and scoring metrics for comparison."
+  (let [to-write (ordered-map :accuracy "Overall accuracy score"
+                              :total-bases "Total bases compared"
+                              [:discordant :snp] "Discordant SNPs"
+                              [:discordant :indel] "Discordant indels"
+                              [:phasing-error :snp] "Phasing Error SNPs"
+                              [:phasing-error :indel] "Phasing Error indels"
+                              :haplotype-blocks "Phased haplotype blocks"
+                              :nonmatch-het-alt "Non-matching heterozygous alternative alleles")
+        s-metrics (assoc metrics :accuracy (calc-accuracy metrics))]
+    (letfn [(prep-row [[k x]]
+              {:metric x
+               :value (if (coll? k) (get-in s-metrics k) (get s-metrics k))})]
+      (.write wrtr (str (doric/table [:metric :value] (map prep-row to-write))
+                        "\n")))))
+
 (defn calc-score [type val]
   "Calculate scoring for input metric types"
   (if (keyword? type) ""
@@ -74,6 +108,6 @@
     (letfn [(get-value-and-score [[k metric]]
               (let [val (if (coll? k) (get-in metrics k) (get metrics k))]
                 {:metric metric :value val :score (calc-score k val)}))]
-      (.write wrtr (str (doric/table [:metric :value {:name :score :align :right}]
+      (.write wrtr (str (doric/table [:metric :value]
                                      (map get-value-and-score to-write))
                         "\n")))))

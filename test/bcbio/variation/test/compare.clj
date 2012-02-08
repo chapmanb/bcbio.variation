@@ -93,7 +93,15 @@
     (let [cmps (score-phased-calls pvcf ref-vcf)]
       (map :variant-type (first cmps)) => [:snp :snp :indel :snp :snp]
       (map :comparison (last cmps)) => [:concordant :phasing-error :concordant :discordant]
-      (map :nomatch-het-alt (first cmps)) => [true false true false true])))
+      (map :nomatch-het-alt (first cmps)) => [true false true false true]))
+  (facts "Check is a variant file is a haploid reference."
+    (is-haploid? pvcf) => false
+    (is-haploid? ref-vcf) => true))
+
+(facts "Calculate final accuracy score for contestant/reference comparison."
+  (calc-accuracy {:total-bases 10
+                  :discordant {:indel 1 :snp 1}
+                  :phasing-error {:indel 1 :snp 1}}) => (roughly 0.625))
 
 (facts "Determine the highest count of items in a list"
   (highest-count []) => nil
