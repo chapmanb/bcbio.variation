@@ -12,11 +12,13 @@
         [bcbio.variation.stats :only [vcf-stats write-summary-table]]
         [bcbio.variation.report :only [concordance-report-metrics
                                        write-concordance-metrics
+                                       write-scoring-table
                                        top-level-metrics]]
         [bcbio.variation.combine :only [combine-variants create-merged
                                         select-by-sample gatk-normalize]]
         [bcbio.variation.annotation :only [add-variant-annotations]]
         [bcbio.variation.filter :only [variant-filter pipeline-recalibration]]
+        [bcbio.variation.phasing :only [is-haploid? compare-two-vcf-phased]]
         [clojure.math.combinatorics :only [combinations]]
         [clojure.java.io]
         [clojure.string :only [join]]
@@ -125,7 +127,7 @@
                                             :out-dir out-dir)
                          start-vcfs)
         merged-vcfs (create-merged sample-vcfs align-bams (map #(get % :refcalls true) (:calls exp))
-                                   (:ref exp) :out-dir (:outdir config))
+                                   (:ref exp) :out-dir (:outdir config) :intervals (:intervals exp))
         ann-vcfs (map (fn [[v b c]] (if (get c :annotate false)
                                         (add-variant-annotations v b (:ref exp))
                                         v))
@@ -137,8 +139,8 @@
     (map (fn [[c v]] (assoc c :file v))
          (map vector (:calls exp) filter-vcfs))))
 
-(defn- compare-two-vcf [c1 c2 exp config]
-  "Compare two VCF files based on the supplied configuration."
+(defn- compare-two-vcf-standard [c1 c2 exp config]
+  "Compare two standard VCF files based on the supplied configuration."
   (let [c-files (select-by-concordance (:sample exp) c1 c2 (:ref exp)
                                        :out-dir (:outdir config)
                                        :interval-file (:intervals exp))
@@ -147,6 +149,15 @@
                                       :interval-file (:intervals exp))
         metrics (first (concordance-report-metrics (:sample exp) eval-file))]
     {:c-files c-files :metrics metrics :c1 c1 :c2 c2 :sample (:sample exp)}))
+
+(defn- compare-two-vcf [c1 c2 exp config]
+  "Compare two VCF files, handling standard and haploid specific comparisons."
+  (let [phased-vcfs (group-by #(-> % :file is-haploid?) [c1 c2])]
+    (if (get phased-vcfs true)
+      (compare-two-vcf-phased (first (get phased-vcfs false))
+                              (first (get phased-vcfs true))
+                              exp config)
+      (compare-two-vcf-standard c1 c2 exp config))))
 
 (defn finalize-comparisons [cmps exp config]
   "Finalize all comparisons with finished initial pass data."
@@ -178,6 +189,7 @@
       (doseq [x comparisons]
         (.write w (format "* %s : %s vs %s\n" (:sample x)
                           (-> x :c1 :name) (-> x :c2 :name)))
+        (write-scoring-table (:metrics x) w)
         (write-concordance-metrics (:summary x) w)
         (doseq [f (:c-files x)]
           (.write w (format "** %s\n" (fs/base-name f)))

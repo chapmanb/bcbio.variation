@@ -35,12 +35,15 @@
      :score (.getScore f)
      :strand (.getStrand f)}))
 
-(defn callable-interval-tree [align-bam ref & {:keys [out-dir] :or {out-dir nil}}]
-  "Retrieve an IntervalTree to retrieve information on callability in a region."
-  (let [bed-file (identify-callable align-bam ref :out-dir out-dir)
-        batch-size 500
+(defn bed-feature-source [bed-file]
+  "Provide tribble feature source for a BED formatted file."
+  (let [batch-size 500
         idx (IndexFactory/createIntervalIndex (file bed-file) (BEDCodec.) batch-size)]
     (BasicFeatureSource. bed-file idx (BEDCodec.))))
+
+(defn callable-interval-tree [align-bam ref & {:keys [out-dir] :or {out-dir nil}}]
+  "Retrieve an IntervalTree to retrieve information on callability in a region."
+  (bed-feature-source (identify-callable align-bam ref :out-dir out-dir)))
 
 (defn callable-checker [align-bam ref & {:keys [out-dir] :or {out-dir nil}}]
   (if (nil? align-bam) (fn [& _] true)

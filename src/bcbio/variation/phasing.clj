@@ -11,7 +11,17 @@
 ;;      - If mismatch and neither allele matches, then calling error
 
 (ns bcbio.variation.phasing
-  (:use [bcbio.variation.variantcontext :only [parse-vcf get-vcf-retriever]]))
+  (:use [bcbio.variation.variantcontext :only [parse-vcf get-vcf-retriever write-vcf-w-template]]
+        [bcbio.variation.callable :only [bed-feature-source]]
+        [ordered.map :only [ordered-map]])
+  (:require [fs.core :as fs]))
+
+(defn is-haploid? [vcf-file]
+  "Is the provided VCF file a haploid genome (one genotype or all homozygous)"
+  (letfn [(is-vc-haploid? [vc]
+            (or (= 1 (apply max (map #(count (:alleles %)) (:genotypes vc))))
+                (contains? #{"HOM_REF" "HOM_VAR"} (:type vc))))]
+    (every? is-vc-haploid? (parse-vcf vcf-file))))
 
 (defn is-phased?
   "Check for phasing on a single genotype variant context."
@@ -121,3 +131,51 @@
   (let [ref-fetch (get-vcf-retriever ref-vcf)]
     (map #(score-phased-region % ref-fetch)
          (parse-phased-haplotypes call-vcf))))
+
+(defn- write-concordance-output [vc-info sample-name base-info out-dir ref]
+  "Write concordant and discordant variants to VCF output files."
+  (let [base-dir (if (nil? out-dir) (fs/parent (:file base-info)) out-dir)
+        gen-file-name (fn [x] (str (fs/file base-dir (format "%s-%s-%s.vcf" sample-name
+                                                             (:name base-info) (name x)))))
+        out-files (apply ordered-map (flatten (map (juxt identity gen-file-name)
+                                                   [:concordant :discordant :phasing-error])))]
+    (if-not (fs/exists? base-dir)
+      (fs/mkdirs base-dir))
+    (write-vcf-w-template (:file base-info) out-files
+                          (map (juxt :comparison :vc) (flatten vc-info))
+                          ref)
+    (vals out-files)))
+
+(defn- count-graded-bases [bed-file]
+  "Count total bases graded based on BED interval file"
+  (letfn [(feature-size [x]
+            (- (.getEnd x) (.getStart x)))]
+    (apply + (map feature-size (.iterator (bed-feature-source bed-file))))))
+
+(defn- get-phasing-metrics [vc-info interval-file]
+  "Collect summary metrics for concordant/discordant and phasing calls"
+  (letfn [(count-nomatch-het-alt [xs]
+            (count (filter #(and (= (:comparison %) :concordant)
+                                 (:nomatch-het-alt %))
+                           (flatten vc-info))))
+          (blank-count-dict []
+            {:snp 0 :indel 0})
+          (add-current-count [coll x]
+            (let [cur-val (map x [:comparison :variant-type])]
+              (assoc-in coll cur-val (inc (get-in coll cur-val)))))]
+    (reduce add-current-count
+            {:haplotype-blocks (count vc-info)
+             :total-bases (count-graded-bases interval-file)
+             :nonmatch-het-alt (count-nomatch-het-alt vc-info)
+             :concordant (blank-count-dict)
+             :discordant (blank-count-dict)
+             :phasing-error (blank-count-dict)}
+            (flatten vc-info))))
+
+(defn compare-two-vcf-phased [call ref exp config]
+  "Compare two VCF files including phasing with a haplotype reference."
+  (let [compared-calls (score-phased-calls (:file call) (:file ref))]
+    {:c-files (write-concordance-output compared-calls (:sample exp) call
+                                        (:outdir config) (:ref exp))
+     :metrics (get-phasing-metrics compared-calls (:intervals exp)) 
+     :c1 call :c2 ref :sample (:sample exp)}))
