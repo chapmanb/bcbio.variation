@@ -3489,22 +3489,23 @@ differences for tweaking filters.</p>
         (if (= i 0)
           (.write w (format &quot;%s\n&quot; (join &quot;,&quot; (map name (keys x))))))
         (.write w (format &quot;%s\n&quot; (join &quot;,&quot; (for [v ( vals x)]
-                                             (if (map? v) (:total v) v)))))))))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#bcbio.variation.complex" name="bcbio.variation.complex"><h1 class="project-name">bcbio.variation.complex</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>Handle more complex variations representations: multi-nucleotide
-polymorphisms, indels and structural rearrangements</p>
-</td><td class="codes"></td></tr><tr><td class="docs"><p>(:import [org.broadinstitute.sting.utils.variantcontext Allele VariantContextBuilder GenotypesContext Genotype VariantContextUtils])</p>
+                                             (if (map? v) (:total v) v)))))))))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#bcbio.variation.complex" name="bcbio.variation.complex"><h1 class="project-name">bcbio.variation.complex</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>Handle complex variations representations: multi-nucleotide
+   polymorphisms and indels.</p>
 </td><td class="codes"><pre class="brush: clojure">(ns bcbio.variation.complex
   (:import [org.broadinstitute.sting.utils.variantcontext Allele
             VariantContextBuilder GenotypesContext Genotype
             VariantContextUtils])
   (:use [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template]])
-  (:require [bcbio.run.itx :as itx]))</pre></td></tr><tr><td class="docs"><p>Multi-nucleotide polymorphisms (MNPs): Split into single variant primitives.</p>
-</td><td class="codes"></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(defn- has-variant-base? [alleles i]
-  &quot;Do a set of alleles have any variants at a position.&quot;
+  (:require [bcbio.run.itx :as itx]))</pre></td></tr><tr><td class="docs"><h2>Multi-nucleotide polymorphisms (MNPs)</h2>
+
+<p>Split into single variant primitives.</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>Do a set of alleles have any variants at a position.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn- has-variant-base?
+  [alleles i]
   (&gt; (count (set (map #(nth % i nil) alleles)))
-     1))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(defn- split-alleles [vc genotype]
-  &quot;Split alleles for a MNP genotype into single call for each.&quot;
+     1))</pre></td></tr><tr><td class="docs"><p>Detect single call SNP variants within a MNP genotype.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn- split-alleles
+  [vc genotype]
   (letfn [(extract-variants [alleles i]
             (let [ref-allele (nth (first alleles) i)
                   cur-alleles (map #(Allele/create (str (nth % i))
@@ -3517,9 +3518,11 @@ polymorphisms, indels and structural rearrangements</p>
       (remove nil?
               (for [i (-&gt; orig-alleles first count range)]
                 (if (has-variant-base? orig-alleles i)
-                  (extract-variants orig-alleles i)))))))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(defn- genotype-w-alleles [vc alleles is-phased]
-  &quot;Retrieve a new genotype with the given alleles.&quot;
+                  (extract-variants orig-alleles i)))))))</pre></td></tr><tr><td class="docs"><p>Retrieve a new genotype with the given alleles.
+   Creates a single genotype from the VariantContext, copying the existing
+   genotype and substituting in the provided alleles and phasing information.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn- genotype-w-alleles
+  [vc alleles is-phased]
   (let [genotype (first (.getGenotypes vc))]
     (doto (-&gt; vc .getGenotypes GenotypesContext/copy)
       (.replace
@@ -3528,9 +3531,11 @@ polymorphisms, indels and structural rearrangements</p>
                   (.getLog10PError genotype)
                   (if (.filtersWereApplied genotype) (.getFilters genotype) nil)
                   (.getAttributes genotype)
-                  is-phased)))))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(defn- new-split-vc [vc i allele-info]
-  &quot;Create a new VariantContext from a base MNP given a split allele.&quot;
+                  is-phased)))))</pre></td></tr><tr><td class="docs"><p>Create a new VariantContext as a subset of an existing variant.
+   <code>allele-info</code> specifies the location size and alleles for the new variant:
+   <code>{:offset :size :ref-allele :alleles}</code></p>
+</td><td class="codes"><pre class="brush: clojure">(defn- new-split-vc
+  [vc i allele-info]
   (let [pos (+ (:offset allele-info) (.getStart vc))]
     (-&gt; (VariantContextBuilder. vc)
         (.start pos)
@@ -3542,8 +3547,10 @@ polymorphisms, indels and structural rearrangements</p>
   [vc]
   {:pre [(= 1 (count (:genotypes vc)))]}
   (let [alleles (split-alleles vc (-&gt; vc :genotypes first))]
-    (map (fn [[i x]] (new-split-vc (:vc vc) i x)) (map-indexed vector alleles))))</pre></td></tr><tr><td class="docs"><p>Handle indels creating a normalized representation for comparison.</p>
-</td><td class="codes"></td></tr><tr><td class="docs"><p>Remove extra variant bases if necessary from 5' end of indels.</p>
+    (map (fn [[i x]] (new-split-vc (:vc vc) i x)) (map-indexed vector alleles))))</pre></td></tr><tr><td class="docs"><h2>Indels</h2>
+
+<p>Create a normalized representation for comparison.</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>Remove extra variant bases, if necessary, from 5' end of indels.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn- maybe-strip-indel
   [vc]
   {:pre [(= 1 (count (:genotypes vc)))]}
@@ -3563,10 +3570,12 @@ polymorphisms, indels and structural rearrangements</p>
                                      (range (apply max (map count orig-alleles)))))]
       (if (or (nil? first-var-i) (= first-var-i 0))
         (:vc vc)
-        (strip-indel (:vc vc) first-var-i orig-alleles)))))</pre></td></tr><tr><td class="docs"><p>Process entire files, normalizing more complex variations</p>
-</td><td class="codes"></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(defn- get-normalized-vcs [in-file]
-  &quot;Lazy list of variant context with MNPs split into single genotypes and indels stripped.&quot;
+        (strip-indel (:vc vc) first-var-i orig-alleles)))))</pre></td></tr><tr><td class="docs"><h2>VCF file conversion</h2>
+
+<p>Process entire files, normalizing complex variations</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>Lazy list of variant context with MNPs split into single genotypes and indels stripped.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn- get-normalized-vcs
+  [in-file]
   (map (fn [x] [:out x])
    (flatten
     (for [vc (parse-vcf in-file)]
