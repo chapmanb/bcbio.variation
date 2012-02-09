@@ -3679,57 +3679,58 @@ differences for tweaking filters.</p>
                                   (variant-recalibration-filter train-info ref)
                                   (variant-filter hard-filters ref)))
         (assoc-in [:c1 :mod] &quot;recal&quot;))))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#bcbio.variation.phasing" name="bcbio.variation.phasing"><h1 class="project-name">bcbio.variation.phasing</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>Support phased haplotype comparisons between variant calls.
-This compares a phased set of calls versus haploid reference calls.</p>
+   Compares a phased set of calls versus haploid reference calls.</p>
 
-<p>The comparison logic is:
-- Group calls into regions based on phasing
-- For each phase region:
-- Determine which set of haploid alleles to compare with the reference
-- With each position in this haploid
-- Compare to reference allele
-- If mismatch and alternate allele matches reference, then phasing error
-- If mismatch and neither allele matches, then calling error</p>
-</td><td class="codes"></td></tr><tr><td class="docs"><p>(:use [bcbio.variation.variantcontext :only [parse-vcf get-vcf-retriever write-vcf-w-template]] [bcbio.variation.callable :only [bed-feature-source]] [ordered.map :only [ordered-map]])</p>
+<p>   The comparison logic is:</p>
+
+<ul>
+<li>Group calls into regions based on phasing</li>
+<li>For each phase region:
+<ul><li>Determine which set of haploid alleles to compare with the reference</li>
+<li>With each position in this haploid:
+<ul><li>Compare to reference allele</li>
+<li>If mismatch and alternate allele matches reference, then phasing error</li>
+<li>If mismatch and neither allele matches, then calling error</li></ul></li></ul></li>
+</ul>
 </td><td class="codes"><pre class="brush: clojure">(ns bcbio.variation.phasing
   (:use [bcbio.variation.variantcontext :only [parse-vcf get-vcf-retriever write-vcf-w-template]]
         [bcbio.variation.callable :only [bed-feature-source]]
         [ordered.map :only [ordered-map]])
-  (:require [fs.core :as fs]))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(defn is-haploid? [vcf-file]
-  &quot;Is the provided VCF file a haploid genome (one genotype or all homozygous)&quot;
-  (letfn [(is-vc-haploid? [vc]
-            (or (= 1 (apply max (map #(count (:alleles %)) (:genotypes vc))))
-                (contains? #{&quot;HOM_REF&quot; &quot;HOM_VAR&quot;} (:type vc))))]
-    (every? is-vc-haploid? (parse-vcf vcf-file))))</pre></td></tr><tr><td class="docs"><p>Check for phasing on a single genotype variant context.</p>
+  (:require [fs.core :as fs]))</pre></td></tr><tr><td class="docs"><h2>Find phased haplotypes in VCF</h2>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>Check for phasing on a single genotype variant context.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn is-phased?
   [vc]
   {:pre [(= 1 (count (:genotypes vc)))]}
-  (-&gt; vc :genotypes first :genotype .isPhased))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(defn parse-phased-haplotypes [in-vcf]
-  &quot;Separate phased haplotypes provided in diploid input genome.&quot;
+  (-&gt; vc :genotypes first :genotype .isPhased))</pre></td></tr><tr><td class="docs"><p>Separate phased haplotypes provided in diploid input genome.
+   3 conditions:</p>
+
+<ol>
+<li>Out of variants; add the current one to the list and done</li>
+<li>No current haplotype variants or phased with the previous variant:
+  add to the current haplotype</li>
+<li>A new haplotype: add existing haplotype to list and create new</li>
+</ol>
+</td><td class="codes"><pre class="brush: clojure">(defn parse-phased-haplotypes
+  [in-vcf]
   (lazy-seq
    (loop [vcs (parse-vcf in-vcf)
           cur-hap []
           all-haps []]
-     ;; 3 conditions:
-     ;; 1. Out of variants; add the current one to the list and done
-     ;; 2. No current haplotype variants or phased with the previous variant:
-     ;;    add to the current haplotype
-     ;; 3. A new haplotype: add existing haplotype to list and create new
      (cond
       (nil? (first vcs)) (if (empty? cur-hap) all-haps (conj all-haps cur-hap))
       (or (empty? cur-hap)
           (is-phased? (first vcs))) (recur (rest vcs) (conj cur-hap (first vcs)) all-haps)
-          :else (recur (rest vcs) [(first vcs)] (conj all-haps cur-hap))))))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(defn highest-count [xs]
-  &quot;Retrieve the item with the highest count in the supplied list.
-  We break ties by sorting by the actual list items&quot;
+          :else (recur (rest vcs) [(first vcs)] (conj all-haps cur-hap))))))</pre></td></tr><tr><td class="docs"><h2>Compare phased variants</h2>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>Retrieve the item with the highest count in the supplied list.
+  We break ties by sorting by the actual list items</p>
+</td><td class="codes"><pre class="brush: clojure">(defn highest-count
+  [xs]
   (-&gt;&gt; (frequencies xs)
        (sort-by val &gt;)
        (partition-by second)
        first
        (sort-by first)
-       ffirst))</pre></td></tr><tr><td class="docs"><p>Retrieve alleles for a single genotype variant context.</p>
+       ffirst))</pre></td></tr><tr><td class="docs"><p>Convenience function to get alleles for a single genotype variant context.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn- get-alleles
   [vc]
   {:pre [(= 1 (count (:genotypes vc)))]}
@@ -3749,12 +3750,15 @@ This compares a phased set of calls versus haploid reference calls.</p>
      (empty? ref-alleles) :discordant
      (contains? ref-alleles call-hap) :concordant
      (some (partial contains? ref-alleles) (get-alleles vc)) :phasing-error
-     :else :discordant)))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(defn get-variant-type [vcs]
-  &quot;Retrieve the type of a set of variants involved in a comparison.
-  :indel -- insertions or deletions of more than 1bp
-  :snp -- Single nucleotide changes or single basepair changes
-  :unknown -- Other classs of variations (structural)&quot;
+     :else :discordant)))</pre></td></tr><tr><td class="docs"><p>Retrieve the type of a set of variants involved in a comparison.</p>
+
+<ul>
+<li><code>:indel</code> -- insertions or deletions of more than 1bp</li>
+<li><code>:snp</code> -- Single nucleotide changes or single basepair changes</li>
+<li><code>:unknown</code> -- Other classs of variations (structural)</li>
+</ul>
+</td><td class="codes"><pre class="brush: clojure">(defn get-variant-type
+  [vcs]
   (letfn [(is-indel? [x]
             (= &quot;INDEL&quot; (:type x)))
           (is-multi-indel? [x]
@@ -3767,36 +3771,37 @@ This compares a phased set of calls versus haploid reference calls.</p>
      (some is-multi-indel? vcs) :indel
      (some is-indel? vcs) :snp
      (every? is-snp? vcs) :snp
-     :else :unknown)))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(defn- nomatch-het-alt? [vc ref-vcs]
-  &quot;Determine if the variant has a non-matching heterozygous alternative allele.&quot;
+     :else :unknown)))</pre></td></tr><tr><td class="docs"><p>Determine if the variant has a non-matching heterozygous alternative allele.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn- nomatch-het-alt?
+  [vc ref-vcs]
   (let [match-allele-i (matching-allele vc ref-vcs)
         no-match-alleles (remove nil? (map-indexed
                                        (fn [i x] (if-not (= i match-allele-i) x))
                                        (get-alleles vc)))]
     (and (= &quot;HET&quot; (-&gt; vc :genotypes first :type))
-         (not-every? #(.isReference %) no-match-alleles))))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(defn- comparison-metrics [vc ref-vcs i]
-  &quot;Provide metrics for comparison of haploid allele to reference calls.&quot;
+         (not-every? #(.isReference %) no-match-alleles))))</pre></td></tr><tr><td class="docs"><p>Provide metrics for comparison of haploid allele to reference calls.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn- comparison-metrics
+  [vc ref-vcs i]
   {:comparison (cmp-allele-to-ref vc ref-vcs i)
    :variant-type (get-variant-type (cons vc ref-vcs))
    :nomatch-het-alt (nomatch-het-alt? vc ref-vcs)
-   :vc (:vc vc)})</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(defn- score-phased-region [vcs ref-fetch]
-  &quot;Provide scoring metrics for a phased region against a haplotype reference.&quot;
+   :vc (:vc vc)})</pre></td></tr><tr><td class="docs"><p>Provide scoring metrics for a phased region against a haplotype reference.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn- score-phased-region
+  [vcs ref-fetch]
   (letfn [(ref-alleles [x]
             (ref-fetch (:chr x) (:start x) (:end x)))
           (ref-match-allele [x]
             (matching-allele x (ref-alleles x)))]
     (let [cmp-allele-i (highest-count (map ref-match-allele vcs))]
-      (map #(comparison-metrics % (ref-alleles %) cmp-allele-i) vcs))))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(defn score-phased-calls [call-vcf ref-vcf]
-  &quot;Score a called VCF against reference based on phased regions.&quot;
+      (map #(comparison-metrics % (ref-alleles %) cmp-allele-i) vcs))))</pre></td></tr><tr><td class="docs"><p>Score a called VCF against reference based on phased regions.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn score-phased-calls
+  [call-vcf ref-vcf]
   (let [ref-fetch (get-vcf-retriever ref-vcf)]
     (map #(score-phased-region % ref-fetch)
-         (parse-phased-haplotypes call-vcf))))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(defn- write-concordance-output [vc-info sample-name base-info out-dir ref]
-  &quot;Write concordant and discordant variants to VCF output files.&quot;
+         (parse-phased-haplotypes call-vcf))))</pre></td></tr><tr><td class="docs"><h2>Summarize phased comparisons</h2>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>Write concordant and discordant variants to VCF output files.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn- write-concordance-output
+  [vc-info sample-name base-info out-dir ref]
   (let [base-dir (if (nil? out-dir) (fs/parent (:file base-info)) out-dir)
         gen-file-name (fn [x] (str (fs/file base-dir (format &quot;%s-%s-%s.vcf&quot; sample-name
                                                              (:name base-info) (name x)))))
@@ -3807,14 +3812,14 @@ This compares a phased set of calls versus haploid reference calls.</p>
     (write-vcf-w-template (:file base-info) out-files
                           (map (juxt :comparison :vc) (flatten vc-info))
                           ref)
-    (vals out-files)))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(defn- count-graded-bases [bed-file]
-  &quot;Count total bases graded based on BED interval file&quot;
+    (vals out-files)))</pre></td></tr><tr><td class="docs"><p>Count total bases graded based on BED interval file</p>
+</td><td class="codes"><pre class="brush: clojure">(defn- count-graded-bases
+  [bed-file]
   (letfn [(feature-size [x]
             (- (.getEnd x) (.getStart x)))]
-    (apply + (map feature-size (.iterator (bed-feature-source bed-file))))))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(defn- get-phasing-metrics [vc-info interval-file]
-  &quot;Collect summary metrics for concordant/discordant and phasing calls&quot;
+    (apply + (map feature-size (.iterator (bed-feature-source bed-file))))))</pre></td></tr><tr><td class="docs"><p>Collect summary metrics for concordant/discordant and phasing calls</p>
+</td><td class="codes"><pre class="brush: clojure">(defn- get-phasing-metrics
+  [vc-info interval-file]
   (letfn [(count-nomatch-het-alt [xs]
             (count (filter #(and (= (:comparison %) :concordant)
                                  (:nomatch-het-alt %))
@@ -3831,14 +3836,21 @@ This compares a phased set of calls versus haploid reference calls.</p>
              :concordant (blank-count-dict)
              :discordant (blank-count-dict)
              :phasing-error (blank-count-dict)}
-            (flatten vc-info))))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(defn compare-two-vcf-phased [call ref exp config]
-  &quot;Compare two VCF files including phasing with a haplotype reference.&quot;
+            (flatten vc-info))))</pre></td></tr><tr><td class="docs"><p>Compare two VCF files including phasing with a haplotype reference.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn compare-two-vcf-phased
+  [call ref exp config]
   (let [compared-calls (score-phased-calls (:file call) (:file ref))]
     {:c-files (write-concordance-output compared-calls (:sample exp) call
                                         (:outdir config) (:ref exp))
      :metrics (get-phasing-metrics compared-calls (:intervals exp)) 
-     :c1 call :c2 ref :sample (:sample exp)}))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#bcbio.variation.report" name="bcbio.variation.report"><h1 class="project-name">bcbio.variation.report</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>Parse and provide detailed information from GATKReport output</p>
+     :c1 call :c2 ref :sample (:sample exp)}))</pre></td></tr><tr><td class="docs"><h2>Utility functions</h2>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>Is the provided VCF file a haploid genome (one genotype or all homozygous)</p>
+</td><td class="codes"><pre class="brush: clojure">(defn is-haploid?
+  [vcf-file]
+  (letfn [(is-vc-haploid? [vc]
+            (or (= 1 (apply max (map #(count (:alleles %)) (:genotypes vc))))
+                (contains? #{&quot;HOM_REF&quot; &quot;HOM_VAR&quot;} (:type vc))))]
+    (every? is-vc-haploid? (parse-vcf vcf-file))))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#bcbio.variation.report" name="bcbio.variation.report"><h1 class="project-name">bcbio.variation.report</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>Parse and provide detailed information from GATKReport output</p>
 </td><td class="codes"></td></tr><tr><td class="docs"><p>(:import [org.broadinstitute.sting.gatk.report GATKReport])</p>
 </td><td class="codes"><pre class="brush: clojure">(ns bcbio.variation.report
   (:import [org.broadinstitute.sting.gatk.report GATKReport])
