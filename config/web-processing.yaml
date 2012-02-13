@@ -1,0 +1,7 @@
+---
+# Configureation information for running web front-end to run scoring on
+# sequencing inputs
+
+dir:
+  html-root: "public"
+  work: "tmp"

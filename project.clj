@@ -9,10 +9,14 @@
                  [fs "1.1.2"]
                  [clj-yaml "0.3.1"]
                  [doric "0.7.0-SNAPSHOT"]
-                 [ordered "1.0.0"]]
+                 [ordered "1.0.0"]
+                 [compojure "1.0.1"]
+                 [ring "1.0.2"]
+                 [enlive "1.0.0"]]
   :dev-dependencies [[midje "1.3.0" :exclusions [org.clojure/clojure]]]
   :java-source-path "src/java"
   :omit-source true
   :aot [bcbio.variation.vcfwalker bcbio.variation.core]
   :main bcbio.variation.core
-  :run-aliases {:compare bcbio.variation.compare})
+  :run-aliases {:compare bcbio.variation.compare
+                :web bcbio.variation.web.server})
