@@ -178,7 +178,9 @@
                        (compare-two-vcf (:c1 updated-cmp) (:c2 updated-cmp) exp config))))]
       (map add-summary (vals (reduce update-w-finalizer cmps-by-name (:finalize exp)))))))
 
-(defn -main [config-file]
+(defn variant-comparison-from-config
+  "Perform comparison between variant calls using inputs from YAML config."
+  [config-file]
   (let [config (-> config-file slurp yaml/parse-string)
         comparisons (flatten
                      (for [exp (:experiments config)]
@@ -200,3 +202,6 @@
           (.write w (format "%s\n" (join "," (map name (keys x))))))
         (.write w (format "%s\n" (join "," (for [v ( vals x)]
                                              (if (map? v) (:total v) v)))))))))
+
+(defn -main [config-file]
+  (variant-comparison-from-config config-file))

@@ -20,3 +20,4 @@ test/data/*-nomnp*vcf
 test/data/method-comparison-summary*
 test/data/prep/
 test/data/grading/
+test/data/web-test/

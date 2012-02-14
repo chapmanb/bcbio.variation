@@ -15,7 +15,7 @@
 (def ^:private config (atom nil))
 
 (defroutes app-routes
-  (POST "/score" request web-process/run-scoring)
+  (POST "/score" request web-process/prep-and-run-scoring)
   (ANY "*" request (file-response "404.html" {:root (-> @config :dir :html-root)})))
 
 (defn wrap-add-config

@@ -2,6 +2,12 @@
 # Configureation information for running web front-end to run scoring on
 # sequencing inputs
 
+ref:
+  sample: NA00001
+  genome: test/data/hg19.fa
+  variants: test/data/phasing-reference.vcf
+  intervals: test/data/phasing-reference-regions.bed
+
 dir:
   html-root: "public"
   work: "tmp"
