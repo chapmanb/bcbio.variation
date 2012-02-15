@@ -1,4 +1,3 @@
-
 (ns bcbio.variation.complex
   "Handle complex variations representations: multi-nucleotide
    polymorphisms and indels."
