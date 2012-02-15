@@ -13,7 +13,7 @@
   (:require [fs.core :as fs]))
 
 (let [data-dir (str (fs/file "." "test" "data"))
-      ref (str (fs/file data-dir "hg19.fa"))
+      ref (str (fs/file data-dir "GRCh37.fa"))
       intervals (str (fs/file data-dir "target-regions.bed"))
       vcf1 (str (fs/file data-dir "gatk-calls.vcf"))
       vcf2 (str (fs/file data-dir "freebayes-calls.vcf"))
@@ -52,10 +52,10 @@
           first :percent_non_reference_sensitivity) => "88.89"
       (identify-callable align-bam ref) => callable-out
       (let [is-callable? (callable-checker align-bam ref)]
-        (is-callable? "chrM" 16 17) => true
-        (is-callable? "chrM" 252 252) => false
-        (is-callable? "chrM" 5100 5200) => false
-        (is-callable? "chrM" 16 15) => false)
+        (is-callable? "MT" 16 17) => true
+        (is-callable? "MT" 252 252) => false
+        (is-callable? "MT" 5100 5200) => false
+        (is-callable? "MT" 16 15) => false)
       (add-variant-annotations vcf2 align-bam ref) => annotated-out)
     (facts "Create merged VCF files for comparison"
       (create-merged [vcf1 vcf2] [align-bam align-bam] [true true] ref) => combine-out)

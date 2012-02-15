@@ -7,7 +7,7 @@
       vcf-file (str (fs/file data-dir "gatk-calls.vcf"))
       vc (first (parse-vcf vcf-file))]
   (facts "Parsing VCF file to VariantContext"
-    (:chr vc) => "chrM"
+    (:chr vc) => "MT"
     (:start vc) => 73
     (:type vc) => "SNP"
     (:filters vc) => #{}
