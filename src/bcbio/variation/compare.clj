@@ -201,7 +201,9 @@
         (if (= i 0)
           (.write w (format "%s\n" (join "," (map name (keys x))))))
         (.write w (format "%s\n" (join "," (for [v ( vals x)]
-                                             (if (map? v) (:total v) v)))))))))
+                                             (if (map? v) (:total v) v)))))))
+    comparisons))
 
 (defn -main [config-file]
-  (variant-comparison-from-config config-file))
+  (variant-comparison-from-config config-file)
+  nil)

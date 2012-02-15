@@ -1,14 +1,14 @@
-;; Parse and provide detailed information from GATKReport output
-
 (ns bcbio.variation.report
+  "Parse and provide detailed information from GATKReport outputs."
   (:import [org.broadinstitute.sting.gatk.report GATKReport])
   (:use [ordered.map :only [ordered-map]]
         [clojure.math.combinatorics :only [cartesian-product]]
         [bcbio.variation.variantcontext :only [parse-vcf]])
   (:require [doric.core :as doric]))
 
-(defn concordance-report-metrics [sample in-file]
+(defn concordance-report-metrics
   "Retrieve high level concordance metrics from GATK VariantEval report."
+  [sample in-file]
   (letfn [(sample-in-row? [x]
             (and (= (:row x) sample)
                  (= (:Sample x) sample)
@@ -22,8 +22,9 @@
                 (zipmap headers
                         (map #(nth (vec (.values %)) i) cols)))))))
 
-(defn top-level-metrics [x]
+(defn top-level-metrics
   "Provide one-line summary of similarity metrics for a VCF comparison."
+  [x]
   (letfn [(passes-filter? [vc]
             (= (count (:filters vc)) 0))
           (nonref-passes-filter? [vc]
@@ -51,12 +52,13 @@
      :discordant1 (all-vrn-counts (second (:c-files x)))
      :discordant2 (all-vrn-counts (nth (:c-files x) 2)))))
 
-(defn calc-accuracy [metrics]
+(defn calc-accuracy
   "Calculate an overall accuracy score from input metrics.
   The accuracy logic is:
   (#correctly aligned bases / (#correctly aligned bases +
                                1*(simple substitutions and indels) +
                                2*(larger errors)))."
+  [metrics]
   (letfn [(get-penalty [[error-type call-type]]
             (case call-type
               :snp 1
@@ -67,8 +69,9 @@
        (/ (:total-bases metrics)
           (+ (:total-bases metrics) error-score))))))
 
-(defn write-scoring-table [metrics wrtr]
+(defn prep-scoring-table
   "Summary table of high level variables and scoring metrics for comparison."
+  [metrics]
   (let [to-write (ordered-map :accuracy "Overall accuracy score"
                               :total-bases "Total bases compared"
                               [:discordant :snp] "Discordant SNPs"
@@ -81,11 +84,17 @@
     (letfn [(prep-row [[k x]]
               {:metric x
                :value (if (coll? k) (get-in s-metrics k) (get s-metrics k))})]
-      (.write wrtr (str (doric/table [:metric :value] (map prep-row to-write))
-                        "\n")))))
+      (map prep-row to-write))))
 
-(defn calc-score [type val]
+(defn write-scoring-table
+  "Write high level metrics table in readable format."
+  [metrics wrtr]
+  (.write wrtr (str (doric/table [:metric :value] (prep-scoring-table metrics))
+                    "\n")))
+
+(defn calc-score
   "Calculate scoring for input metric types"
+  [type val]
   (if (keyword? type) ""
       (let [sign (if (= :concordant (first type)) 1 -1)]
         (case (second type)
@@ -93,8 +102,9 @@
               :indel (-> 2 (* sign) (* val))
               (throw (Exception. (str "Unexpected variant type" type)))))))
 
-(defn write-concordance-metrics [metrics wrtr]
+(defn write-concordance-metrics
   "Summary table of metrics for assessing the score of a variant comparison."
+  [metrics wrtr]
   (let [to-write (ordered-map :genotype_concordance "Overall genotype concordance"
                               :nonref_discrepency "Non-reference discrepancy rate"
                               :nonref_sensitivity "Non-reference sensitivity"

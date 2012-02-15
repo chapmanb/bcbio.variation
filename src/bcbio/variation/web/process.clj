@@ -3,7 +3,8 @@
   (:import [java.util.UUID])
   (:use [clojure.java.io]
         [ring.util.response :only (redirect)]
-        [bcbio.variation.compare :only (variant-comparison-from-config)])
+        [bcbio.variation.compare :only (variant-comparison-from-config)]
+        [bcbio.variation.report :only (prep-scoring-table)])
   (:require [fs.core :as fs]
             [clj-yaml.core :as yaml]))
 
@@ -27,6 +28,12 @@
          (spit config-file))
     config-file))
 
+(defn html-scoring-summary
+  "Generate a summary of scoring results for display."
+  [comparisons]
+  {:pre [(= 1 (count comparisons))]}
+  (println (prep-scoring-table (-> comparisons first :metrics))))
+
 (defn prep-and-run-scoring
   "Prepare output directory and run scoring analysis using form inputs."
   [request]
@@ -46,6 +53,7 @@
     (let [work-info (prep-tmp-dir request)
           in-files (into {} (map (partial download-file (:dir work-info) request)
                                  ["variant-file" "region-file"]))
-          process-config (create-work-config in-files work-info (:config request))]
-      (variant-comparison-from-config process-config)))
+          process-config (create-work-config in-files work-info (:config request))
+          comparisons (variant-comparison-from-config process-config)]
+      (html-scoring-summary comparisons)))
   (redirect "/"))
