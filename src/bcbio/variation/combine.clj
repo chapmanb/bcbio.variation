@@ -23,6 +23,7 @@
   "Combine two variant files with GATK CombineVariants."
   (letfn [(unique-name [f]
             (-> f fs/base-name itx/file-root))]
+    (println intervals)
     (let [base-dir (if (nil? out-dir) (fs/parent (first vcfs)) out-dir)
           file-info {:out-vcf (str (fs/file base-dir
                                             (itx/add-file-part (-> vcfs first fs/base-name)
@@ -34,7 +35,11 @@
                         "-o" :out-vcf
                         "--rod_priority_list" (join "," (map unique-name vcfs))]
                        (flatten (map #(list (str "--variant:" (unique-name %)) %) vcfs))
-                       (if-not (nil? intervals) ["-L", intervals] [])
+                       (cond
+                        (nil? intervals) []
+                        (coll? intervals) (concat (flatten (map #(list "-L" %) intervals))
+                                                  ["--interval_set_rule" "INTERSECTION"])
+                        :else ["-L", intervals])
                        (case merge-type
                              :full ["--genotypemergeoption" "PRIORITIZE"]
                              :unique ["--genotypemergeoption" "UNIQUIFY"]
@@ -93,10 +98,11 @@
 (defn create-merged [vcfs align-bams do-merges ref & {:keys [out-dir intervals]
                                                       :or {out-dir nil
                                                            intervals nil}}]
+  (println intervals)
   "Create merged VCF files with no-call/ref-calls for each of the inputs."
   (letfn [(merge-vcf [vcf all-vcf align-bam ref]
             (let [ready-vcf (combine-variants [vcf all-vcf] ref
-                                              :merge-type :full)]
+                                              :merge-type :full :intervals intervals)]
               (convert-no-calls ready-vcf align-bam ref :out-dir out-dir)))]
     (let [merged (combine-variants vcfs ref :merge-type :minimal :intervals intervals)]
       (map (fn [[v b merge?]] (if merge? (merge-vcf v merged b ref) v))

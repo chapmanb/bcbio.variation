@@ -11,7 +11,10 @@
        - Compare to reference allele
        - If mismatch and alternate allele matches reference, then phasing error
        - If mismatch and neither allele matches, then calling error"
-  (:use [bcbio.variation.variantcontext :only [parse-vcf get-vcf-retriever write-vcf-w-template]]
+  (:import [org.broadinstitute.sting.utils.interval IntervalUtils IntervalSetRule]
+           [org.broadinstitute.sting.utils GenomeLocParser GenomeLoc])
+  (:use [bcbio.variation.variantcontext :only [parse-vcf get-vcf-retriever write-vcf-w-template
+                                               get-seq-dict]]
         [bcbio.variation.callable :only [bed-feature-source]]
         [ordered.map :only [ordered-map]])
   (:require [fs.core :as fs]))
@@ -155,16 +158,36 @@
                           ref)
     (vals out-files)))
 
-(defn- count-graded-bases
-  "Count total bases graded based on BED interval file"
-  [bed-file]
+(defn count-comparison-bases
+  "Provide counts for comparison: entire region plus user specified regions"
+  [total-bed call-bed ref-file]
   (letfn [(feature-size [x]
-            (- (.getEnd x) (.getStart x)))]
-    (apply + (map feature-size (.iterator (bed-feature-source bed-file))))))
+            (cond
+             (instance? GenomeLoc x) (- (.getStop x) (.getStart x))
+             :else (- (.getEnd x) (.getStart x))))
+          (count-bases [xs]
+            (apply + (map feature-size xs)))
+          (genome-loc-list [x]
+            (let [parser (GenomeLocParser. (get-seq-dict ref-file))]
+              (->> x
+                   bed-feature-source
+                   .iterator
+                   (map #(.createGenomeLoc parser %)))))
+          (merge-intervals [x y]
+            (IntervalUtils/mergeListsBySetOperator (genome-loc-list x)
+                                                   (genome-loc-list y)
+                                                   IntervalSetRule/INTERSECTION))]
+    (let [total (count-bases (-> total-bed bed-feature-source .iterator))
+          compared (count-bases (if-not (nil? call-bed)
+                                (merge-intervals total-bed call-bed)
+                                (-> total-bed bed-feature-source .iterator)))]
+      {:percent (* 100.0 (/ compared total))
+       :compared compared
+       :total total})))
 
 (defn- get-phasing-metrics
   "Collect summary metrics for concordant/discordant and phasing calls"
-  [vc-info interval-file]
+  [vc-info exp-interval-file call-interval-file ref-file]
   (letfn [(count-nomatch-het-alt [xs]
             (count (filter #(and (= (:comparison %) :concordant)
                                  (:nomatch-het-alt %))
@@ -176,7 +199,7 @@
               (assoc-in coll cur-val (inc (get-in coll cur-val)))))]
     (reduce add-current-count
             {:haplotype-blocks (count vc-info)
-             :total-bases (count-graded-bases interval-file)
+             :total-bases (count-comparison-bases exp-interval-file call-interval-file ref-file)
              :nonmatch-het-alt (count-nomatch-het-alt vc-info)
              :concordant (blank-count-dict)
              :discordant (blank-count-dict)
@@ -189,7 +212,7 @@
   (let [compared-calls (score-phased-calls (:file call) (:file ref))]
     {:c-files (write-concordance-output compared-calls (:sample exp) call
                                         (:outdir config) (:ref exp))
-     :metrics (get-phasing-metrics compared-calls (:intervals exp)) 
+     :metrics (get-phasing-metrics compared-calls (:intervals exp) (:intervals call) (:ref exp)) 
      :c1 call :c2 ref :sample (:sample exp)}))
 
 ;; ## Utility functions

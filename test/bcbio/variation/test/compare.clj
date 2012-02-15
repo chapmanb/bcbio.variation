@@ -98,10 +98,18 @@
     (is-haploid? pvcf) => false
     (is-haploid? ref-vcf) => true))
 
+(let [data-dir (str (fs/file "." "test" "data"))
+      ref (str (fs/file data-dir "GRCh37.fa"))
+      cbed (str (fs/file data-dir "phasing-contestant-regions.bed"))
+      rbed (str (fs/file data-dir "phasing-reference-regions.bed"))]
+  (facts "Merging and count info for reference and contestant analysis regions."
+    (count-comparison-bases rbed cbed ref) => (contains {:compared 12 :total 13})
+    (count-comparison-bases rbed nil ref) => (contains {:compared 13 :total 13})))
+
 (facts "Calculate final accuracy score for contestant/reference comparison."
-  (calc-accuracy {:total-bases 10
+  (calc-accuracy {:total-bases {:compared 10}
                   :discordant {:indel 1 :snp 1}
-                  :phasing-error {:indel 1 :snp 1}}) => (roughly 0.625))
+                  :phasing-error {:indel 1 :snp 1}}) => (roughly 62.50))
 
 (facts "Determine the highest count of items in a list"
   (highest-count []) => nil

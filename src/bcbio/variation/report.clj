@@ -64,26 +64,30 @@
               :snp 1
               :indel 2))]
     (let [error-items (cartesian-product [:discordant :phasing-error] [:snp :indel])
-          error-score (apply + (map #(* (get-in metrics %) (get-penalty %)) error-items))]
+          error-score (apply + (map #(* (get-in metrics %) (get-penalty %)) error-items))
+          total-bases (get-in metrics [:total-bases :compared])]
       (float
-       (/ (:total-bases metrics)
-          (+ (:total-bases metrics) error-score))))))
+       (* 100.0 (/ total-bases (+ total-bases error-score)))))))
 
 (defn prep-scoring-table
   "Summary table of high level variables and scoring metrics for comparison."
   [metrics]
   (let [to-write (ordered-map :accuracy "Overall accuracy score"
-                              :total-bases "Total bases compared"
+                              [:total-bases :percent] "Percentage of bases compared"
+                              [:total-bases :compared] "Total bases compared"
+                              [:total-bases :total] "Possible evaluation bases"
                               [:discordant :snp] "Discordant SNPs"
                               [:discordant :indel] "Discordant indels"
                               [:phasing-error :snp] "Phasing Error SNPs"
                               [:phasing-error :indel] "Phasing Error indels"
                               :haplotype-blocks "Phased haplotype blocks"
                               :nonmatch-het-alt "Non-matching heterozygous alternative alleles")
-        s-metrics (assoc metrics :accuracy (calc-accuracy metrics))]
+        s-metrics (assoc metrics :accuracy (calc-accuracy metrics))
+        need-percent #{:accuracy [:total-bases :percent]}]
     (letfn [(prep-row [[k x]]
-              {:metric x
-               :value (if (coll? k) (get-in s-metrics k) (get s-metrics k))})]
+              (let [val (if (coll? k) (get-in s-metrics k) (get s-metrics k))]
+                {:metric x
+                 :value (if (contains? need-percent k) (format "%.2f" val) val)}))]
       (map prep-row to-write))))
 
 (defn write-scoring-table

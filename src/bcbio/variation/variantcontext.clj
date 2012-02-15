@@ -82,6 +82,14 @@
      (finally
       (vec (map #(.close %) (vals ~binding-map))))))
 
+(defn get-seq-dict
+  "Retrieve Picard sequence dictionary from FASTA reference file."
+  [ref-file]
+  (-> ref-file
+      file
+      ReferenceSequenceFileFactory/getReferenceSequenceFile
+      .getSequenceDictionary))
+
 (defn write-vcf-w-template
   "Write VCF output files starting with an original input template VCF.
    Handles writing to multiple VCF files simultaneously with the different
@@ -89,12 +97,7 @@
    `vc-iter` is a lazy sequence of `(writer-keyword variant-context)`.
    `out-file-map` is a map of writer-keywords to output filenames."
   [tmpl-file out-file-map vc-iter ref]
-  (letfn [(get-seq-dict [ref-file]
-            (-> ref-file
-                file
-                ReferenceSequenceFileFactory/getReferenceSequenceFile
-                .getSequenceDictionary))
-          (make-vcf-writer [f ref]
+  (letfn [(make-vcf-writer [f ref]
             (StandardVCFWriter. (file f) (get-seq-dict ref)))]
     (let [tmpl-header (.getHeader (vcf-source tmpl-file))
           writer-map (zipmap (keys out-file-map)
