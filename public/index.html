@@ -30,18 +30,18 @@
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </a>
-          <a class="brand" href="#">X PRIZE scoring</a>
+          <a class="brand" href="/">X PRIZE scoring</a>
           <div class="nav-collapse">
             <ul class="nav">
               <li class="active"><a href="/">Home</a></li>
-              <li><a href="#about">About</a></li>
+              <!--<li><a href="#about">About</a></li>-->
             </ul>
           </div><!--/.nav-collapse -->
         </div>
       </div>
     </div>
 
-    <div class="container">
+    <div id="main-content" class="container">
 
       <form class="form-horizontal" method="post" enctype="multipart/form-data" action="/score">
         <legend>Submit variation file for scoring</legend>
@@ -52,7 +52,9 @@
             <p class="help-block">Sequence differences relative to the
               <a href="http://www.ncbi.nlm.nih.gov/projects/genome/assembly/grc/human/index.shtml">GRCh37 reference genome<a>
               (<a href="ftp://gsapubftp-anonymous@ftp.broadinstitute.org/bundle/1.2/b37/human_g1k_v37.fasta.gz">FASTA download</a>),
-in <a href="http://www.1000genomes.org/wiki/Analysis/Variant%20Call%20Format/vcf-variant-call-format-version-41">VCF format</a>
+in <a href="http://www.1000genomes.org/wiki/Analysis/Variant%20Call%20Format/vcf-variant-call-format-version-41">VCF format</a>.
+              <br/>
+              <a href="https://raw.github.com/chapmanb/bcbio.variation/master/test/data/phasing-contestant.vcf">Example file</a>
             </p>
           </div>
         </div>
@@ -60,11 +62,15 @@ in <a href="http://www.1000genomes.org/wiki/Analysis/Variant%20Call%20Format/vcf
           <label class="control-label" for="region-file">Scoring regions</label>
           <div class="controls">
             <input class="input-file" id="region-file" name="region-file" type="file"></input>
-            <p class="help-block">Regions to assess for scoring, in <a href="http://genome.ucsc.edu/FAQ/FAQformat.html#format1">BED format</a></p>
+            <p class="help-block">Regions to assess for scoring, in <a href="http://genome.ucsc.edu/FAQ/FAQformat.html#format1">BED format</a>.
+              <br/>
+              <a href="https://github.com/chapmanb/bcbio.variation/blob/master/test/data/phasing-reference-regions.bed">Example file</a>
+            </p>
           </div>
         </div>
         <div class="form-actions">
           <button type="submit" class="btn">Score</button>
+          <p class="help-block">To see example output, click without uploading any files.</p>
         </div>
       </form>
     </div> <!-- /container -->

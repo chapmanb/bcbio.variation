@@ -6,7 +6,9 @@
         [bcbio.variation.compare :only (variant-comparison-from-config)]
         [bcbio.variation.report :only (prep-scoring-table)])
   (:require [fs.core :as fs]
-            [clj-yaml.core :as yaml]))
+            [clj-yaml.core :as yaml]
+            [net.cgrand.enlive-html :as html]
+            [doric.core :as doric]))
 
 (defn create-work-config
   "Create configuration for processing inputs using references supplied in config."
@@ -22,8 +24,12 @@
                          :calls [{:name "reference"
                                   :file (-> config :ref :variants)}
                                  {:name "contestant"
-                                  :file (:variant-file in-files)
-                                  :intervals (:region-file in-files)}]}]}
+                                  :file (if-let [x (:variant-file in-files)]
+                                          x
+                                          (-> config :ref :default-compare))
+                                  :intervals (if-let [x (:region-file in-files)]
+                                               x
+                                               (-> config :ref :intervals))}]}]}
          yaml/generate-string
          (spit config-file))
     config-file))
@@ -32,7 +38,20 @@
   "Generate a summary of scoring results for display."
   [comparisons]
   {:pre [(= 1 (count comparisons))]}
-  (println (prep-scoring-table (-> comparisons first :metrics))))
+  (let [scoring-table (prep-scoring-table (-> comparisons first :metrics))]
+    (-> (str (doric/table ^{:format doric/html} [:metric :value] scoring-table))
+     java.io.StringReader.
+     html/html-resource
+     (html/transform [:table] (html/set-attr :class "table table-condensed")))))
+
+(defn update-main-html
+  "Update main page HTML with replaced main panel content."
+  [request new-content]
+  (apply str (html/emit*
+              (html/transform (html/html-resource (fs/file (-> request :config :dir :html-root)
+                                                           "index.html"))
+                              [:div#main-content]
+                              (html/content new-content)))))
 
 (defn prep-and-run-scoring
   "Prepare output directory and run scoring analysis using form inputs."
@@ -55,5 +74,5 @@
                                  ["variant-file" "region-file"]))
           process-config (create-work-config in-files work-info (:config request))
           comparisons (variant-comparison-from-config process-config)]
-      (html-scoring-summary comparisons)))
-  (redirect "/"))
+      (update-main-html request
+                        (html-scoring-summary comparisons)))))
