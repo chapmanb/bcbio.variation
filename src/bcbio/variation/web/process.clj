@@ -99,6 +99,7 @@
           in-files (into {} (map (partial download-file (:dir work-info) request)
                                  ["variant-file" "region-file"]))]
       (-> (response (scoring-html request))
+          (content-type "text/html")
           (assoc :session
             (-> (:session request)
                 (assoc :work-info work-info)
