@@ -65,6 +65,8 @@
                                 [:div#main-content]
                                 (-> (fs/file template-dir "score.html")
                                     html/html-resource
+                                    (html/select [:body])
+                                    first
                                     html/content))))))
 
 (defn run-scoring
