@@ -7,15 +7,17 @@
         [ring.middleware.params :only (wrap-params)]
         [ring.middleware.multipart-params :only (wrap-multipart-params)]
         [ring.middleware.reload :only (wrap-reload)]
+        [ring.middleware.session :only (wrap-session)]
         [ring.util.response :only (file-response redirect)]
-        [compojure.core :only (defroutes ANY POST)])
+        [compojure.core :only (defroutes ANY POST GET)])
   (:require [clj-yaml.core :as yaml]
             [bcbio.variation.web.process :as web-process]))
 
 (def ^:private config (atom nil))
 
 (defroutes app-routes
-  (POST "/score" request web-process/prep-and-run-scoring)
+  (POST "/score" request web-process/prep-scoring)
+  (GET "/summary" request web-process/run-scoring)
   (ANY "*" request (file-response "404.html" {:root (-> @config :dir :html-root)})))
 
 (defn wrap-add-config
@@ -29,6 +31,7 @@
       (wrap-reload '(web-process))
       (wrap-file (-> @config :dir :html-root))
       wrap-file-info
+      wrap-session
       wrap-params
       wrap-multipart-params
       wrap-add-config))

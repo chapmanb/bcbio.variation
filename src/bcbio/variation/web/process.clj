@@ -2,7 +2,7 @@
   "Run scoring analysis, handling preparation of input files and run configuration."
   (:import [java.util.UUID])
   (:use [clojure.java.io]
-        [ring.util.response :only (redirect)]
+        [ring.util.response :only (response)]
         [bcbio.variation.compare :only (variant-comparison-from-config)]
         [bcbio.variation.report :only (prep-scoring-table)])
   (:require [fs.core :as fs]
@@ -44,17 +44,31 @@
      html/html-resource
      (html/transform [:table] (html/set-attr :class "table table-condensed")))))
 
-(defn update-main-html
-  "Update main page HTML with replaced main panel content."
-  [request new-content]
-  (apply str (html/emit*
-              (html/transform (html/html-resource (fs/file (-> request :config :dir :html-root)
-                                                           "index.html"))
-                              [:div#main-content]
-                              (html/content new-content)))))
+(defn scoring-html
+  "Update main page HTML with content for scoring."
+  [request]
+  (let [html-dir (-> request :config :dir :html-root)
+        template-dir (-> request :config :dir :template)]
+    (apply str (html/emit*
+                (html/transform (html/html-resource (fs/file html-dir "index.html"))
+                                [:div#main-content]
+                                (-> (fs/file template-dir "score.html")
+                                    html/html-resource
+                                    html/content))))))
 
-(defn prep-and-run-scoring
-  "Prepare output directory and run scoring analysis using form inputs."
+(defn run-scoring
+  "Run scoring analysis from details provided in current session."
+  [request]
+  (println (:session request))
+  (let [process-config (create-work-config (-> request :session :in-files)
+                                           (-> request :session :work-info)
+                                           (:config request))
+        comparisons (variant-comparison-from-config process-config)]
+    (apply str (html/emit*
+                (html-scoring-summary comparisons)))))
+
+(defn prep-scoring
+  "Download form-supplied input files and prep directory for scoring analysis."
   [request]
   (letfn [(prep-tmp-dir [request]
             (let [tmp-dir (-> request :config :dir :work)
@@ -71,8 +85,9 @@
                                   (str out-file)))]))]
     (let [work-info (prep-tmp-dir request)
           in-files (into {} (map (partial download-file (:dir work-info) request)
-                                 ["variant-file" "region-file"]))
-          process-config (create-work-config in-files work-info (:config request))
-          comparisons (variant-comparison-from-config process-config)]
-      (update-main-html request
-                        (html-scoring-summary comparisons)))))
+                                 ["variant-file" "region-file"]))]
+      (-> (response (scoring-html request))
+          (assoc :session
+            (-> (:session request)
+                (assoc :work-info work-info)
+                (assoc :in-files in-files)))))))

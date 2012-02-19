@@ -19,4 +19,8 @@
   :aot [bcbio.variation.vcfwalker bcbio.variation.core]
   :main bcbio.variation.core
   :run-aliases {:compare bcbio.variation.compare
-                :web bcbio.variation.web.server})
+                :web bcbio.variation.web.server}
+  :cljsbuild {:source-path "src/cljs"
+              :compiler {:output-to "public/js/score.js"
+                         :optimizations :advanced
+                         :pretty-print false}})
