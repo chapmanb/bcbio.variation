@@ -18,6 +18,7 @@
 (defroutes app-routes
   (POST "/score" request web-process/prep-scoring)
   (GET "/summary" request web-process/run-scoring)
+  (GET "/scorefile/:name" request web-process/get-variant-file)
   (ANY "*" request (file-response "404.html" {:root (-> @config :dir :html-root)})))
 
 (defn wrap-add-config
