@@ -16,4 +16,5 @@
   (facts "Deal with multi-nucleotide polymorphisms"
     (normalize-variants vcf ref) => nomnp-out)
   (facts "Parse structural variations"
-    (map sv-type (parse-vcf vc-vcf)) => [:DEL :INS :DUP :INS]))
+    (map sv-type (parse-vcf vc-vcf)) => (concat (repeat 6 :BND)
+                                                [:DEL :INS :DUP :INS])))

@@ -4,26 +4,32 @@
   (:use [bcbio.variation.variantcontext :only (parse-vcf)]))
 
 (defn sv-type
-  "Determine the type of a structural variant; nil if not structural variant.
-  Expected types are:
+  "Determine the type of a structural variant. Expected types are:
 
     - DEL: Deletion
     - INS: Insertion
     - DUP: Duplication
     - INV: Inversion
     - BND: Breakpoint end; paired with second variant
-    - CNV: Copy number variation"
+    - CNV: Copy number variation
+    - nil: Not a structural variant."
   [vc]
   (let [min-indel 100]
     (letfn [(max-allele-size [vc]
               (apply max (map #(.length %) (cons (:ref-allele vc) (:alt-alleles vc)))))
             (indel-type [vc]
               (if (> (.length (:ref-allele vc)) 0) :DEL :INS))
-            (alt-sv-type [vc]
-              (->> (-> vc :alt-alleles first .getDisplayString)
+            (sv-type-from-symbol [allele]
+              (->> allele
                    (re-find #"^<(\w+)(:|>)" )
                    second
-                   keyword))]
+                   keyword))
+            (alt-sv-type [vc]
+              (let [allele (-> vc :alt-alleles first .getDisplayString)]
+                (cond
+                 (.startsWith allele "<") (sv-type-from-symbol allele)
+                 (or (.contains allele "[")
+                     (.contains allele "]")) :BND)))]
       (cond
        (and (= "INDEL" (:type vc))
             (> (max-allele-size vc) min-indel)) (indel-type vc)
