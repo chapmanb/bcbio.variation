@@ -1,7 +1,7 @@
-;; Simple walker to parse a VCF file and display distribution of call
-;; quality scores
 
 (ns bcbio.variation.vcfwalker
+  "Simple walker to parse a VCF file and display distribution of call
+  quality scores"
   (:import [bcbio.variation BaseVariantWalker])
   (:use [bcbio.variation.variantcontext :only [from-vc]])
   (:require [incanter.charts :as icharts]
@@ -10,26 +10,30 @@
    :name bcbio.variation.vcfwalker.VcfSimpleStatsWalker
    :extends bcbio.variation.BaseVariantWalker))
 
-(defn -map [this tracker ref context]
+(defn -map
   "Retrieve VariantContexts and extract the variant quality score."
+  [this tracker ref context]
   (if-not (nil? tracker)
     (for [vc (map from-vc
                     (.getValues tracker (.variants (.invrns this))
                                 (.getLocation context)))]
       (-> vc :genotypes first :qual))))
 
-(defn -reduceInit [this]
+(defn -reduceInit
   "Initialize an empty list to collect our quality information"
+  [this]
   [])
 
-(defn -reduce [this cur coll]
+(defn -reduce
   "Add current quality information to the collected list."
+  [this cur coll]
   (if-not (nil? cur)
     (vec (flatten [coll cur]))
     coll))
 
-(defn -onTraversalDone [this result]
+(defn -onTraversalDone
   "Plot histogram of quality scores."
+  [this result]
   (doto (icharts/histogram result
                            :x-label "Variant quality"
                            :nbins 50)

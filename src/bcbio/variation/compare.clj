@@ -1,13 +1,13 @@
-;; Generate comparisons between two sets of variant calls
-;; Utilizes GATK walkers to generate detailed and summary statistics
-;; about two sets of calls
-;; - Identify non-callable regions with CallableLociWalker
-;; - Combine variants from two samples
-;; - Use VariantEval to calculate overall concordance statistics
-;; - Provide output for concordant and discordant regions for
-;;   detailed investigation
-
 (ns bcbio.variation.compare
+  "Generate comparisons between two sets of variant calls.
+   Utilizes GATK walkers to generate detailed and summary statistics
+   about two sets of calls:
+
+   - Identify non-callable regions with CallableLociWalker
+   - Combine variants from two samples
+   - Use VariantEval to calculate overall concordance statistics
+   - Provide output for concordant and discordant regions for
+     detailed investigation"
   (:use [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template]]
         [bcbio.variation.stats :only [vcf-stats write-summary-table]]
         [bcbio.variation.report :only [concordance-report-metrics
@@ -28,12 +28,12 @@
             [bcbio.run.itx :as itx]
             [bcbio.run.broad :as broad]))
 
-;; GATK walker based variance assessment
+;; ## Variance assessment
 
-(defn variant-comparison [sample vcf1 vcf2 ref & {:keys [out-base interval-file]
-                                                  :or {out-base nil
-                                                       interval-file nil}}]
+(defn variant-comparison
   "Compare two variant files with GenotypeConcordance in VariantEval"
+  [sample vcf1 vcf2 ref & {:keys [out-base interval-file]
+                           :or {out-base nil iinterval-file nil}}]
   (let [file-info {:out-eval (str (itx/file-root (if (nil? out-base) vcf1 out-base)) ".eval")}
         args (concat
               ["-R" ref
@@ -53,10 +53,10 @@
     (broad/run-gatk "VariantEval" args file-info {:out [:out-eval]})
     (:out-eval file-info)))
 
-(defn select-by-concordance [sample call1 call2 ref & {:keys [out-dir interval-file]
-                                                       :or {out-dir nil
-                                                            interval-file nil}}]
+(defn select-by-concordance
   "Variant comparison producing 3 files: concordant and both directions discordant"
+  [sample call1 call2 ref & {:keys [out-dir interval-file]
+                             :or {out-dir nil interval-file nil}}]
   (let [base-dir (if (nil? out-dir) (fs/parent (:file call1)) out-dir)]
     (if-not (fs/exists? base-dir)
       (fs/mkdirs base-dir))
@@ -78,10 +78,12 @@
          (broad/run-gatk "SelectVariants" args file-info {:out [:out-vcf]})
          (:out-vcf file-info))))))
 
-;; Custom parsing and combinations using GATK VariantContexts
+;; ## Custom parsing and combinations
+;; Utilizes GATK VariantContexts
 
-(defn- vc-by-match-category [in-file]
+(defn- vc-by-match-category
   "Lazy stream of VariantContexts categorized by concordant/discordant matching."
+  [in-file]
   (letfn [(genotype-alleles [g]
             (vec (map #(.toString %) (:alleles g))))
           (is-concordant? [vc]
@@ -93,8 +95,9 @@
       [(if (is-concordant? vc) :concordant :discordant)
        (:vc vc)])))
 
-(defn split-variants-by-match [vcf1 vcf2 ref]
+(defn split-variants-by-match
   "Provide concordant and discordant variants for two variant files."
+  [vcf1 vcf2 ref]
   (let [combo-file (combine-variants [vcf1 vcf2] ref)
         out-map {:concordant (itx/add-file-part combo-file "concordant")
                  :discordant (itx/add-file-part combo-file "discordant")}]
@@ -103,7 +106,8 @@
                             ref))
     out-map))
 
-;; Top-level: process a directory of variant calls from multiple
+;; ## Top-level
+;; Process a directory of variant calls from multiple
 ;; sources, generating a summary of concordance plus detailed metrics
 ;; differences for tweaking filters.
 
@@ -117,8 +121,9 @@
                                     (itx/file-root (fs/base-name config-file)) ext)))))
     (writer System/out)))
 
-(defn- prepare-vcf-calls [exp config]
+(defn- prepare-vcf-calls
   "Prepare merged and annotated VCF files for an experiment."
+  [exp config]
   (let [align-bams (map #(get % :align (:align exp)) (:calls exp))
         out-dir (get config :outdir-prep (:outdir config))
         start-vcfs (map #(gatk-normalize % (:ref exp) out-dir) (:calls exp))
@@ -140,8 +145,9 @@
     (map (fn [[c v]] (assoc c :file v))
          (map vector (:calls exp) filter-vcfs))))
 
-(defn- compare-two-vcf-standard [c1 c2 exp config]
+(defn- compare-two-vcf-standard
   "Compare two standard VCF files based on the supplied configuration."
+  [c1 c2 exp config]
   (let [c-files (select-by-concordance (:sample exp) c1 c2 (:ref exp)
                                        :out-dir (:outdir config)
                                        :interval-file (:intervals exp))
@@ -151,8 +157,9 @@
         metrics (first (concordance-report-metrics (:sample exp) eval-file))]
     {:c-files c-files :metrics metrics :c1 c1 :c2 c2 :sample (:sample exp)}))
 
-(defn- compare-two-vcf [c1 c2 exp config]
+(defn- compare-two-vcf
   "Compare two VCF files, handling standard and haploid specific comparisons."
+  [c1 c2 exp config]
   (let [phased-vcfs (group-by #(-> % :file is-haploid?) [c1 c2])]
     (if (get phased-vcfs true)
       (compare-two-vcf-phased (first (get phased-vcfs false))
@@ -160,8 +167,9 @@
                               exp config)
       (compare-two-vcf-standard c1 c2 exp config))))
 
-(defn finalize-comparisons [cmps exp config]
+(defn finalize-comparisons
   "Finalize all comparisons with finished initial pass data."
+  [cmps exp config]
   (let [finalize-fns {"recal-filter" pipeline-recalibration}
         cmps-by-name (reduce (fn [m x] (assoc m [(-> x :c1 :name)
                                                  (-> x :c2 :name)] x))

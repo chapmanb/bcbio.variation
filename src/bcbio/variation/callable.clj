@@ -1,7 +1,7 @@
-;; Identify callable bases from a BAM alignment file
-;; Help differentiate positions where we can not assess variation
 
 (ns bcbio.variation.callable
+  "Identify callable bases from a BAM alignment file.
+  Help differentiate positions where we can not assess variation"
   (:import [org.broad.tribble.bed BEDCodec]
            [org.broad.tribble.index IndexFactory]
            [org.broad.tribble.source BasicFeatureSource])
@@ -10,8 +10,9 @@
             [bcbio.run.itx :as itx]
             [bcbio.run.broad :as broad]))
 
-(defn identify-callable [align-bam ref & {:keys [out-dir] :or {out-dir nil}}]
+(defn identify-callable
   "Identify callable bases from the provided alignment file."
+  [align-bam ref & {:keys [out-dir] :or {out-dir nil}}]
   (let [base-dir (if (nil? out-dir) (fs/parent align-bam) out-dir)
         base-fname (str (file base-dir (-> align-bam fs/base-name itx/file-root)))
         file-info {:out-bed (format "%s-callable.bed" base-fname)
@@ -35,14 +36,16 @@
      :score (.getScore f)
      :strand (.getStrand f)}))
 
-(defn bed-feature-source [bed-file]
+(defn bed-feature-source
   "Provide tribble feature source for a BED formatted file."
+  [bed-file]
   (let [batch-size 500
         idx (IndexFactory/createIntervalIndex (file bed-file) (BEDCodec.) batch-size)]
     (BasicFeatureSource. bed-file idx (BEDCodec.))))
 
-(defn callable-interval-tree [align-bam ref & {:keys [out-dir] :or {out-dir nil}}]
+(defn callable-interval-tree
   "Retrieve an IntervalTree to retrieve information on callability in a region."
+  [align-bam ref & {:keys [out-dir] :or {out-dir nil}}]
   (bed-feature-source (identify-callable align-bam ref :out-dir out-dir)))
 
 (defn callable-checker [align-bam ref & {:keys [out-dir] :or {out-dir nil}}]

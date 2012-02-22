@@ -1,11 +1,13 @@
-;; Combine variant files, handling no-calls versus reference calls
-;; 1. Combine the variants to create a merged set of positions to call at
-;; 2. For each variant file:
-;;    a. Generate callability at each position
-;;    b. Combine original calls with merged positions
-;;    c. Walk through each no-call and set as reference if callable
 
 (ns bcbio.variation.combine
+  "Combine variant files, handling no-calls versus reference calls
+
+   1. Combine the variants to create a merged set of positions to call at
+   2. For each variant file:
+
+      a. Generate callability at each position
+      b. Combine original calls with merged positions
+      c. Walk through each no-call and set as reference if callable"
   (:import [org.broadinstitute.sting.utils.variantcontext
             Genotype VariantContextBuilder GenotypesContext])
   (:use [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template]]
@@ -16,11 +18,10 @@
             [bcbio.run.itx :as itx]
             [bcbio.run.broad :as broad]))
 
-(defn combine-variants [vcfs ref & {:keys [merge-type out-dir intervals]
-                                    :or {merge-type :unique
-                                         out-dir nil
-                                         intervals nil}}]
+(defn combine-variants
   "Combine two variant files with GATK CombineVariants."
+  [vcfs ref & {:keys [merge-type out-dir intervals]
+               :or {merge-type :unique out-dir nil intervals nil}}]
   (letfn [(unique-name [f]
             (-> f fs/base-name itx/file-root))]
     (println intervals)
@@ -49,8 +50,9 @@
       (broad/run-gatk "CombineVariants" args file-info {:out [:out-vcf]})
       (:out-vcf file-info))))
 
-(defn convert-no-calls [in-vcf align-bam ref & {:keys [out-dir] :or {out-dir nil}}]
+(defn convert-no-calls
   "Convert no-calls into callable reference and real no-calls."
+  [in-vcf align-bam ref & {:keys [out-dir] :or {out-dir nil}}]
   (let [out-file (itx/add-file-part in-vcf "wrefs")
         is-callable? (callable-checker align-bam ref :out-dir out-dir)]
     (letfn [(ref-genotype [g vc]
@@ -78,10 +80,10 @@
         (write-vcf-w-template in-vcf {:out out-file} (convert-vcs in-vcf) ref))
       out-file)))
 
-(defn select-by-sample [sample call ref & {:keys [out-dir intervals]
-                                           :or {out-dir nil
-                                                intervals nil}}]
+(defn select-by-sample
   "Select only the sample of interest from input VCF files."
+  [sample call ref & {:keys [out-dir intervals]
+                      :or {out-dir nil intervals nil}}]
   (let [base-dir (if (nil? out-dir) (fs/parent (:file call)) out-dir)
         file-info {:out-vcf (str (fs/file base-dir
                                           (format "%s-%s.vcf" sample (:name call))))}

@@ -1,6 +1,5 @@
-;; High level functions to run software from Broad: GATK, Picard
-
 (ns bcbio.run.broad
+  "High level functions to run software from Broad: GATK, Picard"
   (:import [org.broadinstitute.sting.gatk CommandLineGATK]
            [net.sf.samtools SAMFileReader]
            [net.sf.picard.sam BuildBamIndex])
@@ -8,8 +7,9 @@
   (:require [fs.core :as fs]
             [bcbio.run.itx :as itx]))
 
-(defn run-gatk [program args file-info map-info]
+(defn run-gatk
   "Run a GATK commandline in an idempotent file-safe transaction."
+  [program args file-info map-info]
   (if (itx/needs-run? (map #(% file-info) (get map-info :out [])))
     (let [std-args ["-T" program "--phone_home" "NO_ET"]]
       (itx/with-tx-files [tx-file-info file-info (get map-info :out [])]
@@ -18,8 +18,9 @@
                                             (concat std-args args)
                                             tx-file-info)))))))
 
-(defn index-bam [in-bam]
+(defn index-bam
   "Generate BAM index, skipping if already present."
+  [in-bam]
   (let [index-file (str in-bam ".bai")]
     (if (itx/needs-run? index-file)
       (BuildBamIndex/createIndex (SAMFileReader. (file in-bam)) (file index-file)))
