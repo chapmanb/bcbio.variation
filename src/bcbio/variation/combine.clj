@@ -24,7 +24,6 @@
                :or {merge-type :unique out-dir nil intervals nil}}]
   (letfn [(unique-name [f]
             (-> f fs/base-name itx/file-root))]
-    (println intervals)
     (let [base-dir (if (nil? out-dir) (fs/parent (first vcfs)) out-dir)
           file-info {:out-vcf (str (fs/file base-dir
                                             (itx/add-file-part (-> vcfs first fs/base-name)
@@ -100,7 +99,6 @@
 (defn create-merged [vcfs align-bams do-merges ref & {:keys [out-dir intervals]
                                                       :or {out-dir nil
                                                            intervals nil}}]
-  (println intervals)
   "Create merged VCF files with no-call/ref-calls for each of the inputs."
   (letfn [(merge-vcf [vcf all-vcf align-bam ref]
             (let [ready-vcf (combine-variants [vcf all-vcf] ref

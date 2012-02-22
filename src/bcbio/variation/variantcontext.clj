@@ -36,6 +36,7 @@
    :start (.getStart vc)
    :end (.getEnd vc)
    :ref-allele (.getReference vc)
+   :alt-alleles (.getAlternateAlleles vc)
    :type (-> vc .getType .name)
    :filters (set (.getFilters vc))
    :attributes (into {} (.getAttributes vc))

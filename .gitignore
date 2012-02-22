@@ -5,6 +5,7 @@ pom.xml
 /classes/
 .lein-failures
 .lein-deps-sum
+.clojurescript-output
 test/data/*.idx
 test/data/*.eval
 test/data/gatk-calls-combine*

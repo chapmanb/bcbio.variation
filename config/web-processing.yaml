@@ -12,3 +12,4 @@ ref:
 dir:
   html-root: "public"
   work: "tmp"
+  template: "template"
