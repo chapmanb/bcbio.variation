@@ -4,7 +4,6 @@
 
    1. Combine the variants to create a merged set of positions to call at
    2. For each variant file:
-
       a. Generate callability at each position
       b. Combine original calls with merged positions
       c. Walk through each no-call and set as reference if callable"
@@ -96,10 +95,10 @@
     (broad/run-gatk "SelectVariants" args file-info {:out [:out-vcf]})
     (:out-vcf file-info)))
 
-(defn create-merged [vcfs align-bams do-merges ref & {:keys [out-dir intervals]
-                                                      :or {out-dir nil
-                                                           intervals nil}}]
+(defn create-merged
   "Create merged VCF files with no-call/ref-calls for each of the inputs."
+  [vcfs align-bams do-merges ref & {:keys [out-dir intervals]
+                                    :or {out-dir nil intervals nil}}]
   (letfn [(merge-vcf [vcf all-vcf align-bam ref]
             (let [ready-vcf (combine-variants [vcf all-vcf] ref
                                               :merge-type :full :intervals intervals)]
@@ -108,11 +107,13 @@
       (map (fn [[v b merge?]] (if merge? (merge-vcf v merged b ref) v))
            (map vector vcfs align-bams do-merges)))))
 
-(defn gatk-normalize [call ref out-dir]
+(defn gatk-normalize
   "Prepare call information for VCF comparisons by normalizing through GATK.
   Handles:
+
    1. Combining multiple input files
    2. Splitting combined MNPs into phased SNPs"
+  [call ref out-dir]
   (if-not (fs/exists? out-dir)
     (fs/mkdirs out-dir))
   (letfn [(merge-call-files [call]
