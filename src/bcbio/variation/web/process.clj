@@ -26,6 +26,7 @@
                          :calls [{:name "reference"
                                   :file (-> config :ref :variants)}
                                  {:name "contestant"
+                                  :prep true
                                   :file (if-let [x (:variant-file in-files)]
                                           x
                                           (-> config :ref :default-compare))

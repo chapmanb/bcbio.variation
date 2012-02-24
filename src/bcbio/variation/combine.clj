@@ -12,6 +12,7 @@
   (:use [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template]]
         [bcbio.variation.callable :only [callable-checker]]
         [bcbio.variation.complex :only [normalize-variants]]
+        [bcbio.variation.normalize :only [prep-vcf]]
         [clojure.string :only [join]])
   (:require [fs.core :as fs]
             [bcbio.run.itx :as itx]
@@ -112,14 +113,18 @@
   Handles:
 
    1. Combining multiple input files
-   2. Splitting combined MNPs into phased SNPs"
-  [call ref out-dir]
+   2. Fixing reference and sample information.
+   3. Splitting combined MNPs into phased SNPs"
+  [call exp out-dir]
   (if-not (fs/exists? out-dir)
     (fs/mkdirs out-dir))
   (letfn [(merge-call-files [call]
-            (combine-variants (:file call) ref
+            (combine-variants (:file call) (:ref exp)
                               :merge-type :full :out-dir out-dir))]
     (let [merge-file (if (coll? (:file call))
                        (merge-call-files call)
-                       (:file call))]
-      (assoc call :file (normalize-variants merge-file ref out-dir)))))
+                       (:file call))
+          prep-file (if (true? (:prep call))
+                      (prep-vcf merge-file (:ref exp) (:sample exp))
+                      merge-file)]
+      (assoc call :file (normalize-variants prep-file (:ref exp) out-dir)))))

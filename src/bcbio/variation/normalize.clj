@@ -5,7 +5,7 @@
   match, enabling VCF comparisons.
   Currently implemented for human only, with hooks to generalize for other
   organisms."
-  (:import [org.broadinstitute.sting.utils.variantcontext VariantContextBuilder]
+  (:import [org.broadinstitute.sting.utils.variantcontext VariantContextBuilder Genotype]
            [org.broadinstitute.sting.utils.codecs.vcf VCFHeader])
   (:use [bcbio.variation.variantcontext :only (parse-vcf
                                                write-vcf-w-template
@@ -84,27 +84,32 @@
 ;; ## Normalize variant contexts
 
 (defn- fix-vc-chr
-  "Build a new variant context with updated chromosome."
-  [orig new-chr]
-  (-> orig
-      (assoc :chr new-chr)
-      (assoc :vc
-        (-> (VariantContextBuilder. (:vc orig))
-            (.chr new-chr)
-            .make))))
+  "Build a new variant context with updated chromosome and sample name."
+  [orig new-chr sample]
+  (letfn [(update-genotype-sample [vc]
+            {:pre [(= 1 (count (.getGenotypes vc)))]}
+            (let [g (first (.getGenotypes vc))]
+              [(Genotype/modifyName g sample)]))]
+    (-> orig
+        (assoc :chr new-chr)
+        (assoc :vc
+          (-> (VariantContextBuilder. (:vc orig))
+              (.chr new-chr)
+              (.genotypes (update-genotype-sample (:vc orig)))
+              .make)))))
 
 (defn- vcs-at-chr
   "Retrieve variant contexts at chromosome, potentially remapping
   chromosome names to match default reference chromosome."
-  [in-vcf vcf-chr ref-map name-map config]
+  [in-vcf vcf-chr ref-map name-map sample config]
   (let [new-chr (get name-map vcf-chr)
         ref-length (get ref-map new-chr)]
-    (map #(fix-vc-chr % new-chr)
+    (map #(fix-vc-chr % new-chr sample)
          ((get-vcf-retriever in-vcf) vcf-chr 0 (+ 1 ref-length)))))
 
 (defn- ordered-vc-iter
   "Provide VariantContexts ordered by chromosome and normalized."
-  [in-vcf ref-file config]
+  [in-vcf ref-file sample config]
   (letfn [(sort-chrs [xs xs-map]
             (let [count-map (into {} (map-indexed (fn [i x] [x i]) (keys xs-map)))]
               (sort-by #(count-map %) xs)))]
@@ -116,7 +121,7 @@
           name-map (chr-name-remap (:org config) ref-chrs vcf-chrs)]
       (flatten
        (for [vcf-chr (sort-chrs vcf-chrs name-map)]
-         (map :vc (vcs-at-chr in-vcf vcf-chr ref-chrs name-map config)))))))
+         (map :vc (vcs-at-chr in-vcf vcf-chr ref-chrs name-map sample config)))))))
 
 ;; ## Rewrite header information
 
@@ -137,7 +142,7 @@
   (let [config {:org :GRCh37}
         out-file (add-file-part in-vcf "prep")]
     (write-vcf-w-template in-vcf {:out out-file}
-                          (ordered-vc-iter in-vcf ref-file config)
+                          (ordered-vc-iter in-vcf ref-file sample config)
                           ref-file
                           :header-update-fn (update-header sample))
     out-file))

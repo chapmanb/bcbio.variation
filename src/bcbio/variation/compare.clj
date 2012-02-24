@@ -126,7 +126,7 @@
   [exp config]
   (let [align-bams (map #(get % :align (:align exp)) (:calls exp))
         out-dir (get config :outdir-prep (:outdir config))
-        start-vcfs (map #(gatk-normalize % (:ref exp) out-dir) (:calls exp))
+        start-vcfs (map #(gatk-normalize % exp out-dir) (:calls exp))
         sample-vcfs (map #(select-by-sample (:sample exp) % (:ref exp)
                                             :intervals (:intervals exp)
                                             :out-dir out-dir)
