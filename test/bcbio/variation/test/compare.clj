@@ -7,6 +7,7 @@
         [bcbio.variation.combine]
         [bcbio.variation.compare]
         [bcbio.variation.filter]
+        [bcbio.variation.normalize]
         [bcbio.variation.phasing]
         [bcbio.variation.stats]
         [bcbio.variation.report])
@@ -110,6 +111,12 @@
   (calc-accuracy {:total-bases {:compared 10}
                   :discordant {:indel 1 :snp 1}
                   :phasing-error {:indel 1 :snp 1}}) => (roughly 62.50))
+
+(facts "Normalize variant representation of chromosomes, order, genotypes and samples."
+  (let [data-dir (str (fs/file "." "test" "data"))
+        ref (str (fs/file data-dir "GRCh37.fa"))
+        vcf (str (fs/file data-dir "cg-normalize.vcf"))]
+    (prep-vcf vcf ref "Test1") =future=> nil))
 
 (facts "Determine the highest count of items in a list"
   (highest-count []) => nil

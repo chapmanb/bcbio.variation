@@ -1,0 +1,13 @@
+##fileformat=VCFv4.1
+##filter=<id=s50,description="less than 50% of samples are fully called">
+##format=<id=gt,number=1,type=string,description="genotype">
+##info=<id=af,number=a,type=float,description="allele frequency">
+##info=<id=db,number=0,type=flag,description="dbsnp membership">
+##info=<id=ns,number=1,type=integer,description="number of samples with fully called data">
+##info=<id=rsid,number=a,type=string,description="dbsnp rs ids">
+##contig=<ID=chr22,length=51304566,assembly=hg19>
+##contig=<ID=chrM,length=16571,assembly=hg19>
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	NA19239-L2-200-37-ASM
+chrM	64	27603250	C	T	.	PASS	AC=0;AF=0.0;AN=1;DB;DP=0;NS=69;RSID=dbsnp.108:rs3883917	GT	0
+chr22	1605	26232580	T	C	.	PASS	AC=0;AF=NaN;AN=0;DB;DP=0;NS=49;RSID=dbsnp.129:rs61969399	GT	./.
+chr22	1603	26232579	T	C	.	PASS	AC=1;AF=0.50;AN=2;DB;DP=0;NS=44;RSID=dbsnp.100:rs2844883	GT	0/1

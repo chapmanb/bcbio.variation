@@ -53,7 +53,7 @@
    (if (.hasNext iter)
      (cons (from-vc (.next iter)) (vcf-iterator iter)))))
 
-(defn- vcf-source
+(defn vcf-source
   "Create a Tribble FeatureSource for VCF file.
    Handles indexing and parsing of VCF into VariantContexts."
   [in-file]
