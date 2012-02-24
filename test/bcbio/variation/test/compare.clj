@@ -116,7 +116,7 @@
   (let [data-dir (str (fs/file "." "test" "data"))
         ref (str (fs/file data-dir "GRCh37.fa"))
         vcf (str (fs/file data-dir "cg-normalize.vcf"))]
-    (prep-vcf vcf ref "Test1") =future=> nil))
+    (prep-vcf vcf ref "Test1") => nil))
 
 (facts "Determine the highest count of items in a list"
   (highest-count []) => nil
