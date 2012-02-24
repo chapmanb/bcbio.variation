@@ -2,10 +2,18 @@
   "Prepare a VCF file for comparison by normalizing chromosome names,
   sort order, sample name, and genotype representation.
   This handles the work of making slightly different representations
-  match, enabling VCF comparisons."
-  (:use [bcbio.variation.variantcontext :only (parse-vcf write-vcf-w-template
-                                               get-seq-dict vcf-source)]
-        [ordered.map :only (ordered-map)]))
+  match, enabling VCF comparisons.
+  Currently implemented for human only, with hooks to generalize for other
+  organisms."
+  (:import [org.broadinstitute.sting.utils.variantcontext VariantContextBuilder]
+           [org.broadinstitute.sting.utils.codecs.vcf VCFHeader])
+  (:use [bcbio.variation.variantcontext :only (parse-vcf
+                                               write-vcf-w-template
+                                               get-seq-dict vcf-source
+                                               get-vcf-retriever)]
+        [bcbio.run.itx :only (add-file-part)]
+        [ordered.map :only (ordered-map)]
+        [ordered.set :only (ordered-set)]))
 
 ;; ## Chromosome name remapping
 
@@ -65,31 +73,71 @@
 ;; Remap chromosome names from hg19 to GRCh37
 (defmethod chr-name-remap :GRCh37
   [_ ref-chrs vcf-chrs]
-  (println ref-chrs)
-  (println vcf-chrs))
+  (letfn [(maybe-remap-name [x]
+            {:post [(contains? ref-chrs %)]}
+            (if (contains? ref-chrs x)
+              x
+              (get hg19-map x)))]
+    (zipmap vcf-chrs
+            (map maybe-remap-name vcf-chrs))))
+
+;; ## Normalize variant contexts
+
+(defn- fix-vc-chr
+  "Build a new variant context with updated chromosome."
+  [orig new-chr]
+  (-> orig
+      (assoc :chr new-chr)
+      (assoc :vc
+        (-> (VariantContextBuilder. (:vc orig))
+            (.chr new-chr)
+            .make))))
 
 (defn- vcs-at-chr
   "Retrieve variant contexts at chromosome, potentially remapping
   chromosome names to match default reference chromosome."
-  [in-vcf ref-chr ref-length name-map])
+  [in-vcf vcf-chr ref-map name-map config]
+  (let [new-chr (get name-map vcf-chr)
+        ref-length (get ref-map new-chr)]
+    (map #(fix-vc-chr % new-chr)
+         ((get-vcf-retriever in-vcf) vcf-chr 0 (+ 1 ref-length)))))
 
 (defn- ordered-vc-iter
   "Provide VariantContexts ordered by chromosome and normalized."
-  [in-vcf ref-file]
-  (let [ref-chrs (into (ordered-map)
-                       (map (fn [x] [(.getSequenceName x)
-                                     (.getSequenceLength x)])
-                            (-> ref-file get-seq-dict .getSequences)))
-        vcf-chrs (-> in-vcf vcf-source .getSequenceNames vec)
-        name-map (chr-name-remap :GRCh37 ref-chrs vcf-chrs)]
-    (flatten
-     (for [[ref-chr ref-length] ref-chrs]
-       (vcs-at-chr in-vcf ref-chr ref-length name-map)))))
+  [in-vcf ref-file config]
+  (letfn [(sort-chrs [xs xs-map]
+            (let [count-map (into {} (map-indexed (fn [i x] [x i]) (keys xs-map)))]
+              (sort-by #(count-map %) xs)))]
+    (let [ref-chrs (into (ordered-map)
+                         (map (fn [x] [(.getSequenceName x)
+                                       (.getSequenceLength x)])
+                              (-> ref-file get-seq-dict .getSequences)))
+          vcf-chrs (-> in-vcf vcf-source .getSequenceNames vec)
+          name-map (chr-name-remap (:org config) ref-chrs vcf-chrs)]
+      (flatten
+       (for [vcf-chr (sort-chrs vcf-chrs name-map)]
+         (map :vc (vcs-at-chr in-vcf vcf-chr ref-chrs name-map config)))))))
+
+;; ## Rewrite header information
+
+(defn- update-header
+  "Update header information, removing contig and adding sample names."
+  [sample]
+  (fn [header]
+    {:pre [(= 1 (count (.getGenotypeSamples header)))]}
+    (VCFHeader. (apply ordered-set (remove #(= "contig" (.getKey %)) (.getMetaData header)))
+                (ordered-set sample))))
 
 (defn prep-vcf
   "Prepare VCF for comparison by normalizing high level attributes
   Assumes by position sorting of variants in the input VCF. Chromosomes do
-  not require a specific order, but positions internal to a chromosome do."
+  not require a specific order, but positions internal to a chromosome do.
+  Currently configured for diploid human prep."
   [in-vcf ref-file sample]
-  (doseq [vc (ordered-vc-iter in-vcf ref-file)]
-    (println vc)))
+  (let [config {:org :GRCh37}
+        out-file (add-file-part in-vcf "prep")]
+    (write-vcf-w-template in-vcf {:out out-file}
+                          (ordered-vc-iter in-vcf ref-file config)
+                          ref-file
+                          :header-update-fn (update-header sample))
+    out-file))

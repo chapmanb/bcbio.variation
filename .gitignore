@@ -20,6 +20,7 @@ test/data/*-fullcombine*vcf
 test/data/*-mincombine*vcf
 test/data/*-filter*vcf
 test/data/*-nomnp*vcf
+test/data/*-prep*vcf
 test/data/method-comparison-summary*
 test/data/prep/
 test/data/grading/

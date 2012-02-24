@@ -97,7 +97,7 @@
    file handles represented as keywords. This allows lazy splitting of VCF files:
    `vc-iter` is a lazy sequence of `(writer-keyword variant-context)`.
    `out-file-map` is a map of writer-keywords to output filenames."
-  [tmpl-file out-file-map vc-iter ref]
+  [tmpl-file out-file-map vc-iter ref & {:keys [header-update-fn]}]
   (letfn [(make-vcf-writer [f ref]
             (StandardVCFWriter. (file f) (get-seq-dict ref)))]
     (let [tmpl-header (.getHeader (vcf-source tmpl-file))
@@ -105,6 +105,11 @@
                              (map #(make-vcf-writer % ref) (vals out-file-map)))]
       (with-open-map writer-map
         (doseq [out-vcf (vals writer-map)]
-          (.writeHeader out-vcf tmpl-header))
-        (doseq [[category vc] vc-iter]
-          (.add (get writer-map category) vc))))))
+          (.writeHeader out-vcf (if-not (nil? header-update-fn)
+                                  (header-update-fn tmpl-header)
+                                  tmpl-header)))
+        (doseq [info vc-iter]
+          (let [[category vc] (if (and (coll? info) (= 2 (count info)))
+                                info
+                                [:out info])]
+            (.add (get writer-map category) vc)))))))

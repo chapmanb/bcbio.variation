@@ -33,7 +33,7 @@
                 (if (has-variant-base? orig-alleles i)
                   (extract-variants orig-alleles i)))))))
 
-(defn- genotype-w-alleles
+(defn genotype-w-alleles
   "Retrieve a new genotype with the given alleles.
    Creates a single genotype from the VariantContext, copying the existing
    genotype and substituting in the provided alleles and phasing information."
