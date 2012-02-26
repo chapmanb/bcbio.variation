@@ -188,10 +188,38 @@
                        (compare-two-vcf (:c1 updated-cmp) (:c2 updated-cmp) exp config))))]
       (map add-summary (vals (reduce update-w-finalizer cmps-by-name (:finalize exp)))))))
 
+(defn load-config
+  "Load configuration file, handling conversion of relative to absolute paths."
+  [config-file]
+  (let [config (-> config-file slurp yaml/parse-string)
+        base-dir (fs/file (get-in config [:dir :base] "."))
+        to-process #{[:dir :out] [:dir :prep]
+                     [:experiments :ref] [:experiments :intervals]
+                     [:experiments :align] [:experiments :calls :file]}]
+    (letfn [(make-absolute [x]
+              (if (.isAbsolute (file x))
+                x
+                (str (fs/file base-dir x))))
+            (maybe-process [val path]
+              (if (contains? to-process path)
+                (make-absolute val)
+                val))
+            (update-tree [config path]
+              (if (map? config)
+                (reduce (fn [item [k v]]
+                          (assoc item k (cond
+                                         (map? v) (update-tree v (conj path k))
+                                         (seq? v) (map #(update-tree % (conj path k)) v)
+                                         :else (maybe-process v (conj path k)))))
+                        config
+                        (vec config))
+                config))]
+      (update-tree config []))))
+
 (defn variant-comparison-from-config
   "Perform comparison between variant calls using inputs from YAML config."
   [config-file]
-  (let [config (-> config-file slurp yaml/parse-string)
+  (let [config (load-config config-file)
         comparisons (flatten
                      (for [exp (:experiments config)]
                        (let [cmps (for [[c1 c2] (combinations (prepare-vcf-calls exp config) 2)]
