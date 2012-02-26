@@ -202,18 +202,21 @@
                 (str (fs/file base-dir x))))
             (maybe-process [val path]
               (if (contains? to-process path)
-                (make-absolute val)
+                (if (seq? val)
+                  (map make-absolute val)
+                  (make-absolute val))
                 val))
             (update-tree [config path]
-              (if (map? config)
-                (reduce (fn [item [k v]]
-                          (assoc item k (cond
-                                         (map? v) (update-tree v (conj path k))
-                                         (seq? v) (map #(update-tree % (conj path k)) v)
-                                         :else (maybe-process v (conj path k)))))
-                        config
-                        (vec config))
-                config))]
+              (cond (map? config)
+                    (reduce (fn [item [k v]]
+                              (assoc item k (cond
+                                             (map? v) (update-tree v (conj path k))
+                                             (seq? v) (map #(update-tree % (conj path k)) v)
+                                             :else (maybe-process v (conj path k)))))
+                            config
+                            (vec config))
+                    (contains? to-process path) (maybe-process config path)
+                    :else config))]
       (update-tree config []))))
 
 (defn variant-comparison-from-config
