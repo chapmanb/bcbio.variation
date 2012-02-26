@@ -1,6 +1,7 @@
 ---
-outdir: test/data/grading
-outdir-prep: test/data/grading/prep
+dir:
+  out: test/data/grading
+  prep: test/data/grading/prep
 experiments:
   - sample: NA00001
     ref: test/data/GRCh37.fa

@@ -64,8 +64,8 @@
               :snp 1
               :indel 2))]
     (let [error-items (cartesian-product [:discordant :phasing-error] [:snp :indel])
-          error-score (apply + (map #(* (get-in metrics %) (get-penalty %)) error-items))
-          total-bases (get-in metrics [:total-bases :compared])]
+          error-score (apply + (map #(* (get-in metrics % 0) (get-penalty %)) error-items))
+          total-bases (get-in metrics [:total-bases :compared] 1)]
       (float
        (* 100.0 (/ total-bases (+ total-bases error-score)))))))
 

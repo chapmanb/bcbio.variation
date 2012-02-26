@@ -1,9 +1,10 @@
 ---
-outdir: test/data
-outdir-prep: test/data/prep
+dir:
+  out: test/data/method
+  prep: test/data/method/prep
 experiments:
   - sample: Test1
-    ref: test/data/hg19.fa
+    ref: test/data/GRCh37.fa
     intervals: test/data/target-regions.bed
     align: test/data/aligned-reads.bam
     calls:

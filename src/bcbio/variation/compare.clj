@@ -112,11 +112,11 @@
 ;; differences for tweaking filters.
 
 (defn- get-summary-writer [config config-file ext]
-  (if-not (nil? (:outdir config))
+  (if-not (nil? (get-in config [:dir :out]))
     (do
-      (if-not (fs/exists? (:outdir config))
-        (fs/mkdirs (:outdir config)))
-      (writer (str (fs/file (:outdir config)
+      (if-not (fs/exists? (get-in config [:dir :out]))
+        (fs/mkdirs (get-in config :dir :out)))
+      (writer (str (fs/file (get-in config [:dir :out])
                             (format "%s-%s"
                                     (itx/file-root (fs/base-name config-file)) ext)))))
     (writer System/out)))
@@ -125,7 +125,7 @@
   "Prepare merged and annotated VCF files for an experiment."
   [exp config]
   (let [align-bams (map #(get % :align (:align exp)) (:calls exp))
-        out-dir (get config :outdir-prep (:outdir config))
+        out-dir (get-in config [:dir :prep] (get-in config [:dir :out]))
         start-vcfs (map #(gatk-normalize % exp out-dir) (:calls exp))
         sample-vcfs (map #(select-by-sample (:sample exp) % (:ref exp)
                                             :intervals (:intervals exp)
@@ -133,7 +133,8 @@
                          start-vcfs)
         all-intervals (remove nil? (map :intervals (cons exp (:calls exp))))
         merged-vcfs (create-merged sample-vcfs align-bams (map #(get % :refcalls true) (:calls exp))
-                                   (:ref exp) :out-dir (:outdir config) :intervals all-intervals)
+                                   (:ref exp) :out-dir (get-in config [:dir :out])
+                                   :intervals all-intervals)
         ann-vcfs (map (fn [[v b c]] (if (get c :annotate false)
                                         (add-variant-annotations v b (:ref exp))
                                         v))
@@ -149,7 +150,7 @@
   "Compare two standard VCF files based on the supplied configuration."
   [c1 c2 exp config]
   (let [c-files (select-by-concordance (:sample exp) c1 c2 (:ref exp)
-                                       :out-dir (:outdir config)
+                                       :out-dir (get-in config [:out :dir])
                                        :interval-file (:intervals exp))
         eval-file (variant-comparison (:sample exp) (:file c1) (:file c2)
                                       (:ref exp) :out-base (first c-files)

@@ -211,7 +211,7 @@
   [call ref exp config]
   (let [compared-calls (score-phased-calls (:file call) (:file ref))]
     {:c-files (write-concordance-output compared-calls (:sample exp) call
-                                        (:outdir config) (:ref exp))
+                                        (get-in config [:dir :out]) (:ref exp))
      :metrics (get-phasing-metrics compared-calls (:intervals exp) (:intervals call) (:ref exp)) 
      :c1 call :c2 ref :sample (:sample exp)}))
 

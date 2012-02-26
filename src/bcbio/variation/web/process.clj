@@ -18,8 +18,8 @@
   (if-not (fs/exists? (:dir work-info))
     (fs/mkdirs (:dir work-info)))
   (let [config-file (str (fs/file (:dir work-info) "process.yaml"))]
-    (->> {:outdir (str (fs/file (:dir work-info) "grading"))
-          :outdir-prep (str (fs/file (:dir work-info) "grading" "prep"))
+    (->> {:dir {:out (str (fs/file (:dir work-info) "grading"))
+                :prep (str (fs/file (:dir work-info) "grading" "prep"))}
           :experiments [{:sample (-> config :ref :sample)
                          :ref (-> config :ref :genome)
                          :intervals (-> config :ref :intervals)

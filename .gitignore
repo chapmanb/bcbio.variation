@@ -24,4 +24,5 @@ test/data/*-prep*vcf
 test/data/method-comparison-summary*
 test/data/prep/
 test/data/grading/
+test/data/method/
 test/data/web-test/
