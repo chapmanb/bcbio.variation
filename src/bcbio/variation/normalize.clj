@@ -99,6 +99,12 @@
               (.genotypes (update-genotype-sample (:vc orig)))
               .make)))))
 
+(defn- no-call-genotype?
+  "Check if a variant has a non-informative no-call genotype."
+  [vc]
+  {:pre [(= 1 (count (:genotypes vc)))]}
+  (= "NO_CALL" (-> vc :genotypes first :type)))
+
 (defn- vcs-at-chr
   "Retrieve variant contexts at chromosome, potentially remapping
   chromosome names to match default reference chromosome."
@@ -106,7 +112,8 @@
   (let [new-chr (get name-map vcf-chr)
         ref-length (get ref-map new-chr)]
     (map #(fix-vc-chr % new-chr sample)
-         ((get-vcf-retriever in-vcf) vcf-chr 0 (+ 1 ref-length)))))
+         (remove no-call-genotype?
+                 ((get-vcf-retriever in-vcf) vcf-chr 0 (+ 1 ref-length))))))
 
 (defn- ordered-vc-iter
   "Provide VariantContexts ordered by chromosome and normalized."
