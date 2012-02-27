@@ -118,6 +118,7 @@
         vcf (str (fs/file data-dir "cg-normalize.vcf"))
         out-vcf (add-file-part vcf "prep")]
     (against-background [(before :facts (vec (map remove-path [out-vcf])))]
+      (multiple-samples? vcf) => false
       (prep-vcf vcf ref "Test1") => out-vcf)))
 
 (facts "Load configuration files, normalizing input."

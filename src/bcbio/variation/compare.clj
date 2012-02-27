@@ -15,7 +15,7 @@
                                        write-scoring-table
                                        top-level-metrics]]
         [bcbio.variation.combine :only [combine-variants create-merged
-                                        select-by-sample gatk-normalize]]
+                                        gatk-normalize]]
         [bcbio.variation.annotation :only [add-variant-annotations]]
         [bcbio.variation.filter :only [variant-filter pipeline-recalibration]]
         [bcbio.variation.phasing :only [is-haploid? compare-two-vcf-phased]]
@@ -127,12 +127,8 @@
   (let [align-bams (map #(get % :align (:align exp)) (:calls exp))
         out-dir (get-in config [:dir :prep] (get-in config [:dir :out]))
         start-vcfs (map #(gatk-normalize % exp out-dir) (:calls exp))
-        sample-vcfs (map #(select-by-sample (:sample exp) % (:ref exp)
-                                            :intervals (:intervals exp)
-                                            :out-dir out-dir)
-                         start-vcfs)
         all-intervals (remove nil? (map :intervals (cons exp (:calls exp))))
-        merged-vcfs (create-merged sample-vcfs align-bams (map #(get % :refcalls true) (:calls exp))
+        merged-vcfs (create-merged start-vcfs align-bams (map #(get % :refcalls true) (:calls exp))
                                    (:ref exp) :out-dir (get-in config [:dir :out])
                                    :intervals all-intervals)
         ann-vcfs (map (fn [[v b c]] (if (get c :annotate false)

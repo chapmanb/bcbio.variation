@@ -9,7 +9,7 @@
       c. Walk through each no-call and set as reference if callable"
   (:import [org.broadinstitute.sting.utils.variantcontext
             Genotype VariantContextBuilder GenotypesContext])
-  (:use [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template]]
+  (:use [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template vcf-source]]
         [bcbio.variation.callable :only [callable-checker]]
         [bcbio.variation.complex :only [normalize-variants]]
         [bcbio.variation.normalize :only [prep-vcf]])
@@ -82,16 +82,22 @@
         (write-vcf-w-template in-vcf {:out out-file} (convert-vcs in-vcf) ref))
       out-file)))
 
+(defn multiple-samples?
+  "Check if the input VCF file has multiple genotyped samples."
+  [in-file]
+  (> (-> in-file vcf-source .getHeader .getGenotypeSamples count)
+     1))
+
 (defn select-by-sample
   "Select only the sample of interest from input VCF files."
-  [sample call ref & {:keys [out-dir intervals]
+  [sample in-file name ref & {:keys [out-dir intervals]
                       :or {out-dir nil intervals nil}}]
-  (let [base-dir (if (nil? out-dir) (fs/parent (:file call)) out-dir)
+  (let [base-dir (if (nil? out-dir) (fs/parent in-file) out-dir)
         file-info {:out-vcf (str (fs/file base-dir
-                                          (format "%s-%s.vcf" sample (:name call))))}
+                                          (format "%s-%s.vcf" sample name)))}
         args (concat ["-R" ref
                       "--sample_name" sample
-                      "--variant" (:file call)
+                      "--variant" in-file
                       "--out" :out-vcf]
                      (if-not (nil? intervals) ["-L" intervals] []))]
     (if-not (fs/exists? base-dir)
@@ -127,7 +133,11 @@
     (let [merge-file (if (coll? (:file call))
                        (merge-call-files call)
                        (:file call))
+          sample-file (if (multiple-samples? merge-file)
+                        (select-by-sample (:sample exp) merge-file (:name call) (:ref exp)
+                                          :out-dir out-dir)
+                        merge-file)
           prep-file (if (true? (:prep call))
-                      (prep-vcf merge-file (:ref exp) (:sample exp) :out-dir out-dir)
-                      merge-file)]
+                      (prep-vcf sample-file (:ref exp) (:sample exp) :out-dir out-dir)
+                      sample-file)]
       (assoc call :file (normalize-variants prep-file (:ref exp) out-dir)))))
