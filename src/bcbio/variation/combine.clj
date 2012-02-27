@@ -137,7 +137,10 @@
                         (select-by-sample (:sample exp) merge-file (:name call) (:ref exp)
                                           :out-dir out-dir)
                         merge-file)
+          out-fname (format "%s-%s.vcf" (:sample exp) (:name call))
           prep-file (if (true? (:prep call))
-                      (prep-vcf sample-file (:ref exp) (:sample exp) :out-dir out-dir)
+                      (prep-vcf sample-file (:ref exp) (:sample exp) :out-dir out-dir
+                                :out-fname out-fname)
                       sample-file)]
-      (assoc call :file (normalize-variants prep-file (:ref exp) out-dir)))))
+      (assoc call :file (normalize-variants prep-file (:ref exp) out-dir
+                                            :out-fname out-fname)))))

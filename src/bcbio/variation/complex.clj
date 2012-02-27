@@ -111,8 +111,9 @@
   "Convert MNPs and indels into normalized representation."
   ([in-file ref]
      (normalize-variants in-file ref nil))
-  ([in-file ref out-dir]
-     (let [out-file (itx/add-file-part (itx/remove-zip-ext in-file)
-                                       "nomnp" out-dir)]
-       (write-vcf-w-template in-file {:out out-file} (get-normalized-vcs in-file) ref)
+  ([in-file ref out-dir & {:keys [out-fname]}]
+     (let [base-name (if (nil? out-fname) (itx/remove-zip-ext in-file) out-fname)
+           out-file (itx/add-file-part base-name "nomnp" out-dir)]
+       (if (itx/needs-run? out-file)
+         (write-vcf-w-template in-file {:out out-file} (get-normalized-vcs in-file) ref))
        out-file)))

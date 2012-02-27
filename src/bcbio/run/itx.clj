@@ -1,4 +1,3 @@
-
 (ns bcbio.run.itx
    "Functionality for running idempotent, transactional processes.
    Provides an API for long running processes in computational
