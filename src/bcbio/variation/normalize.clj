@@ -103,7 +103,8 @@
   "Check if a variant has a non-informative no-call genotype."
   [vc]
   {:pre [(= 1 (count (:genotypes vc)))]}
-  (= "NO_CALL" (-> vc :genotypes first :type)))
+  (contains? #{"NO_CALL" "MIXED"}
+             (-> vc :genotypes first :type)))
 
 (defn- vcs-at-chr
   "Retrieve variant contexts at chromosome, potentially remapping
@@ -118,9 +119,9 @@
 (defn- ordered-vc-iter
   "Provide VariantContexts ordered by chromosome and normalized."
   [in-vcf ref-file sample config]
-  (letfn [(sort-chrs [xs xs-map]
-            (let [count-map (into {} (map-indexed (fn [i x] [x i]) (keys xs-map)))]
-              (sort-by #(count-map %) xs)))]
+  (letfn [(sort-chrs [xs name-map order-map]
+            (let [count-map (into {} (map-indexed (fn [i x] [x i]) (keys order-map)))]
+              (sort-by #(count-map (get name-map %)) xs)))]
     (let [ref-chrs (into (ordered-map)
                          (map (fn [x] [(.getSequenceName x)
                                        (.getSequenceLength x)])
@@ -128,7 +129,7 @@
           vcf-chrs (-> in-vcf vcf-source .getSequenceNames vec)
           name-map (chr-name-remap (:org config) ref-chrs vcf-chrs)]
       (flatten
-       (for [vcf-chr (sort-chrs vcf-chrs name-map)]
+       (for [vcf-chr (sort-chrs vcf-chrs name-map ref-chrs)]
          (map :vc (vcs-at-chr in-vcf vcf-chr ref-chrs name-map sample config)))))))
 
 ;; ## Rewrite header information
