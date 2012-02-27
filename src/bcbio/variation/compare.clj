@@ -148,7 +148,7 @@
   "Compare two standard VCF files based on the supplied configuration."
   [c1 c2 exp config]
   (let [c-files (select-by-concordance (:sample exp) c1 c2 (:ref exp)
-                                       :out-dir (get-in config [:out :dir])
+                                       :out-dir (get-in config [:dir :out])
                                        :interval-file (:intervals exp))
         eval-file (variant-comparison (:sample exp) (:file c1) (:file c2)
                                       (:ref exp) :out-base (first c-files)
