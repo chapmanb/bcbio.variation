@@ -128,7 +128,9 @@
         out-dir (get-in config [:dir :prep] (get-in config [:dir :out]))
         start-vcfs (map #(gatk-normalize % exp out-dir) (:calls exp))
         all-intervals (remove nil? (map :intervals (cons exp (:calls exp))))
-        merged-vcfs (create-merged start-vcfs align-bams (map #(get % :refcalls true) (:calls exp))
+        merged-vcfs (create-merged (map :file start-vcfs)
+                                   align-bams
+                                   (map #(get % :refcalls true) (:calls exp))
                                    (:ref exp) :out-dir (get-in config [:dir :out])
                                    :intervals all-intervals)
         ann-vcfs (map (fn [[v b c]] (if (get c :annotate false)
