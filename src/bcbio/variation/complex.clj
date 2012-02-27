@@ -17,21 +17,28 @@
      1))
 
 (defn- split-alleles
-  "Detect single call SNP variants within a MNP genotype."
+  "Detect single call SNP variants within a MNP genotype.
+  Handles reference no-variant padding bases on the 5' end of
+  the sequence, writing only variants at the adjusted positions."
   [vc genotype]
-  (letfn [(extract-variants [alleles i]
+  (letfn [(mnp-ref-padding [ref-allele vc]
+            {:post [(>= % 0)]}
+            (- (inc (- (:end vc) (:start vc)))
+               (count ref-allele)))
+          (extract-variants [alleles i ref-pad]
             (let [ref-allele (nth (first alleles) i)
                   cur-alleles (map #(Allele/create (str (nth % i))
                                                    (= ref-allele (nth % i)))
                                    alleles)]
-              {:offset i
+              {:offset (+ i ref-pad)
                :ref-allele (first cur-alleles)
                :alleles (rest cur-alleles)}))]
-    (let [orig-alleles (map #(.getBaseString %) (cons (:ref-allele vc) (:alleles genotype)))]
+    (let [orig-alleles (map #(.getBaseString %) (cons (:ref-allele vc) (:alleles genotype)))
+          ref-pad (mnp-ref-padding (first orig-alleles) vc)]
       (remove nil?
               (for [i (-> orig-alleles first count range)]
                 (if (has-variant-base? orig-alleles i)
-                  (extract-variants orig-alleles i)))))))
+                  (extract-variants orig-alleles i ref-pad)))))))
 
 (defn genotype-w-alleles
   "Retrieve a new genotype with the given alleles.
@@ -96,12 +103,33 @@
 ;; ## VCF file conversion
 ;; Process entire files, normalizing complex variations
 
+(defn- vcs-no-mnp-overlaps
+  "Provide lazy stream of variants, avoiding MNP overlaps with single variants.
+  Variant representations can have a MNP and also a single SNP representing
+  the same information. In this case we ignore SNPs overlapping a MNP region
+  and rely on MNP splitting to resolve the SNPs."
+  [vc-iter]
+  (letfn [(mnp-end [x]
+            (if (= "MNP" (:type x))
+              (:end x)
+              (:start x)))
+          (mnp-overlap? [prev cur]
+            (cond
+             (nil? prev) false
+             (and (= (:chr prev) (:chr cur))
+                  (> (mnp-end prev) (:start cur))) true
+             :else false))]
+    (remove nil?
+            (for [[prev cur] (partition 2 1 (cons nil vc-iter))]
+              (if-not (mnp-overlap? prev cur)
+                cur)))))
+
 (defn- get-normalized-vcs
   "Lazy list of variant context with MNPs split into single genotypes and indels stripped."
   [in-file]
   (map (fn [x] [:out x])
    (flatten
-    (for [vc (parse-vcf in-file)]
+    (for [vc (vcs-no-mnp-overlaps (parse-vcf in-file))]
       (condp = (:type vc)
         "MNP" (split-mnp vc)
         "INDEL" (maybe-strip-indel vc)
@@ -114,6 +142,6 @@
   ([in-file ref out-dir & {:keys [out-fname]}]
      (let [base-name (if (nil? out-fname) (itx/remove-zip-ext in-file) out-fname)
            out-file (itx/add-file-part base-name "nomnp" out-dir)]
-       (if (itx/needs-run? out-file)
+       (if (itx/needs-run? [out-file])
          (write-vcf-w-template in-file {:out out-file} (get-normalized-vcs in-file) ref))
        out-file)))
