@@ -21,4 +21,7 @@
 (facts "Manipulating file paths"
   (add-file-part "test.txt" "add") => "test-add.txt"
   (add-file-part "/full/test.txt" "new") => "/full/test-new.txt"
-  (file-root "/full/test.txt") => "/full/test")
+  (file-root "/full/test.txt") => "/full/test"
+  (remove-zip-ext "test.txt") => "test.txt"
+  (remove-zip-ext "test.txt.gz") => "test.txt"
+  (remove-zip-ext "test.tar.gz") => "test")

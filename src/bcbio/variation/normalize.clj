@@ -11,10 +11,10 @@
                                                write-vcf-w-template
                                                get-seq-dict vcf-source
                                                get-vcf-retriever)]
-        [bcbio.run.itx :only (add-file-part)]
         [ordered.map :only (ordered-map)]
         [ordered.set :only (ordered-set)])
-  (:require [clojure.string :as string]))
+  (:require [bcbio.run.itx :as itx]
+            [fs.core :as fs]))
 
 ;; ## Chromosome name remapping
 
@@ -139,10 +139,12 @@
   Assumes by position sorting of variants in the input VCF. Chromosomes do
   not require a specific order, but positions internal to a chromosome do.
   Currently configured for diploid human prep."
-  [in-vcf ref-file sample]
+  [in-vcf ref-file sample & {:keys [out-dir]}]
   (let [config {:org :GRCh37}
-        out-file (add-file-part (string/replace in-vcf ".gz" "")
-                                "prep")]
+        base-dir (if (nil? out-dir) (fs/parent in-vcf) out-dir)
+        out-file (str (fs/file base-dir (itx/add-file-part
+                                         (-> in-vcf fs/base-name itx/remove-zip-ext)
+                                         "prep")))]
     (write-vcf-w-template in-vcf {:out out-file}
                           (ordered-vc-iter in-vcf ref-file sample config)
                           ref-file

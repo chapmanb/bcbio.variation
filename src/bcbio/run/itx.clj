@@ -85,3 +85,13 @@
        (if-not (nil? out-dir)
          (str (fs/file out-dir (fs/base-name out-fname)))
          out-fname))))
+
+(defn remove-zip-ext
+  "Remove any zip extensions from the input filename"
+  [fname]
+  (letfn [(maybe-remove-ext [fname ext]
+            (if (.endsWith fname ext)
+              (subs fname 0 (- (.length fname) (.length ext)))
+              fname))]
+    (let [exts [".tar.gz" "tar.bz2" ".gz" ".bz2" ".zip"]]
+      (reduce maybe-remove-ext fname exts))))

@@ -29,7 +29,7 @@
                                             (itx/add-file-part (-> vcfs
                                                                    first
                                                                    fs/base-name
-                                                                   (string/replace ".gz" ""))
+                                                                   itx/remove-zip-ext)
                                                                (case merge-type
                                                                      :minimal "mincombine"
                                                                      :full "fullcombine"
@@ -128,6 +128,6 @@
                        (merge-call-files call)
                        (:file call))
           prep-file (if (true? (:prep call))
-                      (prep-vcf merge-file (:ref exp) (:sample exp))
+                      (prep-vcf merge-file (:ref exp) (:sample exp) :out-dir out-dir)
                       merge-file)]
       (assoc call :file (normalize-variants prep-file (:ref exp) out-dir)))))
