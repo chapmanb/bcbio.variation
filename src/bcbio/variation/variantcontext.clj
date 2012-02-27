@@ -55,10 +55,13 @@
 
 (defn vcf-source
   "Create a Tribble FeatureSource for VCF file.
-   Handles indexing and parsing of VCF into VariantContexts."
+   Handles indexing and parsing of VCF into VariantContexts.
+   We treat gzipped files as tabix indexed VCFs."
   [in-file]
-  (let [idx (IndexFactory/createIndex (file in-file) (VCFCodec.))]
-    (BasicFeatureSource. (.getAbsolutePath (file in-file)) idx (VCFCodec.))))
+  (if (.endsWith in-file ".gz")
+    (BasicFeatureSource/getFeatureSource in-file (VCFCodec.) false)
+    (let [idx (IndexFactory/createIndex (file in-file) (VCFCodec.))]
+      (BasicFeatureSource. (.getAbsolutePath (file in-file)) idx (VCFCodec.)))))
 
 (defn get-vcf-retriever
   "Indexed VCF file retrieval.

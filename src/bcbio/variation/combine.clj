@@ -12,9 +12,9 @@
   (:use [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template]]
         [bcbio.variation.callable :only [callable-checker]]
         [bcbio.variation.complex :only [normalize-variants]]
-        [bcbio.variation.normalize :only [prep-vcf]]
-        [clojure.string :only [join]])
+        [bcbio.variation.normalize :only [prep-vcf]])
   (:require [fs.core :as fs]
+            [clojure.string :as string]
             [bcbio.run.itx :as itx]
             [bcbio.run.broad :as broad]))
 
@@ -26,14 +26,17 @@
             (-> f fs/base-name itx/file-root))]
     (let [base-dir (if (nil? out-dir) (fs/parent (first vcfs)) out-dir)
           file-info {:out-vcf (str (fs/file base-dir
-                                            (itx/add-file-part (-> vcfs first fs/base-name)
+                                            (itx/add-file-part (-> vcfs
+                                                                   first
+                                                                   fs/base-name
+                                                                   (string/replace ".gz" ""))
                                                                (case merge-type
                                                                      :minimal "mincombine"
                                                                      :full "fullcombine"
                                                                      "combine"))))}
           args (concat ["-R" ref
                         "-o" :out-vcf
-                        "--rod_priority_list" (join "," (map unique-name vcfs))]
+                        "--rod_priority_list" (string/join "," (map unique-name vcfs))]
                        (flatten (map #(list (str "--variant:" (unique-name %)) %) vcfs))
                        (cond
                         (nil? intervals) []

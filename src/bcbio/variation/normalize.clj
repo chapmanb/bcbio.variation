@@ -13,7 +13,8 @@
                                                get-vcf-retriever)]
         [bcbio.run.itx :only (add-file-part)]
         [ordered.map :only (ordered-map)]
-        [ordered.set :only (ordered-set)]))
+        [ordered.set :only (ordered-set)])
+  (:require [clojure.string :as string]))
 
 ;; ## Chromosome name remapping
 
@@ -140,7 +141,8 @@
   Currently configured for diploid human prep."
   [in-vcf ref-file sample]
   (let [config {:org :GRCh37}
-        out-file (add-file-part in-vcf "prep")]
+        out-file (add-file-part (string/replace in-vcf ".gz" "")
+                                "prep")]
     (write-vcf-w-template in-vcf {:out out-file}
                           (ordered-vc-iter in-vcf ref-file sample config)
                           ref-file

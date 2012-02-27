@@ -5,7 +5,8 @@
             VariantContextBuilder GenotypesContext Genotype
             VariantContextUtils])
   (:use [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template]])
-  (:require [bcbio.run.itx :as itx]))
+  (:require [bcbio.run.itx :as itx]
+            [clojure.string :as string]))
 
 ;; ## Multi-nucleotide polymorphisms (MNPs)
 ;; Split into single variant primitives.
@@ -112,6 +113,7 @@
   ([in-file ref]
      (normalize-variants in-file ref nil))
   ([in-file ref out-dir]
-     (let [out-file (itx/add-file-part in-file "nomnp" out-dir)]
+     (let [out-file (itx/add-file-part (string/replace in-file ".gz" "")
+                                       "nomnp" out-dir)]
        (write-vcf-w-template in-file {:out out-file} (get-normalized-vcs in-file) ref)
        out-file)))
