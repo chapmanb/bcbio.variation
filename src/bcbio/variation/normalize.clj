@@ -103,7 +103,7 @@
   "Check if a variant has a non-informative no-call genotype."
   [vc]
   {:pre [(= 1 (count (:genotypes vc)))]}
-  (contains? #{"NO_CALL" "MIXED"}
+  (contains? #{"NO_CALL" "MIXED" "HOM_REF"}
              (-> vc :genotypes first :type)))
 
 (defn- vcs-at-chr

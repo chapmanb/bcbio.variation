@@ -112,12 +112,13 @@
                   :discordant {:indel 1 :snp 1}
                   :phasing-error {:indel 1 :snp 1}}) => (roughly 62.50))
 
-(facts "Normalize variant representation of chromosomes, order, genotypes and samples."
-  (let [data-dir (str (fs/file "." "test" "data"))
-        ref (str (fs/file data-dir "GRCh37.fa"))
-        vcf (str (fs/file data-dir "cg-normalize.vcf"))
-        out-vcf (add-file-part vcf "prep")]
-    (against-background [(before :facts (vec (map remove-path [out-vcf])))]
+
+(let [data-dir (str (fs/file "." "test" "data"))
+      ref (str (fs/file data-dir "GRCh37.fa"))
+      vcf (str (fs/file data-dir "cg-normalize.vcf"))
+      out-vcf (add-file-part vcf "prep")]
+  (against-background [(before :facts (vec (map remove-path [out-vcf])))]
+    (facts "Normalize variant representation of chromosomes, order, genotypes and samples."
       (multiple-samples? vcf) => false
       (prep-vcf vcf ref "Test1") => out-vcf)))
 
