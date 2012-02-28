@@ -113,16 +113,19 @@
             (if (= "MNP" (:type x))
               (:end x)
               (:start x)))
-          (mnp-overlap? [prev cur]
+          (mnp-overlap? [cur prev]
             (cond
              (nil? prev) false
              (and (= (:chr prev) (:chr cur))
                   (> (mnp-end prev) (:start cur))) true
-             :else false))]
-    (remove nil?
-            (for [[prev cur] (partition 2 1 (cons nil vc-iter))]
-              (if-not (mnp-overlap? prev cur)
-                cur)))))
+                  :else false))]
+    (let [num-prev 5]
+      (remove nil?
+              (for [[prev cur] (map (juxt butlast last)
+                                    (partition num-prev 1 (concat (repeat (dec num-prev) nil)
+                                                                  vc-iter)))]
+                (if (not-any? (partial mnp-overlap? cur) prev)
+                  cur))))))
 
 (defn- get-normalized-vcs
   "Lazy list of variant context with MNPs split into single genotypes and indels stripped."
