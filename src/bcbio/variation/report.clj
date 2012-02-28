@@ -3,7 +3,7 @@
   (:import [org.broadinstitute.sting.gatk.report GATKReport])
   (:use [ordered.map :only [ordered-map]]
         [clojure.math.combinatorics :only [cartesian-product]]
-        [bcbio.variation.variantcontext :only [parse-vcf]])
+        [bcbio.variation.variantcontext :only [parse-vcf get-vcf-retriever]])
   (:require [doric.core :as doric]))
 
 (defn concordance-report-metrics
@@ -21,6 +21,19 @@
               (for [i (range (count (.values (first cols))))]
                 (zipmap headers
                         (map #(nth (vec (.values %)) i) cols)))))))
+
+(defn discordance-metrics
+  "Provide metrics to distinguish types of discordance in a comparison.
+  These identify variants which differ due to being missing in one variant
+  call versus calls present in both with different genotypes."
+  [file1 file2]
+  (let [vrn-fetch (get-vcf-retriever file2)]
+    (reduce (fn [coll vc]
+              (let [other-vcs (vrn-fetch (:chr vc) (:start vc) (:end vc))
+                    vc-type (if-not (empty? other-vcs) :total :unique)]
+                (assoc coll vc-type (inc (get coll vc-type)))))
+            {:total 0 :unique 0}
+            (parse-vcf file1))))
 
 (defn top-level-metrics
   "Provide one-line summary of similarity metrics for a VCF comparison."
@@ -50,7 +63,8 @@
      :concordant (all-vrn-counts (first (:c-files x)))
      :nonref_concordant (count-variants (first (:c-files x)) nonref-passes-filter?)
      :discordant1 (all-vrn-counts (second (:c-files x)))
-     :discordant2 (all-vrn-counts (nth (:c-files x) 2)))))
+     :discordant2 (all-vrn-counts (nth (:c-files x) 2))
+     :discordant_both (apply discordance-metrics (rest (:c-files x))))))
 
 (defn calc-accuracy
   "Calculate an overall accuracy score from input metrics.
@@ -104,7 +118,7 @@
         (case (second type)
               :snp (-> 1 (* sign) (* val))
               :indel (-> 2 (* sign) (* val))
-              (throw (Exception. (str "Unexpected variant type" type)))))))
+              0))))
 
 (defn write-concordance-metrics
   "Summary table of metrics for assessing the score of a variant comparison."
@@ -112,7 +126,9 @@
   (let [to-write (ordered-map :genotype_concordance "Overall genotype concordance"
                               :nonref_discrepency "Non-reference discrepancy rate"
                               :nonref_sensitivity "Non-reference sensitivity"
+                              [:concordant :total] "Total concordant"
                               :nonref_concordant "Non-reference concordant count"
+                              [:discordant_both :total] "Shared discordant"
                               [:concordant :snp] "Concordant SNPs"
                               [:concordant :indel] "Concordant indels"
                               [:discordant1 :snp] (str "Discordant SNPs: " (:call1 metrics))
