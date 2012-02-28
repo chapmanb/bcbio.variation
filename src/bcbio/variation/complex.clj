@@ -79,7 +79,9 @@
 ;; Create a normalized representation for comparison.
 
 (defn- maybe-strip-indel
-  "Remove extra variant bases, if necessary, from 5' end of indels."
+  "Remove extra variant bases, if necessary, from 5' end of indels.
+  Checks both called alleles and potential alleles for extra 5' padding
+  removing this if not needed to distinguish any potential alleles."
   [vc]
   {:pre [(= 1 (count (:genotypes vc)))]}
   (letfn [(strip-indel [vc i alleles]
@@ -91,12 +93,17 @@
               (new-split-vc vc 0 {:offset i
                                   :size (- (count ref-allele) 1)
                                   :ref-allele (first cur-alleles)
-                                  :alleles (rest cur-alleles)})))]
-    (let [orig-alleles (map #(.getBaseString %) (cons (:ref-allele vc)
-                                                      (-> vc :genotypes first :alleles)))
-          first-var-i (first (filter #(has-variant-base? orig-alleles %)
-                                     (range (apply max (map count orig-alleles)))))]
-      (if (or (nil? first-var-i) (= first-var-i 0))
+                                  :alleles (rest cur-alleles)})))
+          (variant-allele-pos [input-alleles]
+            (let [str-alleles (map #(.getBaseString %) input-alleles)
+                  first-var-i (first (filter #(has-variant-base? str-alleles %)
+                                     (range (apply max (map count str-alleles)))))]
+              [str-alleles first-var-i]))]
+    (let [[orig-alleles first-var-i] (variant-allele-pos (cons (:ref-allele vc)
+                                                               (-> vc :genotypes first :alleles)))
+          [_ nocall-i] (variant-allele-pos (cons (:ref-allele vc) (:alt-alleles vc)))]
+      (if (or (nil? first-var-i) (= first-var-i 0)
+              (nil? nocall-i) (= nocall-i 0))
         (:vc vc)
         (strip-indel (:vc vc) first-var-i orig-alleles)))))
 

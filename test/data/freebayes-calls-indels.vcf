@@ -85,102 +85,7 @@
 ##INFO=<ID=XRS,Number=1,Type=Float,Description="Reference allele read SNP rate: The rate of per-base mismatches (SNPs + MNPs) in reads supporting the reference allele.">
 ##INFO=<ID=set,Number=1,Type=String,Description="Source VCF for the merged record in CombineVariants">
 ##INFO=<ID=technology.illumina,Number=A,Type=Float,Description="Fraction of observations supporting the alternate observed in reads from illumina">
-##OriginalSnpEffCmd="SnpEff eff -1 -i vcf -c /n/home05/bchapman/mylocal/share/java/snpeff/snpEff.config -o vcf GRCh37.63 /n/scratch00/hsph/projects/pk_exomeSeq/work/1_111205_pkpilot-sort-dup-gatkrecal-realign-variants-dbsnp-filter.vcf -filterInterval /n/scratch00/hsph/projects/pk_exomeSeq/work/1_111205_pkpilot-sort-dup-gatkrecal-realign-variants-dbsnp-filter-snpeff-intervals.bed "
-##OriginalSnpEffVersion="2.0.2 (build 2011-09-09), by Pablo Cingolani"
-##SelectVariants="analysis_type=SelectVariants input_file=[] read_buffer_size=null phone_home=NO_ET read_filter=[] intervals=[/n/HSPH/projects/pk_exomeSeq/CaptureInfo/pk_captureTargets-sort.bed] excludeIntervals=null interval_set_rule=UNION interval_merging=ALL reference_sequence=/n/HSPH/biodata/genomes/Hsapiens/GRCh37/seq/GRCh37.fa rodBind=[] nonDeterministicRandomSeed=false downsampling_type=BY_SAMPLE downsample_to_fraction=null downsample_to_coverage=1000 baq=OFF baqGapOpenPenalty=40.0 performanceLog=null useOriginalQualities=false defaultBaseQualities=-1 validation_strictness=SILENT unsafe=null num_threads=1 num_cpu_threads=null num_io_threads=null num_bam_file_handles=null read_group_black_list=null pedigree=[] pedigreeString=[] pedigreeValidationType=STRICT allow_intervals_with_unindexed_bam=false logging_level=INFO log_to_file=null help=false variant=(RodBinding name=variant source=/n/HSPH/galaxy/upload/storage/111205_pkpilot/NA12878/NA12878-variants.vcf) discordance=(RodBinding name= source=UNBOUND) concordance=(RodBinding name= source=UNBOUND) out=org.broadinstitute.sting.gatk.io.stubs.VCFWriterStub NO_HEADER=org.broadinstitute.sting.gatk.io.stubs.VCFWriterStub sites_only=org.broadinstitute.sting.gatk.io.stubs.VCFWriterStub sample_name=[NA12878] sample_expressions=null sample_file=null exclude_sample_name=[] exclude_sample_file=[] select_expressions=[] excludeNonVariants=false excludeFiltered=false restrictAllelesTo=ALL keepOriginalAC=false mendelianViolation=false mendelianViolationQualThreshold=0.0 select_random_number=0 select_random_fraction=0.0 remove_fraction_genotypes=0.0 selectTypeToInclude=[] keepIDs=null outMVFile=null filter_mismatching_base_and_quals=false"
-##UnifiedGenotyper="analysis_type=UnifiedGenotyper input_file=[/humgen/gsa-pipeline/P0028/ToKraft_Haiman.Pilot_plate_metrics.GWASeq_BrCa/v1/ToKraft_Haiman.Pilot_plate_metrics.GWASeq_BrCa.bam.list] sample_metadata=[] read_buffer_size=null phone_home=STANDARD read_filter=[] intervals=[/humgen/gsa-pipeline/P0028/ToKraft_Haiman.Pilot_plate_metrics.GWASeq_BrCa/v1/queueScatterGather/Q-11449@node1066-3-sg/temp-4/scatter.intervals] excludeIntervals=null reference_sequence=/seq/references/Homo_sapiens_assembly19/v1/Homo_sapiens_assembly19.fasta rodBind=[/humgen/gsa-hpprojects/GATK/data/dbsnp_132_b37.vcf] rodToIntervalTrackName=null BTI_merge_rule=UNION nonDeterministicRandomSeed=false DBSNP=null downsampling_type=null downsample_to_fraction=null downsample_to_coverage=600 baq=OFF baqGapOpenPenalty=40.0 performanceLog=null useOriginalQualities=false defaultBaseQualities=-1 validation_strictness=SILENT unsafe=null num_threads=1 interval_merging=ALL read_group_black_list=null processingTracker=null restartProcessingTracker=false processingTrackerStatusFile=null processingTrackerID=-1 allow_intervals_with_unindexed_bam=false disable_experimental_low_memory_sharding=false logging_level=INFO log_to_file=null help=false genotype_likelihoods_model=BOTH p_nonref_model=EXACT heterozygosity=0.0010 pcr_error_rate=1.0E-4 genotyping_mode=DISCOVERY output_mode=EMIT_VARIANTS_ONLY standard_min_confidence_threshold_for_calling=30.0 standard_min_confidence_threshold_for_emitting=30.0 noSLOD=false assume_single_sample_reads=null abort_at_too_much_coverage=-1 min_base_quality_score=17 min_mapping_quality_score=20 max_deletion_fraction=0.05 min_indel_count_for_genotyping=5 indel_heterozygosity=1.25E-4 indelGapContinuationPenalty=10.0 indelGapOpenPenalty=45.0 indelHaplotypeSize=80 doContextDependentGapPenalties=true getGapPenaltiesFromData=false indel_recal_file=indel.recal_data.csv indelDebug=false dovit=false GSA_PRODUCTION_ONLY=true exactCalculation=LINEAR_EXPERIMENTAL ignoreSNPAlleles=false output_all_callable_bases=false genotype=false out=org.broadinstitute.sting.gatk.io.stubs.VCFWriterStub NO_HEADER=org.broadinstitute.sting.gatk.io.stubs.VCFWriterStub sites_only=org.broadinstitute.sting.gatk.io.stubs.VCFWriterStub debug_file=null metrics_file=null annotation=[]"
-##VariantAnnotator="analysis_type=VariantAnnotator input_file=[] read_buffer_size=null phone_home=NO_ET read_filter=[] intervals=null excludeIntervals=null interval_set_rule=UNION interval_merging=ALL reference_sequence=/n/home05/bchapman/hsph_scratch/biodata/genomes/Hsapiens/GRCh37/seq/GRCh37.fa rodBind=[] nonDeterministicRandomSeed=false downsampling_type=BY_SAMPLE downsample_to_fraction=null downsample_to_coverage=1000 baq=OFF baqGapOpenPenalty=40.0 performanceLog=null useOriginalQualities=false defaultBaseQualities=-1 validation_strictness=SILENT unsafe=null num_threads=1 read_group_black_list=null pedigree=[] pedigreeString=[] pedigreeValidationType=STRICT allow_intervals_with_unindexed_bam=false disable_experimental_low_memory_sharding=false logging_level=INFO log_to_file=null help=false variant=(RodBinding name=variant source=/n/scratch00/hsph/projects/pk_exomeSeq/work/1_111205_pkpilot-sort-dup-gatkrecal-realign-variants.vcf) snpEffFile=(RodBinding name= source=UNBOUND) dbsnp=(RodBinding name=dbsnp source=/n/home05/bchapman/hsph_scratch/biodata/genomes/Hsapiens/GRCh37/variation/dbsnp_132.vcf) comp=[] resource=[] out=org.broadinstitute.sting.gatk.io.stubs.VCFWriterStub NO_HEADER=org.broadinstitute.sting.gatk.io.stubs.VCFWriterStub sites_only=org.broadinstitute.sting.gatk.io.stubs.VCFWriterStub annotation=[] excludeAnnotation=[] group=[] expression=[] useAllAnnotations=false list=false assume_single_sample_reads=null vcfContainsOnlyIndels=false family_string=null MendelViolationGenotypeQualityThreshold=0.0 filter_mismatching_base_and_quals=false"
-##VariantFiltration="analysis_type=VariantFiltration input_file=[] read_buffer_size=null phone_home=NO_ET read_filter=[] intervals=null excludeIntervals=null interval_set_rule=UNION interval_merging=ALL reference_sequence=/n/home05/bchapman/hsph_scratch/biodata/genomes/Hsapiens/GRCh37/seq/GRCh37.fa rodBind=[] nonDeterministicRandomSeed=false downsampling_type=BY_SAMPLE downsample_to_fraction=null downsample_to_coverage=1000 baq=OFF baqGapOpenPenalty=40.0 performanceLog=null useOriginalQualities=false defaultBaseQualities=-1 validation_strictness=SILENT unsafe=null num_threads=1 read_group_black_list=null pedigree=[] pedigreeString=[] pedigreeValidationType=STRICT allow_intervals_with_unindexed_bam=false disable_experimental_low_memory_sharding=false logging_level=INFO log_to_file=null help=false variant=(RodBinding name=variant source=/n/scratch00/hsph/projects/pk_exomeSeq/work/1_111205_pkpilot-sort-dup-gatkrecal-realign-variants-dbsnp.vcf) mask=(RodBinding name= source=UNBOUND) out=org.broadinstitute.sting.gatk.io.stubs.VCFWriterStub NO_HEADER=org.broadinstitute.sting.gatk.io.stubs.VCFWriterStub sites_only=org.broadinstitute.sting.gatk.io.stubs.VCFWriterStub filterExpression=[QUAL < 20.0, DP < 5] filterName=[GATKStandardQUAL, GATKStandardDP] genotypeFilterExpression=[] genotypeFilterName=[] clusterSize=3 clusterWindowSize=0 maskExtension=0 maskName=Mask missingValuesInExpressionsShouldEvaluateAsFailing=false filter_mismatching_base_and_quals=false"
 ##commandline="freebayes -b /n/scratch00/hsph/projects/pk_exomeSeq/work/1_111205_pkpilot-sort-dup-gatkrecal-realign.bam -v /n/scratch00/hsph/projects/pk_exomeSeq/work/1_111205_pkpilot-sort-dup-gatkrecal-realign-variants-split/tx/1_111205_pkpilot-sort-dup-gatkrecal-realign-GL000192.1-variants.vcf -f /n/home05/bchapman/hsph_scratch/biodata/genomes/Hsapiens/GRCh37/seq/GRCh37.fa -r GL000192.1"
-##contig=<ID=1,length=249250621>
-##contig=<ID=10,length=135534747>
-##contig=<ID=11,length=135006516>
-##contig=<ID=12,length=133851895>
-##contig=<ID=13,length=115169878>
-##contig=<ID=14,length=107349540>
-##contig=<ID=15,length=102531392>
-##contig=<ID=16,length=90354753>
-##contig=<ID=17,length=81195210>
-##contig=<ID=18,length=78077248>
-##contig=<ID=19,length=59128983>
-##contig=<ID=2,length=243199373>
-##contig=<ID=20,length=63025520>
-##contig=<ID=21,length=48129895>
-##contig=<ID=22,length=51304566>
-##contig=<ID=3,length=198022430>
-##contig=<ID=4,length=191154276>
-##contig=<ID=5,length=180915260>
-##contig=<ID=6,length=171115067>
-##contig=<ID=7,length=159138663>
-##contig=<ID=8,length=146364022>
-##contig=<ID=9,length=141213431>
-##contig=<ID=GL000191.1,length=106433>
-##contig=<ID=GL000192.1,length=547496>
-##contig=<ID=GL000193.1,length=189789>
-##contig=<ID=GL000194.1,length=191469>
-##contig=<ID=GL000195.1,length=182896>
-##contig=<ID=GL000196.1,length=38914>
-##contig=<ID=GL000197.1,length=37175>
-##contig=<ID=GL000198.1,length=90085>
-##contig=<ID=GL000199.1,length=169874>
-##contig=<ID=GL000200.1,length=187035>
-##contig=<ID=GL000201.1,length=36148>
-##contig=<ID=GL000202.1,length=40103>
-##contig=<ID=GL000203.1,length=37498>
-##contig=<ID=GL000204.1,length=81310>
-##contig=<ID=GL000205.1,length=174588>
-##contig=<ID=GL000206.1,length=41001>
-##contig=<ID=GL000207.1,length=4262>
-##contig=<ID=GL000208.1,length=92689>
-##contig=<ID=GL000209.1,length=159169>
-##contig=<ID=GL000210.1,length=27682>
-##contig=<ID=GL000211.1,length=166566>
-##contig=<ID=GL000212.1,length=186858>
-##contig=<ID=GL000213.1,length=164239>
-##contig=<ID=GL000214.1,length=137718>
-##contig=<ID=GL000215.1,length=172545>
-##contig=<ID=GL000216.1,length=172294>
-##contig=<ID=GL000217.1,length=172149>
-##contig=<ID=GL000218.1,length=161147>
-##contig=<ID=GL000219.1,length=179198>
-##contig=<ID=GL000220.1,length=161802>
-##contig=<ID=GL000221.1,length=155397>
-##contig=<ID=GL000222.1,length=186861>
-##contig=<ID=GL000223.1,length=180455>
-##contig=<ID=GL000224.1,length=179693>
-##contig=<ID=GL000225.1,length=211173>
-##contig=<ID=GL000226.1,length=15008>
-##contig=<ID=GL000227.1,length=128374>
-##contig=<ID=GL000228.1,length=129120>
-##contig=<ID=GL000229.1,length=19913>
-##contig=<ID=GL000230.1,length=43691>
-##contig=<ID=GL000231.1,length=27386>
-##contig=<ID=GL000232.1,length=40652>
-##contig=<ID=GL000233.1,length=45941>
-##contig=<ID=GL000234.1,length=40531>
-##contig=<ID=GL000235.1,length=34474>
-##contig=<ID=GL000236.1,length=41934>
-##contig=<ID=GL000237.1,length=45867>
-##contig=<ID=GL000238.1,length=39939>
-##contig=<ID=GL000239.1,length=33824>
-##contig=<ID=GL000240.1,length=41933>
-##contig=<ID=GL000241.1,length=42152>
-##contig=<ID=GL000242.1,length=43523>
-##contig=<ID=GL000243.1,length=43341>
-##contig=<ID=GL000244.1,length=39929>
-##contig=<ID=GL000245.1,length=36651>
-##contig=<ID=GL000246.1,length=38154>
-##contig=<ID=GL000247.1,length=36422>
-##contig=<ID=GL000248.1,length=39786>
-##contig=<ID=GL000249.1,length=38502>
-##contig=<ID=MT,length=16569>
-##contig=<ID=X,length=155270560>
-##contig=<ID=Y,length=59373566>
-##fileDate=20111212
-##phasing=none
-##reference=/n/home05/bchapman/hsph_scratch/biodata/genomes/Hsapiens/GRCh37/seq/GRCh37.fa
-##reference=file:///data/concordance/NA12878/work/../inputs/GRCh37.fa
-##source=SelectVariants
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	NA12878
 1	825359	2686	CGTC	CTTA	.	s50	;AC=1;AF=0.50;AN=2;DP=0;NS=31;RSID=.	GT	0/1
 1	825360	2685	G	T	.	s50	AC=1;AF=0.50;AN=2;DB;DP=0;NS=25;RSID=dbsnp.131:rs74559290	GT	0/1
@@ -370,6 +275,8 @@
 11	69515558	.	GC	G	147.48	PASS	AB=0.111111;ABP=26.6552;AC=1;AF=0.50;AN=2;AO=2;BVAR;CIGAR=1M1D;DP=18;DPRA=0;EPP=7.35324;EPPR=7.89611;FS=0.000;GC=66.34;HRun=1;HWE=-0;HaplotypeScore=0.0000;LEN=1;MEANALT=1;MQ=42.52;MQ0=0;MQM=45;MQMR=44.75;NS=1;NUMALT=1;ODDS=33.959;PAIRED=1;PAIREDR=1;QD=6.41;RO=16;RPP=7.35324;RPPR=29.6108;RUN=1;SAP=7.35324;SNPEFF_EFFECT=INTRON;SNPEFF_FUNCTIONAL_CLASS=NONE;SNPEFF_GENE_BIOTYPE=protein_coding;SNPEFF_GENE_NAME=FGF19;SNPEFF_IMPACT=MODIFIER;SNPEFF_TRANSCRIPT_ID=ENST00000294312;SRP=11.6962;TYPE=del;XAI=0;XAM=0.0133333;XAS=0.0133333;XRI=0;XRM=0.0016557;XRS=0.0016557;set=Intersection;technology.illumina=1	GT:AO:DP:GL:GQ:QA:QR:RO	0/1:2:18:-19.38,-3.23385,-54.9188:99:204:606:16
 11	69530979	.	CA	TG	63.75	PASS	AB=0.272727;ABP=7.94546;AC=1;AF=0.50;AN=2;AO=3;BVAR;CIGAR=2X;DP=11;DPRA=0;EPP=9.52472;EPPR=20.3821;GC=49.50;HWE=-0;LEN=2;MEANALT=1;MQ=44.31;MQ0=0;MQM=46.3333;MQMR=47.5;NS=1;NUMALT=1;ODDS=14.6787;PAIRED=1;PAIREDR=1;QD=4.90;RO=8;RPP=9.52472;RPPR=20.3821;RUN=1;SAP=9.52472;SRP=20.3821;TYPE=mnp;XAI=0;XAM=0;XAS=0;XRI=0.003379;XRM=0.00502373;XRS=0.00164474;set=Intersection;technology.illumina=1	GT:AO:DP:GL:GQ:QA:QR:RO	0/1:3:11:-8.86667,-1.09385,-28.7438:63.75:95:315:8
 11	69535388	.	GCCA	TCCG,GCCG	109.25	PASS	AB=0.2,0.8;ABP=6.91895,6.91895;AC=1,1;AF=0.50,0.50;AN=2;AO=1,4;BVAR;CIGAR=1X2M1X,3M1X;DP=5;DPRA=0,0;EPP=5.18177,11.6962;EPPR=0;GC=46.53;HWE=-0;LEN=4,1;MEANALT=2,2;MQ=44.01;MQ0=0;MQM=45,43.75;MQMR=0;NS=1;NUMALT=2;ODDS=1.83258;PAIRED=1,1;PAIREDR=0;QD=21.85;RO=0;RPP=5.18177,11.6962;RPPR=0;RUN=1,1;SAP=5.18177,11.6962;SRP=0;TYPE=complex,snp;XAI=0,0;XAM=0,0.00328947;XAS=0,0.00328947;XRI=0;XRM=0;XRS=0;set=Intersection;technology.illumina=1,1	GT:AO:DP:GL:GQ:QA:QR:RO	1/2:1,4:5:-13.064,-10.661,-10.36,-4.20412,-0.80618,-3:8.59:30,112:0:0
+14	44428430	rs58472249;-/GTTT	TTTTG	T,TTTTGTTTG	100	PASS	AC=0,1;AF=0.00,0.50;AN=2;CA=0;DB;DP=0;HP=7;NF=18;NR=31;set=YRI_trio_2010_07_indel_genotypes.vcf	GT:GQ	0/2:50
+14	44428431	.	T	C	.	PASS	AA=T;AC=1;AF=0.50;AN=2;DP=21;set=YRI_trio_2010_03_genotypes.vcf	GT:DP:GQ	0|1:21:88
 14	68277592	.	AGT	A	589.93	PASS	AB=0.0582524;ABP=352.175;AC=1;AF=0.50;AN=2;AO=12;BVAR;CIGAR=1M2D;DP=206;DPRA=0;EPP=5.9056;EPPR=78.2731;FS=0.000;GC=48.51;HRun=0;HWE=-0;HaplotypeScore=0.0000;LEN=2;MEANALT=1;MQ=46.21;MQ0=0;MQM=47.8333;MQMR=46.2474;NS=1;NUMALT=1;ODDS=135.837;PAIRED=1;PAIREDR=0.994845;QD=2.63;RO=194;RPP=3.0103;RPPR=424.276;RUN=1;SAP=3.0103;SRP=78.2731;TYPE=del;XAI=0;XAM=0;XAS=0;XRI=0.000274914;XRM=0.00115753;XRS=0.000882619;set=Intersection;technology.illumina=1	GT:AO:DP:GL:GQ:QA:QR:RO	0/1:12:206:-103.459,-43.0679,-612.441:99:1139:6801:194
 14	68288349	.	TG	T	59.92	PASS	AB=0.1;ABP=16.9077;AC=1;AF=0.50;AN=2;AO=1;BVAR;CIGAR=1M1D;DP=10;DPRA=0;EPP=5.18177;EPPR=5.18177;FS=0.000;GC=47.52;HRun=1;HWE=-0;HaplotypeScore=0.0000;LEN=1;MEANALT=1;MQ=45.41;MQ0=0;MQM=47;MQMR=45.2222;NS=1;NUMALT=1;ODDS=13.7965;PAIRED=1;PAIREDR=1;QD=5.99;RO=9;RPP=5.18177;RPPR=22.5536;RUN=1;SAP=5.18177;SRP=5.18177;TYPE=del;XAI=0;XAM=0;XAS=0;XRI=0;XRM=0;XRS=0;set=Intersection;technology.illumina=1	GT:AO:DP:GL:GQ:QA:QR:RO	0/1:1:10:-9.4,-2.0103,-27.9711:59.92:94:307:9
 14	68289439	.	GCT	G	37.33	PASS	AB=0.0625;ABP=29.6108;AC=1;AF=0.50;AN=2;AO=1;BVAR;CIGAR=1M2D;DP=16;DPRA=0;EPP=5.18177;EPPR=8.59409;FS=0.000;GC=43.56;HRun=0;HWE=-0;HaplotypeScore=0.0000;LEN=2;MEANALT=2;MQ=46.47;MQ0=0;MQM=46;MQMR=46.4286;NS=1;NUMALT=1;ODDS=8.59486;PAIRED=1;PAIREDR=1;QD=2.33;RO=14;RPP=5.18177;RPPR=12.937;RUN=1;SAP=5.18177;SRP=25.3454;TYPE=del;XAI=0;XAM=0;XAS=0;XRI=0;XRM=0.0056391;XRS=0.0056391;set=Intersection;technology.illumina=1	GT:AO:DP:GL:GQ:QA:QR:RO	0/1:1:16:-11.97,-6.83936,-41.616:37.27:91:424:14
