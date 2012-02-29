@@ -16,7 +16,7 @@
   :dev-dependencies [[midje "1.3.0" :exclusions [org.clojure/clojure]]]
   :java-source-path "src/java"
   :omit-source true
-  :aot [bcbio.variation.vcfwalker bcbio.variation.core]
+  :aot [bcbio.variation.vcfwalker bcbio.variation.core bcbio.variation.annotate.nbq]
   :main bcbio.variation.core
   :run-aliases {:compare bcbio.variation.compare
                 :web bcbio.variation.web.server}

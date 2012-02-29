@@ -13,7 +13,8 @@
         annotations ["BaseQualityRankSumTest" "DepthOfCoverage" "FisherStrand"
                      "GCContent" "HaplotypeScore" "HomopolymerRun"
                      "MappingQualityRankSumTest" "MappingQualityZero"
-                     "QualByDepth" "ReadPosRankSumTest" "RMSMappingQuality"]
+                     "MeanNeighboringBaseQuality" "QualByDepth"
+                     "ReadPosRankSumTest" "RMSMappingQuality"]
         args (concat ["-R" ref
                       "-I" align-bam
                       "--variant" in-vcf

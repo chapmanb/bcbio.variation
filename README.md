@@ -48,7 +48,14 @@ running a variant comparison:
 
     $ lein uberjar
     $ java -jar bcbio.variation-0.0.1-SNAPSHOT-standalone.jar -T VcfSimpleStats
-      -R test/data/hg19.fa --variant test/data/gatk-calls.vcf --out test.png
+      -R test/data/GRCh37.fa --variant test/data/gatk-calls.vcf --out test.png
+
+### Run custom GATK annotator
+
+    $ lein uberjar
+    $ java -jar bcbio.variation-0.0.1-SNAPSHOT-standalone.jar -T VariantAnnotator
+       -A MeanNeighboringBaseQuality -R test/data/GRCh37.fa -I test/data/aligned-reads.bam
+       --variant test/data/gatk-calls.vcf 
 
 [u1]: https://github.com/technomancy/leiningen
 [u2]: http://en.wikipedia.org/wiki/YAML

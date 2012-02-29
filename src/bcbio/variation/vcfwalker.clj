@@ -1,4 +1,3 @@
-
 (ns bcbio.variation.vcfwalker
   "Simple walker to parse a VCF file and display distribution of call
   quality scores"
