@@ -13,8 +13,8 @@
        - If mismatch and neither allele matches, then calling error"
   (:import [org.broadinstitute.sting.utils.interval IntervalUtils IntervalSetRule]
            [org.broadinstitute.sting.utils GenomeLocParser GenomeLoc])
-  (:use [bcbio.variation.variantcontext :only [parse-vcf get-vcf-retriever write-vcf-w-template
-                                               get-seq-dict]]
+  (:use [bcbio.variation.variantcontext :only [parse-vcf get-vcf-retriever get-vcf-source
+                                               write-vcf-w-template get-seq-dict]]
         [bcbio.variation.callable :only [bed-feature-source]]
         [ordered.map :only [ordered-map]])
   (:require [fs.core :as fs]))
@@ -136,8 +136,8 @@
 
 (defn score-phased-calls
   "Score a called VCF against reference based on phased regions."
-  [call-vcf ref-vcf]
-  (let [ref-fetch (get-vcf-retriever ref-vcf)]
+  [call-vcf ref-vcf-s]
+  (let [ref-fetch (get-vcf-retriever ref-vcf-s)]
     (map #(score-phased-region % ref-fetch)
          (parse-phased-haplotypes call-vcf))))
 
@@ -209,11 +209,12 @@
 (defn compare-two-vcf-phased
   "Compare two VCF files including phasing with a haplotype reference."
   [call ref exp config]
-  (let [compared-calls (score-phased-calls (:file call) (:file ref))]
-    {:c-files (write-concordance-output compared-calls (:sample exp) call
-                                        (get-in config [:dir :out]) (:ref exp))
-     :metrics (get-phasing-metrics compared-calls (:intervals exp) (:intervals call) (:ref exp)) 
-     :c1 call :c2 ref :sample (:sample exp)}))
+  (with-open [ref-vcf-s (get-vcf-source (:file ref))]
+    (let [compared-calls (score-phased-calls (:file call) ref-vcf-s)]
+      {:c-files (write-concordance-output compared-calls (:sample exp) call
+                                          (get-in config [:dir :out]) (:ref exp))
+       :metrics (get-phasing-metrics compared-calls (:intervals exp) (:intervals call) (:ref exp)) 
+       :c1 call :c2 ref :sample (:sample exp)})))
 
 ;; ## Utility functions
 

@@ -10,7 +10,8 @@
         [bcbio.variation.normalize]
         [bcbio.variation.phasing]
         [bcbio.variation.stats]
-        [bcbio.variation.report])
+        [bcbio.variation.report]
+        [bcbio.variation.variantcontext])
   (:require [fs.core :as fs]))
 
 (let [data-dir (str (fs/file "." "test" "data"))
@@ -91,10 +92,11 @@
       (count (second haps)) => 1
       (-> haps (nth 2) first :start) => 16))
   (facts "Compare phased calls to haploid reference genotypes."
-    (let [cmps (score-phased-calls pvcf ref-vcf)]
-      (map :variant-type (first cmps)) => [:snp :snp :indel :snp :snp]
-      (map :comparison (last cmps)) => [:concordant :phasing-error :concordant :discordant]
-      (map :nomatch-het-alt (first cmps)) => [true false true false true]))
+    (with-open [ref-vcf-s (get-vcf-source ref-vcf)]
+      (let [cmps (score-phased-calls pvcf ref-vcf-s)]
+        (map :variant-type (first cmps)) => [:snp :snp :indel :snp :snp]
+        (map :comparison (last cmps)) => [:concordant :phasing-error :concordant :discordant]
+        (map :nomatch-het-alt (first cmps)) => [true false true false true])))
   (facts "Check is a variant file is a haploid reference."
     (is-haploid? pvcf) => false
     (is-haploid? ref-vcf) => true))

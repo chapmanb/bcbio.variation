@@ -109,29 +109,28 @@
 (defn- vcs-at-chr
   "Retrieve variant contexts at chromosome, potentially remapping
   chromosome names to match default reference chromosome."
-  [in-vcf vcf-chr ref-map name-map sample config]
+  [in-vcf-s vcf-chr ref-map name-map sample config]
   (let [new-chr (get name-map vcf-chr)
         ref-length (get ref-map new-chr)]
     (map #(fix-vc-chr % new-chr sample)
          (remove no-call-genotype?
-                 ((get-vcf-retriever in-vcf) vcf-chr 0 (+ 1 ref-length))))))
+                 ((get-vcf-retriever in-vcf-s) vcf-chr 0 (+ 1 ref-length))))))
 
 (defn- ordered-vc-iter
   "Provide VariantContexts ordered by chromosome and normalized."
-  [in-vcf ref-file sample config]
+  [in-vcf-s ref-file sample config]
   (letfn [(sort-chrs [xs name-map order-map]
             (let [count-map (into {} (map-indexed (fn [i x] [x i]) (keys order-map)))]
               (sort-by #(count-map (get name-map %)) xs)))]
-    (with-open [vcf-source (get-vcf-source in-vcf)]
-      (let [ref-chrs (into (ordered-map)
-                           (map (fn [x] [(.getSequenceName x)
-                                         (.getSequenceLength x)])
-                                (-> ref-file get-seq-dict .getSequences)))
-            vcf-chrs (-> vcf-source .getSequenceNames vec)
-            name-map (chr-name-remap (:org config) ref-chrs vcf-chrs)]
-        (flatten
-         (for [vcf-chr (sort-chrs vcf-chrs name-map ref-chrs)]
-           (map :vc (vcs-at-chr in-vcf vcf-chr ref-chrs name-map sample config))))))))
+    (let [ref-chrs (into (ordered-map)
+                         (map (fn [x] [(.getSequenceName x)
+                                       (.getSequenceLength x)])
+                              (-> ref-file get-seq-dict .getSequences)))
+          vcf-chrs (-> in-vcf-s .getSequenceNames vec)
+          name-map (chr-name-remap (:org config) ref-chrs vcf-chrs)]
+      (flatten
+       (for [vcf-chr (sort-chrs vcf-chrs name-map ref-chrs)]
+         (map :vc (vcs-at-chr in-vcf-s vcf-chr ref-chrs name-map sample config)))))))
 
 ;; ## Rewrite header information
 
@@ -148,13 +147,14 @@
   Assumes by position sorting of variants in the input VCF. Chromosomes do
   not require a specific order, but positions internal to a chromosome do.
   Currently configured for diploid human prep."
-  [in-vcf ref-file sample & {:keys [out-dir out-fname]}]
+  [in-vcf-file ref-file sample & {:keys [out-dir out-fname]}]
   (let [config {:org :GRCh37}
-        base-name (if (nil? out-fname) (itx/remove-zip-ext in-vcf) out-fname)
+        base-name (if (nil? out-fname) (itx/remove-zip-ext in-vcf-file) out-fname)
         out-file (itx/add-file-part base-name "prep" out-dir)]
     (if (itx/needs-run? out-file)
-      (write-vcf-w-template in-vcf {:out out-file}
-                            (ordered-vc-iter in-vcf ref-file sample config)
-                            ref-file
-                            :header-update-fn (update-header sample)))
+      (with-open [in-vcf (get-vcf-source in-vcf-file)]
+        (write-vcf-w-template in-vcf-file {:out out-file}
+                              (ordered-vc-iter in-vcf ref-file sample config)
+                              ref-file
+                              :header-update-fn (update-header sample))))
     out-file))

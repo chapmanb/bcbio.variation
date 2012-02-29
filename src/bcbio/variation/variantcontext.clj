@@ -66,10 +66,9 @@
 (defn get-vcf-retriever
   "Indexed VCF file retrieval.
    Returns function that fetches all variants in a region (chromosome:start-end)"
-  [in-file]
-  (let [base (get-vcf-source in-file)]
-    (fn [chr start end]
-      (vcf-iterator (.query base chr start end)))))
+  [vcf-source]
+  (fn [chr start end]
+    (vcf-iterator (.query vcf-source chr start end))))
 
 (defn parse-vcf
   "Lazy iterator of VariantContext information from VCF file."

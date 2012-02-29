@@ -3,7 +3,8 @@
   (:import [org.broadinstitute.sting.gatk.report GATKReport])
   (:use [ordered.map :only [ordered-map]]
         [clojure.math.combinatorics :only [cartesian-product]]
-        [bcbio.variation.variantcontext :only [parse-vcf get-vcf-retriever]])
+        [bcbio.variation.variantcontext :only [parse-vcf get-vcf-retriever
+                                               get-vcf-source]])
   (:require [doric.core :as doric]))
 
 (defn concordance-report-metrics
@@ -27,13 +28,14 @@
   These identify variants which differ due to being missing in one variant
   call versus calls present in both with different genotypes."
   [file1 file2]
-  (let [vrn-fetch (get-vcf-retriever file2)]
-    (reduce (fn [coll vc]
-              (let [other-vcs (vrn-fetch (:chr vc) (:start vc) (:end vc))
-                    vc-type (if-not (empty? other-vcs) :total :unique)]
-                (assoc coll vc-type (inc (get coll vc-type)))))
-            {:total 0 :unique 0}
-            (parse-vcf file1))))
+  (with-open [vcf-source (get-vcf-source file2)]
+    (let [vrn-fetch (get-vcf-retriever vcf-source)]
+      (reduce (fn [coll vc]
+                (let [other-vcs (vrn-fetch (:chr vc) (:start vc) (:end vc))
+                      vc-type (if-not (empty? other-vcs) :total :unique)]
+                  (assoc coll vc-type (inc (get coll vc-type)))))
+              {:total 0 :unique 0}
+              (parse-vcf file1)))))
 
 (defn top-level-metrics
   "Provide one-line summary of similarity metrics for a VCF comparison."
