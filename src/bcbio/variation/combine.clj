@@ -9,7 +9,7 @@
       c. Walk through each no-call and set as reference if callable"
   (:import [org.broadinstitute.sting.utils.variantcontext
             Genotype VariantContextBuilder GenotypesContext])
-  (:use [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template vcf-source]]
+  (:use [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template get-vcf-source]]
         [bcbio.variation.callable :only [callable-checker]]
         [bcbio.variation.complex :only [normalize-variants]]
         [bcbio.variation.normalize :only [prep-vcf]])
@@ -85,8 +85,9 @@
 (defn multiple-samples?
   "Check if the input VCF file has multiple genotyped samples."
   [in-file]
-  (> (-> in-file vcf-source .getHeader .getGenotypeSamples count)
-     1))
+  (with-open [vcf-source (get-vcf-source in-file)]
+    (> (-> vcf-source .getHeader .getGenotypeSamples count)
+       1)))
 
 (defn select-by-sample
   "Select only the sample of interest from input VCF files."

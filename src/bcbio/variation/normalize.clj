@@ -9,7 +9,7 @@
            [org.broadinstitute.sting.utils.codecs.vcf VCFHeader])
   (:use [bcbio.variation.variantcontext :only (parse-vcf
                                                write-vcf-w-template
-                                               get-seq-dict vcf-source
+                                               get-seq-dict get-vcf-source
                                                get-vcf-retriever)]
         [ordered.map :only (ordered-map)]
         [ordered.set :only (ordered-set)])
@@ -122,15 +122,16 @@
   (letfn [(sort-chrs [xs name-map order-map]
             (let [count-map (into {} (map-indexed (fn [i x] [x i]) (keys order-map)))]
               (sort-by #(count-map (get name-map %)) xs)))]
-    (let [ref-chrs (into (ordered-map)
-                         (map (fn [x] [(.getSequenceName x)
-                                       (.getSequenceLength x)])
-                              (-> ref-file get-seq-dict .getSequences)))
-          vcf-chrs (-> in-vcf vcf-source .getSequenceNames vec)
-          name-map (chr-name-remap (:org config) ref-chrs vcf-chrs)]
-      (flatten
-       (for [vcf-chr (sort-chrs vcf-chrs name-map ref-chrs)]
-         (map :vc (vcs-at-chr in-vcf vcf-chr ref-chrs name-map sample config)))))))
+    (with-open [vcf-source (get-vcf-source in-vcf)]
+      (let [ref-chrs (into (ordered-map)
+                           (map (fn [x] [(.getSequenceName x)
+                                         (.getSequenceLength x)])
+                                (-> ref-file get-seq-dict .getSequences)))
+            vcf-chrs (-> vcf-source .getSequenceNames vec)
+            name-map (chr-name-remap (:org config) ref-chrs vcf-chrs)]
+        (flatten
+         (for [vcf-chr (sort-chrs vcf-chrs name-map ref-chrs)]
+           (map :vc (vcs-at-chr in-vcf vcf-chr ref-chrs name-map sample config))))))))
 
 ;; ## Rewrite header information
 
