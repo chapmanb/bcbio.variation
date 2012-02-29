@@ -1,4 +1,3 @@
-
 (ns bcbio.variation.annotation
   "Annotate variant calls with metrics for assessing false positives
   http://www.broadinstitute.org/gsa/wiki/index.php/VariantAnnotator"
@@ -9,6 +8,7 @@
 (defn add-variant-annotations
   "Add GATK annotation metrics to variant calls."
   [in-vcf align-bam ref]
+  {:pre [(not (nil? align-bam))]}
   (let [file-info {:out-vcf (itx/add-file-part in-vcf "annotated")}
         annotations ["BaseQualityRankSumTest" "DepthOfCoverage" "FisherStrand"
                      "GCContent" "HaplotypeScore" "HomopolymerRun"

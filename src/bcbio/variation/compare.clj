@@ -193,7 +193,8 @@
         base-dir (fs/file (get-in config [:dir :base] "."))
         to-process #{[:dir :out] [:dir :prep]
                      [:experiments :ref] [:experiments :intervals]
-                     [:experiments :align] [:experiments :calls :file]}]
+                     [:experiments :align] [:experiments :calls :file]
+                     [:experiments :calls :align]}]
     (letfn [(make-absolute [x]
               (if (.isAbsolute (file x))
                 x
