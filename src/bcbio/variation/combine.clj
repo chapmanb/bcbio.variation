@@ -75,11 +75,12 @@
                         (.filters #{"NotCallable"})
                         (.make)))
                   (:vc vc))))
-            (convert-vcs [in-file]
-              (for [vc (parse-vcf in-file)]
+            (convert-vcs [vcf-source]
+              (for [vc (parse-vcf vcf-source)]
                 [:out (maybe-callable-vc vc)]))]
       (if (itx/needs-run? out-file)
-        (write-vcf-w-template in-vcf {:out out-file} (convert-vcs in-vcf) ref))
+        (with-open [in-vcf-s (get-vcf-source in-vcf)]
+          (write-vcf-w-template in-vcf {:out out-file} (convert-vcs in-vcf-s) ref)))
       out-file)))
 
 (defn multiple-samples?

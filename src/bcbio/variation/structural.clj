@@ -1,7 +1,6 @@
 (ns bcbio.variation.structural
   "Handle structural variations for larger insertions, deletions and
-  genome rearrangements."
-  (:use [bcbio.variation.variantcontext :only (parse-vcf)]))
+  genome rearrangements.")
 
 (defn sv-type
   "Determine the type of a structural variant. Expected types are:

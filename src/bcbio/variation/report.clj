@@ -28,14 +28,15 @@
   These identify variants which differ due to being missing in one variant
   call versus calls present in both with different genotypes."
   [file1 file2]
-  (with-open [vcf-source (get-vcf-source file2)]
-    (let [vrn-fetch (get-vcf-retriever vcf-source)]
+  (with-open [file2-source (get-vcf-source file2)
+              file1-source (get-vcf-source file1)]
+    (let [vrn-fetch (get-vcf-retriever file2-source)]
       (reduce (fn [coll vc]
                 (let [other-vcs (vrn-fetch (:chr vc) (:start vc) (:end vc))
                       vc-type (if-not (empty? other-vcs) :total :unique)]
                   (assoc coll vc-type (inc (get coll vc-type)))))
               {:total 0 :unique 0}
-              (parse-vcf file1)))))
+              (parse-vcf file1-source)))))
 
 (defn top-level-metrics
   "Provide one-line summary of similarity metrics for a VCF comparison."
@@ -50,7 +51,8 @@
               (and (passes-filter? vc)
                    (contains? vrn-type (:type vc)))))
           (count-variants [f check?]
-            (count (filter check? (parse-vcf f))))
+            (with-open [vcf-source (get-vcf-source f)]
+              (count (filter check? (parse-vcf vcf-source)))))
           (all-vrn-counts [fname]
             {:total (count-variants fname passes-filter?)
              :snp (count-variants fname (vrn-type-passes-filter #{"SNP"}))

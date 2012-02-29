@@ -72,8 +72,8 @@
 
 (defn parse-vcf
   "Lazy iterator of VariantContext information from VCF file."
-  [in-file]
-  (vcf-iterator (.iterator (get-vcf-source in-file))))
+  [vcf-source]
+  (vcf-iterator (.iterator vcf-source)))
 
 ;; ## Writing VCF files
 

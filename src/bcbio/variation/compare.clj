@@ -8,7 +8,8 @@
    - Use VariantEval to calculate overall concordance statistics
    - Provide output for concordant and discordant regions for
      detailed investigation"
-  (:use [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template]]
+  (:use [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template
+                                               get-vcf-source]]
         [bcbio.variation.stats :only [vcf-stats write-summary-table]]
         [bcbio.variation.report :only [concordance-report-metrics
                                        write-concordance-metrics
@@ -83,7 +84,7 @@
 
 (defn- vc-by-match-category
   "Lazy stream of VariantContexts categorized by concordant/discordant matching."
-  [in-file]
+  [vcf-source]
   (letfn [(genotype-alleles [g]
             (vec (map #(.toString %) (:alleles g))))
           (is-concordant? [vc]
@@ -91,7 +92,7 @@
                    set
                    count)
                1))]
-    (for [vc (parse-vcf in-file)]
+    (for [vc (parse-vcf vcf-source)]
       [(if (is-concordant? vc) :concordant :discordant)
        (:vc vc)])))
 
@@ -102,8 +103,9 @@
         out-map {:concordant (itx/add-file-part combo-file "concordant")
                  :discordant (itx/add-file-part combo-file "discordant")}]
     (if-not (fs/exists? (:concordant out-map))
-      (write-vcf-w-template combo-file out-map (vc-by-match-category combo-file)
-                            ref))
+      (with-open [combo-vcf-s (get-vcf-source combo-file)]
+        (write-vcf-w-template combo-file out-map (vc-by-match-category combo-vcf-s)
+                              ref)))
     out-map))
 
 ;; ## Top-level

@@ -4,7 +4,8 @@
   (:import [org.broadinstitute.sting.utils.variantcontext
             VariantContextBuilder])
   (:use [clojure.string :only [split]]
-        [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template]])
+        [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template
+                                               get-vcf-source]])
   (:require [bcbio.run.broad :as broad]
             [bcbio.run.itx :as itx]))
 
@@ -77,9 +78,10 @@
                       (.passFilters)
                       (.make))])]
     (let [out-file (itx/add-file-part in-vcf "nofilter")]
-      (write-vcf-w-template in-vcf {:out out-file}
-                            (map remove-vc-filter (parse-vcf in-vcf))
-                            ref)
+      (with-open [vcf-source (get-vcf-source in-vcf)]
+        (write-vcf-w-template in-vcf {:out out-file}
+                              (map remove-vc-filter (parse-vcf vcf-source))
+                              ref))
       out-file)))
 
 (defn pipeline-recalibration

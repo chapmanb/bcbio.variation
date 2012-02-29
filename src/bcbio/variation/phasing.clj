@@ -35,9 +35,9 @@
    2. No current haplotype variants or phased with the previous variant:
       add to the current haplotype
    3. A new haplotype: add existing haplotype to list and create new"
-  [in-vcf]
+  [vcf-source]
   (lazy-seq
-   (loop [vcs (parse-vcf in-vcf)
+   (loop [vcs (parse-vcf vcf-source)
           cur-hap []
           all-haps []]
      (cond
@@ -136,10 +136,10 @@
 
 (defn score-phased-calls
   "Score a called VCF against reference based on phased regions."
-  [call-vcf ref-vcf-s]
+  [call-vcf-s ref-vcf-s]
   (let [ref-fetch (get-vcf-retriever ref-vcf-s)]
     (map #(score-phased-region % ref-fetch)
-         (parse-phased-haplotypes call-vcf))))
+         (parse-phased-haplotypes call-vcf-s))))
 
 ;; ## Summarize phased comparisons
 
@@ -209,8 +209,9 @@
 (defn compare-two-vcf-phased
   "Compare two VCF files including phasing with a haplotype reference."
   [call ref exp config]
-  (with-open [ref-vcf-s (get-vcf-source (:file ref))]
-    (let [compared-calls (score-phased-calls (:file call) ref-vcf-s)]
+  (with-open [ref-vcf-s (get-vcf-source (:file ref))
+              call-vcf-s (get-vcf-source (:file call))]
+    (let [compared-calls (score-phased-calls call-vcf-s ref-vcf-s)]
       {:c-files (write-concordance-output compared-calls (:sample exp) call
                                           (get-in config [:dir :out]) (:ref exp))
        :metrics (get-phasing-metrics compared-calls (:intervals exp) (:intervals call) (:ref exp)) 
@@ -224,4 +225,5 @@
   (letfn [(is-vc-haploid? [vc]
             (or (= 1 (apply max (map #(count (:alleles %)) (:genotypes vc))))
                 (contains? #{"HOM_REF" "HOM_VAR"} (:type vc))))]
-    (every? is-vc-haploid? (parse-vcf vcf-file))))
+    (with-open [vcf-source (get-vcf-source vcf-file)]
+      (every? is-vc-haploid? (parse-vcf vcf-source)))))

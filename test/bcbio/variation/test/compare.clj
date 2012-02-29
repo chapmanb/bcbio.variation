@@ -85,15 +85,17 @@
       pvcf (str (fs/file data-dir "phasing-contestant.vcf"))
       ref-vcf (str (fs/file data-dir "phasing-reference.vcf"))]
   (facts "Handle haplotype phasing specified in VCF output files."
-    (let [haps (parse-phased-haplotypes pvcf)]
-      (count haps) => 4
-      (count (first haps)) => 5
-      (-> haps first first :start) => 10
-      (count (second haps)) => 1
-      (-> haps (nth 2) first :start) => 16))
+    (with-open [pvcf-source (get-vcf-source pvcf)]
+      (let [haps (parse-phased-haplotypes pvcf-source)]
+        (count haps) => 4
+        (count (first haps)) => 5
+        (-> haps first first :start) => 10
+        (count (second haps)) => 1
+        (-> haps (nth 2) first :start) => 16)))
   (facts "Compare phased calls to haploid reference genotypes."
-    (with-open [ref-vcf-s (get-vcf-source ref-vcf)]
-      (let [cmps (score-phased-calls pvcf ref-vcf-s)]
+    (with-open [ref-vcf-s (get-vcf-source ref-vcf)
+                pvcf-s (get-vcf-source pvcf)]
+      (let [cmps (score-phased-calls pvcf-s ref-vcf-s)]
         (map :variant-type (first cmps)) => [:snp :snp :indel :snp :snp]
         (map :comparison (last cmps)) => [:concordant :phasing-error :concordant :discordant]
         (map :nomatch-het-alt (first cmps)) => [true false true false true])))

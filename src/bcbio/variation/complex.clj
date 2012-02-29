@@ -4,7 +4,8 @@
   (:import [org.broadinstitute.sting.utils.variantcontext Allele
             VariantContextBuilder GenotypesContext Genotype
             VariantContextUtils])
-  (:use [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template]])
+  (:use [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template
+                                               get-vcf-source]])
   (:require [bcbio.run.itx :as itx]))
 
 ;; ## Multi-nucleotide polymorphisms (MNPs)
@@ -136,10 +137,10 @@
 
 (defn- get-normalized-vcs
   "Lazy list of variant context with MNPs split into single genotypes and indels stripped."
-  [in-file]
+  [vcf-source]
   (map (fn [x] [:out x])
    (flatten
-    (for [vc (vcs-no-mnp-overlaps (parse-vcf in-file))]
+    (for [vc (vcs-no-mnp-overlaps (parse-vcf vcf-source))]
       (condp = (:type vc)
         "MNP" (split-mnp vc)
         "INDEL" (maybe-strip-indel vc)
@@ -153,5 +154,6 @@
      (let [base-name (if (nil? out-fname) (itx/remove-zip-ext in-file) out-fname)
            out-file (itx/add-file-part base-name "nomnp" out-dir)]
        (if (itx/needs-run? [out-file])
-         (write-vcf-w-template in-file {:out out-file} (get-normalized-vcs in-file) ref))
+         (with-open [vcf-source (get-vcf-source in-file)]
+           (write-vcf-w-template in-file {:out out-file} (get-normalized-vcs vcf-source) ref)))
        out-file)))

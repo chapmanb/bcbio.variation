@@ -4,7 +4,7 @@
 
 (ns bcbio.variation.stats
   (:use [clojure.java.io]
-        [bcbio.variation.variantcontext :only [parse-vcf]])
+        [bcbio.variation.variantcontext :only [parse-vcf get-vcf-source]])
   (:require [incanter.stats :as istats]
             [doric.core :as doric]))
 
@@ -39,8 +39,9 @@
                            (get collect "QUAL" []))))
           (passes-filter? [vc]
             (= (count (:filters vc)) 0))]
-    (reduce collect-vc {} (filter passes-filter?
-                                  (parse-vcf vcf-file)))))
+    (with-open [vcf-source (get-vcf-source vcf-file)]
+      (reduce collect-vc {} (filter passes-filter?
+                                    (parse-vcf vcf-source))))))
 
 (defn vcf-stats [vcf-file]
   "Collect summary statistics associated with variant calls."

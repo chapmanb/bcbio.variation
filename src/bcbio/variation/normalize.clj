@@ -7,8 +7,7 @@
   organisms."
   (:import [org.broadinstitute.sting.utils.variantcontext VariantContextBuilder Genotype]
            [org.broadinstitute.sting.utils.codecs.vcf VCFHeader])
-  (:use [bcbio.variation.variantcontext :only (parse-vcf
-                                               write-vcf-w-template
+  (:use [bcbio.variation.variantcontext :only (write-vcf-w-template
                                                get-seq-dict get-vcf-source
                                                get-vcf-retriever)]
         [ordered.map :only (ordered-map)]
