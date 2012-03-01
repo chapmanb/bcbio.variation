@@ -4,7 +4,8 @@
   (:use [ordered.map :only [ordered-map]]
         [clojure.math.combinatorics :only [cartesian-product]]
         [bcbio.variation.variantcontext :only [parse-vcf get-vcf-retriever
-                                               get-vcf-source]])
+                                               get-vcf-source]]
+        [bcbio.variation.callable :only [callable-checker]])
   (:require [doric.core :as doric]))
 
 (defn concordance-report-metrics
@@ -23,6 +24,12 @@
                 (zipmap headers
                         (map #(nth (vec (.values %)) i) cols)))))))
 
+(defn- count-variants
+  "Count variants that pass an optional checker function."
+  [f check?]
+  (with-open [vcf-source (get-vcf-source f)]
+    (count (filter check? (parse-vcf vcf-source)))))
+
 (defn discordance-metrics
   "Provide metrics to distinguish types of discordance in a comparison.
   These identify variants which differ due to being missing in one variant
@@ -38,9 +45,22 @@
               {:total 0 :unique 0}
               (parse-vcf file1-source)))))
 
+(defn nocoverage-count
+  "Calculate count of variant in input file without coverage in the comparison."
+  [in-vcf compare-kw compared]
+  (let [align-file (get-in compared [compare-kw :align]
+                           (get-in compared [:exp :align]))]
+    (if (nil? align-file)
+      ""
+      (let [callable? (callable-checker align-file (-> compared :exp :ref)
+                                        :out-dir (-> compared :dir :out))
+            vc-callable? (fn [vc]
+                           (callable? (:chr vc) (:start vc) (:end vc)))]
+        (count-variants in-vcf vc-callable?)))))
+
 (defn top-level-metrics
   "Provide one-line summary of similarity metrics for a VCF comparison."
-  [x]
+  [compared]
   (letfn [(passes-filter? [vc]
             (= (count (:filters vc)) 0))
           (nonref-passes-filter? [vc]
@@ -50,25 +70,23 @@
             (fn [vc]
               (and (passes-filter? vc)
                    (contains? vrn-type (:type vc)))))
-          (count-variants [f check?]
-            (with-open [vcf-source (get-vcf-source f)]
-              (count (filter check? (parse-vcf vcf-source)))))
-          (all-vrn-counts [fname]
+          (all-vrn-counts [fname cmp-kw compared]
             {:total (count-variants fname passes-filter?)
+             :nocoverage (nocoverage-count fname cmp-kw compared)
              :snp (count-variants fname (vrn-type-passes-filter #{"SNP"}))
              :indel (count-variants fname (vrn-type-passes-filter #{"INDEL"}))})]
     (ordered-map
-     :sample (:sample x)
-     :call1 (-> x :c1 :name)
-     :call2 (-> x :c2 :name)
-     :genotype_concordance (-> x :metrics :percent_overall_genotype_concordance)
-     :nonref_discrepency (-> x :metrics :percent_non_reference_discrepancy_rate)
-     :nonref_sensitivity (-> x :metrics :percent_non_reference_sensitivity)
-     :concordant (all-vrn-counts (first (:c-files x)))
-     :nonref_concordant (count-variants (first (:c-files x)) nonref-passes-filter?)
-     :discordant1 (all-vrn-counts (second (:c-files x)))
-     :discordant2 (all-vrn-counts (nth (:c-files x) 2))
-     :discordant_both (apply discordance-metrics (rest (:c-files x))))))
+     :sample (-> compared :exp :sample)
+     :call1 (-> compared :c1 :name)
+     :call2 (-> compared :c2 :name)
+     :genotype_concordance (-> compared :metrics :percent_overall_genotype_concordance)
+     :nonref_discrepency (-> compared :metrics :percent_non_reference_discrepancy_rate)
+     :nonref_sensitivity (-> compared :metrics :percent_non_reference_sensitivity)
+     :concordant (all-vrn-counts (first (:c-files compared)) nil compared)
+     :nonref_concordant (count-variants (first (:c-files compared)) nonref-passes-filter?)
+     :discordant1 (all-vrn-counts (second (:c-files compared)) :c2 compared)
+     :discordant2 (all-vrn-counts (nth (:c-files compared) 2) :c1 compared)
+     :discordant_both (apply discordance-metrics (rest (:c-files compared))))))
 
 (defn calc-accuracy
   "Calculate an overall accuracy score from input metrics.
@@ -135,8 +153,14 @@
                               [:discordant_both :total] "Shared discordant"
                               [:concordant :snp] "Concordant SNPs"
                               [:concordant :indel] "Concordant indels"
+                              [:discordant1 :total] (str "Discordant total: " (:call1 metrics))
+                              [:discordant1 :nocoverage]  (str "Discordant unique: "
+                                                               (:call1 metrics))
                               [:discordant1 :snp] (str "Discordant SNPs: " (:call1 metrics))
                               [:discordant1 :indel] (str "Discordant indels: " (:call1 metrics))
+                              [:discordant2 :total] (str "Discordant total: " (:call1 metrics))
+                              [:discordant2 :nocoverage]  (str "Discordant unique: "
+                                                               (:call2 metrics))
                               [:discordant2 :snp] (str "Discordant SNPs: " (:call2 metrics))
                               [:discordant2 :indel] (str "Discordant indels: " (:call2 metrics)))]
     (letfn [(get-value-and-score [[k metric]]

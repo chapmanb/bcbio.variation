@@ -156,7 +156,8 @@
                                       (:ref exp) :out-base (first c-files)
                                       :interval-file (:intervals exp))
         metrics (first (concordance-report-metrics (:sample exp) eval-file))]
-    {:c-files c-files :metrics metrics :c1 c1 :c2 c2 :sample (:sample exp)}))
+    {:c-files c-files :metrics metrics :c1 c1 :c2 c2
+     :exp exp :dir (config :dir)}))
 
 (defn- compare-two-vcf
   "Compare two VCF files, handling standard and haploid specific comparisons."
@@ -231,7 +232,7 @@
                          (finalize-comparisons cmps exp config))))]
     (with-open [w (get-summary-writer config config-file "summary.txt")]
       (doseq [x comparisons]
-        (.write w (format "* %s : %s vs %s\n" (:sample x)
+        (.write w (format "* %s : %s vs %s\n" (-> x :exp :sample)
                           (-> x :c1 :name) (-> x :c2 :name)))
         (write-scoring-table (:metrics x) w)
         (write-concordance-metrics (:summary x) w)
