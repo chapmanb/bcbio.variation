@@ -9,7 +9,7 @@
         [bcbio.variation.filter]
         [bcbio.variation.normalize]
         [bcbio.variation.phasing]
-        [bcbio.variation.stats]
+        [bcbio.variation.metrics]
         [bcbio.variation.report]
         [bcbio.variation.variantcontext])
   (:require [fs.core :as fs]))

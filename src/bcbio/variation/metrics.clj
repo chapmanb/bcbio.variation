@@ -1,4 +1,4 @@
-(ns bcbio.variation.stats
+(ns bcbio.variation.metrics
    "Accumulate and analyze metrics associated with each variant.
    This provides summaries intended to identify characteristic
    metrics to use for filtering."

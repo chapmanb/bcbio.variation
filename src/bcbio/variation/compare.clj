@@ -10,7 +10,7 @@
      detailed investigation"
   (:use [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template
                                                get-vcf-source]]
-        [bcbio.variation.stats :only [vcf-stats write-summary-table]]
+        [bcbio.variation.metrics :only [vcf-stats write-summary-table]]
         [bcbio.variation.report :only [concordance-report-metrics
                                        write-concordance-metrics
                                        write-scoring-table
