@@ -72,9 +72,10 @@
                                     ref) => (throws UserException$BadInput
                                     (contains "annotations with zero variance")))))
 
-(let [data-dir (str (fs/file "." "test" "data"))
-      vcf1 (str (fs/file data-dir "gatk-calls.vcf"))]
-  (facts "Accumulate statistics associated with variations."
+(facts "Accumulate statistics associated with variations."
+  (let [data-dir (str (fs/file "." "test" "data"))
+        vcf1 (str (fs/file data-dir "gatk-calls.vcf"))
+        vcf2 (str (fs/file data-dir "freebayes-calls.vcf"))]
     (map :metric (vcf-stats vcf1)) => ["AC" "AF" "AN" "BaseQRankSum" "DP" "Dels" "FS"
                                        "HRun" "HaplotypeScore" "MQ" "MQ0" "MQRankSum"
                                        "QD" "QUAL" "ReadPosRankSum"]
