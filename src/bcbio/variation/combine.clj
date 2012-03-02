@@ -25,11 +25,9 @@
   (letfn [(unique-name [f]
             (-> f fs/base-name itx/file-root))]
     (let [base-dir (if (nil? out-dir) (fs/parent (first vcfs)) out-dir)
+          base-name (-> vcfs first fs/base-name itx/remove-zip-ext)
           file-info {:out-vcf (str (fs/file base-dir
-                                            (itx/add-file-part (-> vcfs
-                                                                   first
-                                                                   fs/base-name
-                                                                   itx/remove-zip-ext)
+                                            (itx/add-file-part base-name
                                                                (case merge-type
                                                                      :minimal "mincombine"
                                                                      :full "fullcombine"
@@ -113,9 +111,11 @@
                                     :or {out-dir nil intervals nil}}]
   (letfn [(merge-vcf [vcf all-vcf align-bam ref]
             (let [ready-vcf (combine-variants [vcf all-vcf] ref
-                                              :merge-type :full :intervals intervals)]
+                                              :merge-type :full :intervals intervals
+                                              :out-dir out-dir)]
               (convert-no-calls ready-vcf align-bam ref :out-dir out-dir)))]
-    (let [merged (combine-variants vcfs ref :merge-type :minimal :intervals intervals)]
+    (let [merged (combine-variants vcfs ref :merge-type :minimal :intervals intervals
+                                   :out-dir out-dir)]
       (map (fn [[v b merge?]] (if merge? (merge-vcf v merged b ref) v))
            (map vector vcfs align-bams do-merges)))))
 
@@ -144,5 +144,7 @@
                       (prep-vcf sample-file (:ref exp) (:sample exp) :out-dir out-dir
                                 :out-fname out-fname)
                       sample-file)]
-      (assoc call :file (normalize-variants prep-file (:ref exp) out-dir
-                                            :out-fname out-fname)))))
+      (assoc call :file (if (true? (get :normalize call exp))
+                          (normalize-variants prep-file (:ref exp) out-dir
+                                              :out-fname out-fname)
+                          prep-file)))))

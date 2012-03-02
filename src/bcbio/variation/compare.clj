@@ -133,7 +133,7 @@
         merged-vcfs (create-merged (map :file start-vcfs)
                                    align-bams
                                    (map #(get % :refcalls true) (:calls exp))
-                                   (:ref exp) :out-dir (get-in config [:dir :out])
+                                   (:ref exp) :out-dir out-dir 
                                    :intervals all-intervals)
         ann-vcfs (map (fn [[v b c]] (if (get c :annotate false)
                                         (add-variant-annotations v b (:ref exp))
