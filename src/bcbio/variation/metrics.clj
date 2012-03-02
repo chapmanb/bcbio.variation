@@ -1,24 +1,39 @@
 (ns bcbio.variation.metrics
-   "Accumulate and analyze metrics associated with each variant.
+  "Accumulate and analyze metrics associated with each variant.
    This provides summaries intended to identify characteristic
    metrics to use for filtering."
   (:use [clojure.java.io]
-        [bcbio.variation.variantcontext :only [parse-vcf get-vcf-source]])
+        [clojure.set]
+        [bcbio.variation.variantcontext :only [parse-vcf get-vcf-source]]
+        [clj-ml.data :only [make-dataset]]
+        [clj-ml.classifiers :only [make-classifier classifier-train]])
   (:require [incanter.stats :as istats]
             [doric.core :as doric]))
 
 ;; ## Convenience functions
 
+(defn- to-float [x]
+  (if (number? x)
+    x
+    (try
+      (Float/parseFloat x)
+      (catch Exception e nil))))
+
 (defn passes-filter? [vc]
   (= (count (:filters vc)) 0))
 
+(defn get-vc-metrics
+  "Retrieve numeric metrics associated with VariantContext."
+  [vc]
+  (reduce (fn [coll [k v]]
+            (if-let [num-v (to-float v)]
+              (assoc coll k num-v)
+              coll))
+   {}
+   (assoc (:attributes vc) "QUAL" (-> vc :genotypes first :qual))))
+
 ;; ## Summary metrics
 ;; Provide a summary-style presentation of distribution of metrics values.
-
-(defn- to-float [x]
-  (try
-    (Float/parseFloat x)
-    (catch Exception e x)))
 
 (def header [{:name :metric}
              {:name :count}
@@ -37,7 +52,7 @@
 (defn- raw-vcf-stats [vcf-file]
   "Accumulate raw statistics associated with variant calls from input VCF."
   (letfn [(collect-attributes [collect [k v]]
-            (if (number? (to-float v))
+            (if-not (nil? (to-float v))
               (assoc collect k (cons (to-float v) (get collect k [])))
               collect))
           (collect-vc [collect vc]
@@ -60,7 +75,57 @@
 ;; Provide metrics for files in preparation for automated
 ;; classification.
 
-(defn get-vcf-classifier-metrics
-  "Collect metrics into tables ready to feed into classification algorithms."
+(defn- get-file-metrics
+  "Collect classification metrics from a single VCF file."
   [vcf-file]
-  (with-open [vcf-source (get-vcf-source vcf-file)]))
+  (letfn [(classifier-metrics [coll vc]
+            (let [cur-metrics (get-vc-metrics vc)]
+              (-> coll
+                  (assoc :rows (cons cur-metrics (:rows coll)))
+                  (assoc :names (union (-> cur-metrics keys set) (:names coll))))))
+          (prep-table [{rows :rows names :names}]
+            (let [sort-names (sort (vec names))]
+              {:cols sort-names
+               :rows (map (fn [x]
+                            (map #(get x %) sort-names))
+                          rows)}))]
+    (with-open [vcf-source (get-vcf-source vcf-file)]
+      (prep-table
+       (reduce classifier-metrics {:rows [] :names #{}}
+               (filter passes-filter? (parse-vcf vcf-source)))))))
+
+(defn get-vcf-classifier-metrics
+  "Collect metrics from multiple vcf files into tables suitable for
+  classification algorithms."
+  [& vcf-files]
+  (letfn [(get-shared-cols [xs]
+            (-> (apply intersection (map #(set (:cols %)) xs))
+                sort
+                vec))
+          (filter-by-cols [orig-cols want-cols]
+            (let [check-cols (set want-cols)
+                  want (set (keep-indexed #(if (contains? check-cols %2) %1) orig-cols))]
+              (fn [xs]
+                (keep-indexed #(if (contains? want %1) %2) xs))))
+          (subset-file-metrics [shared-cols {cols :cols rows :rows}]
+            (let [row-filter (filter-by-cols cols shared-cols)]
+              {:cols shared-cols
+               :rows (map row-filter rows)}))]
+    (let [file-metrics (map get-file-metrics vcf-files)
+          shared-cols (get-shared-cols file-metrics)]
+      (map (partial subset-file-metrics shared-cols) file-metrics))))
+
+(defn classify-decision-tree
+  "Classify VCF files with INFO metrics using a decision tree classifier."
+  [metrics]
+  (letfn [(prep-one-dataset [rows i]
+            (map #(conj (vec %) (str i)) rows))
+          (prep-dataset [metrics]
+            (println (apply concat (map-indexed #(prep-one-dataset (:rows %2) %1) metrics)))
+            (make-dataset "ds" (conj (-> metrics first :cols vec) :c)
+                          (apply concat (map-indexed #(prep-one-dataset (:rows %2) %1) metrics))
+                          {:class :c}))]
+    (let [ds (prep-dataset metrics)
+          c (-> (make-classifier :decision-tree :c45)
+                (classifier-train ds))]
+      (println c))))

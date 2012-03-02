@@ -81,7 +81,12 @@
                                        "QD" "QUAL" "ReadPosRankSum"]
     (first (vcf-stats vcf1)) => {:max 2.0, :pct75 2.0, :median 2.0, :pct25 2.0, :min 2.0,
                                  :count 10, :metric "AC"}
-    (write-summary-table (vcf-stats vcf1)) => nil))
+    (write-summary-table (vcf-stats vcf1)) => nil
+    (let [metrics (get-vcf-classifier-metrics vcf1 vcf2)]
+      (count metrics) => 2
+      (-> metrics first :cols) => ["AC" "AF" "AN" "DP" "QUAL"]
+      (-> metrics second :rows first) => [2.0 1.0 2.0 938.0 99.0]
+      (classify-decision-tree metrics) =future=> nil)))
 
 (let [data-dir (str (fs/file "." "test" "data"))
       pvcf (str (fs/file data-dir "phasing-contestant.vcf"))
