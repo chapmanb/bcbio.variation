@@ -53,11 +53,12 @@
       (-> (concordance-report-metrics sample compare-out)
           first :percent_non_reference_sensitivity) => "88.89"
       (identify-callable align-bam ref) => callable-out
-      (let [is-callable? (callable-checker align-bam ref)]
-        (is-callable? "MT" 16 17) => true
-        (is-callable? "MT" 252 252) => false
-        (is-callable? "MT" 5100 5200) => false
-        (is-callable? "MT" 16 15) => false)
+      (let [[is-callable? call-source] (callable-checker align-bam ref)]
+        (with-open [_ call-source]
+          (is-callable? "MT" 16 17) => true
+          (is-callable? "MT" 252 252) => false
+          (is-callable? "MT" 5100 5200) => false
+          (is-callable? "MT" 16 15) => false))
       (add-variant-annotations vcf2 align-bam ref) => annotated-out)
     (facts "Create merged VCF files for comparison"
       (create-merged [vcf1 vcf2] [align-bam align-bam] [true true] ref) => combine-out)
@@ -69,7 +70,7 @@
                                            :name "concordant"
                                            :prior 10.0}]
                                     ref) => (throws UserException$BadInput
-                                                    (contains "annotations with zero variance")))))
+                                    (contains "annotations with zero variance")))))
 
 (let [data-dir (str (fs/file "." "test" "data"))
       vcf1 (str (fs/file data-dir "gatk-calls.vcf"))]

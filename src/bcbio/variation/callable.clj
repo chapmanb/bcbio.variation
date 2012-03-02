@@ -49,10 +49,10 @@
   (bed-feature-source (identify-callable align-bam ref :out-dir out-dir)))
 
 (defn callable-checker [align-bam ref & {:keys [out-dir] :or {out-dir nil}}]
-  (if (nil? align-bam) (fn [& _] true)
+  (if (nil? align-bam) [(fn [& _] true) (java.io.StringReader. "")]
       (let [source (callable-interval-tree align-bam ref :out-dir out-dir)]
         (letfn [(is-callable? [space start end]
                   (> (count (filter #(= (:name %) "CALLABLE")
                                     (features-in-region source space start end)))
                      0))]
-          is-callable?))))
+          [is-callable? source]))))

@@ -52,11 +52,12 @@
                            (get-in compared [:exp :align]))]
     (if (nil? align-file)
       ""
-      (let [callable? (callable-checker align-file (-> compared :exp :ref)
-                                        :out-dir (-> compared :dir :out))
+      (let [[callable? call-source] (callable-checker align-file (-> compared :exp :ref)
+                                                      :out-dir (-> compared :dir :out))
             vc-callable? (fn [vc]
                            (callable? (:chr vc) (:start vc) (:end vc)))]
-        (count-variants in-vcf vc-callable?)))))
+        (with-open [_ call-source]
+          (count-variants in-vcf vc-callable?))))))
 
 (defn top-level-metrics
   "Provide one-line summary of similarity metrics for a VCF comparison."

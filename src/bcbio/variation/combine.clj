@@ -54,7 +54,7 @@
   "Convert no-calls into callable reference and real no-calls."
   [in-vcf align-bam ref & {:keys [out-dir] :or {out-dir nil}}]
   (let [out-file (itx/add-file-part in-vcf "wrefs")
-        is-callable? (callable-checker align-bam ref :out-dir out-dir)]
+        [is-callable? call-source] (callable-checker align-bam ref :out-dir out-dir)]
     (letfn [(ref-genotype [g vc]
               (doto (-> vc :vc .getGenotypes GenotypesContext/copy)
                 (.replace
@@ -77,7 +77,8 @@
               (for [vc (parse-vcf vcf-source)]
                 [:out (maybe-callable-vc vc)]))]
       (if (itx/needs-run? out-file)
-        (with-open [in-vcf-s (get-vcf-source in-vcf)]
+        (with-open [in-vcf-s (get-vcf-source in-vcf)
+                    _ call-source]
           (write-vcf-w-template in-vcf {:out out-file} (convert-vcs in-vcf-s) ref)))
       out-file)))
 
