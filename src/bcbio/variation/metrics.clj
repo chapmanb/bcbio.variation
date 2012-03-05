@@ -5,8 +5,10 @@
   (:use [clojure.java.io]
         [clojure.set]
         [bcbio.variation.variantcontext :only [parse-vcf get-vcf-source]]
+        [clojure.string :only [split-lines]]
         [clj-ml.data :only [make-dataset]]
-        [clj-ml.classifiers :only [make-classifier classifier-train]])
+        [clj-ml.classifiers :only [make-classifier classifier-train]]
+        [ordered.set :only [ordered-set]])
   (:require [incanter.stats :as istats]
             [doric.core :as doric]))
 
@@ -115,17 +117,31 @@
           shared-cols (get-shared-cols file-metrics)]
       (map (partial subset-file-metrics shared-cols) file-metrics))))
 
+(defn parse-classifier-nodes
+  "Retrieve classification metrics from a tree based classifier.
+  Metric ordering is relative to the usefulness in classifying."
+  [classifier metrics]
+  (->> classifier
+       .graph
+       split-lines
+       (map #(re-find #"label=\"(\w+)\"" %))
+       (map second)
+       flatten
+       (remove nil?)
+       (filter #(contains? (set metrics) %))
+       (apply ordered-set)))
+
 (defn classify-decision-tree
   "Classify VCF files with INFO metrics using a decision tree classifier."
   [metrics]
   (letfn [(prep-one-dataset [rows i]
             (map #(conj (vec %) (str i)) rows))
           (prep-dataset [metrics]
-            (println (apply concat (map-indexed #(prep-one-dataset (:rows %2) %1) metrics)))
-            (make-dataset "ds" (conj (-> metrics first :cols vec) :c)
+            (make-dataset "ds" (conj (-> metrics first :cols)
+                                     {:c (map str (range (count metrics)))})
                           (apply concat (map-indexed #(prep-one-dataset (:rows %2) %1) metrics))
                           {:class :c}))]
     (let [ds (prep-dataset metrics)
           c (-> (make-classifier :decision-tree :c45)
                 (classifier-train ds))]
-      (println c))))
+      {:top-metrics (parse-classifier-nodes c (-> metrics first :cols))})))

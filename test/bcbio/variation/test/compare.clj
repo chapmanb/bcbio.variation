@@ -86,7 +86,7 @@
       (count metrics) => 2
       (-> metrics first :cols) => ["AC" "AF" "AN" "DP" "QUAL"]
       (-> metrics second :rows first) => [2.0 1.0 2.0 938.0 99.0]
-      (classify-decision-tree metrics) =future=> nil)))
+      (classify-decision-tree metrics) => {:top-metrics #{"DP"}})))
 
 (let [data-dir (str (fs/file "." "test" "data"))
       pvcf (str (fs/file data-dir "phasing-contestant.vcf"))
