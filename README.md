@@ -55,7 +55,7 @@ running a variant comparison:
     $ lein uberjar
     $ java -jar bcbio.variation-0.0.1-SNAPSHOT-standalone.jar -T VariantAnnotator
        -A MeanNeighboringBaseQuality -R test/data/GRCh37.fa -I test/data/aligned-reads.bam
-       --variant test/data/gatk-calls.vcf 
+       --variant test/data/gatk-calls.vcf -o annotated-file.vcf
 
 [u1]: https://github.com/technomancy/leiningen
 [u2]: http://en.wikipedia.org/wiki/YAML
