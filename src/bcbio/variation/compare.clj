@@ -241,9 +241,9 @@
           (write-summary-table (vcf-stats f) :wrtr w))))
     (with-open [w (get-summary-writer config config-file "summary.csv")]
       (doseq [[i x] (map-indexed vector (map :summary comparisons))]
-        (if (= i 0)
+        (when (= i 0)
           (.write w (format "%s\n" (join "," (map name (keys x))))))
-        (.write w (format "%s\n" (join "," (for [v ( vals x)]
+        (.write w (format "%s\n" (join "," (for [v (vals x)]
                                              (if (map? v) (:total v) v)))))))
     comparisons))
 

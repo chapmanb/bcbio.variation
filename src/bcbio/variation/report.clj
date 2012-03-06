@@ -5,7 +5,8 @@
         [clojure.math.combinatorics :only [cartesian-product]]
         [bcbio.variation.variantcontext :only [parse-vcf get-vcf-retriever
                                                get-vcf-source]]
-        [bcbio.variation.callable :only [callable-checker]])
+        [bcbio.variation.callable :only [callable-checker]]
+        [bcbio.variation.metrics :only [ml-on-vcf-metrics]])
   (:require [doric.core :as doric]))
 
 (defn concordance-report-metrics
@@ -87,7 +88,8 @@
      :nonref_concordant (count-variants (first (:c-files compared)) nonref-passes-filter?)
      :discordant1 (all-vrn-counts (second (:c-files compared)) :c2 compared)
      :discordant2 (all-vrn-counts (nth (:c-files compared) 2) :c1 compared)
-     :discordant_both (apply discordance-metrics (rest (:c-files compared))))))
+     :discordant_both (apply discordance-metrics (rest (:c-files compared)))
+     :ml_metrics (apply ml-on-vcf-metrics (take 2 (:c-files compared))))))
 
 (defn calc-accuracy
   "Calculate an overall accuracy score from input metrics.
@@ -133,16 +135,6 @@
   (.write wrtr (str (doric/table [:metric :value] (prep-scoring-table metrics))
                     "\n")))
 
-(defn calc-score
-  "Calculate scoring for input metric types"
-  [type val]
-  (if (keyword? type) ""
-      (let [sign (if (= :concordant (first type)) 1 -1)]
-        (case (second type)
-              :snp (-> 1 (* sign) (* val))
-              :indel (-> 2 (* sign) (* val))
-              0))))
-
 (defn write-concordance-metrics
   "Summary table of metrics for assessing the score of a variant comparison."
   [metrics wrtr]
@@ -163,10 +155,10 @@
                               [:discordant2 :nocoverage]  (str "Discordant unique: "
                                                                (:call2 metrics))
                               [:discordant2 :snp] (str "Discordant SNPs: " (:call2 metrics))
-                              [:discordant2 :indel] (str "Discordant indels: " (:call2 metrics)))]
-    (letfn [(get-value-and-score [[k metric]]
+                              [:discordant2 :indel] (str "Discordant indels: " (:call2 metrics))
+                              [:ml_metrics :top-metrics] "Classification metrics")]
+    (letfn [(get-value [[k metric]]
               (let [val (if (coll? k) (get-in metrics k) (get metrics k))]
-                {:metric metric :value val :score (calc-score k val)}))]
-      (.write wrtr (str (doric/table [:metric :value]
-                                     (map get-value-and-score to-write))
+                {:metric metric :value val}))]
+      (.write wrtr (str (doric/table [:metric :value] (map get-value to-write))
                         "\n")))))

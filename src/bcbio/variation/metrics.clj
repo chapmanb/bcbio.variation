@@ -80,20 +80,28 @@
 (defn- get-file-metrics
   "Collect classification metrics from a single VCF file."
   [vcf-file]
-  (letfn [(classifier-metrics [coll vc]
+  (letfn [(has-nil-names [metrics all-metrics all-names]
+            (let [test-names (union (-> metrics keys set) all-names)]
+              (apply union
+                     (map (fn [xs] (set (keep #(when (nil? (get xs %)) %) test-names)))
+                          (cons metrics (take-last 10 all-metrics))))))
+          (classifier-metrics [coll vc]
             (let [cur-metrics (get-vc-metrics vc)]
               (-> coll
                   (assoc :rows (cons cur-metrics (:rows coll)))
-                  (assoc :names (union (-> cur-metrics keys set) (:names coll))))))
-          (prep-table [{rows :rows names :names}]
-            (let [sort-names (sort (vec names))]
+                  (assoc :names (union (-> cur-metrics keys set) (:names coll)))
+                  (assoc :nil-names (union (has-nil-names cur-metrics (:rows coll) (:names coll))
+                                           (:nil-names coll))))))
+          (prep-table [{rows :rows names :names nil-names :nil-names}]
+            (let [sort-names (remove #(contains? (set nil-names) %)
+                                     (sort (vec names)))]
               {:cols sort-names
                :rows (map (fn [x]
                             (map #(get x %) sort-names))
                           rows)}))]
     (with-open [vcf-source (get-vcf-source vcf-file)]
       (prep-table
-       (reduce classifier-metrics {:rows [] :names #{}}
+       (reduce classifier-metrics {:rows [] :names #{} :nil-names #{}}
                (filter passes-filter? (parse-vcf vcf-source)))))))
 
 (defn get-vcf-classifier-metrics
@@ -108,7 +116,7 @@
             (let [check-cols (set want-cols)
                   want (set (keep-indexed #(if (contains? check-cols %2) %1) orig-cols))]
               (fn [xs]
-                (keep-indexed #(if (contains? want %1) %2) xs))))
+                (keep-indexed #(when (contains? want %1) %2) xs))))
           (subset-file-metrics [shared-cols {cols :cols rows :rows}]
             (let [row-filter (filter-by-cols cols shared-cols)]
               {:cols shared-cols
@@ -117,7 +125,7 @@
           shared-cols (get-shared-cols file-metrics)]
       (map (partial subset-file-metrics shared-cols) file-metrics))))
 
-(defn parse-classifier-nodes
+(defn- parse-classifier-nodes
   "Retrieve classification metrics from a tree based classifier.
   Metric ordering is relative to the usefulness in classifying."
   [classifier metrics]
@@ -144,4 +152,11 @@
     (let [ds (prep-dataset metrics)
           c (-> (make-classifier :decision-tree :c45)
                 (classifier-train ds))]
-      {:top-metrics (parse-classifier-nodes c (-> metrics first :cols))})))
+      {:top-metrics (vec (parse-classifier-nodes c (-> metrics first :cols)))})))
+
+(defn ml-on-vcf-metrics
+  "Apply machine learning/classification approaches to distinguish useful
+  metrics distinguishing VCF files."
+  [& vcf-files]
+  (-> (apply get-vcf-classifier-metrics vcf-files)
+      classify-decision-tree))
