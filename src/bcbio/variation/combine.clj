@@ -89,16 +89,30 @@
     (> (-> vcf-source .getHeader .getGenotypeSamples count)
        1)))
 
+(defn vcf-sample-name
+  "Retrieve the sample name in a provided VCF file, allowing for partial matches."
+  [in-vcf sample]
+  (letfn [(sample-match [x choices]
+            (let [do-match (filter #(when (.contains % x) %) choices)]
+              (when (= 1 (count do-match))
+                (first do-match))))]
+    (let [vcf-samples (with-open [vcf-source (get-vcf-source in-vcf)]
+                        (-> vcf-source .getHeader .getGenotypeSamples set))]
+      (if (contains? vcf-samples sample)
+        sample
+        (sample-match sample vcf-samples)))))
+
 (defn select-by-sample
   "Select only the sample of interest from input VCF files."
   [sample in-file name ref & {:keys [out-dir intervals]
-                      :or {out-dir nil intervals nil}}]
+                              :or {out-dir nil intervals nil}}]
   (let [base-dir (if (nil? out-dir) (fs/parent in-file) out-dir)
         file-info {:out-vcf (str (fs/file base-dir
                                           (format "%s-%s.vcf" sample name)))}
         args (concat ["-R" ref
-                      "--sample_name" sample
+                      "--sample_name" (vcf-sample-name in-file sample)
                       "--variant" in-file
+                      "--unsafe" "ALLOW_SEQ_DICT_INCOMPATIBILITY"
                       "--out" :out-vcf]
                      (if-not (nil? intervals) ["-L" intervals] []))]
     (if-not (fs/exists? base-dir)
@@ -137,7 +151,8 @@
                        (merge-call-files call)
                        (:file call))
           sample-file (if (multiple-samples? merge-file)
-                        (select-by-sample (:sample exp) merge-file (:name call) (:ref exp)
+                        (select-by-sample (:sample exp) merge-file (:name call)
+                                          (get call :ref (:ref exp))
                                           :out-dir out-dir)
                         merge-file)
           out-fname (format "%s-%s.vcf" (:sample exp) (:name call))
