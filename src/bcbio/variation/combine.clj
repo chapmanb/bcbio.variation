@@ -145,7 +145,7 @@
                       (prep-vcf sample-file (:ref exp) (:sample exp) :out-dir out-dir
                                 :out-fname out-fname)
                       sample-file)]
-      (assoc call :file (if (true? (get :normalize call exp))
+      (assoc call :file (if (true? (get call :normalize true))
                           (normalize-variants prep-file (:ref exp) out-dir
                                               :out-fname out-fname)
                           prep-file)))))
