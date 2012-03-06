@@ -53,8 +53,9 @@
                            (get-in compared [:exp :align]))]
     (if (nil? align-file)
       ""
-      (let [[callable? call-source] (callable-checker align-file (-> compared :exp :ref)
-                                                      :out-dir (-> compared :dir :out))
+      (let [out-dir (get-in compared [:dir :prep] (get-in compared [:dir :out]))
+            [callable? call-source] (callable-checker align-file (-> compared :exp :ref)
+                                                      :out-dir out-dir)
             vc-callable? (fn [vc]
                            (callable? (:chr vc) (:start vc) (:end vc)))]
         (with-open [_ call-source]
