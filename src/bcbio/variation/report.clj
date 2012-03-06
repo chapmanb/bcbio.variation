@@ -61,36 +61,53 @@
         (with-open [_ call-source]
           (count-variants in-vcf vc-callable?))))))
 
+(defn get-summary-level
+  "Retrieve expected summary level from configuration"
+  [config]
+  (letfn [(level-from-string [x]
+            (case (when-not ( nil? x) (.lower x))
+              "simple" :simple
+              :standard))
+          (get-string-level [config to-try]
+            (loop [cur-try to-try]
+              (if (empty? cur-try) nil
+                  (let [cur-level (get-in config (first cur-try))]
+                    (if-not (nil? cur-level) cur-level
+                            (recur (rest cur-try)))))))]
+    (let [to-check (cartesian-product [:exp :c1 :c2 :call] [:summary-level])]
+      (level-from-string (get-string-level config to-check)))))
+
 (defn top-level-metrics
   "Provide one-line summary of similarity metrics for a VCF comparison."
   [compared]
-  (letfn [(passes-filter? [vc]
-            (= (count (:filters vc)) 0))
-          (nonref-passes-filter? [vc]
-            (and (passes-filter? vc)
-                 (every? #(contains? #{"HET" "HOM_VAR"} (:type %)) (:genotypes vc))))
-          (vrn-type-passes-filter [vrn-type]
-            (fn [vc]
+  (let [sum-level (get-summary-level compared)]
+    (letfn [(passes-filter? [vc]
+              (= (count (:filters vc)) 0))
+            (nonref-passes-filter? [vc]
               (and (passes-filter? vc)
-                   (contains? vrn-type (:type vc)))))
-          (all-vrn-counts [fname cmp-kw compared]
-            {:total (count-variants fname passes-filter?)
-             :nocoverage (nocoverage-count fname cmp-kw compared)
-             :snp (count-variants fname (vrn-type-passes-filter #{"SNP"}))
-             :indel (count-variants fname (vrn-type-passes-filter #{"INDEL"}))})]
-    (ordered-map
-     :sample (-> compared :exp :sample)
-     :call1 (-> compared :c1 :name)
-     :call2 (-> compared :c2 :name)
-     :genotype_concordance (-> compared :metrics :percent_overall_genotype_concordance)
-     :nonref_discrepency (-> compared :metrics :percent_non_reference_discrepancy_rate)
-     :nonref_sensitivity (-> compared :metrics :percent_non_reference_sensitivity)
-     :concordant (all-vrn-counts (first (:c-files compared)) nil compared)
-     :nonref_concordant (count-variants (first (:c-files compared)) nonref-passes-filter?)
-     :discordant1 (all-vrn-counts (second (:c-files compared)) :c2 compared)
-     :discordant2 (all-vrn-counts (nth (:c-files compared) 2) :c1 compared)
-     :discordant_both (apply discordance-metrics (rest (:c-files compared)))
-     :ml_metrics (apply ml-on-vcf-metrics (take 2 (:c-files compared))))))
+                   (every? #(contains? #{"HET" "HOM_VAR"} (:type %)) (:genotypes vc))))
+            (vrn-type-passes-filter [vrn-type]
+              (fn [vc]
+                (and (passes-filter? vc)
+                     (contains? vrn-type (:type vc)))))
+            (all-vrn-counts [fname cmp-kw compared]
+              {:total (count-variants fname passes-filter?)
+               :nocoverage (nocoverage-count fname cmp-kw compared)
+               :snp (count-variants fname (vrn-type-passes-filter #{"SNP"}))
+               :indel (count-variants fname (vrn-type-passes-filter #{"INDEL"}))})]
+      (ordered-map
+       :sample (-> compared :exp :sample)
+       :call1 (-> compared :c1 :name)
+       :call2 (-> compared :c2 :name)
+       :genotype_concordance (-> compared :metrics :percent_overall_genotype_concordance)
+       :nonref_discrepency (-> compared :metrics :percent_non_reference_discrepancy_rate)
+       :nonref_sensitivity (-> compared :metrics :percent_non_reference_sensitivity)
+       :concordant (all-vrn-counts (first (:c-files compared)) nil compared)
+       :nonref_concordant (count-variants (first (:c-files compared)) nonref-passes-filter?)
+       :discordant1 (all-vrn-counts (second (:c-files compared)) :c2 compared)
+       :discordant2 (all-vrn-counts (nth (:c-files compared) 2) :c1 compared)
+       :discordant_both (apply discordance-metrics (rest (:c-files compared)))
+       :ml_metrics (apply ml-on-vcf-metrics (take 2 (:c-files compared)))))))
 
 (defn calc-accuracy
   "Calculate an overall accuracy score from input metrics.
