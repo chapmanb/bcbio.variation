@@ -27,17 +27,17 @@
 
 (defn- count-variants
   "Count variants that pass an optional checker function."
-  [f check?]
-  (with-open [vcf-source (get-vcf-source f)]
+  [f ref-file check?]
+  (with-open [vcf-source (get-vcf-source f ref-file)]
     (count (filter check? (parse-vcf vcf-source)))))
 
 (defn discordance-metrics
   "Provide metrics to distinguish types of discordance in a comparison.
   These identify variants which differ due to being missing in one variant
   call versus calls present in both with different genotypes."
-  [file1 file2]
-  (with-open [file2-source (get-vcf-source file2)
-              file1-source (get-vcf-source file1)]
+  [file1 file2 ref-file]
+  (with-open [file2-source (get-vcf-source file2 ref-file)
+              file1-source (get-vcf-source file1 ref-file)]
     (let [vrn-fetch (get-vcf-retriever file2-source)]
       (reduce (fn [coll vc]
                 (let [other-vcs (vrn-fetch (:chr vc) (:start vc) (:end vc))
@@ -48,7 +48,7 @@
 
 (defn nocoverage-count
   "Calculate count of variant in input file without coverage in the comparison."
-  [in-vcf compare-kw compared]
+  [in-vcf ref-file compare-kw compared]
   (let [align-file (get-in compared [compare-kw :align]
                            (get-in compared [:exp :align]))]
     (if (nil? align-file)
@@ -59,7 +59,7 @@
             vc-callable? (fn [vc]
                            (callable? (:chr vc) (:start vc) (:end vc)))]
         (with-open [_ call-source]
-          (count-variants in-vcf vc-callable?))))))
+          (count-variants in-vcf ref-file vc-callable?))))))
 
 (defn get-summary-level
   "Retrieve expected summary level from configuration"
@@ -80,7 +80,8 @@
 (defn top-level-metrics
   "Provide one-line summary of similarity metrics for a VCF comparison."
   [compared]
-  (let [sum-level (get-summary-level compared)]
+  (let [sum-level (get-summary-level compared)
+        ref-file (get-in compared [:exp :ref])]
     (letfn [(passes-filter? [vc]
               (= (count (:filters vc)) 0))
             (nonref-passes-filter? [vc]
@@ -91,10 +92,10 @@
                 (and (passes-filter? vc)
                      (contains? vrn-type (:type vc)))))
             (all-vrn-counts [fname cmp-kw compared]
-              {:total (count-variants fname passes-filter?)
-               :nocoverage (nocoverage-count fname cmp-kw compared)
-               :snp (count-variants fname (vrn-type-passes-filter #{"SNP"}))
-               :indel (count-variants fname (vrn-type-passes-filter #{"INDEL"}))})]
+              {:total (count-variants fname ref-file passes-filter?)
+               :nocoverage (nocoverage-count fname ref-file cmp-kw compared)
+               :snp (count-variants fname ref-file (vrn-type-passes-filter #{"SNP"}))
+               :indel (count-variants fname ref-file (vrn-type-passes-filter #{"INDEL"}))})]
       (ordered-map
        :sample (-> compared :exp :sample)
        :call1 (-> compared :c1 :name)
@@ -103,11 +104,13 @@
        :nonref_discrepency (-> compared :metrics :percent_non_reference_discrepancy_rate)
        :nonref_sensitivity (-> compared :metrics :percent_non_reference_sensitivity)
        :concordant (all-vrn-counts (first (:c-files compared)) nil compared)
-       :nonref_concordant (count-variants (first (:c-files compared)) nonref-passes-filter?)
+       :nonref_concordant (count-variants (first (:c-files compared)) ref-file
+                                          nonref-passes-filter?)
        :discordant1 (all-vrn-counts (second (:c-files compared)) :c2 compared)
        :discordant2 (all-vrn-counts (nth (:c-files compared) 2) :c1 compared)
-       :discordant_both (apply discordance-metrics (rest (:c-files compared)))
-       :ml_metrics (apply ml-on-vcf-metrics (take 2 (:c-files compared)))))))
+       :discordant_both (apply discordance-metrics (conj (vec (rest (:c-files compared)))
+                                                         ref-file))
+       :ml_metrics (apply ml-on-vcf-metrics (cons ref-file (take 2 (:c-files compared))))))))
 
 (defn calc-accuracy
   "Calculate an overall accuracy score from input metrics.

@@ -4,6 +4,9 @@
   (:import [org.broad.tribble.index IndexFactory]
            [org.broad.tribble.source BasicFeatureSource]
            [org.broadinstitute.sting.utils.codecs.vcf VCFCodec StandardVCFWriter]
+           [org.broadinstitute.sting.gatk.refdata.tracks RMDTrackBuilder]
+           [org.broadinstitute.sting.gatk.datasources.reference ReferenceDataSource]
+           [org.broadinstitute.sting.gatk.arguments ValidationExclusion$TYPE]
            [net.sf.picard.reference ReferenceSequenceFileFactory])
   (:use [clojure.java.io]))
 
@@ -46,6 +49,15 @@
 
 ;; ## Parsing VCF files
 
+(defn get-seq-dict
+  "Retrieve Picard sequence dictionary from FASTA reference file."
+  [ref-file]
+  (ReferenceDataSource. (file ref-file))
+  (-> ref-file
+      file
+      ReferenceSequenceFileFactory/getReferenceSequenceFile
+      .getSequenceDictionary))
+
 (defn- vcf-iterator
   "Lazy iterator over variant contexts in the VCF source iterator."
   [iter]
@@ -57,11 +69,16 @@
   "Create a Tribble FeatureSource for VCF file.
    Handles indexing and parsing of VCF into VariantContexts.
    We treat gzipped files as tabix indexed VCFs."
-  [in-file]
-  (if (.endsWith in-file ".gz")
-    (BasicFeatureSource/getFeatureSource in-file (VCFCodec.) false)
-    (let [idx (IndexFactory/createIndex (file in-file) (VCFCodec.))]
-      (BasicFeatureSource. (.getAbsolutePath (file in-file)) idx (VCFCodec.)))))
+  ([in-file ref-file ensure-safe]
+     (if (.endsWith in-file ".gz")
+       (BasicFeatureSource/getFeatureSource in-file (VCFCodec.) false)
+       (let [validate (when-not ensure-safe
+                        ValidationExclusion$TYPE/ALLOW_SEQ_DICT_INCOMPATIBILITY)
+             idx (.loadIndex (RMDTrackBuilder. (get-seq-dict ref-file) nil validate)
+                             (file in-file) (VCFCodec.))]
+         (BasicFeatureSource. (.getAbsolutePath (file in-file)) idx (VCFCodec.)))))
+  ([in-file ref-file]
+     (get-vcf-source in-file ref-file true)))
 
 (defn get-vcf-retriever
   "Indexed VCF file retrieval.
@@ -85,14 +102,6 @@
      (finally
       (vec (map #(.close %) (vals ~binding-map))))))
 
-(defn get-seq-dict
-  "Retrieve Picard sequence dictionary from FASTA reference file."
-  [ref-file]
-  (-> ref-file
-      file
-      ReferenceSequenceFileFactory/getReferenceSequenceFile
-      .getSequenceDictionary))
-
 (defn write-vcf-w-template
   "Write VCF output files starting with an original input template VCF.
    Handles writing to multiple VCF files simultaneously with the different
@@ -102,7 +111,7 @@
   [tmpl-file out-file-map vc-iter ref & {:keys [header-update-fn]}]
   (letfn [(make-vcf-writer [f ref]
             (StandardVCFWriter. (file f) (get-seq-dict ref)))]
-    (with-open [vcf-source (get-vcf-source tmpl-file)]
+    (with-open [vcf-source (get-vcf-source tmpl-file ref)]
       (let [tmpl-header (.getHeader vcf-source)
             writer-map (zipmap (keys out-file-map)
                                (map #(make-vcf-writer % ref) (vals out-file-map)))]

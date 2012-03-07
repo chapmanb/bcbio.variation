@@ -103,7 +103,7 @@
         out-map {:concordant (itx/add-file-part combo-file "concordant")
                  :discordant (itx/add-file-part combo-file "discordant")}]
     (if-not (fs/exists? (:concordant out-map))
-      (with-open [combo-vcf-s (get-vcf-source combo-file)]
+      (with-open [combo-vcf-s (get-vcf-source combo-file ref)]
         (write-vcf-w-template combo-file out-map (vc-by-match-category combo-vcf-s)
                               ref)))
     out-map))
@@ -162,7 +162,7 @@
 (defn- compare-two-vcf
   "Compare two VCF files, handling standard and haploid specific comparisons."
   [c1 c2 exp config]
-  (let [phased-vcfs (group-by #(-> % :file is-haploid?) [c1 c2])]
+  (let [phased-vcfs (group-by #(-> % :file (is-haploid? (:ref exp))) [c1 c2])]
     (if (get phased-vcfs true)
       (compare-two-vcf-phased (first (get phased-vcfs false))
                               (first (get phased-vcfs true))
@@ -178,7 +178,9 @@
                              (ordered-map)
                              cmps)]
     (letfn [(add-summary [x]
-              (assoc x :summary (top-level-metrics x)))
+              (-> x
+                  (assoc :exp exp)
+                  (#(assoc % :summary (top-level-metrics %)))))
             (update-w-finalizer [cur-cmps finalizer]
               "Update the current comparisons with a defined finalizer."
               (let [updated-cmp ((get finalize-fns (:method finalizer))
@@ -238,7 +240,7 @@
         (write-concordance-metrics (:summary x) w)
         (doseq [f (:c-files x)]
           (.write w (format "** %s\n" (fs/base-name f)))
-          (write-summary-table (vcf-stats f) :wrtr w))))
+          (write-summary-table (vcf-stats f (get-in x [:exp :ref])) :wrtr w))))
     (with-open [w (get-summary-writer config config-file "summary.csv")]
       (doseq [[i x] (map-indexed vector (map :summary comparisons))]
         (when (= i 0)

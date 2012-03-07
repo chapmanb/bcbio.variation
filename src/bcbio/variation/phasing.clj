@@ -209,8 +209,8 @@
 (defn compare-two-vcf-phased
   "Compare two VCF files including phasing with a haplotype reference."
   [call ref exp config]
-  (with-open [ref-vcf-s (get-vcf-source (:file ref))
-              call-vcf-s (get-vcf-source (:file call))]
+  (with-open [ref-vcf-s (get-vcf-source (:file ref) (:ref exp))
+              call-vcf-s (get-vcf-source (:file call) (:ref exp))]
     (let [compared-calls (score-phased-calls call-vcf-s ref-vcf-s)]
       {:c-files (write-concordance-output compared-calls (:sample exp) call
                                           (get-in config [:dir :out]) (:ref exp))
@@ -221,9 +221,9 @@
 
 (defn is-haploid?
   "Is the provided VCF file a haploid genome (one genotype or all homozygous)"
-  [vcf-file]
+  [vcf-file ref-file]
   (letfn [(is-vc-haploid? [vc]
             (or (= 1 (apply max (map #(count (:alleles %)) (:genotypes vc))))
                 (contains? #{"HOM_REF" "HOM_VAR"} (:type vc))))]
-    (with-open [vcf-source (get-vcf-source vcf-file)]
+    (with-open [vcf-source (get-vcf-source vcf-file ref-file)]
       (every? is-vc-haploid? (parse-vcf vcf-source)))))

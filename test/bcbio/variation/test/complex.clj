@@ -18,7 +18,8 @@
 
 (facts "Parse structural variations"
   (let [data-dir (str (fs/file "." "test" "data"))
+        ref (str (fs/file data-dir "GRCh37.fa"))
         vc-vcf (str (fs/file data-dir "sv-1000g.vcf"))]
-    (with-open [vcf-source (get-vcf-source vc-vcf)]
+    (with-open [vcf-source (get-vcf-source vc-vcf ref)]
       (doall (map sv-type (parse-vcf vcf-source)))) => (concat (repeat 6 :BND)
                                                                [:DEL :INS :DUP :INS])))

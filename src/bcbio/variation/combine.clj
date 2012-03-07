@@ -77,26 +77,26 @@
               (for [vc (parse-vcf vcf-source)]
                 [:out (maybe-callable-vc vc)]))]
       (if (itx/needs-run? out-file)
-        (with-open [in-vcf-s (get-vcf-source in-vcf)
+        (with-open [in-vcf-s (get-vcf-source in-vcf ref)
                     _ call-source]
           (write-vcf-w-template in-vcf {:out out-file} (convert-vcs in-vcf-s) ref)))
       out-file)))
 
 (defn multiple-samples?
   "Check if the input VCF file has multiple genotyped samples."
-  [in-file]
-  (with-open [vcf-source (get-vcf-source in-file)]
+  [in-file ref-file]
+  (with-open [vcf-source (get-vcf-source in-file ref-file false)]
     (> (-> vcf-source .getHeader .getGenotypeSamples count)
        1)))
 
 (defn vcf-sample-name
   "Retrieve the sample name in a provided VCF file, allowing for partial matches."
-  [in-vcf sample]
+  [sample in-vcf ref-file]
   (letfn [(sample-match [x choices]
             (let [do-match (filter #(when (.contains % x) %) choices)]
               (when (= 1 (count do-match))
                 (first do-match))))]
-    (let [vcf-samples (with-open [vcf-source (get-vcf-source in-vcf)]
+    (let [vcf-samples (with-open [vcf-source (get-vcf-source in-vcf ref-file)]
                         (-> vcf-source .getHeader .getGenotypeSamples set))]
       (if (contains? vcf-samples sample)
         sample
@@ -110,7 +110,7 @@
         file-info {:out-vcf (str (fs/file base-dir
                                           (format "%s-%s.vcf" sample name)))}
         args (concat ["-R" ref
-                      "--sample_name" (vcf-sample-name in-file sample)
+                      "--sample_name" (vcf-sample-name sample in-file ref)
                       "--variant" in-file
                       "--unsafe" "ALLOW_SEQ_DICT_INCOMPATIBILITY"
                       "--out" :out-vcf]
@@ -150,7 +150,7 @@
     (let [merge-file (if (coll? (:file call))
                        (merge-call-files call)
                        (:file call))
-          sample-file (if (multiple-samples? merge-file)
+          sample-file (if (multiple-samples? merge-file (:ref exp))
                         (select-by-sample (:sample exp) merge-file (:name call)
                                           (get call :ref (:ref exp))
                                           :out-dir out-dir)
@@ -158,7 +158,7 @@
           out-fname (format "%s-%s.vcf" (:sample exp) (:name call))
           prep-file (if (true? (:prep call))
                       (prep-vcf sample-file (:ref exp) (:sample exp) :out-dir out-dir
-                                :out-fname out-fname)
+                                :out-fname out-fname :orig-ref-file (:ref call))
                       sample-file)]
       (assoc call :file (if (true? (get call :normalize true))
                           (normalize-variants prep-file (:ref exp) out-dir

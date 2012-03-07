@@ -78,7 +78,7 @@
                       (.passFilters)
                       (.make))])]
     (let [out-file (itx/add-file-part in-vcf "nofilter")]
-      (with-open [vcf-source (get-vcf-source in-vcf)]
+      (with-open [vcf-source (get-vcf-source in-vcf ref)]
         (write-vcf-w-template in-vcf {:out out-file}
                               (map remove-vc-filter (parse-vcf vcf-source))
                               ref))

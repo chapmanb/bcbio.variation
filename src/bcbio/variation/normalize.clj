@@ -146,12 +146,14 @@
   Assumes by position sorting of variants in the input VCF. Chromosomes do
   not require a specific order, but positions internal to a chromosome do.
   Currently configured for diploid human prep."
-  [in-vcf-file ref-file sample & {:keys [out-dir out-fname]}]
+  [in-vcf-file ref-file sample & {:keys [out-dir out-fname orig-ref-file]}]
   (let [config {:org :GRCh37}
         base-name (if (nil? out-fname) (itx/remove-zip-ext in-vcf-file) out-fname)
         out-file (itx/add-file-part base-name "prep" out-dir)]
     (if (itx/needs-run? out-file)
-      (with-open [in-vcf (get-vcf-source in-vcf-file)]
+      (with-open [in-vcf (get-vcf-source in-vcf-file
+                                         (if (nil? orig-ref-file) ref-file orig-ref-file)
+                                         false)]
         (write-vcf-w-template in-vcf-file {:out out-file}
                               (ordered-vc-iter in-vcf ref-file sample config)
                               ref-file

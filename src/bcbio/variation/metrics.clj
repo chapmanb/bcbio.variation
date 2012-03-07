@@ -51,8 +51,9 @@
           (concat [key (count vals)]
                   (istats/quantile vals))))
 
-(defn- raw-vcf-stats [vcf-file]
+(defn- raw-vcf-stats
   "Accumulate raw statistics associated with variant calls from input VCF."
+  [vcf-file ref-file]
   (letfn [(collect-attributes [collect [k v]]
             (if-not (nil? (to-float v))
               (assoc collect k (cons (to-float v) (get collect k [])))
@@ -61,12 +62,13 @@
             (assoc (reduce collect-attributes collect (:attributes vc))
               "QUAL" (cons (-> vc :genotypes first :qual)
                            (get collect "QUAL" []))))]
-    (with-open [vcf-source (get-vcf-source vcf-file)]
+    (with-open [vcf-source (get-vcf-source vcf-file ref-file)]
       (reduce collect-vc {} (filter passes-filter? (parse-vcf vcf-source))))))
 
-(defn vcf-stats [vcf-file]
+(defn vcf-stats
   "Collect summary statistics associated with variant calls."
-  (let [raw-stats (raw-vcf-stats vcf-file)]
+  [vcf-file ref-file]
+  (let [raw-stats (raw-vcf-stats vcf-file ref-file)]
     (map #(apply summary-stats %) (sort-by first raw-stats))))
 
 (defn write-summary-table [stats & {:keys [wrtr]
@@ -79,7 +81,7 @@
 
 (defn- get-file-metrics
   "Collect classification metrics from a single VCF file."
-  [vcf-file]
+  [ref-file vcf-file]
   (letfn [(has-nil-names [metrics all-metrics all-names]
             (let [test-names (union (-> metrics keys set) all-names)]
               (apply union
@@ -99,7 +101,7 @@
                :rows (map (fn [x]
                             (map #(get x %) sort-names))
                           rows)}))]
-    (with-open [vcf-source (get-vcf-source vcf-file)]
+    (with-open [vcf-source (get-vcf-source vcf-file ref-file)]
       (prep-table
        (reduce classifier-metrics {:rows [] :names #{} :nil-names #{}}
                (filter passes-filter? (parse-vcf vcf-source)))))))
@@ -107,7 +109,7 @@
 (defn get-vcf-classifier-metrics
   "Collect metrics from multiple vcf files into tables suitable for
   classification algorithms."
-  [& vcf-files]
+  [ref-file & vcf-files]
   (letfn [(get-shared-cols [xs]
             (-> (apply intersection (map #(set (:cols %)) xs))
                 sort
@@ -121,7 +123,7 @@
             (let [row-filter (filter-by-cols cols shared-cols)]
               {:cols shared-cols
                :rows (map row-filter rows)}))]
-    (let [file-metrics (map get-file-metrics vcf-files)
+    (let [file-metrics (map (partial get-file-metrics ref-file) vcf-files)
           shared-cols (get-shared-cols file-metrics)]
       (map (partial subset-file-metrics shared-cols) file-metrics))))
 
@@ -157,6 +159,6 @@
 (defn ml-on-vcf-metrics
   "Apply machine learning/classification approaches to distinguish useful
   metrics distinguishing VCF files."
-  [& vcf-files]
-  (-> (apply get-vcf-classifier-metrics vcf-files)
+  [ref-file & vcf-files]
+  (-> (apply get-vcf-classifier-metrics ref-file vcf-files)
       classify-decision-tree))

@@ -29,6 +29,9 @@
       nofilter-out (add-file-part filter-out "nofilter")
       combine-out [(add-file-part vcf1 "fullcombine-wrefs")
                    (add-file-part vcf2 "fullcombine-wrefs")]
+      combine-out-xtra [(add-file-part vcf1 "mincombine")
+                        (add-file-part vcf1 "fullcombine")
+                        (add-file-part vcf2 "fullcombine")]
       match-out {:concordant (add-file-part combo-out "concordant")
                  :discordant (add-file-part combo-out "discordant")}
       select-out (doall (map #(str (fs/file data-dir (format "%s-%s.vcf" sample %)))
@@ -40,7 +43,7 @@
                                                 (concat
                                                  [combo-out compare-out callable-out
                                                   annotated-out filter-out nofilter-out]
-                                                 combine-out
+                                                 combine-out combine-out-xtra
                                                  (vals match-out)
                                                  select-out))))]
     (facts "Variant comparison and assessment with GATK"
@@ -74,25 +77,27 @@
 
 (facts "Accumulate statistics associated with variations."
   (let [data-dir (str (fs/file "." "test" "data"))
+        ref (str (fs/file data-dir "GRCh37.fa"))
         vcf1 (str (fs/file data-dir "gatk-calls.vcf"))
         vcf2 (str (fs/file data-dir "freebayes-calls.vcf"))]
-    (map :metric (vcf-stats vcf1)) => ["AC" "AF" "AN" "BaseQRankSum" "DP" "Dels" "FS"
-                                       "HRun" "HaplotypeScore" "MQ" "MQ0" "MQRankSum"
-                                       "QD" "QUAL" "ReadPosRankSum"]
-    (first (vcf-stats vcf1)) => {:max 2.0, :pct75 2.0, :median 2.0, :pct25 2.0, :min 2.0,
-                                 :count 10, :metric "AC"}
-    (write-summary-table (vcf-stats vcf1)) => nil
-    (let [metrics (get-vcf-classifier-metrics vcf1 vcf2)]
+    (map :metric (vcf-stats vcf1 ref)) => ["AC" "AF" "AN" "BaseQRankSum" "DP" "Dels" "FS"
+                                           "HRun" "HaplotypeScore" "MQ" "MQ0" "MQRankSum"
+                                           "QD" "QUAL" "ReadPosRankSum"]
+    (first (vcf-stats vcf1 ref)) => {:max 2.0, :pct75 2.0, :median 2.0, :pct25 2.0, :min 2.0,
+                                     :count 10, :metric "AC"}
+    (write-summary-table (vcf-stats vcf1 ref)) => nil
+    (let [metrics (get-vcf-classifier-metrics ref vcf1 vcf2)]
       (count metrics) => 2
       (-> metrics first :cols) => ["AC" "AF" "AN" "DP" "QUAL"]
       (-> metrics second :rows first) => [2.0 1.0 2.0 938.0 99.0]
       (classify-decision-tree metrics) => {:top-metrics ["DP"]})))
 
 (let [data-dir (str (fs/file "." "test" "data"))
+      ref (str (fs/file data-dir "GRCh37.fa"))
       pvcf (str (fs/file data-dir "phasing-contestant.vcf"))
       ref-vcf (str (fs/file data-dir "phasing-reference.vcf"))]
   (facts "Handle haplotype phasing specified in VCF output files."
-    (with-open [pvcf-source (get-vcf-source pvcf)]
+    (with-open [pvcf-source (get-vcf-source pvcf ref)]
       (let [haps (parse-phased-haplotypes pvcf-source)]
         (count haps) => 4
         (count (first haps)) => 5
@@ -100,15 +105,15 @@
         (count (second haps)) => 1
         (-> haps (nth 2) first :start) => 16)))
   (facts "Compare phased calls to haploid reference genotypes."
-    (with-open [ref-vcf-s (get-vcf-source ref-vcf)
-                pvcf-s (get-vcf-source pvcf)]
+    (with-open [ref-vcf-s (get-vcf-source ref-vcf ref)
+                pvcf-s (get-vcf-source pvcf ref)]
       (let [cmps (score-phased-calls pvcf-s ref-vcf-s)]
         (map :variant-type (first cmps)) => [:snp :snp :indel :snp :snp]
         (map :comparison (last cmps)) => [:concordant :phasing-error :concordant :discordant]
         (map :nomatch-het-alt (first cmps)) => [true false true false true])))
   (facts "Check is a variant file is a haploid reference."
-    (is-haploid? pvcf) => false
-    (is-haploid? ref-vcf) => true))
+    (is-haploid? pvcf ref) => false
+    (is-haploid? ref-vcf ref) => true))
 
 (let [data-dir (str (fs/file "." "test" "data"))
       ref (str (fs/file data-dir "GRCh37.fa"))
@@ -126,12 +131,14 @@
 
 (let [data-dir (str (fs/file "." "test" "data"))
       ref (str (fs/file data-dir "GRCh37.fa"))
+      alt-ref (str (fs/file data-dir "hg19.fa"))
       vcf (str (fs/file data-dir "cg-normalize.vcf"))
       out-vcf (add-file-part vcf "prep")]
-  (against-background [(before :facts (vec (map remove-path [out-vcf])))]
+  (against-background [(before :facts (vec (map remove-path [out-vcf (str vcf ".idx")])))]
+    (facts "Check for multiple samples in a VCF file"
+      (multiple-samples? vcf alt-ref) => false)
     (facts "Normalize variant representation of chromosomes, order, genotypes and samples."
-      (multiple-samples? vcf) => false
-      (prep-vcf vcf ref "Test1") => out-vcf)))
+      (prep-vcf vcf ref "Test1" :orig-ref-file alt-ref) => out-vcf)))
 
 (facts "Load configuration files, normalizing input."
   (let [config-file (fs/file "." "config" "method-comparison.yaml")

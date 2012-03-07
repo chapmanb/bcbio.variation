@@ -4,9 +4,10 @@
   (:require [fs.core :as fs]))
 
 (let [data-dir (str (fs/file "." "test" "data"))
+      ref (str (fs/file data-dir "GRCh37.fa"))
       vcf-file (str (fs/file data-dir "gatk-calls.vcf"))]
   (facts "Parsing VCF file to VariantContext"
-    (with-open [vcf-source (get-vcf-source vcf-file)]
+    (with-open [vcf-source (get-vcf-source vcf-file ref)]
       (let [vc (first (parse-vcf vcf-source))]
         (:chr vc) => "MT"
         (:start vc) => 73
