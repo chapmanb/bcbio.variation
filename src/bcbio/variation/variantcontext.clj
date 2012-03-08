@@ -8,7 +8,8 @@
            [org.broadinstitute.sting.gatk.datasources.reference ReferenceDataSource]
            [org.broadinstitute.sting.gatk.arguments ValidationExclusion$TYPE]
            [net.sf.picard.reference ReferenceSequenceFileFactory])
-  (:use [clojure.java.io]))
+  (:use [clojure.java.io])
+  (:require [clojure.string :as string]))
 
 ;; ## Represent VariantContext objects
 ;;
@@ -65,6 +66,25 @@
    (if (.hasNext iter)
      (cons (from-vc (.next iter)) (vcf-iterator iter)))))
 
+(defn flexible-vcfcodec []
+  "Provide VCFCodec decoder that handles problem VCF files before parsing.
+  Fixes:
+    - INFO lines with empty attributes (starting with ';'), found in
+      Complete Genomics VCF files"
+  (letfn [(empty-attribute-info [info]
+            (if (.startsWith info ";")
+              (subs info 1)
+              info))
+          (fix-info [xs]
+            (assoc xs 7 (-> (nth xs 7)
+                            empty-attribute-info)))]
+    (proxy [VCFCodec] []
+      (decode [line]
+        (proxy-super decode (-> line
+                                (string/split #"\t")
+                                fix-info
+                                (#(string/join "\t" %))))))))
+
 (defn get-vcf-source
   "Create a Tribble FeatureSource for VCF file.
    Handles indexing and parsing of VCF into VariantContexts.
@@ -74,9 +94,10 @@
        (BasicFeatureSource/getFeatureSource in-file (VCFCodec.) false)
        (let [validate (when-not ensure-safe
                         ValidationExclusion$TYPE/ALLOW_SEQ_DICT_INCOMPATIBILITY)
+             codec (if ensure-safe (VCFCodec.) (flexible-vcfcodec))
              idx (.loadIndex (RMDTrackBuilder. (get-seq-dict ref-file) nil validate)
-                             (file in-file) (VCFCodec.))]
-         (BasicFeatureSource. (.getAbsolutePath (file in-file)) idx (VCFCodec.)))))
+                             (file in-file) codec)]
+         (BasicFeatureSource. (.getAbsolutePath (file in-file)) idx codec))))
   ([in-file ref-file]
      (get-vcf-source in-file ref-file true)))
 

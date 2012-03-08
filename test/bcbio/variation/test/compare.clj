@@ -128,7 +128,6 @@
                   :discordant {:indel 1 :snp 1}
                   :phasing-error {:indel 1 :snp 1}}) => (roughly 62.50))
 
-
 (let [data-dir (str (fs/file "." "test" "data"))
       ref (str (fs/file data-dir "GRCh37.fa"))
       alt-ref (str (fs/file data-dir "hg19.fa"))
