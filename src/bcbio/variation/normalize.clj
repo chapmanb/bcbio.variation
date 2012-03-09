@@ -113,7 +113,8 @@
   split by chromosome."
   [line-seq]
   (letfn [(add-position [line]
-            [(vec (take 2 (string/split line #"\t"))) line])]
+            (let [[chrom start] (take 2 (string/split line #"\t"))]
+              [[chrom (Integer/parseInt start)] line]))]
     (->> line-seq
          (map add-position)
          (sort-by first)
