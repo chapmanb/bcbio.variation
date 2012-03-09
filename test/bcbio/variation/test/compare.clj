@@ -134,7 +134,7 @@
       out-vcf (add-file-part vcf "prep")]
   (against-background [(before :facts (vec (map remove-path [out-vcf (str vcf ".idx")])))]
     (facts "Check for multiple samples in a VCF file"
-      (multiple-samples? vcf ref) => false)
+      (multiple-samples? vcf) => false)
     (facts "Normalize variant representation of chromosomes, order, genotypes and samples."
       (prep-vcf vcf ref "Test1") => out-vcf)))
 

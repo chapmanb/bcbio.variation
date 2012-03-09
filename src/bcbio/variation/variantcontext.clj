@@ -3,6 +3,7 @@
    objects, which represent variant data stored in VCF files."
   (:import [org.broad.tribble.index IndexFactory]
            [org.broad.tribble.source BasicFeatureSource]
+           [org.broad.tribble.readers AsciiLineReader]
            [org.broadinstitute.sting.utils.codecs.vcf VCFCodec StandardVCFWriter]
            [org.broadinstitute.sting.gatk.refdata.tracks RMDTrackBuilder]
            [org.broadinstitute.sting.gatk.datasources.reference ReferenceDataSource]
@@ -101,6 +102,12 @@
     (fn [line]
       (from-vc (.decode codec line)))))
 
+(defn get-vcf-header
+  "Retrieve header from input VCF file."
+  [vcf-file]
+  (with-open [vcf-reader (AsciiLineReader. (input-stream vcf-file))]
+    (.readHeader (VCFCodec.) vcf-reader)))
+
 (defn parse-vcf-line
   "Retrieve a VariantContext for a single line from a VCF file."
   [line]
@@ -117,17 +124,16 @@
   [tmpl-file out-file-map vc-iter ref & {:keys [header-update-fn]}]
   (letfn [(make-vcf-writer [f ref]
             (StandardVCFWriter. (file f) (get-seq-dict ref)))]
-    (with-open [vcf-source (get-vcf-source tmpl-file ref false)]
-      (let [tmpl-header (.getHeader vcf-source)
-            writer-map (zipmap (keys out-file-map)
-                               (map #(make-vcf-writer % ref) (vals out-file-map)))]
-        (itx/with-open-map writer-map
-          (doseq [out-vcf (vals writer-map)]
-            (.writeHeader out-vcf (if-not (nil? header-update-fn)
-                                    (header-update-fn tmpl-header)
-                                    tmpl-header)))
-          (doseq [info vc-iter]
-            (let [[category vc] (if (and (coll? info) (= 2 (count info)))
-                                  info
-                                  [:out info])]
-              (.add (get writer-map category) vc))))))))
+    (let [tmpl-header (get-vcf-header tmpl-file)
+          writer-map (zipmap (keys out-file-map)
+                             (map #(make-vcf-writer % ref) (vals out-file-map)))]
+      (itx/with-open-map writer-map
+        (doseq [out-vcf (vals writer-map)]
+          (.writeHeader out-vcf (if-not (nil? header-update-fn)
+                                  (header-update-fn tmpl-header)
+                                  tmpl-header)))
+        (doseq [info vc-iter]
+          (let [[category vc] (if (and (coll? info) (= 2 (count info)))
+                                info
+                                [:out info])]
+            (.add (get writer-map category) vc)))))))

@@ -1,4 +1,3 @@
-
 (ns bcbio.variation.combine
   "Combine variant files, handling no-calls versus reference calls
 
@@ -9,7 +8,8 @@
       c. Walk through each no-call and set as reference if callable"
   (:import [org.broadinstitute.sting.utils.variantcontext
             Genotype VariantContextBuilder GenotypesContext])
-  (:use [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template get-vcf-source]]
+  (:use [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template get-vcf-source
+                                               get-vcf-header]]
         [bcbio.variation.callable :only [callable-checker]]
         [bcbio.variation.complex :only [normalize-variants]]
         [bcbio.variation.normalize :only [prep-vcf]])
@@ -84,10 +84,9 @@
 
 (defn multiple-samples?
   "Check if the input VCF file has multiple genotyped samples."
-  [in-file ref-file]
-  (with-open [vcf-source (get-vcf-source in-file ref-file false)]
-    (> (-> vcf-source .getHeader .getGenotypeSamples count)
-       1)))
+  [in-file]
+  (> (-> in-file get-vcf-header .getGenotypeSamples count)
+     1))
 
 (defn vcf-sample-name
   "Retrieve the sample name in a provided VCF file, allowing for partial matches."
@@ -150,7 +149,7 @@
     (let [merge-file (if (coll? (:file call))
                        (merge-call-files call)
                        (:file call))
-          sample-file (if (multiple-samples? merge-file (:ref exp))
+          sample-file (if (multiple-samples? merge-file)
                         (select-by-sample (:sample exp) merge-file (:name call)
                                           (get call :ref (:ref exp))
                                           :out-dir out-dir)
