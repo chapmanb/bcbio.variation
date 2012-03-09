@@ -6,13 +6,17 @@
   Currently implemented for human only, with hooks to generalize for other
   organisms."
   (:import [org.broadinstitute.sting.utils.variantcontext VariantContextBuilder Genotype]
-           [org.broadinstitute.sting.utils.codecs.vcf VCFHeader])
-  (:use [bcbio.variation.variantcontext :only (write-vcf-w-template
+           [org.broadinstitute.sting.utils.codecs.vcf VCFHeader]
+           [org.broad.tribble.readers AsciiLineReader])
+  (:use [clojure.java.io]
+        [bcbio.variation.variantcontext :only (write-vcf-w-template
                                                get-seq-dict get-vcf-source
-                                               get-vcf-retriever)]
+                                               get-vcf-retriever
+                                               get-vcf-line-parser)]
         [ordered.map :only (ordered-map)]
         [ordered.set :only (ordered-set)])
-  (:require [bcbio.run.itx :as itx]
+  (:require [clojure.string :as string]
+            [bcbio.run.itx :as itx]
             [fs.core :as fs]))
 
 ;; ## Chromosome name remapping
@@ -70,7 +74,6 @@
    "chrUn_gl000242" "GL000242", "chrUn_gl000221" "GL000221", "chrUn_gl000232" "GL000232",
    "chrUn_gl000243" "GL000243"})
 
-;; Remap chromosome names from hg19 to GRCh37
 (defmethod chr-name-remap :GRCh37
   [_ ref-chrs vcf-chrs]
   (letfn [(maybe-remap-name [x]
@@ -83,18 +86,16 @@
 
 ;; ## Normalize variant contexts
 
-(defn- fix-vc-chr
-  "Build a new variant context with updated chromosome and sample name."
-  [orig new-chr sample]
+(defn- fix-vc
+  "Build a new variant context with updated sample name."
+  [sample orig]
   (letfn [(update-genotype-sample [vc]
             {:pre [(= 1 (count (.getGenotypes vc)))]}
             (let [g (first (.getGenotypes vc))]
               [(Genotype/modifyName g sample)]))]
     (-> orig
-        (assoc :chr new-chr)
         (assoc :vc
           (-> (VariantContextBuilder. (:vc orig))
-              (.chr new-chr)
               (.genotypes (update-genotype-sample (:vc orig)))
               .make)))))
 
@@ -105,33 +106,65 @@
   (contains? #{"NO_CALL" "MIXED" "HOM_REF"}
              (-> vc :genotypes first :type)))
 
-(defn- vcs-at-chr
-  "Retrieve variant contexts at chromosome, potentially remapping
-  chromosome names to match default reference chromosome."
-  [in-vcf-s vcf-chr ref-map name-map sample config]
-  (let [new-chr (get name-map vcf-chr)
-        ref-length (get ref-map new-chr)]
-    (map #(fix-vc-chr % new-chr sample)
-         (remove no-call-genotype?
-                 ((get-vcf-retriever in-vcf-s) vcf-chr 0 (+ 1 ref-length))))))
-
 (defn- ordered-vc-iter
   "Provide VariantContexts ordered by chromosome and normalized."
-  [in-vcf-s ref-file sample config]
-  (letfn [(sort-chrs [xs name-map order-map]
-            (let [count-map (into {} (map-indexed (fn [i x] [x i]) (keys order-map)))]
-              (sort-by #(count-map (get name-map %)) xs)))]
-    (let [ref-chrs (into (ordered-map)
-                         (map (fn [x] [(.getSequenceName x)
-                                       (.getSequenceLength x)])
-                              (-> ref-file get-seq-dict .getSequences)))
-          vcf-chrs (-> in-vcf-s .getSequenceNames vec)
-          name-map (chr-name-remap (:org config) ref-chrs vcf-chrs)]
-      (flatten
-       (for [vcf-chr (sort-chrs vcf-chrs name-map ref-chrs)]
-         (map :vc (vcs-at-chr in-vcf-s vcf-chr ref-chrs name-map sample config)))))))
+  [rdr vcf-decoder sample config]
+  (->> rdr
+       line-seq
+       (map vcf-decoder)
+       (remove no-call-genotype?)
+       (map (partial fix-vc sample))
+       (map :vc)))
 
-;; ## Rewrite header information
+(defn- fix-vcf-line
+  "Provide fixes to VCF input lines that do not require VariantContext parsing.
+  Fixes:
+    - INFO lines with empty attributes (starting with ';'), found in
+      Complete Genomics VCF files
+    - Chromosome renaming."
+  [line ref-info config]
+  (letfn [(empty-attribute-info [info]
+            (if (.startsWith info ";")
+              (subs info 1)
+              info))
+          (fix-info [xs]
+            (assoc xs 7 (-> (nth xs 7)
+                            empty-attribute-info)))
+          (fix-chrom [new xs]
+            (assoc xs 0 new))]
+    (let [parts (string/split line #"\t")
+          cur-chrom (first (vals
+                            (chr-name-remap (:org config) ref-info [(first parts)])))]
+      {:chrom cur-chrom
+       :line (->> parts
+                  (fix-chrom cur-chrom)
+                  fix-info
+                  (string/join "\t"))})))
+
+(defn- vcf-by-chrom
+  "Split input VCF into separate files by chromosome, returning a map of file names."
+  [vcf-file ref-file tmp-dir config]
+  (letfn [(ref-chr-files [ref-file]
+            (into (ordered-map)
+                  (map (fn [x] [(.getSequenceName x)
+                                (str (fs/file tmp-dir (str "prep" (.getSequenceName x) ".vcf")))])
+                       (-> ref-file get-seq-dict .getSequences))))
+          (write-by-chrom [ref-wrtrs line]
+            (let [line-info (fix-vcf-line line ref-wrtrs config)]
+              (.write (get ref-wrtrs (:chrom line-info))
+                      (str (:line line-info) "\n"))))]
+    (let [ref-chrs (ref-chr-files ref-file)
+          ref-wrtrs (zipmap (keys ref-chrs) (map writer (vals ref-chrs)))]
+      (with-open [rdr (reader vcf-file)]
+        (itx/with-open-map ref-wrtrs
+          (->> rdr
+               line-seq
+               (drop-while #(.startsWith % "#"))
+               (map (partial write-by-chrom ref-wrtrs))
+               doall))
+        ref-chrs))))
+
+;; ## Top level functionality to manage inputs and writing.
 
 (defn- update-header
   "Update header information, removing contig and adding sample names."
@@ -141,21 +174,31 @@
     (VCFHeader. (apply ordered-set (remove #(= "contig" (.getKey %)) (.getMetaData header)))
                 (ordered-set sample))))
 
+(defn- write-prepped-vcf
+  "Write VCF file with correctly ordered and cleaned variants."
+  [vcf-file out-info ref-file sample config]
+  (itx/with-temp-dir [tmp-dir (fs/parent (:out out-info))]
+    (let [reader-by-chr (into (ordered-map) (map (fn [[k v]] [k (reader v)])
+                                                 (vcf-by-chrom vcf-file ref-file tmp-dir config)))]
+      (itx/with-open-map reader-by-chr
+        (with-open [vcf-reader (AsciiLineReader. (input-stream vcf-file))]
+          (let [vcf-decoder (get-vcf-line-parser vcf-reader)]
+            (write-vcf-w-template vcf-file out-info
+                                  (flatten
+                                   (for [rdr (vals reader-by-chr)]
+                                     (ordered-vc-iter rdr vcf-decoder sample config)))
+                                  ref-file
+                                  :header-update-fn (update-header sample))))))))
+
 (defn prep-vcf
   "Prepare VCF for comparison by normalizing high level attributes
   Assumes by position sorting of variants in the input VCF. Chromosomes do
   not require a specific order, but positions internal to a chromosome do.
-  Currently configured for diploid human prep."
-  [in-vcf-file ref-file sample & {:keys [out-dir out-fname orig-ref-file]}]
+  Currently configured for human preparation."
+  [in-vcf-file ref-file sample & {:keys [out-dir out-fname]}]
   (let [config {:org :GRCh37}
         base-name (if (nil? out-fname) (itx/remove-zip-ext in-vcf-file) out-fname)
         out-file (itx/add-file-part base-name "prep" out-dir)]
     (if (itx/needs-run? out-file)
-      (with-open [in-vcf (get-vcf-source in-vcf-file
-                                         (if (nil? orig-ref-file) ref-file orig-ref-file)
-                                         false)]
-        (write-vcf-w-template in-vcf-file {:out out-file}
-                              (ordered-vc-iter in-vcf ref-file sample config)
-                              ref-file
-                              :header-update-fn (update-header sample))))
+      (write-prepped-vcf in-vcf-file {:out out-file} ref-file sample config))
     out-file))

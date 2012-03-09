@@ -6,10 +6,10 @@
            [org.broadinstitute.sting.utils.codecs.vcf VCFCodec StandardVCFWriter]
            [org.broadinstitute.sting.gatk.refdata.tracks RMDTrackBuilder]
            [org.broadinstitute.sting.gatk.datasources.reference ReferenceDataSource]
-           [org.broadinstitute.sting.gatk.arguments ValidationExclusion$TYPE]
            [net.sf.picard.reference ReferenceSequenceFileFactory])
   (:use [clojure.java.io])
-  (:require [clojure.string :as string]))
+  (:require [clojure.string :as string]
+            [bcbio.run.itx :as itx]))
 
 ;; ## Represent VariantContext objects
 ;;
@@ -63,27 +63,8 @@
   "Lazy iterator over variant contexts in the VCF source iterator."
   [iter]
   (lazy-seq
-   (if (.hasNext iter)
+   (when (.hasNext iter)
      (cons (from-vc (.next iter)) (vcf-iterator iter)))))
-
-(defn flexible-vcfcodec []
-  "Provide VCFCodec decoder that handles problem VCF files before parsing.
-  Fixes:
-    - INFO lines with empty attributes (starting with ';'), found in
-      Complete Genomics VCF files"
-  (letfn [(empty-attribute-info [info]
-            (if (.startsWith info ";")
-              (subs info 1)
-              info))
-          (fix-info [xs]
-            (assoc xs 7 (-> (nth xs 7)
-                            empty-attribute-info)))]
-    (proxy [VCFCodec] []
-      (decode [line]
-        (proxy-super decode (-> line
-                                (string/split #"\t")
-                                fix-info
-                                (#(string/join "\t" %))))))))
 
 (defn get-vcf-source
   "Create a Tribble FeatureSource for VCF file.
@@ -92,12 +73,11 @@
   ([in-file ref-file ensure-safe]
      (if (.endsWith in-file ".gz")
        (BasicFeatureSource/getFeatureSource in-file (VCFCodec.) false)
-       (let [validate (when-not ensure-safe
-                        ValidationExclusion$TYPE/ALLOW_SEQ_DICT_INCOMPATIBILITY)
-             codec (if ensure-safe (VCFCodec.) (flexible-vcfcodec))
-             idx (.loadIndex (RMDTrackBuilder. (get-seq-dict ref-file) nil validate)
-                             (file in-file) codec)]
-         (BasicFeatureSource. (.getAbsolutePath (file in-file)) idx codec))))
+       (let [idx (if ensure-safe
+                   (.loadIndex (RMDTrackBuilder. (get-seq-dict ref-file) nil nil)
+                               (file in-file) (VCFCodec.))
+                   (IndexFactory/createIndex (file in-file) (VCFCodec.)))]
+         (BasicFeatureSource. (.getAbsolutePath (file in-file)) idx (VCFCodec.)))))
   ([in-file ref-file]
      (get-vcf-source in-file ref-file true)))
 
@@ -113,15 +93,20 @@
   [vcf-source]
   (vcf-iterator (.iterator vcf-source)))
 
-;; ## Writing VCF files
+(defn get-vcf-line-parser
+  "Retrieve parser to do line-by-line parsing of VCF files."
+  [vcf-reader]
+  (let [codec (VCFCodec.)]
+    (.readHeader codec vcf-reader)
+    (fn [line]
+      (from-vc (.decode codec line)))))
 
-(defmacro with-open-map
-  "Emulate with-open using bindings supplied as a map."
-  [binding-map & body]
-  `(try
-     ~@body
-     (finally
-      (vec (map #(.close %) (vals ~binding-map))))))
+(defn parse-vcf-line
+  "Retrieve a VariantContext for a single line from a VCF file."
+  [line]
+  (.decode (VCFCodec.) line))
+
+;; ## Writing VCF files
 
 (defn write-vcf-w-template
   "Write VCF output files starting with an original input template VCF.
@@ -132,11 +117,11 @@
   [tmpl-file out-file-map vc-iter ref & {:keys [header-update-fn]}]
   (letfn [(make-vcf-writer [f ref]
             (StandardVCFWriter. (file f) (get-seq-dict ref)))]
-    (with-open [vcf-source (get-vcf-source tmpl-file ref)]
+    (with-open [vcf-source (get-vcf-source tmpl-file ref false)]
       (let [tmpl-header (.getHeader vcf-source)
             writer-map (zipmap (keys out-file-map)
                                (map #(make-vcf-writer % ref) (vals out-file-map)))]
-        (with-open-map writer-map
+        (itx/with-open-map writer-map
           (doseq [out-vcf (vals writer-map)]
             (.writeHeader out-vcf (if-not (nil? header-update-fn)
                                     (header-update-fn tmpl-header)

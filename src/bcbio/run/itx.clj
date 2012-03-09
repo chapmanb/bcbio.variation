@@ -40,6 +40,15 @@
     (fs/mkdir dir)
     dir))
 
+(defmacro with-temp-dir
+  "Provide a temporary directory, removed when exiting the body."
+  [[tmp-dir base-dir] & body]
+  `(let [~tmp-dir (temp-dir-w-prefix ~base-dir "tmp")]
+     (try
+       ~@body
+       (finally
+        (fs/delete-dir ~tmp-dir)))))
+
 (defn safe-tx-files
   "Update file-info with need-tx files in a safe transaction directory."
   [file-info need-tx]
@@ -104,3 +113,14 @@
     (if (fs/directory? x)
       (fs/delete-dir x)
       (fs/delete x))))
+
+;; ## Utility macros
+
+(defmacro with-open-map
+  "Emulate with-open using bindings supplied as a map."
+  [binding-map & body]
+  `(try
+     ~@body
+     (finally
+      (vec (map #(.close %) (vals ~binding-map))))))
+

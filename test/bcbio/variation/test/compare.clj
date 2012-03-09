@@ -130,14 +130,13 @@
 
 (let [data-dir (str (fs/file "." "test" "data"))
       ref (str (fs/file data-dir "GRCh37.fa"))
-      alt-ref (str (fs/file data-dir "hg19.fa"))
       vcf (str (fs/file data-dir "cg-normalize.vcf"))
       out-vcf (add-file-part vcf "prep")]
   (against-background [(before :facts (vec (map remove-path [out-vcf (str vcf ".idx")])))]
     (facts "Check for multiple samples in a VCF file"
-      (multiple-samples? vcf alt-ref) => false)
+      (multiple-samples? vcf ref) => false)
     (facts "Normalize variant representation of chromosomes, order, genotypes and samples."
-      (prep-vcf vcf ref "Test1" :orig-ref-file alt-ref) => out-vcf)))
+      (prep-vcf vcf ref "Test1") => out-vcf)))
 
 (facts "Load configuration files, normalizing input."
   (let [config-file (fs/file "." "config" "method-comparison.yaml")
