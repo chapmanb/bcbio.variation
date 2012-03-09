@@ -210,8 +210,9 @@
   Assumes by position sorting of variants in the input VCF. Chromosomes do
   not require a specific order, but positions internal to a chromosome do.
   Currently configured for human preparation."
-  [in-vcf-file ref-file sample & {:keys [out-dir out-fname]}]
-  (let [config {:org :GRCh37 :sort-pos true}
+  [in-vcf-file ref-file sample & {:keys [out-dir out-fname sort-pos]
+                                  :or [sort-pos false]}]
+  (let [config {:org :GRCh37 :sort-pos sort-pos}
         base-name (if (nil? out-fname) (itx/remove-zip-ext in-vcf-file) out-fname)
         out-file (itx/add-file-part base-name "prep" out-dir)]
     (if (itx/needs-run? out-file)

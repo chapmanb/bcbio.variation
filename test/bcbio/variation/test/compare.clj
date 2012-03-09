@@ -136,7 +136,7 @@
     (facts "Check for multiple samples in a VCF file"
       (multiple-samples? vcf) => false)
     (facts "Normalize variant representation of chromosomes, order, genotypes and samples."
-      (prep-vcf vcf ref "Test1") => out-vcf)))
+      (prep-vcf vcf ref "Test1" :sort-pos true) => out-vcf)))
 
 (facts "Load configuration files, normalizing input."
   (let [config-file (fs/file "." "config" "method-comparison.yaml")
