@@ -106,11 +106,25 @@
   (contains? #{"NO_CALL" "MIXED" "HOM_REF"}
              (-> vc :genotypes first :type)))
 
+(defn- sort-by-position
+  "Sort stream of line inputs by position.
+  Requires loading the entire file into memory during the sort-by phase
+  so will not work on massive files. Should be feasible with files
+  split by chromosome."
+  [line-seq]
+  (letfn [(add-position [line]
+            [(vec (take 2 (string/split line #"\t"))) line])]
+    (->> line-seq
+         (map add-position)
+         (sort-by first)
+         (map second))))
+
 (defn- ordered-vc-iter
   "Provide VariantContexts ordered by chromosome and normalized."
   [rdr vcf-decoder sample config]
   (->> rdr
        line-seq
+       (#(if (:sort-pos config) (sort-by-position %) %))
        (map vcf-decoder)
        (remove no-call-genotype?)
        (map (partial fix-vc sample))
@@ -196,7 +210,7 @@
   not require a specific order, but positions internal to a chromosome do.
   Currently configured for human preparation."
   [in-vcf-file ref-file sample & {:keys [out-dir out-fname]}]
-  (let [config {:org :GRCh37}
+  (let [config {:org :GRCh37 :sort-pos true}
         base-name (if (nil? out-fname) (itx/remove-zip-ext in-vcf-file) out-fname)
         out-file (itx/add-file-part base-name "prep" out-dir)]
     (if (itx/needs-run? out-file)
