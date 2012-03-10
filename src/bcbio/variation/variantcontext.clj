@@ -7,6 +7,7 @@
            [org.broadinstitute.sting.utils.codecs.vcf VCFCodec StandardVCFWriter]
            [org.broadinstitute.sting.gatk.refdata.tracks RMDTrackBuilder]
            [org.broadinstitute.sting.gatk.datasources.reference ReferenceDataSource]
+           [org.broadinstitute.sting.gatk.arguments ValidationExclusion$TYPE]
            [net.sf.picard.reference ReferenceSequenceFileFactory])
   (:use [clojure.java.io])
   (:require [clojure.string :as string]
@@ -74,10 +75,10 @@
   ([in-file ref-file ensure-safe]
      (if (.endsWith in-file ".gz")
        (BasicFeatureSource/getFeatureSource in-file (VCFCodec.) false)
-       (let [idx (if ensure-safe
-                   (.loadIndex (RMDTrackBuilder. (get-seq-dict ref-file) nil nil)
-                               (file in-file) (VCFCodec.))
-                   (IndexFactory/createIndex (file in-file) (VCFCodec.)))]
+       (let [validate (when-not ensure-safe
+                        ValidationExclusion$TYPE/ALLOW_SEQ_DICT_INCOMPATIBILITY)
+             idx (.loadIndex (RMDTrackBuilder. (get-seq-dict ref-file) nil validate)
+                             (file in-file) (VCFCodec.))]
          (BasicFeatureSource. (.getAbsolutePath (file in-file)) idx (VCFCodec.)))))
   ([in-file ref-file]
      (get-vcf-source in-file ref-file true)))

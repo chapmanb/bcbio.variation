@@ -6,6 +6,7 @@ experiments:
   - sample: NA00001
     ref: test/data/GRCh37.fa
     intervals: test/data/phasing-reference-regions.bed
+    summary-level: quick
     calls:
       - name: reference
         file: test/data/phasing-reference.vcf
