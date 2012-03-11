@@ -57,8 +57,37 @@ running a variant comparison:
        -A MeanNeighboringBaseQuality -R test/data/GRCh37.fa -I test/data/aligned-reads.bam
        --variant test/data/gatk-calls.vcf -o annotated-file.vcf
 
+## Configuration file
+
+A YAML configuration file defines targets for comparison processing. Two example
+files for [reference grading][u4] and [comparison of calling methods][u3]
+provide example starting points and details on available options are below:
+
+    dir:
+      base: Base directory to allow use of relative paths (optional).
+      out: Working directory to write output.
+      prep: Prep directory where files will be pre-processed.
+    experiments: # one or more experiments
+     - sample: Name of current sample.
+       ref: Reference genome in FASTA format.
+       intervals: Intervals to process in BED format (optional).
+       align: Alignments for all calls in BAM format (optional).
+       calls: # two or more calls to compare
+         - name: Name of call type
+           file: One or more input files in VCF format
+           align: Alignment for specific call in BAM format (optional).
+           ref: Reference genome if different than experiment ref (optional)
+           intervals: Genome intervals to process in BED format (optional).
+           refcalls: Add reference calls if has alignment info (boolean; default false).
+           annotate: Annotate calls with GATK annotations (boolean; default false).
+           normalize: Normalize MNPs and indels (boolean: default true).
+           prep: Prep with in-order chromosomes and sample names (boolean;default false).
+           
+
 [u1]: https://github.com/technomancy/leiningen
 [u2]: http://en.wikipedia.org/wiki/YAML
+[u3]: https://github.com/chapmanb/bcbio.variation/blob/master/config/method-comparison.yaml
+[u4]: https://github.com/chapmanb/bcbio.variation/blob/master/config/reference-grading.yaml
 
 ## License
 
