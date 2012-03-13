@@ -95,9 +95,9 @@
                   (assoc :nil-names (union (has-nil-names cur-metrics (:rows coll) (:names coll))
                                            (:nil-names coll))))))
           (prep-table [{rows :rows names :names nil-names :nil-names}]
-            (let [sort-names (remove #(contains? (set nil-names) %)
-                                     (sort (vec names)))]
+            (let [sort-names (sort (vec names))]
               {:cols sort-names
+               :with-nil-cols nil-names
                :rows (map (fn [x]
                             (map #(get x %) sort-names))
                           rows)}))]
@@ -109,7 +109,8 @@
 (defn get-vcf-classifier-metrics
   "Collect metrics from multiple vcf files into tables suitable for
   classification algorithms."
-  [ref-file & vcf-files]
+  [ref-file vcf-files & {:keys [remove-nil-cols]
+                         :or {remove-nil-cols true}}]
   (letfn [(get-shared-cols [xs]
             (-> (apply intersection (map #(set (:cols %)) xs))
                 sort
@@ -119,13 +120,16 @@
                   want (set (keep-indexed #(if (contains? check-cols %2) %1) orig-cols))]
               (fn [xs]
                 (keep-indexed #(when (contains? want %1) %2) xs))))
-          (subset-file-metrics [shared-cols {cols :cols rows :rows}]
-            (let [row-filter (filter-by-cols cols shared-cols)]
-              {:cols shared-cols
+          (subset-file-metrics [shared-cols nil-cols {cols :cols rows :rows}]
+            (let [ready-cols (if-not remove-nil-cols shared-cols
+                                     (remove #(contains? nil-cols %) shared-cols))
+                  row-filter (filter-by-cols cols ready-cols)]
+              {:cols ready-cols
                :rows (map row-filter rows)}))]
     (let [file-metrics (map (partial get-file-metrics ref-file) vcf-files)
-          shared-cols (get-shared-cols file-metrics)]
-      (map (partial subset-file-metrics shared-cols) file-metrics))))
+          shared-cols (get-shared-cols file-metrics)
+          nil-cols (apply union (map #(set (:with-nil-cols %)) file-metrics))]
+      (map (partial subset-file-metrics shared-cols nil-cols) file-metrics))))
 
 (defn- parse-classifier-nodes
   "Retrieve classification metrics from a tree based classifier.
@@ -147,7 +151,7 @@
   (letfn [(prep-one-dataset [rows i]
             (map #(conj (vec %) (str i)) rows))
           (prep-dataset [metrics]
-            (make-dataset "ds" (conj (-> metrics first :cols)
+            (make-dataset "ds" (conj (-> metrics first :cols vec)
                                      {:c (map str (range (count metrics)))})
                           (apply concat (map-indexed #(prep-one-dataset (:rows %2) %1) metrics))
                           {:class :c}))]
@@ -160,5 +164,5 @@
   "Apply machine learning/classification approaches to distinguish useful
   metrics distinguishing VCF files."
   [ref-file & vcf-files]
-  (-> (apply get-vcf-classifier-metrics ref-file vcf-files)
+  (-> (get-vcf-classifier-metrics ref-file vcf-files :remove-nil-cols true)
       classify-decision-tree))

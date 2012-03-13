@@ -86,7 +86,7 @@
     (first (vcf-stats vcf1 ref)) => {:max 2.0, :pct75 2.0, :median 2.0, :pct25 2.0, :min 2.0,
                                      :count 10, :metric "AC"}
     (write-summary-table (vcf-stats vcf1 ref)) => nil
-    (let [metrics (get-vcf-classifier-metrics ref vcf1 vcf2)]
+    (let [metrics (get-vcf-classifier-metrics ref [vcf1 vcf2])]
       (count metrics) => 2
       (-> metrics first :cols) => ["AC" "AF" "AN" "DP" "QUAL"]
       (-> metrics second :rows first) => [2.0 1.0 2.0 938.0 99.0]
