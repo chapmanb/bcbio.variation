@@ -7,6 +7,8 @@ for variant file comparison.
 
 For more details, see the [code documentation][3] and a [presentation overview of the project][4].
 
+[![Build Status](https://secure.travis-ci.org/chapmanb/bcbio.variation.png)](http://travis-ci.org/chapmanb/bcbio.variation)
+
 [1]: http://www.broadinstitute.org/gsa/wiki/index.php/The_Genome_Analysis_Toolkit
 [2]: http://www.1000genomes.org/wiki/Analysis/Variant%20Call%20Format/vcf-variant-call-format-version-40
 [3]: http://chapmanb.github.com/bcbio.variation
