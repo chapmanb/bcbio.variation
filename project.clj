@@ -2,8 +2,8 @@
   :description "Clojure API for variation data, built on GATK"
   :dependencies [[org.clojure/clojure "1.3.0"]
                  [org.clojure/math.combinatorics "0.0.2"]
-                 [org.clojars.chapmanb/gatk "1.4.30"]
-                 [org.clojars.chapmanb/picard "1.58"]
+                 [org.clojars.chapmanb/gatk "1.5.2"]
+                 [org.clojars.chapmanb/picard "1.64"]
                  [incanter/incanter-core "1.3.0-SNAPSHOT"]
                  [incanter/incanter-charts "1.3.0-SNAPSHOT"]
                  [com.leadtune/clj-ml "0.2.0"]

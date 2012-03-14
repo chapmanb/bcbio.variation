@@ -118,8 +118,7 @@
                                                                ref-file)))]
         (if (= sum-level :quick) base
             (assoc base
-              :ml_metrics (apply ml-on-vcf-metrics
-                                 (cons ref-file (take 2 (:c-files compared))))))))))
+              :ml_metrics (ml-on-vcf-metrics ref-file (take 2 (:c-files compared)))))))))
 
 (defn calc-accuracy
   "Calculate an overall accuracy score from input metrics.

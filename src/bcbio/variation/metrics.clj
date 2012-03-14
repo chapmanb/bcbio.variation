@@ -176,7 +176,7 @@
 (defn ml-on-vcf-metrics
   "Apply machine learning/classification approaches to distinguish useful
   metrics distinguishing VCF files."
-  [ref-file & vcf-files]
+  [ref-file vcf-files]
   (letfn [(run-classifier [remove-nil-cols]
             (-> (get-vcf-classifier-metrics ref-file vcf-files :remove-nil-cols remove-nil-cols)
                 classify-decision-tree))]
