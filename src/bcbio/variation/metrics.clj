@@ -125,7 +125,7 @@
                                      (remove #(contains? nil-cols %) shared-cols))
                   row-filter (filter-by-cols cols ready-cols)]
               {:cols ready-cols
-               :rows (map row-filter rows)}))]
+               :rows (remove #(not= (count %) (count ready-cols)) (map row-filter rows))}))]
     (let [file-metrics (map (partial get-file-metrics ref-file) vcf-files)
           shared-cols (get-shared-cols file-metrics)
           nil-cols (apply union (map #(set (:with-nil-cols %)) file-metrics))]
@@ -158,11 +158,26 @@
     (let [ds (prep-dataset metrics)
           c (-> (make-classifier :decision-tree :c45)
                 (classifier-train ds))]
-      {:top-metrics (vec (parse-classifier-nodes c (-> metrics first :cols)))})))
+      (vec (parse-classifier-nodes c (-> metrics first :cols))))))
+
+(defn merge-classified-metrics
+  "Merge multiple classification approaches into a set of final metrics.
+  `in-metrics` contains ordered best metric classifiers from the different
+  approaches. Returns interleaved metrics ranked by present in these
+  classifiers. "
+  [in-metrics]
+  (loop [cur in-metrics
+         final (ordered-set)]
+    (if (every? empty? cur)
+      {:top-metrics (vec final)}
+      (recur (map rest cur)
+             (reduce #(conj %1 %2) final (remove nil? (map first cur)))))))
 
 (defn ml-on-vcf-metrics
   "Apply machine learning/classification approaches to distinguish useful
   metrics distinguishing VCF files."
   [ref-file & vcf-files]
-  (-> (get-vcf-classifier-metrics ref-file vcf-files :remove-nil-cols true)
-      classify-decision-tree))
+  (letfn [(run-classifier [remove-nil-cols]
+            (-> (get-vcf-classifier-metrics ref-file vcf-files :remove-nil-cols remove-nil-cols)
+                classify-decision-tree))]
+    (merge-classified-metrics (map run-classifier [true false]))))

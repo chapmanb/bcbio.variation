@@ -86,11 +86,17 @@
     (first (vcf-stats vcf1 ref)) => {:max 2.0, :pct75 2.0, :median 2.0, :pct25 2.0, :min 2.0,
                                      :count 10, :metric "AC"}
     (write-summary-table (vcf-stats vcf1 ref)) => nil
-    (let [metrics (get-vcf-classifier-metrics ref [vcf1 vcf2])]
+    (let [metrics (get-vcf-classifier-metrics ref [vcf1 vcf2])
+          wnil-metrics (get-vcf-classifier-metrics ref [vcf1 vcf2] :remove-nil-cols false)]
       (count metrics) => 2
       (-> metrics first :cols) => ["AC" "AF" "AN" "DP" "QUAL"]
+      (-> metrics first :rows count) => 10
+      (-> wnil-metrics first :cols) => ["AC" "AF" "AN" "DP" "QUAL" "ReadPosRankSum"]
+      (-> wnil-metrics first :rows count) => 2
       (-> metrics second :rows first) => [2.0 1.0 2.0 938.0 99.0]
-      (classify-decision-tree metrics) => {:top-metrics ["DP"]})))
+      (classify-decision-tree metrics) => ["DP"]
+      (classify-decision-tree wnil-metrics) => []
+      (merge-classified-metrics [["A" "B" "C"] ["C" "D"]]) => {:top-metrics ["A" "C" "B" "D"]})))
 
 (let [data-dir (str (fs/file "." "test" "data"))
       ref (str (fs/file data-dir "GRCh37.fa"))
