@@ -36,21 +36,19 @@
      :score (.getScore f)
      :strand (.getStrand f)}))
 
-(defn bed-feature-source
+(defn get-bed-source
   "Provide tribble feature source for a BED formatted file."
   [bed-file]
   (let [batch-size 500
         idx (IndexFactory/createIntervalIndex (file bed-file) (BEDCodec.) batch-size)]
     (BasicFeatureSource. bed-file idx (BEDCodec.))))
 
-(defn callable-interval-tree
-  "Retrieve an IntervalTree to retrieve information on callability in a region."
+(defn callable-checker
+  "Provide function to check if a region (chromsome start end) is callable.
+  Calculates based on reads in input BAM file."
   [align-bam ref & {:keys [out-dir] :or {out-dir nil}}]
-  (bed-feature-source (identify-callable align-bam ref :out-dir out-dir)))
-
-(defn callable-checker [align-bam ref & {:keys [out-dir] :or {out-dir nil}}]
   (if (nil? align-bam) [(fn [& _] true) (java.io.StringReader. "")]
-      (let [source (callable-interval-tree align-bam ref :out-dir out-dir)]
+      (let [source (get-bed-source (identify-callable align-bam ref :out-dir out-dir))]
         (letfn [(is-callable? [space start end]
                   (> (count (filter #(= (:name %) "CALLABLE")
                                     (features-in-region source space start end)))

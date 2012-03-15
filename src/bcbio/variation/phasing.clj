@@ -15,7 +15,7 @@
            [org.broadinstitute.sting.utils GenomeLocParser GenomeLoc])
   (:use [bcbio.variation.variantcontext :only [parse-vcf get-vcf-retriever get-vcf-source
                                                write-vcf-w-template get-seq-dict]]
-        [bcbio.variation.callable :only [bed-feature-source]]
+        [bcbio.variation.callable :only [get-bed-source]]
         [ordered.map :only [ordered-map]])
   (:require [fs.core :as fs]))
 
@@ -169,21 +169,22 @@
             (apply + (map feature-size xs)))
           (genome-loc-list [x]
             (let [parser (GenomeLocParser. (get-seq-dict ref-file))]
-              (->> x
-                   bed-feature-source
-                   .iterator
-                   (map #(.createGenomeLoc parser %)))))
+              (with-open [bed-source (get-bed-source x)]
+                (->> bed-source
+                     .iterator
+                     (map #(.createGenomeLoc parser %))
+                     doall))))
           (merge-intervals [x y]
             (IntervalUtils/mergeListsBySetOperator (genome-loc-list x)
                                                    (genome-loc-list y)
                                                    IntervalSetRule/INTERSECTION))]
-    (let [total (count-bases (-> total-bed bed-feature-source .iterator))
-          compared (count-bases (if-not (nil? call-bed)
-                                (merge-intervals total-bed call-bed)
-                                (-> total-bed bed-feature-source .iterator)))]
-      {:percent (* 100.0 (/ compared total))
-       :compared compared
-       :total total})))
+    (with-open [bed-source (get-bed-source total-bed)]
+      (let [total (count-bases (.iterator bed-source))
+            compared (if (nil? call-bed) total
+                         (count-bases (merge-intervals total-bed call-bed)))]
+        {:percent (* 100.0 (/ compared total))
+         :compared compared
+         :total total}))))
 
 (defn- get-phasing-metrics
   "Collect summary metrics for concordant/discordant and phasing calls"
