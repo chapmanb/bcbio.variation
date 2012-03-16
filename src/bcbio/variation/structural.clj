@@ -1,8 +1,14 @@
 (ns bcbio.variation.structural
   "Handle structural variations for larger insertions, deletions and
-  genome rearrangements.")
+  genome rearrangements."
+  (:import [org.broadinstitute.sting.utils.codecs.vcf VCFCodec]
+           [org.broadinstitute.sting.utils.variantcontext VariantContextBuilder
+            Allele])
+  (:use [bcbio.variation.variantcontext :only [get-vcf-source parse-vcf
+                                               from-vc]])
+  (:require [bcbio.run.itx :as itx]))
 
-(defn sv-type
+(defn get-sv-type
   "Determine the type of a structural variant. Expected types are:
 
     - DEL: Deletion
@@ -34,3 +40,47 @@
             (> (max-allele-size vc) min-indel)) (indel-type vc)
        (= "SYMBOLIC" (:type vc)) (alt-sv-type vc)
        :else nil))))
+
+(defn structural-vcfcodec []
+  "Provide VCFCodec decoder that returns structural variants expanded
+  to include confidence regions."
+  (letfn [(pos-from-attr [vc attr-name attr-index]
+            (-> vc
+                :attributes
+                (get attr-name ["0" "0"])
+                (nth attr-index)
+                (Integer/parseInt)
+                Math/abs))
+          (start-adjust [vc]
+            (pos-from-attr vc "CIPOS" 0))
+          (end-adjust [vc]
+            (pos-from-attr vc "CIEND" 1))
+          (fix-ref [allele new-bases]
+            (Allele/create (apply str (cons (.getBaseString allele) (repeat new-bases "N")))
+                           true))
+          (update-pos [vc sv-type]
+            (let [start-pad (start-adjust vc)
+                  end-pad (end-adjust vc)]
+              (-> (VariantContextBuilder. (:vc vc))
+                  (.start (- (:start vc) start-pad))
+                  (.stop (+ (:end vc) end-pad))
+                  (.alleles (set (cons (fix-ref (:ref-allele vc) (+ start-pad end-pad))
+                                       (:alt-alleles vc))))
+                  .make)))
+          (updated-sv-vc [vc]
+            (let [cur-vc (from-vc vc)]
+              (when-let [sv-type (get-sv-type cur-vc)]
+                (update-pos cur-vc sv-type))))]
+    (proxy [VCFCodec] []
+      (decode [line]
+        (when-let [vc (proxy-super decode line)]
+          (updated-sv-vc vc)))
+      (decodeLoc [line]
+        (when-let [vc (proxy-super decode line)]
+          (updated-sv-vc vc))))))
+
+(defn parse-sv-vcf [vcf-file ref-file]
+  (itx/remove-path (str vcf-file ".idx"))
+  (with-open [vcf-source (get-vcf-source vcf-file ref-file :codec (structural-vcfcodec))]
+    (doseq [vc (parse-vcf vcf-source)]
+      (println vc))))

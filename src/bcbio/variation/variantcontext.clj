@@ -72,16 +72,15 @@
   "Create a Tribble FeatureSource for VCF file.
    Handles indexing and parsing of VCF into VariantContexts.
    We treat gzipped files as tabix indexed VCFs."
-  ([in-file ref-file ensure-safe]
-     (if (.endsWith in-file ".gz")
-       (BasicFeatureSource/getFeatureSource in-file (VCFCodec.) false)
-       (let [validate (when-not ensure-safe
-                        ValidationExclusion$TYPE/ALLOW_SEQ_DICT_INCOMPATIBILITY)
-             idx (.loadIndex (RMDTrackBuilder. (get-seq-dict ref-file) nil validate)
-                             (file in-file) (VCFCodec.))]
-         (BasicFeatureSource. (.getAbsolutePath (file in-file)) idx (VCFCodec.)))))
-  ([in-file ref-file]
-     (get-vcf-source in-file ref-file true)))
+  [in-file ref-file & {:keys [ensure-safe codec]}]
+  (let [cur-codec (if (nil? codec) (VCFCodec.) codec)]
+    (if (.endsWith in-file ".gz")
+      (BasicFeatureSource/getFeatureSource in-file cur-codec false)
+      (let [validate (when (false? ensure-safe)
+                       ValidationExclusion$TYPE/ALLOW_SEQ_DICT_INCOMPATIBILITY)
+            idx (.loadIndex (RMDTrackBuilder. (get-seq-dict ref-file) nil validate)
+                            (file in-file) cur-codec)]
+        (BasicFeatureSource. (.getAbsolutePath (file in-file)) idx cur-codec)))))
 
 (defn get-vcf-retriever
   "Indexed VCF file retrieval.
