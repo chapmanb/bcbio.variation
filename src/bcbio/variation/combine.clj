@@ -20,8 +20,9 @@
 
 (defn combine-variants
   "Combine two variant files with GATK CombineVariants."
-  [vcfs ref & {:keys [merge-type out-dir intervals]
-               :or {merge-type :unique out-dir nil intervals nil}}]
+  [vcfs ref & {:keys [merge-type out-dir intervals unsafe]
+               :or {merge-type :unique out-dir nil intervals nil
+                    unsafe false}}]
   (letfn [(unique-name [f]
             (-> f fs/base-name itx/file-root))]
     (let [base-dir (if (nil? out-dir) (fs/parent (first vcfs)) out-dir)
@@ -35,6 +36,7 @@
           args (concat ["-R" ref
                         "-o" :out-vcf
                         "--rod_priority_list" (string/join "," (map unique-name vcfs))]
+                       (if unsafe ["--unsafe" "ALLOW_SEQ_DICT_INCOMPATIBILITY"] [])
                        (flatten (map #(list (str "--variant:" (unique-name %)) %) vcfs))
                        (cond
                         (nil? intervals) []
@@ -84,9 +86,11 @@
 
 (defn multiple-samples?
   "Check if the input VCF file has multiple genotyped samples."
-  [in-file]
-  (> (-> in-file get-vcf-header .getGenotypeSamples count)
-     1))
+  [in-file & {:keys [sample]}]
+  (let [samples (-> in-file get-vcf-header .getGenotypeSamples)]
+    (or (> (count samples) 1)
+        (and (not (nil? sample))
+             (not (contains? (set samples) sample))))))
 
 (defn vcf-sample-name
   "Retrieve the sample name in a provided VCF file, allowing for partial matches."
@@ -144,12 +148,13 @@
   (if-not (fs/exists? out-dir)
     (fs/mkdirs out-dir))
   (letfn [(merge-call-files [call]
-            (combine-variants (:file call) (:ref exp)
-                              :merge-type :full :out-dir out-dir))]
+            (combine-variants (:file call) (get call :ref (:ref exp))
+                              :merge-type :full :out-dir out-dir
+                              :unsafe true))]
     (let [merge-file (if (coll? (:file call))
                        (merge-call-files call)
                        (:file call))
-          sample-file (if (multiple-samples? merge-file)
+          sample-file (if (multiple-samples? merge-file :sample (:sample exp))
                         (select-by-sample (:sample exp) merge-file (:name call)
                                           (get call :ref (:ref exp))
                                           :out-dir out-dir)
