@@ -137,12 +137,17 @@
 (let [data-dir (str (fs/file "." "test" "data"))
       ref (str (fs/file data-dir "GRCh37.fa"))
       vcf (str (fs/file data-dir "cg-normalize.vcf"))
-      out-vcf (add-file-part vcf "prep")]
-  (against-background [(before :facts (vec (map remove-path [out-vcf (str vcf ".idx")])))]
+      out-vcf (add-file-part vcf "prep")
+      prevcf (str (fs/file data-dir "illumina-needclean.vcf"))
+      out-prevcf (add-file-part prevcf "preclean")]
+  (against-background [(before :facts (vec (map remove-path [out-vcf out-prevcf
+                                                             (str vcf ".idx")])))]
     (facts "Check for multiple samples in a VCF file"
       (multiple-samples? vcf) => false)
     (facts "Normalize variant representation of chromosomes, order, genotypes and samples."
-      (prep-vcf vcf ref "Test1" :sort-pos true) => out-vcf)))
+      (prep-vcf vcf ref "Test1" :sort-pos true) => out-vcf)
+    (facts "Pre-cleaning of problematic VCF input files"
+      (clean-problem-vcf prevcf) => out-prevcf)))
 
 (facts "Load configuration files, normalizing input."
   (let [config-file (fs/file "." "config" "method-comparison.yaml")

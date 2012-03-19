@@ -84,7 +84,7 @@ provide example starting points and details on available options are below:
            annotate: Annotate calls with GATK annotations (boolean; default false).
            normalize: Normalize MNPs and indels (boolean: default true).
            prep: Prep with in-order chromosomes and sample names (boolean;default false).
-           
+           preclean: Remove problematic characters from input VCFs. 
 
 [u1]: https://github.com/technomancy/leiningen
 [u2]: http://en.wikipedia.org/wiki/YAML

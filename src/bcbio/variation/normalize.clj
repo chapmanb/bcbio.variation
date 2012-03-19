@@ -84,7 +84,7 @@
     (zipmap vcf-chrs
             (map maybe-remap-name vcf-chrs))))
 
-;; ## Normalize variant contexts
+;; ## Resort and normalize variants
 
 (defn- fix-vc
   "Build a new variant context with updated sample name."
@@ -211,10 +211,35 @@
   not require a specific order, but positions internal to a chromosome do.
   Currently configured for human preparation."
   [in-vcf-file ref-file sample & {:keys [out-dir out-fname sort-pos]
-                                  :or [sort-pos false]}]
+                                  :or {sort-pos false}}]
   (let [config {:org :GRCh37 :sort-pos sort-pos}
         base-name (if (nil? out-fname) (itx/remove-zip-ext in-vcf-file) out-fname)
         out-file (itx/add-file-part base-name "prep" out-dir)]
-    (if (itx/needs-run? out-file)
+    (when (itx/needs-run? out-file)
       (write-prepped-vcf in-vcf-file {:out out-file} ref-file sample config))
     out-file))
+
+;; ## Remove problem characters
+;; Handle cleanup for VCF files before feeding to any verifying parser.
+
+(defn clean-problem-vcf
+  "Clean VCF file which GATK parsers cannot handle due to illegal characters.
+  Fixes:
+    - Gap characters (-) found in REF or ALT indels."
+  [in-vcf-file & {:keys [out-dir]}]
+  (letfn [(remove-gap [n xs]
+            (assoc xs n
+                   (string/replace (nth xs n) "-" "")))
+          (clean-line [line]
+            (if (.startsWith line "#") line
+                (->> (string/split line #"\t")
+                     (remove-gap 3)
+                     (remove-gap 4)
+                     (string/join "\t"))))]
+    (let [out-file (itx/add-file-part in-vcf-file "preclean" out-dir)]
+      (when (itx/needs-run? out-file)
+        (with-open [rdr (reader in-vcf-file)
+                    wtr (writer out-file)]
+          (doall
+           (map #(.write wtr (str (clean-line %) "\n")) (line-seq rdr)))))
+      out-file)))

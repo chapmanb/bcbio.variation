@@ -1,0 +1,16 @@
+##fileformat=VCFv4.1
+##fileDate=20120220
+##source=GenerateReportDataAndVCFv2.0.0.0
+##reference=HumanNCBI37_UCSC
+##phasing=none
+##INFO=<ID=DP,Number=1,Type=Integer,Description="Total Depth">
+##INFO=<ID=TI,Number=.,Type=String,Description="Transcript ID">
+##INFO=<ID=GI,Number=.,Type=String,Description="Gene ID">
+##INFO=<ID=EXON,Number=0,Type=Flag,Description="Exon Region">
+##INFO=<ID=FC,Number=.,Type=String,Description="Functional Consequence">
+##INFO=<ID=BKPT,Number=0,Type=Flag,Description="Breakpoint">
+##FILTER=<ID=q20,Description="Quality below 20">
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+##FORMAT=<ID=GQ,Number=1,Type=Integer,Description="Genotype Quality">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	NA12878
+chr1	2470672	.	CATTTCAGTG-----	CCCATCTCAGCGGCA	1102	PASS	DP=42	GT:GQ	0/1:877

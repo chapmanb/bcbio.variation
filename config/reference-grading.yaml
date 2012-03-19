@@ -12,5 +12,6 @@ experiments:
         file: test/data/phasing-reference.vcf
       - name: contestant
         prep: true
+        preclean: true
         file: test/data/phasing-contestant.vcf
         intervals: test/data/phasing-contestant-regions.bed

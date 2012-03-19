@@ -12,7 +12,7 @@
                                                get-vcf-header]]
         [bcbio.variation.callable :only [callable-checker]]
         [bcbio.variation.complex :only [normalize-variants]]
-        [bcbio.variation.normalize :only [prep-vcf]])
+        [bcbio.variation.normalize :only [prep-vcf clean-problem-vcf]])
   (:require [fs.core :as fs]
             [clojure.string :as string]
             [bcbio.run.itx :as itx]
@@ -151,15 +151,19 @@
             (combine-variants (:file call) (get call :ref (:ref exp))
                               :merge-type :full :out-dir out-dir
                               :unsafe true))]
-    (let [merge-file (if (coll? (:file call))
+    (let [out-fname (format "%s-%s.vcf" (:sample exp) (:name call))
+          in-files (if (coll? (:file call)) (:file call) [(:file call)])
+          clean-files (map #(if-not (:preclean call) %
+                                    (clean-problem-vcf % :out-dir out-dir))
+                           in-files)
+          merge-file (if (> (count clean-files) 1)
                        (merge-call-files call)
-                       (:file call))
-          sample-file (if (multiple-samples? merge-file :sample (:sample exp))
+                       (first clean-files))
+          sample-file (if (multiple-samples? merge-file)
                         (select-by-sample (:sample exp) merge-file (:name call)
                                           (get call :ref (:ref exp))
                                           :out-dir out-dir)
                         merge-file)
-          out-fname (format "%s-%s.vcf" (:sample exp) (:name call))
           prep-file (if (true? (:prep call))
                       (prep-vcf sample-file (:ref exp) (:sample exp) :out-dir out-dir
                                 :out-fname out-fname :orig-ref-file (:ref call))
