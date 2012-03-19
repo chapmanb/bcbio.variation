@@ -1,11 +1,13 @@
 # bcbio.variation
 
-Use the [Genome Analysis Toolkit (GATK)][1] to analyze variant data.
-This is a Clojure API to parse and analyze [VCF files][2]. It supports scoring
-for the [Archon Genomic X PRIZE competition][5] but is also a general framework
+A Clojure interface to the [Genome Analysis Toolkit (GATK)][1] to analyze
+variant data in [VCF files][2]. It supports scoring for the
+[Archon Genomic X PRIZE competition][5] but is also a general framework
 for variant file comparison.
 
-For more details, see the [code documentation][3] and a [presentation overview of the project][4].
+* [presentation overview of the project][4]
+* [howto description of interfacing with GATK][6]
+* [code documentation][3]
 
 [![Build Status](https://secure.travis-ci.org/chapmanb/bcbio.variation.png)](http://travis-ci.org/chapmanb/bcbio.variation)
 
@@ -14,6 +16,7 @@ For more details, see the [code documentation][3] and a [presentation overview o
 [3]: http://chapmanb.github.com/bcbio.variation
 [4]: http://chapmanb.github.com/bcbio.variation/presentations/gatk_clojure.pdf
 [5]: http://genomics.xprize.org/
+[6]: http://bcbio.wordpress.com/2012/03/04/extending-the-gatk-for-custom-variant-comparisons-using-clojure/
 
 ## Usage
 
@@ -83,8 +86,8 @@ provide example starting points and details on available options are below:
            refcalls: Add reference calls if has alignment info (boolean; default false).
            annotate: Annotate calls with GATK annotations (boolean; default false).
            normalize: Normalize MNPs and indels (boolean: default true).
-           prep: Prep with in-order chromosomes and sample names (boolean;default false).
-           preclean: Remove problematic characters from input VCFs. 
+           prep: Prep with in-order chromosomes and sample names (boolean; default false).
+           preclean: Remove problematic characters from input VCFs (bolean; default false). 
 
 [u1]: https://github.com/technomancy/leiningen
 [u2]: http://en.wikipedia.org/wiki/YAML
