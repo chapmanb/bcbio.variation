@@ -147,8 +147,8 @@
   [call exp out-dir]
   (if-not (fs/exists? out-dir)
     (fs/mkdirs out-dir))
-  (letfn [(merge-call-files [call]
-            (combine-variants (:file call) (get call :ref (:ref exp))
+  (letfn [(merge-call-files [call in-files]
+            (combine-variants in-files (get call :ref (:ref exp))
                               :merge-type :full :out-dir out-dir
                               :unsafe true))]
     (let [out-fname (format "%s-%s.vcf" (:sample exp) (:name call))
@@ -157,7 +157,7 @@
                                     (clean-problem-vcf % :out-dir out-dir))
                            in-files)
           merge-file (if (> (count clean-files) 1)
-                       (merge-call-files call)
+                       (merge-call-files call clean-files)
                        (first clean-files))
           sample-file (if (multiple-samples? merge-file)
                         (select-by-sample (:sample exp) merge-file (:name call)
