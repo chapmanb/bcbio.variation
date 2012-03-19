@@ -13,6 +13,7 @@
                                                get-seq-dict get-vcf-source
                                                get-vcf-retriever
                                                get-vcf-line-parser)]
+        [bcbio.variation.structural :only [nochange-alt?]]
         [ordered.map :only (ordered-map)]
         [ordered.set :only (ordered-set)])
   (:require [clojure.string :as string]
@@ -90,9 +91,10 @@
   "Build a new variant context with updated sample name."
   [sample orig]
   (letfn [(update-genotype-sample [vc]
-            {:pre [(= 1 (count (.getGenotypes vc)))]}
-            (let [g (first (.getGenotypes vc))]
-              [(Genotype/modifyName g sample)]))]
+            (if (= 1 (count (.getGenotypes vc)))
+              (let [g (first (.getGenotypes vc))]
+                [(Genotype/modifyName g sample)])
+              (.getGenotypes vc)))]
     (-> orig
         (assoc :vc
           (-> (VariantContextBuilder. (:vc orig))
@@ -102,9 +104,9 @@
 (defn- no-call-genotype?
   "Check if a variant has a non-informative no-call genotype."
   [vc]
-  {:pre [(= 1 (count (:genotypes vc)))]}
-  (contains? #{"NO_CALL" "MIXED" "HOM_REF"}
-             (-> vc :genotypes first :type)))
+  (if-not (= 1 (count (:genotypes vc))) false
+          (contains? #{"NO_CALL" "MIXED" "HOM_REF"}
+                     (-> vc :genotypes first :type))))
 
 (defn- sort-by-position
   "Sort stream of line inputs by position.
@@ -126,6 +128,7 @@
   (->> rdr
        line-seq
        (#(if (:sort-pos config) (sort-by-position %) %))
+       (remove nochange-alt?)
        (map vcf-decoder)
        (remove no-call-genotype?)
        (map (partial fix-vc sample))
@@ -185,9 +188,11 @@
   "Update header information, removing contig and adding sample names."
   [sample]
   (fn [header]
-    {:pre [(= 1 (count (.getGenotypeSamples header)))]}
-    (VCFHeader. (apply ordered-set (remove #(= "contig" (.getKey %)) (.getMetaData header)))
-                (ordered-set sample))))
+    (case (count (.getGenotypeSamples header))
+     1 (VCFHeader. (apply ordered-set (remove #(= "contig" (.getKey %)) (.getMetaData header)))
+                   (ordered-set sample))
+     0 (VCFHeader. (apply ordered-set (remove #(= "contig" (.getKey %)) (.getMetaData header))) #{})
+     header)))
 
 (defn- write-prepped-vcf
   "Write VCF file with correctly ordered and cleaned variants."

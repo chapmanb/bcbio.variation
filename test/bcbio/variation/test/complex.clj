@@ -22,7 +22,7 @@
         vcf (str (fs/file data-dir "sv-1000g.vcf"))
         ill-vcf (str (fs/file data-dir "sv-illumina.vcf"))]
     (parse-sv-vcf ill-vcf ref) =future=> nil
-    (parse-sv-vcf vcf ref) => nil
+    (parse-sv-vcf vcf ref) =future=> nil
     (with-open [vcf-source (get-vcf-source vcf ref)]
       (doall (map get-sv-type (parse-vcf vcf-source)))) => (concat (repeat 6 :BND)
                                                                    [nil :DEL :INS :DUP :INS])))

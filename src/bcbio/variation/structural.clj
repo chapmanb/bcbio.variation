@@ -42,16 +42,21 @@
        (= "SYMBOLIC" (:type vc)) (alt-sv-type vc)
        :else nil))))
 
+(defn nochange-alt?
+  "Check a VCF input line for identical REF and ALT calls"
+  [line]
+  (let [parts (string/split line #"\t")]
+    (= (nth parts 3) (nth parts 4))))
+
 (defn- check-sv-line
   "Check SV inputs for validity, fixing or filtering where possible.
   Fixes:
     - identical ref/alt calls: an apparent SV no-call"
   [line]
-  (if (.startsWith line "#") line
-      (let [parts (string/split line #"\t")]
-        (cond
-         (= (nth parts 3) (nth parts 4)) nil
-         :else (string/join "\t" parts)))))
+  (cond
+   (.startsWith line "#") line
+   (nochange-alt? line) nil
+   :else line))
 
 (defn structural-vcfcodec []
   "Provide VCFCodec decoder that returns structural variants expanded
