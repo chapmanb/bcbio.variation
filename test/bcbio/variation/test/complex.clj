@@ -19,8 +19,10 @@
 (facts "Parse structural variations"
   (let [data-dir (str (fs/file "." "test" "data"))
         ref (str (fs/file data-dir "GRCh37.fa"))
-        vc-vcf (str (fs/file data-dir "sv-1000g.vcf"))]
-    (parse-sv-vcf vc-vcf ref) => nil
-    (with-open [vcf-source (get-vcf-source vc-vcf ref)]
+        vcf (str (fs/file data-dir "sv-1000g.vcf"))
+        ill-vcf (str (fs/file data-dir "sv-illumina.vcf"))]
+    (parse-sv-vcf ill-vcf ref) =future=> nil
+    (parse-sv-vcf vcf ref) => nil
+    (with-open [vcf-source (get-vcf-source vcf ref)]
       (doall (map get-sv-type (parse-vcf vcf-source)))) => (concat (repeat 6 :BND)
                                                                    [nil :DEL :INS :DUP :INS])))

@@ -6,7 +6,8 @@
             Allele])
   (:use [bcbio.variation.variantcontext :only [get-vcf-source parse-vcf
                                                from-vc]])
-  (:require [bcbio.run.itx :as itx]))
+  (:require [clojure.string :as string]
+            [bcbio.run.itx :as itx]))
 
 (defn get-sv-type
   "Determine the type of a structural variant. Expected types are:
@@ -41,6 +42,17 @@
        (= "SYMBOLIC" (:type vc)) (alt-sv-type vc)
        :else nil))))
 
+(defn- check-sv-line
+  "Check SV inputs for validity, fixing or filtering where possible.
+  Fixes:
+    - identical ref/alt calls: an apparent SV no-call"
+  [line]
+  (if (.startsWith line "#") line
+      (let [parts (string/split line #"\t")]
+        (cond
+         (= (nth parts 3) (nth parts 4)) nil
+         :else (string/join "\t" parts)))))
+
 (defn structural-vcfcodec []
   "Provide VCFCodec decoder that returns structural variants expanded
   to include confidence regions."
@@ -73,11 +85,13 @@
                 (update-pos cur-vc sv-type))))]
     (proxy [VCFCodec] []
       (decode [line]
-        (when-let [vc (proxy-super decode line)]
-          (updated-sv-vc vc)))
+        (when-let [work-line (check-sv-line line)]
+          (when-let [vc (proxy-super decode work-line)]
+            (updated-sv-vc vc))))
       (decodeLoc [line]
-        (when-let [vc (proxy-super decode line)]
-          (updated-sv-vc vc))))))
+        (when-let [work-line (check-sv-line line)]
+          (when-let [vc (proxy-super decode work-line)]
+            (updated-sv-vc vc)))))))
 
 (defn parse-sv-vcf [vcf-file ref-file]
   (itx/remove-path (str vcf-file ".idx"))
