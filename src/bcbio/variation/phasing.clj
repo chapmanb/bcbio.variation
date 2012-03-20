@@ -14,7 +14,8 @@
   (:import [org.broadinstitute.sting.utils.interval IntervalUtils IntervalSetRule]
            [org.broadinstitute.sting.utils GenomeLocParser GenomeLoc])
   (:use [bcbio.variation.variantcontext :only [parse-vcf get-vcf-retriever get-vcf-source
-                                               write-vcf-w-template get-seq-dict]]
+                                               write-vcf-w-template]]
+        [bcbio.align.ref :only [get-seq-dict]]
         [bcbio.variation.callable :only [get-bed-source]]
         [ordered.map :only [ordered-map]])
   (:require [fs.core :as fs]))

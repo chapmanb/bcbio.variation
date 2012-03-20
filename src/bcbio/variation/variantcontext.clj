@@ -6,10 +6,9 @@
            [org.broad.tribble.readers AsciiLineReader]
            [org.broadinstitute.sting.utils.codecs.vcf VCFCodec StandardVCFWriter]
            [org.broadinstitute.sting.gatk.refdata.tracks RMDTrackBuilder]
-           [org.broadinstitute.sting.gatk.datasources.reference ReferenceDataSource]
-           [org.broadinstitute.sting.gatk.arguments ValidationExclusion$TYPE]
-           [net.sf.picard.reference ReferenceSequenceFileFactory])
-  (:use [clojure.java.io])
+           [org.broadinstitute.sting.gatk.arguments ValidationExclusion$TYPE])
+  (:use [clojure.java.io]
+        [bcbio.align.ref :only [get-seq-dict]])
   (:require [clojure.string :as string]
             [bcbio.run.itx :as itx]))
 
@@ -51,15 +50,6 @@
    :vc vc})
 
 ;; ## Parsing VCF files
-
-(defn get-seq-dict
-  "Retrieve Picard sequence dictionary from FASTA reference file."
-  [ref-file]
-  (ReferenceDataSource. (file ref-file))
-  (-> ref-file
-      file
-      ReferenceSequenceFileFactory/getReferenceSequenceFile
-      .getSequenceDictionary))
 
 (defn- vcf-iterator
   "Lazy iterator over variant contexts in the VCF source iterator."

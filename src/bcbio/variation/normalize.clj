@@ -9,10 +9,11 @@
            [org.broadinstitute.sting.utils.codecs.vcf VCFHeader]
            [org.broad.tribble.readers AsciiLineReader])
   (:use [clojure.java.io]
-        [bcbio.variation.variantcontext :only (write-vcf-w-template
-                                               get-seq-dict get-vcf-source
+        [bcbio.variation.variantcontext :only [write-vcf-w-template
+                                               get-vcf-source
                                                get-vcf-retriever
-                                               get-vcf-line-parser)]
+                                               get-vcf-line-parser]]
+        [bcbio.align.ref :only [get-seq-dict]]
         [bcbio.variation.structural :only [nochange-alt?]]
         [ordered.map :only (ordered-map)]
         [ordered.set :only (ordered-set)])
