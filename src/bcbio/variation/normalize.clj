@@ -231,7 +231,7 @@
   "Clean VCF file which GATK parsers cannot handle due to illegal characters.
   Fixes:
     - Gap characters (-) found in REF or ALT indels.
-    - Extra N padding on 5' side of indels."
+    - Filter out call with extra N padding on 5' side of indels."
   [in-vcf-file & {:keys [out-dir]}]
   (letfn [(remove-gap [n xs]
             (assoc xs n
@@ -241,12 +241,7 @@
                   alt (nth xs 4)]
               (and (= ref "N") (.startsWith alt "N") (> (count alt) 1))))
           (remove-5pad-n [xs]
-            (if-not (is-5pad-n? xs) xs
-                    (let [new-alt (.substring (nth xs 4) 1)
-                          new-ref (.substring new-alt 0 1)]
-                      (-> xs
-                          (assoc 3 new-ref)
-                          (assoc 4 new-alt)))))
+            (if (is-5pad-n? xs) [] xs))
           (clean-line [line]
             (if (.startsWith line "#") line
                 (->> (string/split line #"\t")
@@ -259,5 +254,6 @@
         (with-open [rdr (reader in-vcf-file)
                     wtr (writer out-file)]
           (doall
-           (map #(.write wtr (str (clean-line %) "\n")) (line-seq rdr)))))
+           (map #(.write wtr (str (clean-line %) "\n"))
+                (remove empty? (line-seq rdr))))))
       out-file)))
