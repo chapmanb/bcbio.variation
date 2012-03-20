@@ -254,6 +254,6 @@
         (with-open [rdr (reader in-vcf-file)
                     wtr (writer out-file)]
           (doall
-           (map #(.write wtr (str (clean-line %) "\n"))
-                (remove empty? (line-seq rdr))))))
+           (map #(.write wtr (str % "\n"))
+                (remove empty? (map clean-line (line-seq rdr)))))))
       out-file)))
