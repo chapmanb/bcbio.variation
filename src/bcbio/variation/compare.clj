@@ -20,6 +20,7 @@
         [bcbio.variation.annotation :only [add-variant-annotations]]
         [bcbio.variation.filter :only [variant-filter pipeline-recalibration]]
         [bcbio.variation.phasing :only [is-haploid? compare-two-vcf-phased]]
+        [bcbio.align.reorder :only [reorder-bam]]
         [clojure.math.combinatorics :only [combinations]]
         [clojure.java.io]
         [clojure.string :only [join]]
@@ -123,11 +124,19 @@
                                     (itx/file-root (fs/base-name config-file)) ext)))))
     (writer System/out)))
 
+(defn- prepare-input-bams
+  "Retrieve BAM files associated with alignments, normalizing if needed."
+  [exp out-dir]
+  (let [call-bams (map (fn [c] [(get c :align (:align exp)) c]) (:calls exp))]
+    (map (fn [[b c]] (when-not (nil? b)
+                     (reorder-bam b (:ref exp) c exp :out-dir out-dir)))
+         call-bams)))
+
 (defn- prepare-vcf-calls
   "Prepare merged and annotated VCF files for an experiment."
   [exp config]
-  (let [align-bams (map #(get % :align (:align exp)) (:calls exp))
-        out-dir (get-in config [:dir :prep] (get-in config [:dir :out]))
+  (let [out-dir (get-in config [:dir :prep] (get-in config [:dir :out]))
+        align-bams (prepare-input-bams exp out-dir)
         start-vcfs (map #(gatk-normalize % exp out-dir) (:calls exp))
         all-intervals (remove nil? (map :intervals (cons exp (:calls exp))))
         merged-vcfs (create-merged (map :file start-vcfs)

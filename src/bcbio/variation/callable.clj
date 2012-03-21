@@ -1,4 +1,3 @@
-
 (ns bcbio.variation.callable
   "Identify callable bases from a BAM alignment file.
   Help differentiate positions where we can not assess variation"
