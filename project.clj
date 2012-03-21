@@ -21,7 +21,8 @@
   :aot [bcbio.variation.vcfwalker bcbio.variation.core bcbio.variation.annotate.nbq]
   :main bcbio.variation.core
   :run-aliases {:compare bcbio.variation.compare
-                :web bcbio.variation.web.server}
+                :web bcbio.variation.web.server
+                :popfreq bcbio.variation.utils.popfreq}
   :cljsbuild {:source-path "src/cljs"
               :compiler {:output-to "public/js/score.js"
                          :optimizations :advanced

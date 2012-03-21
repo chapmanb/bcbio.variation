@@ -40,6 +40,7 @@
   {:chr (.getChr vc)
    :start (.getStart vc)
    :end (.getEnd vc)
+   :id (when (.hasID vc) (.getID vc))
    :ref-allele (.getReference vc)
    :alt-alleles (.getAlternateAlleles vc)
    :type (-> vc .getType .name)
