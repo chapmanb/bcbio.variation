@@ -1,0 +1,46 @@
+# Provide background set of genomes from 1000 genomes project based on
+# Complete Genomics diversity panel
+---
+dir:
+  base: /tmp/
+  out: vcfbackground
+  prep: vcfbackground/prep
+ftp:
+  vcf_url: ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/release/20110521/ALL.chr%s.phase1_release_v3.20101123.snps_indels_svs.genotypes.vcf.gz
+  bam_url: ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/data/%s/alignment/%s.mapped.*.bam
+  chromosomes: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, X]
+genomes:
+- HG00731
+- HG00732
+- NA06994
+- NA07357
+- NA10851
+- NA12004
+- NA12889
+- NA12890
+- NA18501
+- NA18502
+- NA18504
+- NA18505
+- NA18508
+- NA18517
+- NA18526
+- NA18537
+- NA18555
+- NA18558
+- NA18940
+- NA18942
+- NA18947
+- NA18956
+- NA19020
+- NA19129
+- NA19648
+- NA19700
+- NA19701
+- NA19703
+- NA19704
+- NA19735
+- NA19834
+- NA20502
+- NA20509
+- NA20510

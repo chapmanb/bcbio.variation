@@ -22,7 +22,8 @@
   :main bcbio.variation.core
   :run-aliases {:compare bcbio.variation.compare
                 :web bcbio.variation.web.server
-                :popfreq bcbio.variation.utils.popfreq}
+                :popfreq bcbio.variation.utils.popfreq
+                :background bcbio.variation.utils.background}
   :cljsbuild {:source-path "src/cljs"
               :compiler {:output-to "public/js/score.js"
                          :optimizations :advanced
