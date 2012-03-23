@@ -65,5 +65,5 @@
       (doseq [f (.iterator source)]
         (when (= (.getName f) "CALLABLE")
           (.write wtr (format "%s\t%s\t%s\n" (.getChr f)
-                              (dec (.getStart f)) (.getEnd f))))))
+                              (dec (.getStart f)) (inc (.getEnd f)))))))
     out-file))

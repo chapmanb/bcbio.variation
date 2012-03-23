@@ -20,6 +20,7 @@
         [bcbio.variation.annotation :only [add-variant-annotations]]
         [bcbio.variation.filter :only [variant-filter pipeline-recalibration]]
         [bcbio.variation.phasing :only [is-haploid? compare-two-vcf-phased]]
+        [bcbio.variation.callable :only [get-callable-bed]]
         [bcbio.align.reorder :only [reorder-bam]]
         [clojure.math.combinatorics :only [combinations]]
         [clojure.java.io]
@@ -151,21 +152,33 @@
                                        (variant-filter v (:filters c) (:ref exp))
                                        v))
                          (map vector ann-vcfs (:calls exp)))]
-    (map (fn [[c v]] (assoc c :file v))
-         (map vector (:calls exp) filter-vcfs))))
+    (map (fn [[c v b]] (-> c
+                           (assoc :file v)
+                           (assoc :align b)))
+         (map vector (:calls exp) filter-vcfs align-bams))))
 
 (defn- compare-two-vcf-standard
   "Compare two standard VCF files based on the supplied configuration."
   [c1 c2 exp config]
-  (let [c-files (select-by-concordance (:sample exp) c1 c2 (:ref exp)
-                                       :out-dir (get-in config [:dir :out])
-                                       :interval-file (:intervals exp))
-        eval-file (calc-variant-eval-metrics (:sample exp) (:file c1) (:file c2)
-                                             (:ref exp) :out-base (first c-files)
-                                             :intervals (:intervals exp))
-        metrics (first (concordance-report-metrics (:sample exp) eval-file))]
-    {:c-files c-files :metrics metrics :c1 c1 :c2 c2
-     :exp exp :dir (config :dir)}))
+  (letfn [(callable-intervals [exp c1 c2]
+            (let [out-dir (get-in config [:dir :prep] (get-in config [:dir :out]))]
+              (remove nil? (cons (:intervals exp)
+                                 (map #(when-not (nil? (:align %))
+                                         (get-callable-bed (:align %) (:ref exp)
+                                                           :out-dir out-dir))
+                                      [c1 c2])))))]
+    (let [c-files (select-by-concordance (:sample exp) c1 c2 (:ref exp)
+                                         :out-dir (get-in config [:dir :out])
+                                         :interval-file (:intervals exp))
+          eval (calc-variant-eval-metrics (:sample exp) (:file c1) (:file c2) (:ref exp)
+                                          :out-base (first c-files)
+                                          :intervals (:intervals exp))
+          c-eval (calc-variant-eval-metrics (:sample exp) (:file c1) (:file c2) (:ref exp)
+                                            :out-base (itx/add-file-part (first c-files) "callable")
+                                            :intervals (callable-intervals exp c1 c2))]
+      {:c-files c-files :c1 c1 :c2 c2 :exp exp :dir (config :dir)
+       :metrics (first (concordance-report-metrics (:sample exp) eval))
+       :callable-metrics (first (concordance-report-metrics (:sample exp) c-eval))})))
 
 (defn- compare-two-vcf
   "Compare two VCF files, handling standard and haploid specific comparisons."

@@ -107,6 +107,8 @@
              :call1 (-> compared :c1 :name)
              :call2 (-> compared :c2 :name)
              :genotype_concordance (-> compared :metrics :percent_overall_genotype_concordance)
+             :callable_concordance (-> compared :callable-metrics
+                                       :percent_overall_genotype_concordance)
              :nonref_discrepency (-> compared :metrics :percent_non_reference_discrepancy_rate)
              :nonref_sensitivity (-> compared :metrics :percent_non_reference_sensitivity)
              :concordant (all-vrn-counts (first (:c-files compared)) nil compared)
@@ -168,6 +170,7 @@
   "Summary table of metrics for assessing the score of a variant comparison."
   [metrics wrtr]
   (let [to-write (ordered-map :genotype_concordance "Overall genotype concordance"
+                              :callable_concordance "Callable genotype concordance"
                               :nonref_discrepency "Non-reference discrepancy rate"
                               :nonref_sensitivity "Non-reference sensitivity"
                               [:concordant :total] "Total concordant"
