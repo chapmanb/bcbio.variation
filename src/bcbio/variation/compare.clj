@@ -16,7 +16,7 @@
                                        write-scoring-table
                                        top-level-metrics]]
         [bcbio.variation.combine :only [combine-variants create-merged
-                                        gatk-normalize]]
+                                        gatk-normalize gatk-cl-intersect-intervals]]
         [bcbio.variation.annotation :only [add-variant-annotations]]
         [bcbio.variation.filter :only [variant-filter pipeline-recalibration]]
         [bcbio.variation.phasing :only [is-haploid? compare-two-vcf-phased]]
@@ -32,10 +32,9 @@
 
 ;; ## Variance assessment
 
-(defn variant-comparison
+(defn calc-variant-eval-metrics
   "Compare two variant files with GenotypeConcordance in VariantEval"
-  [sample vcf1 vcf2 ref & {:keys [out-base interval-file]
-                           :or {out-base nil iinterval-file nil}}]
+  [sample vcf1 vcf2 ref & {:keys [out-base intervals]}]
   (let [file-info {:out-eval (str (itx/file-root (if (nil? out-base) vcf1 out-base)) ".eval")}
         args (concat
               ["-R" ref
@@ -51,7 +50,7 @@
                "--evalModule" "ValidationReport"
                "--stratificationModule" "Sample"
                "--stratificationModule" "Filter"]
-              (if-not (nil? interval-file) ["-L:bed" interval-file] []))]
+              (gatk-cl-intersect-intervals intervals))]
     (broad/run-gatk "VariantEval" args file-info {:out [:out-eval]})
     (:out-eval file-info)))
 
@@ -161,9 +160,9 @@
   (let [c-files (select-by-concordance (:sample exp) c1 c2 (:ref exp)
                                        :out-dir (get-in config [:dir :out])
                                        :interval-file (:intervals exp))
-        eval-file (variant-comparison (:sample exp) (:file c1) (:file c2)
-                                      (:ref exp) :out-base (first c-files)
-                                      :interval-file (:intervals exp))
+        eval-file (calc-variant-eval-metrics (:sample exp) (:file c1) (:file c2)
+                                             (:ref exp) :out-base (first c-files)
+                                             :intervals (:intervals exp))
         metrics (first (concordance-report-metrics (:sample exp) eval-file))]
     {:c-files c-files :metrics metrics :c1 c1 :c2 c2
      :exp exp :dir (config :dir)}))

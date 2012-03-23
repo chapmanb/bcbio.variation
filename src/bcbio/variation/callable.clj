@@ -53,3 +53,17 @@
                                     (features-in-region source space start end)))
                      0))]
           [is-callable? source]))))
+
+(defn get-callable-bed
+  "Create BED file of callable regions from the BAM alignment file.
+  Pass the callable BED to GATK for subsetting based on callable intervals."
+  [align-bam ref & {:keys [out-dir]}]
+  (let [orig-bed-file (identify-callable align-bam ref :out-dir out-dir)
+        out-file (itx/add-file-part orig-bed-file "intervals")]
+    (with-open [source (get-bed-source orig-bed-file)
+                wtr (writer out-file)]
+      (doseq [f (.iterator source)]
+        (when (= (.getName f) "CALLABLE")
+          (.write wtr (format "%s\t%s\t%s\n" (.getChr f)
+                              (dec (.getStart f)) (.getEnd f))))))
+    out-file))

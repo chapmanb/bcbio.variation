@@ -18,6 +18,15 @@
             [bcbio.run.itx :as itx]
             [bcbio.run.broad :as broad]))
 
+(defn gatk-cl-intersect-intervals
+  "Supply GATK commandline arguments for interval files, merging via intersection."
+  [intervals]
+  (cond
+   (nil? intervals) []
+   (coll? intervals) (concat (flatten (map #(list "-L" %) intervals))
+                             ["--interval_set_rule" "INTERSECTION"])
+   :else ["-L", intervals]))
+
 (defn combine-variants
   "Combine two variant files with GATK CombineVariants."
   [vcfs ref & {:keys [merge-type out-dir intervals unsafe]
@@ -38,11 +47,7 @@
                         "--rod_priority_list" (string/join "," (map unique-name vcfs))]
                        (if unsafe ["--unsafe" "ALLOW_SEQ_DICT_INCOMPATIBILITY"] [])
                        (flatten (map #(list (str "--variant:" (unique-name %)) %) vcfs))
-                       (cond
-                        (nil? intervals) []
-                        (coll? intervals) (concat (flatten (map #(list "-L" %) intervals))
-                                                  ["--interval_set_rule" "INTERSECTION"])
-                        :else ["-L", intervals])
+                       (gatk-cl-intersect-intervals intervals)
                        (case merge-type
                              :full ["--genotypemergeoption" "PRIORITIZE"]
                              :unique ["--genotypemergeoption" "UNIQUIFY"]
