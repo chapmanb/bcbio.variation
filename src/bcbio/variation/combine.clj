@@ -119,6 +119,8 @@
                                           (format "%s-%s.vcf" sample name)))}
         args (concat ["-R" ref
                       "--sample_name" (vcf-sample-name sample in-file ref)
+                      "--excludeNonVariants"
+                      "--excludeFiltered"
                       "--variant" in-file
                       "--unsafe" "ALLOW_SEQ_DICT_INCOMPATIBILITY"
                       "--out" :out-vcf]
