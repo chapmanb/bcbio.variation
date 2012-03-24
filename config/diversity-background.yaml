@@ -10,7 +10,7 @@ ftp:
   bam-url: ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/data/%s/alignment/%s.mapped.*.bam
   chromosomes: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, X]
   batch-size: 6
-ref: /tmp/biodata/genomes/Hsapiens/hg19/seq/hg19.fa
+ref: /tmp/biodata/genomes/Hsapiens/GRCh37/seq/GRCh37.fa
 genomes:
 - HG00731
 - HG00732

@@ -26,11 +26,11 @@
 
 (defn- merge-sample-batch
   "Select sample from input VCF batch and merge."
-  [sample vcfs batch-num ref out-dir]
-  (combine-variants (map #(select-by-sample sample % batch-num ref
-                                            :out-dir out-dir)
-                         vcfs)
-                    ref :out-dir out-dir))
+  [sample vcfs ref out-dir]
+  (combine-variants (map #(select-by-sample sample (:file %) (:chrom %)
+                                            ref :out-dir out-dir)
+                                   vcfs)
+                      ref :out-dir out-dir))
 
 (defn- download-base-vcfs
   "Download original VCFs from 1000 genomes for processing."
@@ -46,7 +46,7 @@
             final-file (itx/remove-zip-ext local-file)]
         (when-not (fs/exists? final-file)
           (download-vcf dl-url local-file))
-        final-file))))
+        {:chrom chrom :file final-file}))))
 
 (defn make-work-dirs [config]
   (doseq [dir-name (-> config :dir keys)]
@@ -58,10 +58,10 @@
   (let [config (load-config config-file)]
     (make-work-dirs config)
     (doall
-     (for [[batch-num chroms] (map-indexed vec (partition-all (get-in config [:ftp :chromosomes])
-                                                              (get-in config [:ftp :batch-size])))]
+     (for [chroms (partition-all (get-in config [:ftp :batch-size])
+                                 (get-in config [:ftp :chromosomes]))]
        (let [vcfs (download-base-vcfs chroms (:ftp config)
                                       (get-in config [:dir :prep]))]
          (for [sample (:genomes config)]
-           (merge-sample-batch sample vcfs batch-num (:ref config)
+           (merge-sample-batch sample vcfs (:ref config)
                                   (get-in config [:dir :prep]))))))))
