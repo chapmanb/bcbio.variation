@@ -10,6 +10,8 @@
             [fs.core :as fs]
             [bcbio.run.itx :as itx]))
 
+;; ## Combine and annotate VCFs
+
 (defn- download-sample-bam
   "Download BAM file and index for a sample from 1000 genomes FTP."
   [sample ftp-config out-dir]
@@ -24,29 +26,43 @@
       (download (str dl-url ".bai") (str local-file ".bai"))
       local-file)))
 
-(defn- merge-sample-batch
-  "Select sample from input VCF batch and merge."
-  [sample vcfs ref out-dir]
-  (combine-variants (map #(select-by-sample sample (:file %) (:chrom %)
-                                            ref :out-dir out-dir)
-                                   vcfs)
-                      ref :out-dir out-dir))
+(defn- combine-samples
+  "Combine sample VCFs split by chromosome."
+  [sample-info ref out-dir]
+  (letfn [(combine-sample [[name xs]]
+            (combine-variants (map :file xs) ref :out-dir out-dir))]
+    (map combine-sample
+         (group-by :sample (flatten sample-info)))))
 
-(defn- download-base-vcfs
-  "Download original VCFs from 1000 genomes for processing."
-  [chroms ftp-config out-dir]
+;; ## Subset VCF by sample
+
+(defn- download-chrom-vcf
+  "Download chromosome VCF from 1000 genomes for processing."
+  [chrom ftp-config out-dir]
   (letfn [(download-vcf [url fname]
             (println "Downloading" url "to" fname)
             (shell/with-sh-dir out-dir
               (shell/sh "wget" "-O" fname url)
               (shell/sh "gunzip" (str (fs/base-name fname)))))]
-    (for [chrom chroms]
-      (let [dl-url (format (:vcf-url ftp-config) chrom)
-            local-file (str (fs/file out-dir (fs/base-name dl-url)))
-            final-file (itx/remove-zip-ext local-file)]
-        (when-not (fs/exists? final-file)
-          (download-vcf dl-url local-file))
-        {:chrom chrom :file final-file}))))
+    (let [dl-url (format (:vcf-url ftp-config) chrom)
+          local-file (str (fs/file out-dir (fs/base-name dl-url)))
+          final-file (itx/remove-zip-ext local-file)]
+      (when-not (fs/exists? final-file)
+        (download-vcf dl-url local-file))
+      final-file)))
+
+(defn- select-samples-at-chrom
+  "Select samples from input 1000 genomes chromosome VCF."
+  [chrom samples ref ftp-config out-dir]
+  (let [sample-info (map (fn [x] {:sample x
+                                  :file (str (fs/file out-dir (format "%s-%s.vcf" x chrom)))})
+                         samples)]
+    (when (apply itx/needs-run? (map :file sample-info))
+      (let [chrom-vcf (download-chrom-vcf chrom ftp-config out-dir)]
+        (doseq [sample samples]
+          (select-by-sample sample chrom-vcf chrom ref :out-dir out-dir))
+        (itx/remove-path chrom-vcf)))
+    sample-info))
 
 (defn make-work-dirs [config]
   (doseq [dir-name (-> config :dir keys)]
@@ -57,11 +73,9 @@
 (defn -main [config-file]
   (let [config (load-config config-file)]
     (make-work-dirs config)
-    (doall
-     (for [chroms (partition-all (get-in config [:ftp :batch-size])
-                                 (get-in config [:ftp :chromosomes]))]
-       (let [vcfs (download-base-vcfs chroms (:ftp config)
-                                      (get-in config [:dir :prep]))]
-         (for [sample (:genomes config)]
-           (merge-sample-batch sample vcfs (:ref config)
-                                  (get-in config [:dir :prep]))))))))
+    (let [prep-dir (get-in config [:dir :prep])
+          samples (map #(select-samples-at-chrom % (:genomes config) (:ref config)
+                                                 (:ftp config) prep-dir)
+                                        (get-in config [:ftp :chromosomes]))
+          combo-samples (combine-samples samples (:ref config) prep-dir)]
+      (println combo-samples))))
