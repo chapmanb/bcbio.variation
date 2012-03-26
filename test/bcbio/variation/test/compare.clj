@@ -61,11 +61,13 @@
       (variant-filter vcf1 ["QD < 2.0" "MQ < 40.0"] ref) => filter-out
       (remove-cur-filters filter-out ref) => nofilter-out
       (split-variants-by-match vcf1 vcf2 ref) => match-out
-      (variant-recalibration-filter vcf1 [{:file (:concordant match-out)
-                                           :name "concordant"
-                                           :prior 10.0}]
-                                    ref) => (throws UserException$BadInput
-                                    (contains "annotations with zero variance")))))
+      (variant-recal-filter vcf1 [{:file (:concordant match-out)
+                                   :name "concordant"
+                                   :truth "true"
+                                   :prior 10.0}]
+                            ["QD" "DP"]
+                            ref) => (throws UserException$BadInput
+                                            (contains "Error during negative model training")))))
 
 (let [data-dir (str (fs/file "." "test" "data"))
       ref (str (fs/file data-dir "GRCh37.fa"))

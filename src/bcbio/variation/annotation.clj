@@ -7,11 +7,11 @@
 
 (defn add-variant-annotations
   "Add GATK annotation metrics to variant calls."
-  [in-vcf align-bam ref]
+  [in-vcf align-bam ref & {:keys [out-dir]}]
   {:pre [(not (nil? align-bam))]}
-  (let [file-info {:out-vcf (itx/add-file-part in-vcf "annotated")}
-        annotations ["BaseQualityRankSumTest" "DepthOfCoverage" "FisherStrand"
-                     "GCContent" "HaplotypeScore" "HomopolymerRun"
+  (let [file-info {:out-vcf (itx/add-file-part in-vcf "annotated" out-dir)}
+        annotations ["AlleleBalance" "BaseQualityRankSumTest" "DepthOfCoverage"
+                     "FisherStrand" "GCContent" "HaplotypeScore" "HomopolymerRun"
                      "MappingQualityRankSumTest" "MappingQualityZero"
                      "MeanNeighboringBaseQuality" "QualByDepth"
                      "ReadPosRankSumTest" "RMSMappingQuality"]

@@ -12,6 +12,7 @@ experiments:
         file: test/data/gatk-calls.vcf
         refcalls: false
         normalize: false
+        annotate: true
       - name: freebayes
         file: test/data/freebayes-calls.vcf
         annotate: true
@@ -20,7 +21,9 @@ experiments:
           - QD < 2.0
           - FS > 60.0
           - MQRankSum < -12.5
-    #finalize:
-    #  - method: recal-filter
-    #    target: [gatk, freebayes]
-                
+    finalize:
+      - method: recal-filter
+        target: [gatk, freebayes]
+        params:
+          #annotations:  [QD, HaplotypeScore, MQRankSum, ReadPosRankSum, FS, MQ, DP, AB]
+          filters: [HRun > 5.0]

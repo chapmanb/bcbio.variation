@@ -145,7 +145,7 @@
                                    (:ref exp) :out-dir out-dir 
                                    :intervals all-intervals)
         ann-vcfs (map (fn [[v b c]] (if (get c :annotate false)
-                                        (add-variant-annotations v b (:ref exp))
+                                        (add-variant-annotations v b (:ref exp) :out-dir out-dir)
                                         v))
                       (map vector merged-vcfs align-bams (:calls exp)))
         filter-vcfs (map (fn [[v c]] (if-not (nil? (:filters c))
@@ -207,6 +207,7 @@
               (let [updated-cmp ((get finalize-fns (:method finalizer))
                                  (get cmps-by-name (:target finalizer))
                                  (get cmps-by-name (get finalizer :support (:target finalizer)))
+                                 (:params finalizer)
                                  (:ref exp))]
                 (assoc cur-cmps (:target finalizer)
                        (compare-two-vcf (:c1 updated-cmp) (:c2 updated-cmp) exp config))))]

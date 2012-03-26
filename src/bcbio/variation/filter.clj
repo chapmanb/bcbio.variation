@@ -1,4 +1,3 @@
-
 (ns bcbio.variation.filter
   "Filter variant calls according to supplied criteria."
   (:import [org.broadinstitute.sting.utils.variantcontext
@@ -27,9 +26,8 @@
 (defn- variant-recalibration
   "Perform the variant recalibration step with input training VCF files.
   training-vcfs is a list of `{:file vcf-file :name name-to-use :prior probability}`"
-  [in-vcf training-vcfs ref]
-  (let [annotations ["MQRankSum" "ReadPosRankSum"]
-        base-out (itx/file-root in-vcf)
+  [in-vcf training-vcfs annotations ref]
+  (let [base-out (itx/file-root in-vcf)
         file-info {:out-recal (str base-out ".recal")
                    :out-tranch (str base-out ".tranches")
                    :out-r (str base-out "-recalplots.R")}
@@ -39,11 +37,13 @@
                       "-tranchesFile" :out-tranch
                       "-rscriptFile" :out-r
                       "--percentBadVariants" "0.03"
-                      "--maxGaussians" "4"]
+                      "--maxGaussians" "10"
+                      "--mode" "BOTH"]
                      (flatten (map (fn [x] ["-an" x]) annotations))
                      (flatten (map (fn [x] [(str "-resource:" (:name x)
-                                                 ",known=true,training=true,truth=true,prior="
-                                                 (:prior x))
+                                                 ",known=true,training=true,"
+                                                 "truth=" (:truth x)
+                                                 ",prior=" (:prior x))
                                             (:file x)])
                                    training-vcfs)))]
     (broad/run-gatk "VariantRecalibrator" args file-info {:out [:out-recal :out-tranch]})
@@ -62,12 +62,12 @@
     (broad/run-gatk "ApplyRecalibration" args file-info {:out [:out-vcf]})
     (:out-vcf file-info)))
 
-(defn variant-recalibration-filter
+(defn variant-recal-filter
   "Perform filtration using variant recalibration based on known variations.
   Training-vcfs is a list of true training sites along with associated
   probability and name."
-  [in-vcf training-vcfs ref]
-  (let [recal-files (variant-recalibration in-vcf training-vcfs ref)]
+  [in-vcf training-vcfs annotations ref]
+  (let [recal-files (variant-recalibration in-vcf training-vcfs annotations ref)]
     (apply-recalibration in-vcf recal-files ref)))
 
 (defn remove-cur-filters
@@ -86,14 +86,20 @@
 
 (defn pipeline-recalibration
   "Perform variant recalibration and filtration as part of processing pipeline."
-  [target support ref]
+  [target support params ref]
   (let [in-vcf (remove-cur-filters (-> target :c1 :file) ref)
-        hard-filters ["FS > 60.0" "HRun > 5.0" "QD < 2.0" "HaplotypeScore > 13.0"]
+        hard-filters (:filters params)
+        anns (:annotations params)
         train-info [{:file (-> support :c-files first)
-                      :name "concordant"
+                     :name "concordant"
+                     :truth "true"
+                     :prior 10.0}
+                    {:file (-> support :c-files second)
+                     :name "discordant"
+                     :truth "false"
                      :prior 10.0}]]
     (-> target
         (assoc-in [:c1 :file] (-> in-vcf
-                                  (variant-recalibration-filter train-info ref)
-                                  (variant-filter hard-filters ref)))
+                                  (#(if-not anns % (variant-recal-filter % train-info anns ref)))
+                                  (#(if-not hard-filters % (variant-filter % hard-filters ref)))))
         (assoc-in [:c1 :mod] "recal"))))
