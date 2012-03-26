@@ -7,7 +7,8 @@
   (:use [bcbio.variation.variantcontext :only [get-vcf-source parse-vcf
                                                from-vc]])
   (:require [clojure.string :as string]
-            [bcbio.run.itx :as itx]))
+            [bcbio.run.itx :as itx]
+            [bcbio.itree :as itree]))
 
 (defn get-sv-type
   "Determine the type of a structural variant. Expected types are:
@@ -48,19 +49,32 @@
   (let [parts (string/split line #"\t")]
     (= (nth parts 3) (nth parts 4))))
 
-(defn- check-sv-line
-  "Check SV inputs for validity, fixing or filtering where possible.
+(defn structural-vcfcodec []
+  "Provide VCFCodec decoder that returns structural variants.
+  Check SV inputs for validity, fixing or filtering where possible.
   Fixes:
     - identical ref/alt calls: an apparent SV no-call"
-  [line]
-  (cond
-   (.startsWith line "#") line
-   (nochange-alt? line) nil
-   :else line))
+  (letfn [(check-sv-line [line]
+            (cond
+             (.startsWith line "#") line
+             (nochange-alt? line) nil
+             :else line))]
+    (proxy [VCFCodec] []
+      (decode [line]
+        (when-let [work-line (check-sv-line line)]
+          (when-let [vc (proxy-super decode work-line)]
+            vc)))
+      (decodeLoc [line]
+        (when-let [work-line (check-sv-line line)]
+          (when-let [vc (proxy-super decode work-line)]
+            vc))))))
 
-(defn structural-vcfcodec []
-  "Provide VCFCodec decoder that returns structural variants expanded
-  to include confidence regions."
+(defn parse-vcf-sv
+  "Parse VCF file returning structural variants with confidence intervals.
+  The :out-format keyword specifies how to return the parsed structural variants:
+   - :itree -- Interval tree for variant lookup by chromosome and start/end.
+   - default -- List of variants (non-lazy)."
+  [vcf-file ref-file & {:keys [out-format]}]
   (letfn [(pos-from-attr [vc attr-name attr-index]
             (-> vc
                 :attributes
@@ -72,34 +86,18 @@
             (pos-from-attr vc "CIPOS" 0))
           (end-adjust [vc]
             (pos-from-attr vc "CIEND" 1))
-          (fix-ref [allele new-bases]
-            (Allele/create (apply str (cons (.getBaseString allele) (repeat new-bases "N")))
-                           true))
-          (update-pos [vc sv-type]
-            (let [start-pad (start-adjust vc)
-                  end-pad (end-adjust vc)]
-              (-> (VariantContextBuilder. (:vc vc))
-                  (.start (- (:start vc) start-pad))
-                  (.stop (+ (:end vc) end-pad))
-                  (.alleles (set (cons (fix-ref (:ref-allele vc) (+ start-pad end-pad))
-                                       (:alt-alleles vc))))
-                  .make)))
-          (updated-sv-vc [vc]
-            (let [cur-vc (from-vc vc)]
-              (when-let [sv-type (get-sv-type cur-vc)]
-                (update-pos cur-vc sv-type))))]
-    (proxy [VCFCodec] []
-      (decode [line]
-        (when-let [work-line (check-sv-line line)]
-          (when-let [vc (proxy-super decode work-line)]
-            (updated-sv-vc vc))))
-      (decodeLoc [line]
-        (when-let [work-line (check-sv-line line)]
-          (when-let [vc (proxy-super decode work-line)]
-            (updated-sv-vc vc)))))))
-
-(defn parse-sv-vcf [vcf-file ref-file]
-  (itx/remove-path (str vcf-file ".idx"))
-  (with-open [vcf-source (get-vcf-source vcf-file ref-file :codec (structural-vcfcodec))]
-    (doseq [vc (parse-vcf vcf-source)]
-      (println vc))))
+          (updated-sv-vc [cur-vc]
+            (when-let [sv-type (get-sv-type cur-vc)]
+              (-> cur-vc
+                  (assoc :start-ci (- (:start cur-vc) (start-adjust cur-vc)))
+                  (assoc :end-ci (+ (:end cur-vc) (end-adjust cur-vc))))))
+          (prep-itree [vc-iter]
+            (reduce (fn [coll vc] (assoc coll (:chr vc)
+                                         (itree/iassoc (get coll (:chr vc) itree/empty-interval-map)
+                                                       (:start-ci vc) (:end-ci vc) vc)))
+                    {} vc-iter))]
+    (with-open [vcf-source (get-vcf-source vcf-file ref-file :codec (structural-vcfcodec))]
+      (let [vs-iter (keep updated-sv-vc (parse-vcf vcf-source))]
+        (case out-format
+          :itree (prep-itree vs-iter)
+          (vec vs-iter))))))
