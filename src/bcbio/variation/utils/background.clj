@@ -4,7 +4,8 @@
   provides a ready to use set of calls to batch with a single sample using 1000 genomes data."
   (:use [clojure.java.io]
         [bcbio.variation.compare :only [load-config]]
-        [bcbio.variation.combine :only [select-by-sample combine-variants]])
+        [bcbio.variation.combine :only [select-by-sample combine-variants]]
+        [bcbio.variation.annotation :only [add-variant-annotations]])
   (:require [clojure.java.shell :as shell]
             [clj-yaml.core :as yaml]
             [fs.core :as fs]
@@ -26,11 +27,23 @@
       (download (str dl-url ".bai") (str local-file ".bai"))
       local-file)))
 
+(defn- annotate-sample
+  "Annotate genome sample VCFs with GATK metrics."
+  [sample-info ref ftp-config prep-dir out-dir]
+  (let [final-file (str (fs/file out-dir (format "%s-annotated.vcf" (:sample sample-info))))]
+    (when (itx/needs-run? final-file)
+      (let [sample-bam (download-sample-bam (:sample sample-info) ftp-config prep-dir)
+            ann-vcf (add-variant-annotations (:file sample-info) sample-bam ref)]
+        (fs/rename ann-vcf final-file)
+        (itx/remove-path sample-bam)))
+    final-file))
+
 (defn- combine-samples
   "Combine sample VCFs split by chromosome."
   [sample-info ref out-dir]
   (letfn [(combine-sample [[name xs]]
-            (combine-variants (map :file xs) ref :out-dir out-dir))]
+            {:sample name
+             :file (combine-variants (map :file xs) ref :out-dir out-dir)})]
     (map combine-sample
          (group-by :sample (flatten sample-info)))))
 
@@ -60,7 +73,8 @@
     (when (apply itx/needs-run? (map :file sample-info))
       (let [chrom-vcf (download-chrom-vcf chrom ftp-config out-dir)]
         (doseq [sample samples]
-          (select-by-sample sample chrom-vcf chrom ref :out-dir out-dir))
+          (select-by-sample sample chrom-vcf chrom ref :out-dir out-dir
+                            :minimize true))
         (itx/remove-path chrom-vcf)))
     sample-info))
 
@@ -77,5 +91,8 @@
           samples (map #(select-samples-at-chrom % (:genomes config) (:ref config)
                                                  (:ftp config) prep-dir)
                                         (get-in config [:ftp :chromosomes]))
-          combo-samples (combine-samples samples (:ref config) prep-dir)]
-      (println combo-samples))))
+          combo-samples (combine-samples samples (:ref config) prep-dir)
+          ann-samples (map #(annotate-sample % (:ref config) (:ftp config)
+                                             prep-dir (get-in config [:dir :out]))
+                           combo-samples)]
+      (println ann-samples))))

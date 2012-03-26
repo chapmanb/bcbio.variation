@@ -112,18 +112,17 @@
 
 (defn select-by-sample
   "Select only the sample of interest from input VCF files."
-  [sample in-file name ref & {:keys [out-dir intervals]
-                              :or {out-dir nil intervals nil}}]
+  [sample in-file name ref & {:keys [out-dir intervals minimize]
+                              :or {minimize false}}]
   (let [base-dir (if (nil? out-dir) (fs/parent in-file) out-dir)
         file-info {:out-vcf (str (fs/file base-dir
                                           (format "%s-%s.vcf" sample name)))}
         args (concat ["-R" ref
                       "--sample_name" (vcf-sample-name sample in-file ref)
-                      "--excludeNonVariants"
-                      "--excludeFiltered"
                       "--variant" in-file
                       "--unsafe" "ALLOW_SEQ_DICT_INCOMPATIBILITY"
                       "--out" :out-vcf]
+                     (if minimize ["--excludeNonVariants" "--excludeFiltered"] [])
                      (if-not (nil? intervals) ["-L" intervals] []))]
     (if-not (fs/exists? base-dir)
       (fs/mkdirs base-dir))
