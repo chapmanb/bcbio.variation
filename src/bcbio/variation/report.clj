@@ -68,6 +68,7 @@
   (letfn [(level-from-string [x]
             (case (when-not (nil? x) (string/lower-case x))
               "quick" :quick
+              "full" :full
               :standard))
           (get-string-level [config to-try]
             (loop [cur-try to-try]
@@ -118,7 +119,7 @@
              :discordant2 (all-vrn-counts (nth (:c-files compared) 2) :c1 compared)
              :discordant_both (apply discordance-metrics (conj (vec (rest (:c-files compared)))
                                                                ref-file)))]
-        (if (= sum-level :quick) base
+        (if-not (= sum-level :full) base
             (assoc base
               :ml_metrics (ml-on-vcf-metrics ref-file (take 2 (:c-files compared)))))))))
 
@@ -194,3 +195,23 @@
                 {:metric metric :value val}))]
       (.write wrtr (str (doric/table [:metric :value] (map get-value to-write))
                         "\n")))))
+
+;; ## Classification metrics
+
+(defn write-classification-metrics
+  "Summary table of classification metrics from GATK variant recalibration."
+  [cmp-info wrtr]
+  (letfn [(get-metric-counts [in-vcf]
+            (with-open [vcf-source (get-vcf-source in-vcf (get-in cmp-info [:exp :ref]))]
+              (reduce (fn [coll vc]
+                        (let [culprit (get-in vc [:attributes "culprit"])]
+                          (if (or (nil? culprit) (= (count (:filters vc)) 0)) coll
+                              (assoc coll culprit (inc (get coll culprit 0))))))
+                      {} (parse-vcf vcf-source))))
+          (get-recal-metrics [in-vcf]
+            (sort-by :count >
+                     (map (fn [[m c]] {:metric m :count c}) (get-metric-counts in-vcf))))]
+    (.write wrtr "** GATK recalibration filter metrics\n")
+    (.write wrtr (str (doric/table [:metric :count]
+                                   (get-recal-metrics (get-in cmp-info [:c1 :file])))
+                      "\n"))))

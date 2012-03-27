@@ -14,7 +14,8 @@
         [bcbio.variation.report :only [concordance-report-metrics
                                        write-concordance-metrics
                                        write-scoring-table
-                                       top-level-metrics]]
+                                       top-level-metrics
+                                       write-classification-metrics]]
         [bcbio.variation.combine :only [combine-variants create-merged
                                         gatk-normalize gatk-cl-intersect-intervals]]
         [bcbio.variation.annotation :only [add-variant-annotations]]
@@ -67,9 +68,8 @@
                              [call1 call2 "discordance"]
                              [call2 call1 "discordance"]]]
        (let [file-info {:out-vcf (str (fs/file base-dir
-                                               (format "%s-%s%s-%s%s-%s.vcf"
-                                                       sample (:name c1) (get c1 :mod "")
-                                                       (:name c2) (get c2 :mod "") cmp-type)))}
+                                               (format "%s-%s-%s-%s.vcf"
+                                                       sample (:name c1) (:name c2) cmp-type)))}
              args (concat
                    ["-R" ref
                     "--sample_name" sample
@@ -209,7 +209,7 @@
                                  (get cmps-by-name (get finalizer :support (:target finalizer)))
                                  (:params finalizer)
                                  (:ref exp))]
-                (assoc cur-cmps (:target finalizer)
+                (assoc cur-cmps (map #(get-in updated-cmp [% :name]) [:c1 :c2])
                        (compare-two-vcf (:c1 updated-cmp) (:c2 updated-cmp) exp config))))]
       (map add-summary (vals (reduce update-w-finalizer cmps-by-name (:finalize exp)))))))
 
@@ -260,6 +260,8 @@
                           (-> x :c1 :name) (-> x :c2 :name)))
         (write-scoring-table (:metrics x) w)
         (write-concordance-metrics (:summary x) w)
+        (when (get-in x [:c1 :mod])
+          (write-classification-metrics x w))
         (doseq [f (:c-files x)]
           (.write w (format "** %s\n" (fs/base-name f)))
           (write-summary-table (vcf-stats f (get-in x [:exp :ref])) :wrtr w))))

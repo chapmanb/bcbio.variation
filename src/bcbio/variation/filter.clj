@@ -102,4 +102,5 @@
         (assoc-in [:c1 :file] (-> in-vcf
                                   (#(if-not anns % (variant-recal-filter % train-info anns ref)))
                                   (#(if-not hard-filters % (variant-filter % hard-filters ref)))))
+        (#(assoc-in % [:c1 :name] (format "%s-%s" (get-in % [:c1 :name]) "recal")))
         (assoc-in [:c1 :mod] "recal"))))
