@@ -56,6 +56,7 @@
         args ["-R" ref
               "-input" in-vcf
               "--ts_filter_level" "99.0"
+              "--mode" "BOTH"
               "-tranchesFile" (:out-tranch recal-files)
               "-recalFile" (:out-recal recal-files)
               "-o" :out-vcf]]
