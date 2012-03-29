@@ -23,7 +23,8 @@
   :run-aliases {:compare bcbio.variation.compare
                 :web bcbio.variation.web.server
                 :popfreq bcbio.variation.utils.popfreq
-                :background bcbio.variation.utils.background}
+                :background bcbio.variation.utils.background
+                :reorder bcbio.align.reorder}
   :cljsbuild {:source-path "src/cljs"
               :compiler {:output-to "public/js/score.js"
                          :optimizations :advanced

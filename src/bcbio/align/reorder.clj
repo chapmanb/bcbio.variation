@@ -71,7 +71,10 @@
       (doseq [cur-chr (:names chr-order)]
         (with-open [iter (.query in-bam cur-chr 0 0 false)]
           (doseq [read (bam-read-seq iter)]
-            (.addAlignment out-bam (update-read read))))))))
+            (.addAlignment out-bam (update-read read)))))
+      (with-open [iter (.queryUnmapped in-bam)]
+        (doseq [read (bam-read-seq iter)]
+          (.addAlignment out-bam (update-read read)))))))
 
 (defn reorder-bam
   "Reorder and remap BAM file to match supplied reference file."
@@ -92,3 +95,6 @@
                 (write-reorder-bam in-bam out-bam chr-order header))
               out-file)
             bam-file))))))
+
+(defn -main [bam-file ref-file sample-name]
+  (reorder-bam bam-file ref-file {} {:sample sample-name}))

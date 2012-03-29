@@ -17,4 +17,4 @@
                                                           :indexes {1 0 0 1}}
       (get-new-chr-order ["chrM" "chr22"] ["22" "MT" "X"]) => {:names ["chr22" "chrM"]
                                                                :indexes {1 0 0 1}}
-      (reorder-bam align-bam ref {:sample "Test1"} {}) => out-bam)))
+      (reorder-bam align-bam ref {} {:sample "Test1"}) => out-bam)))
