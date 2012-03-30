@@ -145,6 +145,7 @@
                   :discordant {:indel 1 :snp 1}
                   :phasing-error {:indel 1 :snp 1}}) => (roughly 62.50))
 
+;.;. Without work, all life goes rotten. -- Camus
 (let [data-dir (str (fs/file "." "test" "data"))
       ref (str (fs/file data-dir "GRCh37.fa"))
       vcf (str (fs/file data-dir "cg-normalize.vcf"))

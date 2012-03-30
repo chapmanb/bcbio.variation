@@ -89,17 +89,25 @@
 ;; ## Resort and normalize variants
 
 (defn- fix-vc
-  "Build a new variant context with updated sample name."
-  [sample orig]
+  "Build a new variant context with updated sample name and normalized alleles.
+  Based on :allele-count in the configuration updates haploid allele calls. This
+  normalizes the representation in Mitochondrial and Y chromosomes which are
+  haploid but are often represented as diploid with a single call."
+  [sample config orig]
   (letfn [(update-genotype-sample [vc]
             (if (= 1 (count (.getGenotypes vc)))
               (let [g (first (.getGenotypes vc))]
                 [(Genotype/modifyName g sample)])
-              (.getGenotypes vc)))]
+              (.getGenotypes vc)))
+          (normalize-allele-calls [g]
+            {:pre [(contains? #{1 (:allele-count config)} (count (.getAlleles g)))]}
+            (if (= (count (.getAlleles g)) (:allele-count config)) g
+                (Genotype/modifyAlleles g (repeat (:allele-count config)
+                                                  (first (.getAlleles g))))))]
     (-> orig
         (assoc :vc
           (-> (VariantContextBuilder. (:vc orig))
-              (.genotypes (update-genotype-sample (:vc orig)))
+              (.genotypes (map normalize-allele-calls (update-genotype-sample (:vc orig))))
               .make)))))
 
 (defn- no-call-genotype?
@@ -132,7 +140,7 @@
        (remove nochange-alt?)
        (map vcf-decoder)
        (remove no-call-genotype?)
-       (map (partial fix-vc sample))
+       (map (partial fix-vc sample config))
        (map :vc)))
 
 (defn- fix-vcf-line
@@ -218,7 +226,7 @@
   Currently configured for human preparation."
   [in-vcf-file ref-file sample & {:keys [out-dir out-fname sort-pos]
                                   :or {sort-pos false}}]
-  (let [config {:org :GRCh37 :sort-pos sort-pos}
+  (let [config {:org :GRCh37 :allele-count 2 :sort-pos sort-pos}
         base-name (if (nil? out-fname) (itx/remove-zip-ext in-vcf-file) out-fname)
         out-file (itx/add-file-part base-name "prep" out-dir)]
     (when (itx/needs-run? out-file)
