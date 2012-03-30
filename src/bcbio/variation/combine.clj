@@ -112,8 +112,8 @@
 
 (defn select-by-sample
   "Select only the sample of interest from input VCF files."
-  [sample in-file name ref & {:keys [out-dir intervals minimize]
-                              :or {minimize false}}]
+  [sample in-file name ref & {:keys [out-dir intervals remove-ref-calls]
+                              :or {remove-ref-calls false}}]
   (let [base-dir (if (nil? out-dir) (fs/parent in-file) out-dir)
         file-info {:out-vcf (str (fs/file base-dir
                                           (format "%s-%s.vcf" sample name)))}
@@ -122,7 +122,7 @@
                       "--variant" in-file
                       "--unsafe" "ALLOW_SEQ_DICT_INCOMPATIBILITY"
                       "--out" :out-vcf]
-                     (if minimize ["--excludeNonVariants" "--excludeFiltered"] [])
+                     (if remove-ref-calls ["--excludeNonVariants" "--excludeFiltered"] [])
                      (if-not (nil? intervals) ["-L" intervals] []))]
     (if-not (fs/exists? base-dir)
       (fs/mkdirs base-dir))
@@ -168,7 +168,8 @@
           sample-file (if (multiple-samples? merge-file)
                         (select-by-sample (:sample exp) merge-file (:name call)
                                           (get call :ref (:ref exp))
-                                          :out-dir out-dir)
+                                          :out-dir out-dir
+                                          :remove-ref-calls (get call :remove-ref-calls false))
                         merge-file)
           prep-file (if (true? (:prep call))
                       (prep-vcf sample-file (:ref exp) (:sample exp) :out-dir out-dir

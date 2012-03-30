@@ -74,7 +74,7 @@
       (let [chrom-vcf (download-chrom-vcf chrom ftp-config out-dir)]
         (doseq [sample samples]
           (select-by-sample sample chrom-vcf chrom ref :out-dir out-dir
-                            :minimize true))
+                            :remove-ref-calls true))
         (itx/remove-path chrom-vcf)))
     sample-info))
 
