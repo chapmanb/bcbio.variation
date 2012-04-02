@@ -165,7 +165,7 @@
           merge-file (if (> (count clean-files) 1)
                        (merge-call-files call clean-files)
                        (first clean-files))
-          sample-file (if (multiple-samples? merge-file)
+          sample-file (if (or (multiple-samples? merge-file) (:remove-refcalls call))
                         (select-by-sample (:sample exp) merge-file (:name call)
                                           (get call :ref (:ref exp))
                                           :out-dir out-dir
