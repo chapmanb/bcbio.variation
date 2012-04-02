@@ -104,7 +104,7 @@
     (let [exts [".tar.gz" "tar.bz2" ".gz" ".bz2" ".zip"]]
       (reduce maybe-remove-ext fname exts))))
 
-;; ## File removal
+;; ## File and directory manipulation
 
 (defn remove-path
   "Remove file or directory only if it exists."

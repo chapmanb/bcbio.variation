@@ -28,14 +28,17 @@
    :else ["-L", intervals]))
 
 (defn combine-variants
-  "Combine two variant files with GATK CombineVariants."
-  [vcfs ref & {:keys [merge-type out-dir intervals unsafe]
-               :or {merge-type :unique out-dir nil intervals nil
-                    unsafe false}}]
+  "Combine multiple variant files with GATK CombineVariants."
+  [vcfs ref & {:keys [merge-type out-dir intervals unsafe name-map base-ext]
+               :or {merge-type :unique unsafe false name-map {}}}]
   (letfn [(unique-name [f]
-            (-> f fs/base-name itx/file-root))]
+            (get name-map f
+                 (-> f fs/base-name itx/file-root)))]
     (let [base-dir (if (nil? out-dir) (fs/parent (first vcfs)) out-dir)
-          base-name (-> vcfs first fs/base-name itx/remove-zip-ext)
+          full-base-name (-> vcfs first fs/base-name itx/remove-zip-ext)
+          base-name (if (nil? base-ext) full-base-name
+                        (format "%s-%s.vcf" (first (string/split full-base-name #"-"))
+                                base-ext))
           file-info {:out-vcf (str (fs/file base-dir
                                             (itx/add-file-part base-name
                                                                (case merge-type

@@ -22,11 +22,11 @@
         [bcbio.variation.filter :only [variant-filter pipeline-recalibration]]
         [bcbio.variation.phasing :only [is-haploid? compare-two-vcf-phased]]
         [bcbio.variation.callable :only [get-callable-bed]]
+        [bcbio.variation.multiple :only [prep-cmp-name-lookup]]
         [bcbio.align.reorder :only [reorder-bam]]
         [clojure.math.combinatorics :only [combinations]]
         [clojure.java.io]
-        [clojure.string :only [join]]
-        [ordered.map :only [ordered-map]])
+        [clojure.string :only [join]])
   (:require [fs.core :as fs]
             [clj-yaml.core :as yaml]
             [bcbio.run.itx :as itx]
@@ -194,10 +194,7 @@
   "Finalize all comparisons with finished initial pass data."
   [cmps exp config]
   (let [finalize-fns {"recal-filter" pipeline-recalibration}
-        cmps-by-name (reduce (fn [m x] (assoc m [(-> x :c1 :name)
-                                                 (-> x :c2 :name)] x))
-                             (ordered-map)
-                             cmps)]
+        cmps-by-name (prep-cmp-name-lookup cmps)]
     (letfn [(add-summary [x]
               (-> x
                   (assoc :exp exp)
