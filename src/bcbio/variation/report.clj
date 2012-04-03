@@ -97,7 +97,8 @@
                                                 (vrn-type-passes-filter #{"SNP"}))
                       :indel (count-variants fname ref-file
                                              (vrn-type-passes-filter #{"INDEL"}))))))]
-      (let [base
+      (let [c-files (-> compared :c-files vals)
+            base
             (ordered-map
              :sample (-> compared :exp :sample)
              :call1 (-> compared :c1 :name)
@@ -107,16 +108,16 @@
                                        :percent_overall_genotype_concordance)
              :nonref_discrepency (-> compared :metrics :percent_non_reference_discrepancy_rate)
              :nonref_sensitivity (-> compared :metrics :percent_non_reference_sensitivity)
-             :concordant (all-vrn-counts (first (:c-files compared)) nil compared)
-             :nonref_concordant (count-variants (first (:c-files compared)) ref-file
+             :concordant (all-vrn-counts (first c-files) nil compared)
+             :nonref_concordant (count-variants (first c-files) ref-file
                                                 nonref-passes-filter?)
-             :discordant1 (all-vrn-counts (second (:c-files compared)) :c2 compared)
-             :discordant2 (all-vrn-counts (nth (:c-files compared) 2) :c1 compared)
-             :discordant_both (apply discordance-metrics (conj (vec (rest (:c-files compared)))
+             :discordant1 (all-vrn-counts (second c-files) :c2 compared)
+             :discordant2 (all-vrn-counts (nth c-files 2) :c1 compared)
+             :discordant_both (apply discordance-metrics (conj (vec (rest c-files))
                                                                ref-file)))]
         (if-not (= sum-level :full) base
             (assoc base
-              :ml_metrics (ml-on-vcf-metrics ref-file (take 2 (:c-files compared)))))))))
+              :ml_metrics (ml-on-vcf-metrics ref-file (take 2 c-files))))))))
 
 (defn calc-accuracy
   "Calculate an overall accuracy score from input metrics.

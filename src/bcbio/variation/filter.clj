@@ -94,7 +94,7 @@
   [cmps-by-name finalizer config]
   (let [support (get finalizer :support (:target finalizer))
         support-vcfs (if (coll? support)
-                       (take 2 (-> cmps-by-name (get support) :c-files))
+                       (take 2 (-> cmps-by-name (get support) :c-files vals))
                        (let [x (multiple-overlap-analysis cmps-by-name config support)]
                          [(:true-positives x) (:false-positives x)]))]
       [{:file (first support-vcfs)

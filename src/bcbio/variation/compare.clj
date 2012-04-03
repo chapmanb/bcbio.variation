@@ -24,6 +24,7 @@
         [bcbio.variation.callable :only [get-callable-bed]]
         [bcbio.variation.multiple :only [prep-cmp-name-lookup pipeline-compare-multiple]]
         [bcbio.align.reorder :only [reorder-bam]]
+        [ordered.map :only [ordered-map]]
         [clojure.math.combinatorics :only [combinations]]
         [clojure.java.io]
         [clojure.string :only [join]])
@@ -166,7 +167,11 @@
                                  (map #(when-not (nil? (:align %))
                                          (get-callable-bed (:align %) (:ref exp)
                                                            :out-dir out-dir))
-                                      [c1 c2])))))]
+                                      [c1 c2])))))
+          (discordant-name [x]
+            (format "%s-discordant" (:name x)))
+          (zipmap-ordered [xs1 xs2]
+            (apply ordered-map (interleave xs1 xs2)))]
     (let [c-files (select-by-concordance (:sample exp) c1 c2 (:ref exp)
                                          :out-dir (get-in config [:dir :out])
                                          :interval-file (:intervals exp))
@@ -176,7 +181,9 @@
           c-eval (calc-variant-eval-metrics (:sample exp) (:file c1) (:file c2) (:ref exp)
                                             :out-base (itx/add-file-part (first c-files) "callable")
                                             :intervals (callable-intervals exp c1 c2))]
-      {:c-files c-files :c1 c1 :c2 c2 :exp exp :dir (config :dir)
+      {:c-files (zipmap-ordered ["concordant" (discordant-name c1) (discordant-name c2)]
+                                c-files)
+       :c1 c1 :c2 c2 :exp exp :dir (config :dir)
        :metrics (first (concordance-report-metrics (:sample exp) eval))
        :callable-metrics (first (concordance-report-metrics (:sample exp) c-eval))})))
 
@@ -258,8 +265,8 @@
         (write-concordance-metrics (:summary x) w)
         (when (get-in x [:c1 :mod])
           (write-classification-metrics x w))
-        (doseq [f (:c-files x)]
-          (.write w (format "** %s\n" (fs/base-name f)))
+        (doseq [[k f] (:c-files x)]
+          (.write w (format "** %s\n" (name k)))
           (write-summary-table (vcf-stats f (get-in x [:exp :ref])) :wrtr w))))
     (with-open [w (get-summary-writer config config-file "summary.csv")]
       (doseq [[i x] (map-indexed vector (map :summary comparisons))]

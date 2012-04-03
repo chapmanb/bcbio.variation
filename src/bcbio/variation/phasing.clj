@@ -157,7 +157,7 @@
     (write-vcf-w-template (:file base-info) out-files
                           (map (juxt :comparison :vc) (flatten vc-info))
                           ref)
-    (vals out-files)))
+    out-files))
 
 (defn count-comparison-bases
   "Provide counts for comparison: entire region plus user specified regions"

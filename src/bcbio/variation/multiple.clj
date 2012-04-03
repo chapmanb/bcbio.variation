@@ -38,7 +38,7 @@
                                   :or {base-ext "multiall"}}]
   (let [concordant-map (reduce (fn [m [k v]]
                                  (if (or (nil? do-include?) (do-include? k))
-                                   (assoc m (-> v :c-files first) (string/join "-" k))
+                                   (assoc m (-> v :c-files (get "concordant")) (string/join "-" k))
                                    m))
                                (ordered-map) cmps-by-name)
         ref (-> cmps-by-name vals first :exp :ref)
@@ -59,8 +59,8 @@
           (get-shared-discordant [xs fetch]
             (let [pass-and-shared? (check-shared fetch)]
               (map :vc (filter pass-and-shared? xs))))]
-    (let [disc-vcfs (map (fn [[k v]] (nth (:c-files v) (if (= target-name (first k)) 1 2)))
-                         target-cmps)
+    (let [disc-vcfs (map (fn [v] (get (:c-files v) (format "%s-discordant" target-name)))
+                         (vals target-cmps))
           disc-vcf (-> (combine-variants disc-vcfs ref :merge-type :full :out-dir out-dir
                                          :base-ext (format "dis%s" target-name))
                        (select-variant-by-set ref "Intersection"))
@@ -122,7 +122,7 @@
   "Perform high level pipeline comparison of a target with multiple experiments."
   [cmps finalizer exp config]
   (let [analysis (multiple-overlap-analysis cmps config (:target finalizer))]
-    {:c-files (vals analysis)
+    {:c-files analysis
      :c1 {:name (:target finalizer)}
      :c2 {:name "all"}
      :exp exp :dir (config :dir)}))
