@@ -25,6 +25,8 @@ experiments:
         prep: true
         file: test/data/cg-calls.vcf
     finalize:
+      - method: multiple
+        target: gatk
       - method: recal-filter
         target: [gatk, freebayes]
         params:

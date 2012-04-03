@@ -159,8 +159,9 @@
 (defn write-scoring-table
   "Write high level metrics table in readable format."
   [metrics wrtr]
-  (.write wrtr (str (doric/table [:metric :value] (prep-scoring-table metrics))
-                    "\n")))
+  (when-not (nil? metrics)
+    (.write wrtr (str (doric/table [:metric :value] (prep-scoring-table metrics))
+                      "\n"))))
 
 (defn write-concordance-metrics
   "Summary table of metrics for assessing the score of a variant comparison."

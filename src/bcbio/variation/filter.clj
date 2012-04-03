@@ -3,6 +3,7 @@
   (:import [org.broadinstitute.sting.utils.variantcontext
             VariantContextBuilder])
   (:use [clojure.string :only [split]]
+        [bcbio.variation.multiple :only [multiple-overlap-analysis]]
         [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template
                                                get-vcf-source]])
   (:require [bcbio.run.broad :as broad]
@@ -85,23 +86,40 @@
                               ref))
       out-file)))
 
+(defn- get-train-info
+  "Retrieve training information for GATK recalibration:
+   - No support specified: use the target comparison
+   - Support specified and a specific comparison pair
+   - Support specified as a single target: use target versus all comparison"
+  [cmps-by-name finalizer config]
+  (let [support (get finalizer :support (:target finalizer))
+        support-vcfs (if (coll? support)
+                       (take 2 (-> cmps-by-name (get support) :c-files))
+                       (let [x (multiple-overlap-analysis cmps-by-name config support)]
+                         [(:true-positives x) (:false-positives x)]))]
+      [{:file (first support-vcfs)
+        :name "concordant"
+        :truth "true"
+        :prior 10.0}
+       {:file (second support-vcfs)
+        :name "discordant"
+        :truth "false"
+        :prior 10.0}]))
+
 (defn pipeline-recalibration
   "Perform variant recalibration and filtration as part of processing pipeline."
-  [target support params ref]
-  (let [in-vcf (remove-cur-filters (-> target :c1 :file) ref)
-        hard-filters (:filters params)
-        anns (:annotations params)
-        train-info [{:file (-> support :c-files first)
-                     :name "concordant"
-                     :truth "true"
-                     :prior 10.0}
-                    {:file (-> support :c-files second)
-                     :name "discordant"
-                     :truth "false"
-                     :prior 10.0}]]
+  [cmps-by-name finalizer exp config]
+  (let [target (get cmps-by-name (:target finalizer))
+        in-vcf (remove-cur-filters (-> target :c1 :file) (:ref exp))
+        hard-filters (get-in finalizer [:params :filters])
+        anns (get-in finalizer [:params :annotations])
+        train-info (get-train-info cmps-by-name finalizer config)]
     (-> target
         (assoc-in [:c1 :file] (-> in-vcf
-                                  (#(if-not anns % (variant-recal-filter % train-info anns ref)))
-                                  (#(if-not hard-filters % (variant-filter % hard-filters ref)))))
+                                  (#(if-not anns % (variant-recal-filter % train-info
+                                                                         anns (:ref exp))))
+                                  (#(if-not hard-filters % (variant-filter % hard-filters
+                                                                           (:ref exp))))))
         (#(assoc-in % [:c1 :name] (format "%s-%s" (get-in % [:c1 :name]) "recal")))
-        (assoc-in [:c1 :mod] "recal"))))
+        (assoc-in [:c1 :mod] "recal")
+        (assoc :re-compare true))))

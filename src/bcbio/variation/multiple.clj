@@ -13,9 +13,11 @@
 
 (defn prep-cmp-name-lookup
   "Lookup map of comparisons by method names."
-  [cmps]
-  (reduce (fn [m x] (assoc m [(-> x :c1 :name)
-                              (-> x :c2 :name)] x))
+  [cmps & {:keys [ignore] :or {ignore #{}}}]
+  (reduce (fn [m x]
+            (let [names [(-> x :c1 :name) (-> x :c2 :name)]]
+              (if (some #(contains? ignore %) names) m
+                  (assoc m names x))))
           (ordered-map)
           cmps))
 
@@ -104,7 +106,7 @@
      methods. We restrict to shared calls to avoid penalizing unique calls.
      These are false positives."
   [cmps config target-name]
-  (let [cmps-by-name (prep-cmp-name-lookup cmps)
+  (let [cmps-by-name (if-not (map? cmps) (prep-cmp-name-lookup cmps :ignore #{"all"}) cmps)
         out-dir (str (fs/file (get-in config [:dir :prep] (get-in config [:dir :out]))
                               "multiple"))]
     (when-not (fs/exists? out-dir)
@@ -112,6 +114,15 @@
     (let [true-p-vcf (:intersection (gen-all-concordant cmps-by-name out-dir config))
           target-problems (gen-target-problems target-name cmps-by-name true-p-vcf
                                                out-dir config)]
-      {:true-positives true-p-vcf
-       :false-negatives (:false-negatives target-problems)
-       :false-positives (:false-positives target-problems)})))
+      (ordered-map :true-positives true-p-vcf
+                   :false-negatives (:false-negatives target-problems)
+                   :false-positives (:false-positives target-problems)))))
+
+(defn pipeline-compare-multiple
+  "Perform high level pipeline comparison of a target with multiple experiments."
+  [cmps finalizer exp config]
+  (let [analysis (multiple-overlap-analysis cmps config (:target finalizer))]
+    {:c-files (vals analysis)
+     :c1 {:name (:target finalizer)}
+     :c2 {:name "all"}
+     :exp exp :dir (config :dir)}))

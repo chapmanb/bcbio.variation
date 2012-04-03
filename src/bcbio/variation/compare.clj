@@ -22,7 +22,7 @@
         [bcbio.variation.filter :only [variant-filter pipeline-recalibration]]
         [bcbio.variation.phasing :only [is-haploid? compare-two-vcf-phased]]
         [bcbio.variation.callable :only [get-callable-bed]]
-        [bcbio.variation.multiple :only [prep-cmp-name-lookup]]
+        [bcbio.variation.multiple :only [prep-cmp-name-lookup pipeline-compare-multiple]]
         [bcbio.align.reorder :only [reorder-bam]]
         [clojure.math.combinatorics :only [combinations]]
         [clojure.java.io]
@@ -193,7 +193,8 @@
 (defn finalize-comparisons
   "Finalize all comparisons with finished initial pass data."
   [cmps exp config]
-  (let [finalize-fns {"recal-filter" pipeline-recalibration}
+  (let [finalize-fns {"recal-filter" pipeline-recalibration
+                      "multiple" pipeline-compare-multiple}
         cmps-by-name (prep-cmp-name-lookup cmps)]
     (letfn [(add-summary [x]
               (-> x
@@ -202,12 +203,10 @@
             (update-w-finalizer [cur-cmps finalizer]
               "Update the current comparisons with a defined finalizer."
               (let [updated-cmp ((get finalize-fns (:method finalizer))
-                                 (get cmps-by-name (:target finalizer))
-                                 (get cmps-by-name (get finalizer :support (:target finalizer)))
-                                 (:params finalizer)
-                                 (:ref exp))]
+                                 cmps-by-name finalizer exp config)]
                 (assoc cur-cmps (map #(get-in updated-cmp [% :name]) [:c1 :c2])
-                       (compare-two-vcf (:c1 updated-cmp) (:c2 updated-cmp) exp config))))]
+                       (if-not (:re-compare updated-cmp) updated-cmp
+                               (compare-two-vcf (:c1 updated-cmp) (:c2 updated-cmp) exp config)))))]
       (map add-summary (vals (reduce update-w-finalizer cmps-by-name (:finalize exp)))))))
 
 (defn load-config
