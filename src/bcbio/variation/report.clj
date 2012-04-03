@@ -6,7 +6,7 @@
         [bcbio.variation.variantcontext :only [parse-vcf get-vcf-retriever
                                                get-vcf-source]]
         [bcbio.variation.callable :only [callable-checker]]
-        [bcbio.variation.metrics :only [ml-on-vcf-metrics]])
+        [bcbio.variation.metrics :only [ml-on-vcf-metrics passes-filter? nonref-passes-filter?]])
   (:require [doric.core :as doric]
             [clojure.string :as string]))
 
@@ -84,12 +84,7 @@
   [compared]
   (let [sum-level (get-summary-level compared)
         ref-file (get-in compared [:exp :ref])]
-    (letfn [(passes-filter? [vc]
-              (= (count (:filters vc)) 0))
-            (nonref-passes-filter? [vc]
-              (and (passes-filter? vc)
-                   (every? #(contains? #{"HET" "HOM_VAR"} (:type %)) (:genotypes vc))))
-            (vrn-type-passes-filter [vrn-type]
+    (letfn [(vrn-type-passes-filter [vrn-type]
               (fn [vc]
                 (and (passes-filter? vc)
                      (contains? vrn-type (:type vc)))))

@@ -21,8 +21,16 @@
       (Float/parseFloat x)
       (catch Exception e nil))))
 
-(defn passes-filter? [vc]
+(defn passes-filter?
+  "Check if a VariantContext is not filtered."
+  [vc]
   (= (count (:filters vc)) 0))
+
+(defn nonref-passes-filter?
+  "Check if a variant context is not filter and is not a reference call."
+  [vc]
+  (and (passes-filter? vc)
+       (every? #(contains? #{"HET" "HOM_VAR"} (:type %)) (:genotypes vc))))
 
 (defn get-vc-metrics
   "Retrieve numeric metrics associated with VariantContext."

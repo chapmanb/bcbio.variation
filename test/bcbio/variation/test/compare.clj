@@ -164,14 +164,18 @@
 (let [config-file (str (fs/file "." "config" "method-comparison.yaml"))
       config (load-config config-file)
       out-dir (str (fs/file (get-in config [:dir :prep]) "multiple"))
-      cmps (variant-comparison-from-config config-file)
-      out-files {:true-positives
-                 (str (fs/file out-dir "Test1-multiall-fullcombine-Intersection.vcf"))
-                 :false-negatives
-                 (str (fs/file out-dir "Test1-multiall-nocg-fullcombine-cg.vcf"))}]
-  (against-background [(before :facts (vec (map remove-path [out-dir])))]
-  (facts "Handle multiple variant approach comparisons."
-    (multiple-overlap-analysis cmps config "cg") => out-files)))
+      cmps (variant-comparison-from-config config-file)]
+  (letfn [(get-out-files [x]
+            {:true-positives
+             (str (fs/file out-dir "Test1-multiall-fullcombine-Intersection.vcf"))
+             :false-negatives
+             (str (fs/file out-dir (format "Test1-multiall-no%s-fullcombine-%s.vcf" x x)))
+             :false-positives
+             (str (fs/file out-dir (format "Test1-dis%s-fullcombine-Intersection-shared.vcf" x)))})]
+    (against-background [(before :facts (vec (map remove-path [out-dir])))]
+      (facts "Handle multiple variant approach comparisons."
+        (multiple-overlap-analysis cmps config "cg") => (get-out-files "cg")
+        (multiple-overlap-analysis cmps config "gatk") => (get-out-files "gatk")))))
 
 (facts "Load configuration files, normalizing input."
   (let [config-file (fs/file "." "config" "method-comparison.yaml")
