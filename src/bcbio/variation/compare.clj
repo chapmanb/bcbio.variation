@@ -26,9 +26,10 @@
         [bcbio.align.reorder :only [reorder-bam]]
         [ordered.map :only [ordered-map]]
         [clojure.math.combinatorics :only [combinations]]
-        [clojure.java.io]
-        [clojure.string :only [join]])
-  (:require [fs.core :as fs]
+        [clojure.java.io])
+  (:require [clojure.string :as string]
+            [clojure.data.csv :as csv]
+            [fs.core :as fs]
             [clj-yaml.core :as yaml]
             [bcbio.run.itx :as itx]
             [bcbio.run.broad :as broad]))
@@ -257,7 +258,9 @@
                        (let [cmps (for [[c1 c2] (combinations (prepare-vcf-calls exp config) 2)]
                                     (compare-two-vcf c1 c2 exp config))]
                          (finalize-comparisons cmps exp config))))]
-    (with-open [w (get-summary-writer config config-file "summary.txt")]
+    (with-open [w (get-summary-writer config config-file "summary.txt")
+                w2 (get-summary-writer config config-file "files.csv")]
+      (csv/write-csv w2 [["call1" "call2" "type" "fname"]])
       (doseq [x comparisons]
         (.write w (format "* %s : %s vs %s\n" (-> x :exp :sample)
                           (-> x :c1 :name) (-> x :c2 :name)))
@@ -267,13 +270,15 @@
           (write-classification-metrics x w))
         (doseq [[k f] (:c-files x)]
           (.write w (format "** %s\n" (name k)))
+          (csv/write-csv w2 [[(get-in x [:c1 :name]) (get-in x [:c2 :name]) (name k)
+                              (string/replace-first f (str (get-in config [:dir :out]) "/") "")]])
           (write-summary-table (vcf-stats f (get-in x [:exp :ref])) :wrtr w))))
     (with-open [w (get-summary-writer config config-file "summary.csv")]
       (doseq [[i x] (map-indexed vector (map :summary comparisons))]
         (when (= i 0)
-          (.write w (format "%s\n" (join "," (map name (keys x))))))
-        (.write w (format "%s\n" (join "," (for [v (vals x)]
-                                             (if (map? v) (:total v) v)))))))
+          (.write w (format "%s\n" (string/join "," (map name (keys x))))))
+        (.write w (format "%s\n" (string/join "," (for [v (vals x)]
+                                                    (if (map? v) (:total v) v)))))))
     comparisons))
 
 (defn -main [config-file]
