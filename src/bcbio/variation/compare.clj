@@ -60,8 +60,7 @@
 
 (defn select-by-concordance
   "Variant comparison producing 3 files: concordant and both directions discordant"
-  [sample call1 call2 ref & {:keys [out-dir interval-file]
-                             :or {out-dir nil interval-file nil}}]
+  [sample call1 call2 ref & {:keys [out-dir interval-file]}]
   (let [base-dir (if (nil? out-dir) (fs/parent (:file call1)) out-dir)]
     (if-not (fs/exists? base-dir)
       (fs/mkdirs base-dir))
