@@ -4,14 +4,14 @@
   (:import [org.broadinstitute.sting.utils.codecs.vcf VCFCodec]
            [org.broadinstitute.sting.utils.variantcontext VariantContextBuilder
             Allele]
-           [java.io StringReader])
+           [java.io StringReader]
+           [net.sf.picard.util IntervalTree])
   (:use [bcbio.variation.variantcontext :only [get-vcf-source parse-vcf
                                                from-vc write-vcf-w-template]]
         [bcbio.variation.callable :only [get-bed-source]])
   (:require [clojure.string :as string]
             [fs.core :as fs]
-            [bcbio.run.itx :as itx]
-            [bcbio.itree :as itree]))
+            [bcbio.run.itx :as itx]))
 
 (defn get-sv-type
   "Determine the type of a structural variant. Expected types are:
@@ -100,9 +100,10 @@
                   (assoc :end-ci (+ (:end cur-vc) (end-adjust cur-vc)))
                   (assoc :sv-type sv-type))))
           (prep-itree [vc-iter]
-            (reduce (fn [coll vc] (assoc coll (:chr vc)
-                                         (itree/iassoc (get coll (:chr vc) itree/empty-interval-map)
-                                                       (:start-ci vc) (:end-ci vc) vc)))
+            (reduce (fn [coll vc]
+                      (assoc coll (:chr vc)
+                             (doto (get coll (:chr vc) (IntervalTree.))
+                               (.put (:start-ci vc) (inc (:end-ci vc)) vc))))
                     {} vc-iter))
           (in-intervals? [bed-source vc]
             (or (instance? StringReader bed-source)
@@ -135,8 +136,8 @@
   (or (and (>= s2 s1) (<= s2 e1))
       (and (>= e2 s1) (<= e2 e1))))
 
-(defn sv-del-concordant?
-  "Check for concordance of large deletion variants."
+(defn sv-len-concordant?
+  "Check for concordance of variants based on reported length: deletions and inversions."
   [sv1 sv2]
   (letfn [(get-start-end [x]
             (let [start (:start x)
@@ -151,12 +152,24 @@
   [sv1 sv2]
   (and (apply = (map :sv-type [sv1 sv2]))
        (case (:sv-type sv1)
-         :DEL (sv-del-concordant? sv1 sv2)
+         :DEL (sv-len-concordant? sv1 sv2)
          :INS true
-         :INV true
+         :INV (sv-len-concordant? sv1 sv2)
          :DUP true
          :BND true
          (throw (Exception. (str "Structural variant type not handled: " (:sv-type sv1)))))))
+
+(defn get-itree-overlap
+  "Lazy sequence of items that overlap a region in a nested IntervalTree."
+  [itree chrom start end]
+  (letfn [(itree-seq [iter]
+            (lazy-seq
+             (when (.hasNext iter)
+               (cons (.getValue (.next iter)) (itree-seq iter)))))]
+    (-> itree
+        (get chrom)
+        (.overlappers start end)
+        itree-seq)))
 
 (defn- find-concordant-svs
   "Compare two structural variant files, returning variant contexts keyed by concordance."
@@ -164,9 +177,8 @@
   (let [cmp-tree (parse-vcf-sv fname2 ref :out-format :itree :interval-file interval-file)]
     (letfn [(check-sv-concordance [vc]
               (let [matches (filter (partial sv-concordant? vc)
-                                    (-> cmp-tree
-                                        (get (:chr vc))
-                                        (itree/iget-range (:start-ci vc) (:end-ci vc))))]
+                                    (get-itree-overlap cmp-tree (:chr vc)
+                                                       (:start-ci vc) (inc (:end-ci vc))))]
               [(if (seq matches) :concordant :discordant1) (:vc vc)]))]
       (map check-sv-concordance (parse-vcf-sv fname1 ref :interval-file interval-file)))))
 

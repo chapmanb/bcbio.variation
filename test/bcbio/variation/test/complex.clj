@@ -6,8 +6,7 @@
         [bcbio.variation.structural]
         [bcbio.variation.variantcontext])
   (:require [fs.core :as fs]
-            [bcbio.run.itx :as itx]
-            [bcbio.itree :as itree]))
+            [bcbio.run.itx :as itx]))
 
 (background
  (around :facts
@@ -33,12 +32,13 @@
         vcf-by-region (parse-vcf-sv sv-vcf1 ref :interval-file target-bed)
         vcf-itree (parse-vcf-sv sv-vcf1 ref :out-format :itree)]
     (-> vcf-list first :start-ci) => 6066065
-    (-> vcf-itree (get "22") (itree/iget-range 15883520 15883620) first :end-ci) => 15883626
+    (-> vcf-itree (get-itree-overlap "22" 15883520 15883620) first :end-ci) => 15883626
     (count vcf-by-region) => 1
     (with-open [vcf-source1 (get-vcf-source sv-vcf1 ref)
                 vcf-source2 (get-vcf-source sv-vcf2 ref)]
-      (doall (map get-sv-type (parse-vcf vcf-source1))) => (concat (repeat 6 :BND)
-                                                                   [nil :DEL :INS :DEL :DUP :INS])
+      (doall (map get-sv-type (parse-vcf vcf-source1))) =>
+      (concat (repeat 6 :BND)
+              [nil :DEL :INS :DEL :DUP :INV :INS])
       (doall (map get-sv-type (parse-vcf vcf-source2))) => [:DUP :BND :BND :INS :CNV :DEL :INV])))
 
 (facts "Compare structural variation calls from two inputs."
