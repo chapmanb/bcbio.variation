@@ -6,15 +6,16 @@ experiments:
   - sample: Test1
     ref: test/data/GRCh37.fa
     intervals: test/data/target-regions.bed
-    align: test/data/aligned-reads.bam
     calls:
       - name: gatk
         file: test/data/gatk-calls.vcf
+        align: test/data/aligned-reads.bam
         refcalls: false
         normalize: false
         annotate: true
       - name: freebayes
         file: test/data/freebayes-calls.vcf
+        align: test/data/aligned-reads.bam
         annotate: true
         filters:
           - HRun > 5.0

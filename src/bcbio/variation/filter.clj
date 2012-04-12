@@ -42,9 +42,11 @@
                       "--mode" "BOTH"]
                      (flatten (map (fn [x] ["-an" x]) annotations))
                      (flatten (map (fn [x] [(str "-resource:" (:name x)
-                                                 ",known=true,training=true,"
-                                                 "truth=" (:truth x)
-                                                 ",prior=" (:prior x))
+                                                 ",known=true"
+                                                 ",training=true"
+                                                 ",truth=" (:truth x)
+                                                 ",prior=" (:prior x)
+                                                 ",bad=" (:bad x))
                                             (:file x)])
                                    training-vcfs)))]
     (broad/run-gatk "VariantRecalibrator" args file-info {:out [:out-recal :out-tranch]})
@@ -100,10 +102,12 @@
       [{:file (first support-vcfs)
         :name "concordant"
         :truth "true"
+        :bad "false"
         :prior 10.0}
        {:file (second support-vcfs)
         :name "discordant"
         :truth "false"
+        :bad "true"
         :prior 10.0}]))
 
 (defn pipeline-recalibration
