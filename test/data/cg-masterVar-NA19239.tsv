@@ -1,0 +1,21 @@
+#ASSEMBLY_ID	NA19239-L2-200-37-ASM
+#CNV_DIPLOID_WINDOW_WIDTH	2000
+#CNV_NONDIPLOID_WINDOW_WIDTH	100000
+#COSMIC	COSMIC v48
+#DBSNP_BUILD	dbSNP build 132
+#DGV_VERSION	9
+#FORMAT_VERSION	2.0
+#GENERATED_AT	2011-Oct-08 22:57:59.257056
+#GENERATED_BY	cgatools
+#GENE_ANNOTATIONS	NCBI build 37.2
+#GENOME_REFERENCE	NCBI build 37
+#MIRBASE_VERSION	miRBase version 16
+#PFAM_DATE	April 21, 2011
+#REPMASK_GENERATED_AT	2011-Feb-15 10:08
+#SAMPLE	GS00706-DNA_B01
+#SEGDUP_GENERATED_AT	2010-Dec-01 13:40
+#SOFTWARE_VERSION	2.0.0.26
+#TYPE	VAR-OLPL
+
+>locus	ploidy	chromosome	begin	end	zygosity	varType	reference	allele1Seq	allele2Seq	allele1VarScoreVAF	allele2VarScoreVAF	allele1VarScoreEAF	allele2VarScoreEAF	allele1VarQuality	allele2VarQuality	allele1HapLink	allele2HapLink	allele1XRef	allele2XRef	evidenceIntervalId	allele1ReadCount	allele2ReadCount	referenceAlleleReadCount	totalReadCount	allele1Gene	allele2Gene	pfam	miRBaseId	repeatMasker	segDupOverlap	relativeCoverageDiploid	calledPloidy	relativeCoverageNondiploid	calledLevel
+15804192	2	chr22	1604	1605	het-ref	snp	T	C	T	198	198	198	198	VQHIGH	VQHIGH			dbsnp.100:rs2844883		2	74	51	51	125						1	1.73	N	1.58	1.788
