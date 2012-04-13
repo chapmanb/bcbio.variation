@@ -59,11 +59,13 @@
   "Add CG metrics definitions to the VCF input header."
   [header]
   (let [new #{(VCFInfoHeaderLine. "DP" 1
-                                  VCFHeaderLineType/Integer "Total Depth")
+                                  VCFHeaderLineType/Integer "Total depth")
               (VCFInfoHeaderLine. "QUALEAF" 1
-                                  VCFHeaderLineType/Float "Variant Quality EAF")
+                                  VCFHeaderLineType/Float
+                                  "Variant quality under equal allele fraction model (EAF)")
               (VCFInfoHeaderLine. "QUALVAF" 1
-                                  VCFHeaderLineType/Float "Variant Quality VAF")
+                                  VCFHeaderLineType/Float
+                                  "Variant quality under maximum likelihood variable allele fraction model (VAF)")
               (VCFInfoHeaderLine. "AB" 1
                                   VCFHeaderLineType/Float "Allele Balance")}]
     (VCFHeader. (apply ordered-set (concat (.getMetaData header) new))
