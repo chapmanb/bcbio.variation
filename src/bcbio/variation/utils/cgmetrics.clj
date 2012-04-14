@@ -31,7 +31,7 @@
         (reduce (fn [coll xs]
                   (let [line (zipmap header xs)]
                     (assoc coll [(get hg19-map (get line "chromosome"))
-                                 (dec (Integer/parseInt (get line "begin")))]
+                                 (inc (Integer/parseInt (get line "begin")))]
                            {:depth (get line "totalReadCount")
                             :qual-eaf (variant-score line "EAF")
                             :qual-vaf (variant-score line "VAF")

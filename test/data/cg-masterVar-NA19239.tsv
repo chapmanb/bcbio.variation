@@ -18,4 +18,4 @@
 #TYPE	VAR-OLPL
 
 >locus	ploidy	chromosome	begin	end	zygosity	varType	reference	allele1Seq	allele2Seq	allele1VarScoreVAF	allele2VarScoreVAF	allele1VarScoreEAF	allele2VarScoreEAF	allele1VarQuality	allele2VarQuality	allele1HapLink	allele2HapLink	allele1XRef	allele2XRef	evidenceIntervalId	allele1ReadCount	allele2ReadCount	referenceAlleleReadCount	totalReadCount	allele1Gene	allele2Gene	pfam	miRBaseId	repeatMasker	segDupOverlap	relativeCoverageDiploid	calledPloidy	relativeCoverageNondiploid	calledLevel
-15804192	2	chr22	1604	1605	het-ref	snp	T	C	T	198	198	198	198	VQHIGH	VQHIGH			dbsnp.100:rs2844883		2	74	51	51	125						1	1.73	N	1.58	1.788
+15804192	2	chr22	1602	1603	het-ref	snp	T	C	T	198	198	198	198	VQHIGH	VQHIGH			dbsnp.100:rs2844883		2	74	51	51	125						1	1.73	N	1.58	1.788
