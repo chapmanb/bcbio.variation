@@ -7,6 +7,7 @@
         [bcbio.variation.combine :only [select-by-sample combine-variants]]
         [bcbio.variation.annotation :only [add-variant-annotations]])
   (:require [clojure.java.shell :as shell]
+            [clojure.string :as string]
             [clj-yaml.core :as yaml]
             [fs.core :as fs]
             [bcbio.run.itx :as itx]))
@@ -17,12 +18,12 @@
   "Download BAM file and index for a sample from 1000 genomes FTP."
   [sample ftp-config out-dir]
   (letfn [(download [url fname]
-            (if-not (fs/exists? fname)
+            (when-not (fs/exists? fname)
               (println "Downloading" url "to" fname)
               (shell/with-sh-dir out-dir
                 (shell/sh "wget" "-O" fname url))))]
     (let [dl-url (format (:bam-url ftp-config) sample sample)
-          local-file (str (fs/file out-dir (fs/base-name dl-url)))]
+          local-file (str (fs/file out-dir (string/replace (fs/base-name dl-url) ".*" "")))]
       (download dl-url local-file)
       (download (str dl-url ".bai") (str local-file ".bai"))
       local-file)))
