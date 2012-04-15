@@ -230,16 +230,17 @@
         to-process #{[:dir :out] [:dir :prep]
                      [:experiments :ref] [:experiments :intervals]
                      [:experiments :align] [:experiments :calls :file]
-                     [:experiments :calls :align]}]
+                     [:experiments :calls :align] [:experiments :calls :annotate]}]
     (letfn [(make-absolute [x]
               (if (.isAbsolute (file x))
                 x
                 (str (fs/file base-dir x))))
             (maybe-process [val path]
               (if (contains? to-process path)
-                (if (seq? val)
-                  (map make-absolute val)
-                  (make-absolute val))
+                (cond
+                 (seq? val) (map make-absolute val)
+                 (string? val) (make-absolute val)
+                 :else val)
                 val))
             (update-tree [config path]
               (cond (map? config)
