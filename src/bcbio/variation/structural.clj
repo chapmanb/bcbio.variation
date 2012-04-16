@@ -74,14 +74,16 @@
 
 (defn value-from-attr
   "Retrieve normalized integer values from an attribute."
-  [vc attr-name attr-index]
-  (-> vc
-      :attributes
-      (get attr-name (repeat (inc attr-index) "0"))
-      (#(if (string? %) [%] %))
-      (nth attr-index)
-      (Integer/parseInt)
-      Math/abs))
+  ([vc attr-name]
+     (value-from-attr vc attr-name 0))
+  ([vc attr-name attr-index]
+      (-> vc
+          :attributes
+          (get attr-name (repeat (inc attr-index) "0"))
+          (#(if (string? %) [%] %))
+          (nth attr-index)
+          (Integer/parseInt)
+          Math/abs)))
 
 (defn parse-vcf-sv
   "Parse VCF file returning structural variants with confidence intervals.
@@ -119,43 +121,85 @@
 
 ;; ## Concordance checking
 
-(defn- coords-with-ci
-  "Retrieve the coordinates of a variant context with confidence intervals."
-  [s e vc]
+(defn get-ci-start-end
+  "Retrieve start and end with confidence intervals for a variation.
+  length-fn returns the length of the item or a string for well-known items."
+  [vc length-fn]
   (letfn [(get-ci-range [orig attr]
             [(- orig (value-from-attr vc attr 0))
              (+ orig (value-from-attr vc attr 1))])]
-    [(get-ci-range s "CIPOS")
-     (get-ci-range e "CIEND")]))
+    (let [start (:start vc)
+          length (length-fn vc)
+          end (if (string? length) length
+                  (max (+ start length) (:end vc)))]
+      [(get-ci-range start "CIPOS")
+       (if (string? end) end
+           (get-ci-range end "CIEND"))])))
 
-(defn sv-ends-overlap?
+(defmulti sv-ends-overlap?
   "Check if coordinates from two structural variants overlap.
   Considered an overlap if the two confidence intervals
   have shared bases."
+  (fn [[end1 end2]] (type end1)))
+
+(defmethod sv-ends-overlap? clojure.lang.PersistentVector
   [[[s1 e1] [s2 e2]]]
   (or (and (>= s2 s1) (<= s2 e1))
       (and (>= e2 s1) (<= e2 e1))))
 
+(defmethod sv-ends-overlap? java.lang.String
+  [[end1 end2]]
+  (= end1 end2))
+
+(defn- length-from-svlen [x] (value-from-attr x "SVLEN"))
+
+(defn- insertion-length
+  "Length of insertion variation, handling ALT allele, INSEQ
+  and well-known named insertions."
+  [x]
+  (letfn [(get-insseq [x]
+            (-> x :attributes (get "INSSEQ")))
+          (length-by-insert-name [alt-allele]
+            (cond
+             (.startsWith alt-allele "<INS:ME:") (-> alt-allele
+                                                     (subs 1 (dec (count alt-allele)))
+                                                     (string/split #":")
+                                                     last)
+             :else (throw (Exception. (str "Unknown insert allele" alt-allele)))))
+          (get-allele-insert [x]
+            (let [alt-allele (-> x :alt-alleles first .getDisplayString)]
+              (if (.startsWith alt-allele "<")
+                (length-by-insert-name alt-allele)
+                (dec (count alt-allele)))))]
+    (if-let [seq (get-insseq x)]
+      (count seq)
+      (get-allele-insert x))))
+
+(defn- duplication-length
+  "Length of duplication variation, handling SVLEN and END."
+  [x]
+  (max (length-from-svlen x)
+       (- (value-from-attr x "END") (:start x))))
+
 (defn sv-len-concordant?
-  "Check for concordance of variants based on reported length: deletions and inversions."
-  [sv1 sv2]
-  (letfn [(get-start-end [x]
-            (let [start (:start x)
-                  end (max (+ start (value-from-attr x "SVLEN" 0))
-                           (:end x))]
-              (coords-with-ci start end x)))]
+  "Check for concordance of variants based on reported length:
+  handles deletions, inversions. insertions and duplications.
+  length-fn is a custom function to retrieve the variation length."
+  [sv1 sv2 length-fn]
+  (letfn []
     (every? sv-ends-overlap?
-            (partition 2 (interleave (get-start-end sv1) (get-start-end sv2))))))
+            (partition 2 (interleave (get-ci-start-end sv1 length-fn)
+                                     (get-ci-start-end sv2 length-fn))))))
 
 (defn sv-concordant?
   "Check if structural variants are concordant."
   [sv1 sv2]
   (and (apply = (map :sv-type [sv1 sv2]))
        (case (:sv-type sv1)
-         :DEL (sv-len-concordant? sv1 sv2)
-         :INS true
-         :INV (sv-len-concordant? sv1 sv2)
-         :DUP true
+         :DEL (sv-len-concordant? sv1 sv2 length-from-svlen)
+         :INS (sv-len-concordant? sv1 sv2 insertion-length)
+         :INV (sv-len-concordant? sv1 sv2 length-from-svlen)
+         :DUP (sv-len-concordant? sv1 sv2 duplication-length)
          :BND true
          (throw (Exception. (str "Structural variant type not handled: " (:sv-type sv1)))))))
 

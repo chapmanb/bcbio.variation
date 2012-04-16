@@ -18,9 +18,12 @@
                sv-out {:concordant (str (fs/file data-dir "Test-sv1000g-svIll-svconcordance.vcf"))
                        :discordant1 (str (fs/file data-dir "Test-sv1000g-svIll-svdiscordance.vcf"))
                        :discordant2 (str (fs/file data-dir "Test-svIll-sv1000g-svdiscordance.vcf"))}
+               sv-out2 {:concordant (str (fs/file data-dir "Test-sv1-sv2-svconcordance.vcf"))
+                        :discordant1 (str (fs/file data-dir "Test-sv1-sv2-svdiscordance.vcf"))
+                        :discordant2 (str (fs/file data-dir "Test-sv2-sv1-svdiscordance.vcf"))}
                indel-vcf (str (fs/file data-dir "freebayes-calls-indels.vcf"))
                nomnp-out (itx/add-file-part indel-vcf "nomnp")]
-           (doseq [x (concat [nomnp-out] (vals sv-out))]
+           (doseq [x (concat [nomnp-out] (vals sv-out) (vals sv-out2))]
              (itx/remove-path x))
            ?form)))
 
@@ -37,10 +40,12 @@
     (with-open [vcf-source1 (get-vcf-source sv-vcf1 ref)
                 vcf-source2 (get-vcf-source sv-vcf2 ref)]
       (doall (map get-sv-type (parse-vcf vcf-source1))) =>
-      (concat (repeat 6 :BND)
+      (concat [:INS] (repeat 6 :BND)
               [nil :DEL :INS :DEL :DUP :INV :INS])
       (doall (map get-sv-type (parse-vcf vcf-source2))) => [:DUP :BND :BND :INS :CNV :DEL :INV])))
 
 (facts "Compare structural variation calls from two inputs."
   (compare-sv "Test" {:name "sv1000g" :file sv-vcf1}
-              {:name "svIll" :file sv-vcf2} ref) => sv-out)
+              {:name "svIll" :file sv-vcf2} ref) => sv-out
+  (compare-sv "Test" {:name "sv1" :file sv-vcf1}
+              {:name "sv2" :file sv-vcf1} ref) => sv-out2)
