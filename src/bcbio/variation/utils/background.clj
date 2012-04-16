@@ -44,7 +44,8 @@
   [sample-info ref out-dir]
   (letfn [(combine-sample [[name xs]]
             {:sample name
-             :file (combine-variants (map :file xs) ref :out-dir out-dir)})]
+             :file (combine-variants (map :file xs) ref :merge-type :full
+                                     :out-dir out-dir)})]
     (map combine-sample
          (group-by :sample (flatten sample-info)))))
 
