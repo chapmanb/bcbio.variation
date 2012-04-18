@@ -44,7 +44,7 @@
   (letfn [(update-cgmetrics [vc x]
             (-> (VariantContextBuilder. (:vc vc))
                 (.attributes (assoc (:attributes vc)
-                               "DP" (:depth x)
+                               "DPCALL" (:depth x)
                                "AB" (:ab x)
                                "QUALEAF" (:qual-eaf x)
                                "QUALVAF" (:qual-vaf x)))
@@ -58,8 +58,8 @@
 (defn- add-cgmetrics-header
   "Add CG metrics definitions to the VCF input header."
   [header]
-  (let [new #{(VCFInfoHeaderLine. "DP" 1
-                                  VCFHeaderLineType/Integer "Total depth")
+  (let [new #{(VCFInfoHeaderLine. "DPCALL" 1
+                                  VCFHeaderLineType/Integer "Total depth used for calls")
               (VCFInfoHeaderLine. "QUALEAF" 1
                                   VCFHeaderLineType/Float
                                   "Variant quality under equal allele fraction model (EAF)")
