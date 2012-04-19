@@ -74,34 +74,26 @@
                                 ref)))
       out-file)))
 
+(defn- not-target? [target-name x] (not (contains? (set x) target-name)))
+
 (defn- gen-target-problems
   "Create files of false negatives and positives from target-name."
-  [target-name cmps-by-name true-p-vcf out-dir config]
-  (letfn [(not-target? [x]
-            (not (contains? (set x) target-name)))]
-    (let [ref (-> cmps-by-name vals first :exp :ref)
-          notarget-concordant (gen-all-concordant cmps-by-name out-dir config
-                                                  :do-include? not-target?
-                                                  :base-ext (format "multino%s" target-name))
-          target-call (->> cmps-by-name
-                           (remove #(not-target? (first %)))
-                           first
-                           second
-                           ((juxt :c1 :c2))
-                           (filter #(= (:name %) target-name))
-                           first)]
-      {:false-negatives
-       (-> (combine-variants [true-p-vcf (:intersection notarget-concordant)]
-                             ref :merge-type :full :out-dir out-dir
-                             :name-map {true-p-vcf "truep"
-                                        (:intersection notarget-concordant) target-name}
-                             :base-ext (format "multiall-no%s" target-name))
-           (select-variant-by-set ref target-name)
-           (add-variant-annotations (:align target-call) ref target-call :out-dir out-dir))
-       :false-positives (gen-target-fps (remove #(not-target? (first %))
-                                                cmps-by-name)
-                                        target-name (:union notarget-concordant)
-                                        ref out-dir)})))
+  [target-name target-call cmps-by-name true-p-vcf ref out-dir config]
+  (let [notarget-concordant (gen-all-concordant cmps-by-name out-dir config
+                                                :do-include? (partial not-target? target-name)
+                                                :base-ext (format "multino%s" target-name))]
+    {:false-negatives
+     (-> (combine-variants [true-p-vcf (:intersection notarget-concordant)]
+                           ref :merge-type :full :out-dir out-dir
+                           :name-map {true-p-vcf "truep"
+                                      (:intersection notarget-concordant) target-name}
+                           :base-ext (format "multiall-no%s" target-name))
+         (select-variant-by-set ref target-name)
+         (add-variant-annotations (:align target-call) ref target-call :out-dir out-dir))
+     :false-positives (gen-target-fps (remove #(not-target? target-name (first %))
+                                              cmps-by-name)
+                                      target-name (:union notarget-concordant)
+                                      ref out-dir)}))
 
 (defn multiple-overlap-analysis
   "Provide high level concordance overlap comparisons for multiple call approaches.
@@ -117,12 +109,23 @@
   [cmps config target-name]
   (let [cmps-by-name (if-not (map? cmps) (prep-cmp-name-lookup cmps :ignore #{"all"}) cmps)
         out-dir (str (fs/file (get-in config [:dir :prep] (get-in config [:dir :out]))
-                              "multiple"))]
+                              "multiple"))
+        ref (-> cmps-by-name vals first :exp :ref)
+        target-call (->> cmps-by-name
+                         (remove #(not-target? target-name (first %)))
+                         first
+                         second
+                         ((juxt :c1 :c2))
+                         (filter #(= (:name %) target-name))
+                         first)]
     (when-not (fs/exists? out-dir)
       (fs/mkdirs out-dir))
-    (let [true-p-vcf (:intersection (gen-all-concordant cmps-by-name out-dir config))
-          target-problems (gen-target-problems target-name cmps-by-name true-p-vcf
-                                               out-dir config)]
+    (let [true-p-vcf (-> (gen-all-concordant cmps-by-name out-dir config)
+                         :intersection
+                         (add-variant-annotations (:align target-call) ref target-call
+                                                  :out-dir out-dir))
+          target-problems (gen-target-problems target-name target-call cmps-by-name
+                                               true-p-vcf ref out-dir config)]
       (ordered-map :true-positives true-p-vcf
                    :false-negatives (:false-negatives target-problems)
                    :false-positives (:false-positives target-problems)))))

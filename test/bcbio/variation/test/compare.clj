@@ -167,7 +167,7 @@
       cmps (variant-comparison-from-config config-file)]
   (letfn [(get-out-files [x ext]
             {:true-positives
-             (str (fs/file out-dir "Test1-multiall-fullcombine-Intersection.vcf"))
+             (str (fs/file out-dir (format "Test1-multiall-fullcombine-Intersection%s.vcf" ext)))
              :false-negatives
              (str (fs/file out-dir (format "Test1-multiall-no%s-fullcombine-%s%s.vcf" x x ext)))
              :false-positives
