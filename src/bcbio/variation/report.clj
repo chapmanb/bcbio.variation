@@ -209,6 +209,8 @@
             (sort-by :count >
                      (map (fn [[m c]] {:metric m :count c}) (get-metric-counts in-vcf))))]
     (.write wrtr "** GATK recalibration filter metrics\n")
-    (.write wrtr (str (doric/table [:metric :count]
-                                   (get-recal-metrics (get-in cmp-info [:c1 :file])))
-                      "\n"))))
+    (doseq [call (map (partial get cmp-info) [:c1 :c2])]
+      (when (= (:mod call) "recal")
+        (.write wrtr (str (doric/table [:metric :count]
+                                       (get-recal-metrics (:file call)))
+                          "\n"))))))
