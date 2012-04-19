@@ -55,7 +55,7 @@
                                  :intervals intervals) => compare-out
       (-> (concordance-report-metrics sample compare-out)
           first :percent_non_reference_sensitivity) => "88.89"
-      (add-variant-annotations vcf2 align-bam ref) => annotated-out)
+      (add-gatk-annotations vcf2 align-bam ref) => annotated-out)
     (facts "Create merged VCF files for comparison"
       (create-merged [vcf1 vcf2] [align-bam align-bam] [true true] ref) => combine-out)
     (facts "Filter variant calls avoiding false positives."

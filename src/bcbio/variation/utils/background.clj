@@ -5,7 +5,7 @@
   (:use [clojure.java.io]
         [bcbio.variation.compare :only [load-config]]
         [bcbio.variation.combine :only [select-by-sample combine-variants]]
-        [bcbio.variation.annotation :only [add-variant-annotations]])
+        [bcbio.variation.annotation :only [add-gatk-annotations]])
   (:require [clojure.java.shell :as shell]
             [clojure.string :as string]
             [clj-yaml.core :as yaml]
@@ -34,7 +34,7 @@
   (let [final-file (str (fs/file out-dir (format "%s-annotated.vcf" (:sample sample-info))))]
     (when (itx/needs-run? final-file)
       (let [sample-bam (download-sample-bam (:sample sample-info) ftp-config prep-dir)
-            ann-vcf (add-variant-annotations (:file sample-info) sample-bam ref)]
+            ann-vcf (add-gatk-annotations (:file sample-info) sample-bam ref)]
         (fs/rename ann-vcf final-file)
         (itx/remove-path sample-bam)))
     final-file))

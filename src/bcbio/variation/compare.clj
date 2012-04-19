@@ -19,7 +19,6 @@
         [bcbio.variation.combine :only [combine-variants create-merged
                                         gatk-normalize gatk-cl-intersect-intervals]]
         [bcbio.variation.annotation :only [add-variant-annotations]]
-        [bcbio.variation.utils.cgmetrics :only [add-cgmetrics]]
         [bcbio.variation.filter :only [variant-filter pipeline-recalibration]]
         [bcbio.variation.phasing :only [is-haploid? compare-two-vcf-phased]]
         [bcbio.variation.callable :only [get-callable-bed]]
@@ -147,13 +146,7 @@
                                    (:ref exp) :out-dir out-dir 
                                    :intervals all-intervals)
         ann-vcfs (map (fn [[v b c]]
-                        (let [x (get c :annotate "")
-                              ann (if (true? x) "gatk" x)]
-                          (cond
-                           (= ann "gatk") (add-variant-annotations v b (:ref exp) :out-dir out-dir)
-                           (.contains ann "masterVar") (add-cgmetrics v ann (:ref exp)
-                                                                      :out-dir out-dir)
-                           :else v)))
+                        (add-variant-annotations v b (:ref exp) c :out-dir out-dir))
                       (map vector merged-vcfs align-bams (:calls exp)))
         filter-vcfs (map (fn [[v c]] (if-not (nil? (:filters c))
                                        (variant-filter v (:filters c) (:ref exp))

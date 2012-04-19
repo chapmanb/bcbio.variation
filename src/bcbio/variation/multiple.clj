@@ -83,14 +83,13 @@
           notarget-concordant (gen-all-concordant cmps-by-name out-dir config
                                                   :do-include? not-target?
                                                   :base-ext (format "multino%s" target-name))
-          target-bam (->> cmps-by-name
-                          (remove #(not-target? (first %)))
-                          first
-                          second
-                          ((juxt :c1 :c2))
-                          (filter #(= (:name %) target-name))
-                          first
-                          :align)]
+          target-call (->> cmps-by-name
+                           (remove #(not-target? (first %)))
+                           first
+                           second
+                           ((juxt :c1 :c2))
+                           (filter #(= (:name %) target-name))
+                           first)]
       {:false-negatives
        (-> (combine-variants [true-p-vcf (:intersection notarget-concordant)]
                              ref :merge-type :full :out-dir out-dir
@@ -98,8 +97,7 @@
                                         (:intersection notarget-concordant) target-name}
                              :base-ext (format "multiall-no%s" target-name))
            (select-variant-by-set ref target-name)
-           (#(if (nil? target-bam) %
-                 (add-variant-annotations % target-bam ref))))
+           (add-variant-annotations (:align target-call) ref target-call :out-dir out-dir))
        :false-positives (gen-target-fps (remove #(not-target? (first %))
                                                 cmps-by-name)
                                         target-name (:union notarget-concordant)

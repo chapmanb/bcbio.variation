@@ -93,9 +93,8 @@
    - No support specified: use the target comparison
    - Support specified and a specific comparison pair
    - Support specified as a single target: use target versus all comparison"
-  [cmps-by-name finalizer config]
-  (let [support (get finalizer :support (:target finalizer))
-        support-vcfs (if (coll? support)
+  [cmps-by-name support config]
+  (let [support-vcfs (if (coll? support)
                        (take 2 (-> cmps-by-name (get support) :c-files vals))
                        (let [x (multiple-overlap-analysis cmps-by-name config support)]
                          [(:true-positives x) (:false-positives x)]))]
@@ -113,17 +112,24 @@
 (defn pipeline-recalibration
   "Perform variant recalibration and filtration as part of processing pipeline."
   [cmps-by-name finalizer exp config]
-  (let [target (get cmps-by-name (:target finalizer))
-        in-vcf (remove-cur-filters (-> target :c1 :file) (:ref exp))
-        hard-filters (get-in finalizer [:params :filters])
-        anns (get-in finalizer [:params :annotations])
-        train-info (get-train-info cmps-by-name finalizer config)]
-    (-> target
-        (assoc-in [:c1 :file] (-> in-vcf
-                                  (#(if-not anns % (variant-recal-filter % train-info
-                                                                         anns (:ref exp))))
-                                  (#(if-not hard-filters % (variant-filter % hard-filters
-                                                                           (:ref exp))))))
-        (#(assoc-in % [:c1 :name] (format "%s-%s" (get-in % [:c1 :name]) "recal")))
-        (assoc-in [:c1 :mod] "recal")
-        (assoc :re-compare true))))
+  (let [init-target (get cmps-by-name (:target finalizer))
+        all-params (let [x (:params finalizer)] (if (map? x) [x] x))]
+    (reduce (fn [target [params fkey]]
+              (let [in-vcf (remove-cur-filters (-> target fkey :file) (:ref exp))
+                    hard-filters (:filters params)
+                    anns (:annotations params)
+                    train-info (get-train-info cmps-by-name
+                                               (get params :support (:target finalizer))
+                                               config)]
+                (-> target
+                    (assoc-in [fkey :file] (-> in-vcf
+                                               (#(if-not anns %
+                                                         (variant-recal-filter % train-info
+                                                                               anns (:ref exp))))
+                                               (#(if-not hard-filters %
+                                                         (variant-filter % hard-filters
+                                                                         (:ref exp))))))
+                    (#(assoc-in % [fkey :name] (format "%s-%s" (get-in % [fkey :name]) "recal")))
+                    (assoc-in [fkey :mod] "recal")
+                    (assoc :re-compare true))))
+            init-target (map vector all-params [:c1 :c2]))))
