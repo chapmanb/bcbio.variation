@@ -181,7 +181,7 @@
   (let [config-file (fs/file "." "config" "method-comparison.yaml")
         config (load-config config-file)]
     (get-in config [:dir :out]) => (has-prefix "/")
-  
+    (-> config :experiments first :sample) => "Test1"
     (-> config :experiments first :calls first :file) => (has-prefix "/")
     (-> config :experiments first :calls second :filters first) => "HRun > 5.0"))
 

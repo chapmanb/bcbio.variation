@@ -12,6 +12,14 @@
             [bcbio.run.itx :as itx]
             [bcbio.run.broad :as broad]))
 
+;; ## Utility functions
+
+(defn- remove-mod-name [x]
+  "Removes modification names from an approach name."
+  (reduce (fn [final mod]
+            (string/replace final (str "-" mod) ""))
+          x ["recal"]))
+
 (defn prep-cmp-name-lookup
   "Lookup map of comparisons by method names."
   [cmps & {:keys [ignore] :or {ignore #{}}}]
@@ -21,6 +29,11 @@
                   (assoc m names x))))
           (ordered-map)
           cmps))
+
+(defn- not-target? [target-name xs]
+  (not (contains? (set xs) target-name)))
+
+;; ## Prepare multi-overlap sets
 
 (defn- select-variant-by-set
   "Select samples based on name of a 'set' from CombineVariants."
@@ -73,8 +86,6 @@
                                 (get-shared-discordant (parse-vcf disc-source) vrn-fetch)
                                 ref)))
       out-file)))
-
-(defn- not-target? [target-name x] (not (contains? (set x) target-name)))
 
 (defn- gen-target-problems
   "Create files of false negatives and positives from target-name."

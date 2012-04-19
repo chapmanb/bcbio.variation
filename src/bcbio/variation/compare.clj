@@ -23,6 +23,7 @@
         [bcbio.variation.phasing :only [is-haploid? compare-two-vcf-phased]]
         [bcbio.variation.callable :only [get-callable-bed]]
         [bcbio.variation.multiple :only [prep-cmp-name-lookup pipeline-compare-multiple]]
+        [bcbio.variation.validate :only [pipeline-validate]]
         [bcbio.align.reorder :only [reorder-bam]]
         [ordered.map :only [ordered-map]]
         [clojure.math.combinatorics :only [combinations]]
@@ -196,24 +197,43 @@
                               exp config)
       (compare-two-vcf-standard c1 c2 exp config))))
 
+;; ## Customizable finalizer comparisons
+
+(defmulti run-finalizer
+  "Run a post-pairwise comparison function, returning updated comparison details,"
+  (fn [cmps finalizer exp config] (-> finalizer :method keyword)))
+
+(defmethod run-finalizer :recal-filter
+  [& args]
+  (apply pipeline-recalibration args))
+
+(defmethod run-finalizer :multiple
+  [& args]
+  (apply pipeline-compare-multiple args))
+
+(defmethod run-finalizer :validate
+  [& args]
+  (apply pipeline-validate args))
+
 (defn finalize-comparisons
   "Finalize all comparisons with finished initial pass data."
   [cmps exp config]
-  (let [finalize-fns {"recal-filter" pipeline-recalibration
-                      "multiple" pipeline-compare-multiple}
-        cmps-by-name (prep-cmp-name-lookup cmps)]
-    (letfn [(add-summary [x]
-              (-> x
-                  (assoc :exp exp)
-                  (#(assoc % :summary (top-level-metrics %)))))
-            (update-w-finalizer [cur-cmps finalizer]
-              "Update the current comparisons with a defined finalizer."
-              (let [updated-cmp ((get finalize-fns (:method finalizer))
-                                 cmps-by-name finalizer exp config)]
-                (assoc cur-cmps (map #(get-in updated-cmp [% :name]) [:c1 :c2])
-                       (if-not (:re-compare updated-cmp) updated-cmp
-                               (compare-two-vcf (:c1 updated-cmp) (:c2 updated-cmp) exp config)))))]
-      (map add-summary (vals (reduce update-w-finalizer cmps-by-name (:finalize exp)))))))
+  (letfn [(add-summary [x]
+            (-> x
+                (assoc :exp exp)
+                (#(assoc % :summary (top-level-metrics %)))))
+          (update-w-finalizer [cur-cmps finalizer]
+            "Update the current comparisons with a defined finalizer."
+            (let [updated-cmp (run-finalizer cur-cmps finalizer exp config)]
+              (assoc cur-cmps (map #(get-in updated-cmp [% :name]) [:c1 :c2])
+                     (if-not (:re-compare updated-cmp) updated-cmp
+                             (compare-two-vcf (:c1 updated-cmp) (:c2 updated-cmp) exp config)))))]
+    (->> (reduce update-w-finalizer
+                 (prep-cmp-name-lookup cmps) (:finalize exp))
+         vals
+         (map add-summary))))
+
+;; ## Top-level
 
 (defn load-config
   "Load configuration file, handling conversion of relative to absolute paths."
