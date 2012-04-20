@@ -1,2 +1,4 @@
 language: clojure
 script: lein midje
+before_install:
+  - git submodule update --init --recursive
