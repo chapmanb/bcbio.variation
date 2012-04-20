@@ -134,7 +134,7 @@
                          first
                          second
                          ((juxt :c1 :c2))
-                         (filter #(= (:name %) target-name))
+                         (filter #(= (remove-mod-name (:name %)) target-name))
                          first)]
     (when-not (fs/exists? out-dir)
       (fs/mkdirs out-dir))

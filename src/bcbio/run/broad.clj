@@ -14,9 +14,9 @@
     (let [std-args ["-T" program]]
       (itx/with-tx-files [tx-file-info file-info (get map-info :out [])]
         (CommandLineGATK/start (CommandLineGATK.)
-                               (into-array (itx/subs-kw-files
-                                            (concat std-args args)
-                                            tx-file-info)))))))
+                               (into-array (map str (itx/subs-kw-files
+                                                     (concat std-args args)
+                                                     tx-file-info))))))))
 
 (defn index-bam
   "Generate BAM index, skipping if already present."

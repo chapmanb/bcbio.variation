@@ -36,6 +36,9 @@ experiments:
       - method: validate
         target: gatk
         params:
-          validate-count: 10
-          validate-approach: top
-        
+          filters:
+            keep: [QD < 10.0]
+            validate: [QD > 10.0]
+          validate:
+            approach: random
+            count: 1

@@ -9,20 +9,24 @@
   (:require [bcbio.run.broad :as broad]
             [bcbio.run.itx :as itx]))
 
-(defn variant-filter
-  "Perform hard variant filtering with supplied JEXL expression criteria."
-  [in-vcf jexl-filters ref]
+(defn jexl-from-config [jexl-filters]
+  "Retrieve GATK JEXL commandline expressions from filters."
   (letfn [(jexl-args [x]
             ["--filterName" (str (first (split x #"\s+")) "Filter")
              "--filterExpression" x])]
-    (let [file-info {:out-vcf (itx/add-file-part in-vcf "filter")}
-          args (concat ["-R" ref
-                        "--variant" in-vcf
-                        "-o" :out-vcf
-                        "-l" "ERROR"]
-                       (flatten (map jexl-args jexl-filters)))]
-      (broad/run-gatk "VariantFiltration" args file-info {:out [:out-vcf]})
-      (:out-vcf file-info))))
+    (flatten (map jexl-args jexl-filters))))
+
+(defn variant-filter
+  "Perform hard variant filtering with supplied JEXL expression criteria."
+  [in-vcf jexl-filters ref]
+  (let [file-info {:out-vcf (itx/add-file-part in-vcf "filter")}
+        args (concat ["-R" ref
+                      "--variant" in-vcf
+                      "-o" :out-vcf
+                      "-l" "ERROR"]
+                      (jexl-from-config jexl-filters))]
+    (broad/run-gatk "VariantFiltration" args file-info {:out [:out-vcf]})
+    (:out-vcf file-info)))
 
 (defn- variant-recalibration
   "Perform the variant recalibration step with input training VCF files.
