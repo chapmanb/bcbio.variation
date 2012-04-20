@@ -18,7 +18,9 @@
   (:use [ordered.map :only [ordered-map]]
         [bcbio.variation.combine :only [combine-variants]]
         [bcbio.variation.multiple :only [prep-cmp-name-lookup
-                                         multiple-overlap-analysis]])
+                                         multiple-overlap-analysis]]
+        [bcbio.variation.variantcontext :only [parse-vcf get-vcf-source
+                                               write-vcf-w-template]])
   (:require [bcbio.run.broad :as broad]
             [bcbio.run.itx :as itx]))
 
@@ -51,6 +53,20 @@
 (defmethod get-to-validate :random
   [in-vcf params ref]
   (select-by-random (get-in params [:validate :count]) in-vcf ref))
+
+(defn- get-top-variants
+  "Retrieve top variants sorted by metrics of interest."
+  [vcf-iter params])
+
+(defmethod get-to-validate :top
+  [in-vcf params ref]
+  (let [out-file (itx/add-file-part in-vcf "topsubset")]
+    (when (itx/needs-run? out-file)
+      (with-open [vcf-source (get-vcf-source in-vcf ref)]
+        (write-vcf-w-template in-vcf out-file
+                              (get-top-variants (parse-vcf vcf-source) params)
+                              ref)))
+    out-file))
 
 (defn get-final-and-tovalidate
   "Prepare files of calls: finalized and validation targets."
