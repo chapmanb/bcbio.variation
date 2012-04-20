@@ -14,19 +14,25 @@
          is below the validation threshold.
    - Validate calls
        - calls that overlap in all but the target and fall below configurable threshold.
-         These are either sampled from the distribution or picked off the top.")
+         These are either sampled from the distribution or picked off the top."
+  (:use [ordered.map :only [ordered-map]]
+        [bcbio.variation.multiple :only [prep-cmp-name-lookup
+                                         multiple-overlap-analysis]]))
 
 (defn get-final-and-tovalidate
-  "Prepare files of calls: finalized and those that require validation."
+  "Prepare files of calls: finalized and validation targets."
   [cmps finalizer config]
-  (println finalizer)
-  (println (keys cmps))
-  (throw (Exception.)))
+  (let [cmps-by-name (prep-cmp-name-lookup (vals cmps) :remove-mods? true
+                                           :ignore #{"all" "validate"})
+        multi-prep (multiple-overlap-analysis cmps-by-name config (:target finalizer)
+                                              :dirname "validate")]
+    (ordered-map :final (:true-positives multi-prep)
+                 :validate (:false-negatives multi-prep))))
 
 (defn pipeline-validate
   "High level pipeline entry for producing final and to-validate call sets."
   [cmps finalizer exp config]
   {:c-files (get-final-and-tovalidate cmps finalizer config)
    :c1 {:name (:target finalizer)}
-   :c2 {:name "final"}
+   :c2 {:name "validate"}
    :exp exp :dir (:dir config)})

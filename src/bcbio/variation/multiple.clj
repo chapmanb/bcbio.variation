@@ -14,24 +14,31 @@
 
 ;; ## Utility functions
 
-(defn- remove-mod-name [x]
+(defn- remove-mod-name [x & {:keys [mods] :or {mods ["recal"]}}]
   "Removes modification names from an approach name."
   (reduce (fn [final mod]
             (string/replace final (str "-" mod) ""))
-          x ["recal"]))
+          x mods))
 
 (defn prep-cmp-name-lookup
-  "Lookup map of comparisons by method names."
-  [cmps & {:keys [ignore] :or {ignore #{}}}]
+  "Lookup map of comparisons by method names.
+   - ignore: a list of method names to ignore when creating the lookup map.
+   - remove-mods?: Flag to remove naming modifications. This
+                   will replace original comparisons with recalibrated."
+  [cmps & {:keys [ignore remove-mods?] :or {ignore #{}}}]
   (reduce (fn [m x]
-            (let [names [(-> x :c1 :name) (-> x :c2 :name)]]
+            (let [cmps [:c1 :c2]
+                  names (map #(let [n (get-in x [% :name])]
+                                (if-not remove-mods? n
+                                        (remove-mod-name n :mods [(get-in x [% :mod])])))
+                             cmps)]
               (if (some #(contains? ignore %) names) m
                   (assoc m names x))))
           (ordered-map)
           cmps))
 
 (defn- not-target? [target-name xs]
-  (not (contains? (set xs) target-name)))
+  (not (contains? (set (map remove-mod-name xs)) target-name)))
 
 ;; ## Prepare multi-overlap sets
 
@@ -56,8 +63,6 @@
                                    m))
                                (ordered-map) cmps-by-name)
         ref (-> cmps-by-name vals first :exp :ref)
-        out-dir (str (fs/file (get-in config [:dir :prep] (get-in config [:dir :out]))
-                              "multiple"))
         union-vcf (combine-variants (keys concordant-map) ref :merge-type :full :out-dir out-dir
                                     :name-map concordant-map :base-ext base-ext)]
     {:union union-vcf
@@ -73,8 +78,9 @@
           (get-shared-discordant [xs fetch]
             (let [pass-and-shared? (check-shared fetch)]
               (map :vc (filter pass-and-shared? xs))))]
-    (let [disc-vcfs (map (fn [v] (get (:c-files v) (format "%s-discordant" target-name)))
-                         (vals target-cmps))
+    (let [disc-vcfs (remove nil? (map (fn [v]
+                                        (get (:c-files v) (format "%s-discordant" target-name)))
+                                      (vals target-cmps)))
           disc-vcf (-> (combine-variants disc-vcfs ref :merge-type :full :out-dir out-dir
                                          :base-ext (format "dis%s" target-name))
                        (select-variant-by-set ref "Intersection"))
@@ -117,10 +123,11 @@
    - VCF of non-ref calls discordant in the target method and called in any of the other
      methods. We restrict to shared calls to avoid penalizing unique calls.
      These are false positives."
-  [cmps config target-name]
-  (let [cmps-by-name (if-not (map? cmps) (prep-cmp-name-lookup cmps :ignore #{"all"}) cmps)
+  [cmps config target-name & {:keys [dirname] :or {dirname "multiple"}}]
+  (let [cmps-by-name (if (map? cmps) cmps
+                         (prep-cmp-name-lookup cmps :ignore #{"all" "validate"}))
         out-dir (str (fs/file (get-in config [:dir :prep] (get-in config [:dir :out]))
-                              "multiple"))
+                              dirname))
         ref (-> cmps-by-name vals first :exp :ref)
         target-call (->> cmps-by-name
                          (remove #(not-target? target-name (first %)))

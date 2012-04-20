@@ -33,9 +33,9 @@ experiments:
         params:
           #annotations:  [QD, HaplotypeScore, MQRankSum, ReadPosRankSum, FS, MQ, DP, AB]
           filters: [HRun > 5.0]
-      # - method: validate
-      #   target: gatk
-      #   params:
-      #     validate-count: 10
-      #     validate-approach: top
+      - method: validate
+        target: gatk
+        params:
+          validate-count: 10
+          validate-approach: top
         
