@@ -42,3 +42,6 @@ experiments:
           validate:
             approach: random
             count: 1
+            top-metric:
+              - name: "QD"
+                mod: 1

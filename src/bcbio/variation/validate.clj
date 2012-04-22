@@ -41,6 +41,8 @@
   (select-by-general (interleave (repeat "--select_expressions") filters)
                      ext in-vcf ref))
 
+;; ## Validation targets by random sampling
+
 (defn select-by-random
   "Subset a VCF file with a random number of variants."
   [count in-vcf ref]
@@ -54,18 +56,39 @@
   [in-vcf params ref]
   (select-by-random (get-in params [:validate :count]) in-vcf ref))
 
+; ## Validation targets by sorting
+
+(defn- extract-sort-metrics
+  "Provide function to extract metric used in sorting from a variant context."
+  [params]
+  {:pre [(= 1 (count (:top-metric params)))]}
+  (let [metric (get-in params [:top-metric 0 :name])
+        mod (get-in params [:top-metric 0 :mod])]
+    (fn [vc]
+      (when-let [base (-> vc :attributes (get metric) (Float/parseFloat))]
+        (if mod (* mod base) base)))))
+
 (defn- get-top-variants
   "Retrieve top variants sorted by metrics of interest."
-  [vcf-iter params])
+  [vcf-file params ref]
+  (with-open [vcf-source (get-vcf-source vcf-file ref)]
+    (let [metric-gettr (extract-sort-metrics (:validate params))]
+      (set
+       (map (juxt :chr :start)
+            (take (get-in params [:validate :count])
+                  (sort-by metric-gettr > (parse-vcf vcf-source))))))))
 
 (defmethod get-to-validate :top
   [in-vcf params ref]
   (let [out-file (itx/add-file-part in-vcf "topsubset")]
     (when (itx/needs-run? out-file)
-      (with-open [vcf-source (get-vcf-source in-vcf ref)]
-        (write-vcf-w-template in-vcf out-file
-                              (get-top-variants (parse-vcf vcf-source) params)
-                              ref)))
+      (let [to-keep (get-top-variants in-vcf params ref)]
+        (with-open [vcf-source (get-vcf-source in-vcf ref)]
+          (write-vcf-w-template in-vcf {:out out-file}
+                                (map :vc
+                                     (filter #(contains? to-keep ((juxt :chr :start) %))
+                                             (parse-vcf vcf-source)))
+                                ref))))
     out-file))
 
 (defn get-final-and-tovalidate

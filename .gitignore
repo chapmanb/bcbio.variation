@@ -24,6 +24,7 @@ test/data/*-nomnp*vcf
 test/data/*-prep*vcf
 test/data/*-preclean*vcf
 test/data/*-nofilter*vcf
+test/data/*-*subset*vcf
 test/data/method-comparison-summary*
 test/data/prep/
 test/data/grading/
