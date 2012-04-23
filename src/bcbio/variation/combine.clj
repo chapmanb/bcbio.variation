@@ -146,6 +146,32 @@
       (map (fn [[v b merge?]] (if merge? (merge-vcf v merged b ref) v))
            (map vector vcfs align-bams do-merges)))))
 
+(defn- dirty-prep-work
+  "Prepare input file for comparisons based on configuration:
+    - Selecting a single sample from multi-sample files
+    - Resorting and fixing chromosome naming
+    - Removing reference call genotypes
+   This organizes the logic which get convoluted for different cases.
+   The approach is to select a single sample and remove refcalls if we have
+   a multiple sample file, so the sample name will be correct."
+  [in-file call exp out-dir out-fname]
+  (letfn [(run-sample-select [in-file]
+            (select-by-sample (:sample exp) in-file (:name call)
+                              (get call :ref (:ref exp))
+                              :out-dir out-dir
+                              :remove-refcalls (get call :remove-refcalls false)))]
+    (let [sample-file (if (multiple-samples? in-file)
+                        (run-sample-select in-file)
+                        in-file)
+          prep-file (if (true? (:prep call))
+                      (prep-vcf sample-file (:ref exp) (:sample exp) :out-dir out-dir
+                                :out-fname out-fname :orig-ref-file (:ref call))
+                      sample-file)
+          noref-file (if (and (not (multiple-samples? in-file)) (:remove-refcalls call))
+                       (run-sample-select prep-file)
+                       prep-file)]
+      noref-file)))
+
 (defn gatk-normalize
   "Prepare call information for VCF comparisons by normalizing through GATK.
   Handles:
@@ -168,16 +194,7 @@
           merge-file (if (> (count clean-files) 1)
                        (merge-call-files call clean-files)
                        (first clean-files))
-          sample-file (if (or (multiple-samples? merge-file) (:remove-refcalls call))
-                        (select-by-sample (:sample exp) merge-file (:name call)
-                                          (get call :ref (:ref exp))
-                                          :out-dir out-dir
-                                          :remove-refcalls (get call :remove-refcalls false))
-                        merge-file)
-          prep-file (if (true? (:prep call))
-                      (prep-vcf sample-file (:ref exp) (:sample exp) :out-dir out-dir
-                                :out-fname out-fname :orig-ref-file (:ref call))
-                      sample-file)]
+          prep-file (dirty-prep-work merge-file call exp out-dir out-fname)]
       (assoc call :file (if (true? (get call :normalize true))
                           (normalize-variants prep-file (:ref exp) out-dir
                                               :out-fname out-fname)

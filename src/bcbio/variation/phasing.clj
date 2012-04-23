@@ -79,7 +79,7 @@
   [vc ref-vcs i]
   {:pre [(= 2 (count (get-alleles vc)))]}
   (let [ref-alleles (set (map #(-> % get-alleles first) ref-vcs))
-        call-hap (nth (get-alleles vc) i)]
+        call-hap (when-not (nil? i) (nth (get-alleles vc) i))]
     (cond
      (empty? ref-alleles) :discordant
      (contains? ref-alleles call-hap) :concordant

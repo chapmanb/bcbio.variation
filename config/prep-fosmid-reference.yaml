@@ -1,0 +1,27 @@
+# Prepare fosmid reference calls and items for validation
+# given calls from multiple technologies.
+---
+dir:
+  out: test/data/fosmid
+  prep: test/data/fosmid/prep
+experiments:
+  - sample: NA00001
+    ref: test/data/GRCh37.fa
+    intervals: test/data/phasing-reference-regions.bed
+    summary-level: quick
+    calls:
+      - name: fosmid
+        file: test/data/phasing-reference.vcf
+        align: test/data/aligned-reads.bam
+        remove-refcalls: true
+        annotate: true
+      - name: illumina
+        prep: true
+        preclean: true
+        remove-refcalls: true
+        annotate: true
+        file: test/data/phasing-contestant.vcf
+        align: test/data/aligned-reads.bam
+    #finalize:
+    #  - method: multiple
+    #    target: fosmid

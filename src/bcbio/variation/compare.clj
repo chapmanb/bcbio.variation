@@ -143,8 +143,8 @@
         all-intervals (remove nil? (map :intervals (cons exp (:calls exp))))
         merged-vcfs (create-merged (map :file start-vcfs)
                                    align-bams
-                                   (map #(get % :refcalls true) (:calls exp))
-                                   (:ref exp) :out-dir out-dir 
+                                   (map #(get % :refcalls false) (:calls exp))
+                                   (:ref exp) :out-dir out-dir
                                    :intervals all-intervals)
         ann-vcfs (map (fn [[v b c]]
                         (add-variant-annotations v b (:ref exp) c :out-dir out-dir))

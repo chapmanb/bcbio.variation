@@ -1,3 +1,5 @@
+# Example configuration demonstrating grading a contestant genome
+# against a prepared fosmid reference.
 ---
 dir:
   out: test/data/grading
