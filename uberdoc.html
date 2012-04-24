@@ -3029,7 +3029,7 @@ net.brehaut.ClojureTools = (function (SH) {
   };
 })(SyntaxHighlighter);
 </script><title>bcbio.variation -- Marginalia</title></head><body><table><tr><td class="docs"><div class="header"><h1 class="project-name">bcbio.variation</h1><h2 class="project-version">0.0.1-SNAPSHOT</h2><br /><p>Clojure API for variation data, built on GATK</p>
-</div><div class="dependencies"><h3>dependencies</h3><table><tr><td class="dep-name">org.clojure/clojure</td><td class="dotted"><hr /></td><td class="dep-version">1.3.0</td></tr><tr><td class="dep-name">org.clojure/math.combinatorics</td><td class="dotted"><hr /></td><td class="dep-version">0.0.2</td></tr><tr><td class="dep-name">org.clojure/data.csv</td><td class="dotted"><hr /></td><td class="dep-version">0.1.2</td></tr><tr><td class="dep-name">org.clojars.chapmanb/gatk</td><td class="dotted"><hr /></td><td class="dep-version">1.5.2</td></tr><tr><td class="dep-name">org.clojars.chapmanb/picard</td><td class="dotted"><hr /></td><td class="dep-version">1.64</td></tr><tr><td class="dep-name">incanter/incanter-core</td><td class="dotted"><hr /></td><td class="dep-version">1.3.0-SNAPSHOT</td></tr><tr><td class="dep-name">incanter/incanter-charts</td><td class="dotted"><hr /></td><td class="dep-version">1.3.0-SNAPSHOT</td></tr><tr><td class="dep-name">com.leadtune/clj-ml</td><td class="dotted"><hr /></td><td class="dep-version">0.2.0</td></tr><tr><td class="dep-name">fs</td><td class="dotted"><hr /></td><td class="dep-version">1.1.2</td></tr><tr><td class="dep-name">clj-yaml</td><td class="dotted"><hr /></td><td class="dep-version">0.3.1</td></tr><tr><td class="dep-name">doric</td><td class="dotted"><hr /></td><td class="dep-version">0.7.0-SNAPSHOT</td></tr><tr><td class="dep-name">ordered</td><td class="dotted"><hr /></td><td class="dep-version">1.0.0</td></tr><tr><td class="dep-name">compojure</td><td class="dotted"><hr /></td><td class="dep-version">1.0.1</td></tr><tr><td class="dep-name">ring</td><td class="dotted"><hr /></td><td class="dep-version">1.0.2</td></tr><tr><td class="dep-name">enlive</td><td class="dotted"><hr /></td><td class="dep-version">1.0.0</td></tr></table></div><div class="dependencies"><h3>dev dependencies</h3><table><tr><td class="dep-name">midje</td><td class="dotted"><hr /></td><td class="dep-version">1.3.0</td></tr><tr><td class="dep-name">lein-midje</td><td class="dotted"><hr /></td><td class="dep-version">1.0.8</td></tr></table></div></td><td class="codes" style="text-align: center; vertical-align: middle;color: #666;padding-right:20px"><br /><br /><br />(this space intentionally left almost blank)</td></tr><tr><td class="docs"><div class="toc"><a name="toc"><h3>namespaces</h3></a><ul><li><a href="#bcbio.align.ref">bcbio.align.ref</a></li><li><a href="#bcbio.align.reorder">bcbio.align.reorder</a></li><li><a href="#bcbio.itree">bcbio.itree</a></li><li><a href="#bcbio.run.broad">bcbio.run.broad</a></li><li><a href="#bcbio.run.itx">bcbio.run.itx</a></li><li><a href="#bcbio.variation.annotate.nbq">bcbio.variation.annotate.nbq</a></li><li><a href="#bcbio.variation.annotation">bcbio.variation.annotation</a></li><li><a href="#bcbio.variation.callable">bcbio.variation.callable</a></li><li><a href="#bcbio.variation.combine">bcbio.variation.combine</a></li><li><a href="#bcbio.variation.compare">bcbio.variation.compare</a></li><li><a href="#bcbio.variation.complex">bcbio.variation.complex</a></li><li><a href="#bcbio.variation.core">bcbio.variation.core</a></li><li><a href="#bcbio.variation.filter">bcbio.variation.filter</a></li><li><a href="#bcbio.variation.metrics">bcbio.variation.metrics</a></li><li><a href="#bcbio.variation.multiple">bcbio.variation.multiple</a></li><li><a href="#bcbio.variation.normalize">bcbio.variation.normalize</a></li><li><a href="#bcbio.variation.phasing">bcbio.variation.phasing</a></li><li><a href="#bcbio.variation.report">bcbio.variation.report</a></li><li><a href="#bcbio.variation.structural">bcbio.variation.structural</a></li><li><a href="#bcbio.variation.utils.background">bcbio.variation.utils.background</a></li><li><a href="#bcbio.variation.utils.popfreq">bcbio.variation.utils.popfreq</a></li><li><a href="#bcbio.variation.variantcontext">bcbio.variation.variantcontext</a></li><li><a href="#bcbio.variation.vcfwalker">bcbio.variation.vcfwalker</a></li><li><a href="#bcbio.variation.web.process">bcbio.variation.web.process</a></li><li><a href="#bcbio.variation.web.server">bcbio.variation.web.server</a></li><li><a href="#bcbio.variation.score">bcbio.variation.score</a></li></ul></div></td><td class="codes">&nbsp;</td></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#bcbio.align.ref" name="bcbio.align.ref"><h1 class="project-name">bcbio.align.ref</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>Deal with reference sequences for alignment and variant calling.</p>
+</div><div class="dependencies"><h3>dependencies</h3><table><tr><td class="dep-name">org.clojure/clojure</td><td class="dotted"><hr /></td><td class="dep-version">1.3.0</td></tr><tr><td class="dep-name">org.clojure/math.combinatorics</td><td class="dotted"><hr /></td><td class="dep-version">0.0.2</td></tr><tr><td class="dep-name">org.clojure/data.csv</td><td class="dotted"><hr /></td><td class="dep-version">0.1.2</td></tr><tr><td class="dep-name">org.clojars.chapmanb/gatk</td><td class="dotted"><hr /></td><td class="dep-version">1.5.2</td></tr><tr><td class="dep-name">org.clojars.chapmanb/picard</td><td class="dotted"><hr /></td><td class="dep-version">1.64</td></tr><tr><td class="dep-name">incanter/incanter-core</td><td class="dotted"><hr /></td><td class="dep-version">1.3.0-SNAPSHOT</td></tr><tr><td class="dep-name">incanter/incanter-charts</td><td class="dotted"><hr /></td><td class="dep-version">1.3.0-SNAPSHOT</td></tr><tr><td class="dep-name">com.leadtune/clj-ml</td><td class="dotted"><hr /></td><td class="dep-version">0.2.0</td></tr><tr><td class="dep-name">fs</td><td class="dotted"><hr /></td><td class="dep-version">1.1.2</td></tr><tr><td class="dep-name">clj-yaml</td><td class="dotted"><hr /></td><td class="dep-version">0.3.1</td></tr><tr><td class="dep-name">doric</td><td class="dotted"><hr /></td><td class="dep-version">0.7.0-SNAPSHOT</td></tr><tr><td class="dep-name">ordered</td><td class="dotted"><hr /></td><td class="dep-version">1.0.0</td></tr><tr><td class="dep-name">compojure</td><td class="dotted"><hr /></td><td class="dep-version">1.0.1</td></tr><tr><td class="dep-name">ring</td><td class="dotted"><hr /></td><td class="dep-version">1.0.2</td></tr><tr><td class="dep-name">enlive</td><td class="dotted"><hr /></td><td class="dep-version">1.0.0</td></tr></table></div><div class="dependencies"><h3>dev dependencies</h3><table><tr><td class="dep-name">midje</td><td class="dotted"><hr /></td><td class="dep-version">1.3.0</td></tr><tr><td class="dep-name">lein-midje</td><td class="dotted"><hr /></td><td class="dep-version">1.0.8</td></tr></table></div></td><td class="codes" style="text-align: center; vertical-align: middle;color: #666;padding-right:20px"><br /><br /><br />(this space intentionally left almost blank)</td></tr><tr><td class="docs"><div class="toc"><a name="toc"><h3>namespaces</h3></a><ul><li><a href="#bcbio.align.ref">bcbio.align.ref</a></li><li><a href="#bcbio.align.reorder">bcbio.align.reorder</a></li><li><a href="#bcbio.run.broad">bcbio.run.broad</a></li><li><a href="#bcbio.run.itx">bcbio.run.itx</a></li><li><a href="#bcbio.variation.annotate.nbq">bcbio.variation.annotate.nbq</a></li><li><a href="#bcbio.variation.annotation">bcbio.variation.annotation</a></li><li><a href="#bcbio.variation.callable">bcbio.variation.callable</a></li><li><a href="#bcbio.variation.combine">bcbio.variation.combine</a></li><li><a href="#bcbio.variation.compare">bcbio.variation.compare</a></li><li><a href="#bcbio.variation.complex">bcbio.variation.complex</a></li><li><a href="#bcbio.variation.core">bcbio.variation.core</a></li><li><a href="#bcbio.variation.filter">bcbio.variation.filter</a></li><li><a href="#bcbio.variation.metrics">bcbio.variation.metrics</a></li><li><a href="#bcbio.variation.multiple">bcbio.variation.multiple</a></li><li><a href="#bcbio.variation.normalize">bcbio.variation.normalize</a></li><li><a href="#bcbio.variation.phasing">bcbio.variation.phasing</a></li><li><a href="#bcbio.variation.report">bcbio.variation.report</a></li><li><a href="#bcbio.variation.structural">bcbio.variation.structural</a></li><li><a href="#bcbio.variation.utils.background">bcbio.variation.utils.background</a></li><li><a href="#bcbio.variation.utils.cgmetrics">bcbio.variation.utils.cgmetrics</a></li><li><a href="#bcbio.variation.utils.popfreq">bcbio.variation.utils.popfreq</a></li><li><a href="#bcbio.variation.validate">bcbio.variation.validate</a></li><li><a href="#bcbio.variation.variantcontext">bcbio.variation.variantcontext</a></li><li><a href="#bcbio.variation.vcfwalker">bcbio.variation.vcfwalker</a></li><li><a href="#bcbio.variation.web.process">bcbio.variation.web.process</a></li><li><a href="#bcbio.variation.web.server">bcbio.variation.web.server</a></li><li><a href="#bcbio.variation.score">bcbio.variation.score</a></li></ul></div></td><td class="codes">&nbsp;</td></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#bcbio.align.ref" name="bcbio.align.ref"><h1 class="project-name">bcbio.align.ref</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>Deal with reference sequences for alignment and variant calling.</p>
 </td><td class="codes"><pre class="brush: clojure">(ns bcbio.align.ref
   (:import [org.broadinstitute.sting.gatk.datasources.reference ReferenceDataSource]
            [net.sf.picard.reference ReferenceSequenceFileFactory])
@@ -3128,47 +3128,7 @@ net.brehaut.ClojureTools = (function (SH) {
               out-file)
             bam-file))))))</pre></td></tr><tr><td class="docs">
 </td><td class="codes"><pre class="brush: clojure">(defn -main [bam-file ref-file sample-name]
-  (reorder-bam bam-file ref-file {} {:sample sample-name}))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#bcbio.itree" name="bcbio.itree"><h1 class="project-name">bcbio.itree</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>In-memory interval tree implementation for ranged value lookups.
-  From cgrand: http://clj-me.cgrand.net/2012/03/16/a-poor-mans-interval-tree/</p>
-</td><td class="codes"><pre class="brush: clojure">(ns bcbio.itree
-  (:use [clojure.set]))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(defn- interval-lt
-  [[a b] [c d]]
-  (boolean (and b c
-                (if (= a b)
-                  (neg? (compare b c))
-                  (&lt;= (compare b c) 0)))))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(defn- isplit-at [interval-map x]
-  (if x
-    (let [[[a b :as k] vs] (find interval-map [x x])]
-      (if (or (= a x) (= b x))
-        interval-map
-        (-&gt; interval-map (dissoc k) (assoc [a x] vs [x b] vs))))
-    interval-map))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(defn- ialter [interval-map from to f &amp; args]
-  (let [interval-map (-&gt; interval-map (isplit-at from) (isplit-at to))
-        kvs (for [[r vs]
-                  (cond 
-                    (and from to)
-                    (subseq interval-map &gt;= [from from] &lt; [to to])
-                    from
-                    (subseq interval-map &gt;= [from from])
-                    to
-                    (subseq interval-map &lt; [to to])
-                    :else
-                    interval-map)]
-              [r (apply f vs args)])]
-    (into interval-map kvs)))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(def empty-interval-map
-  (sorted-map-by interval-lt [nil nil] #{}))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(defn iassoc [interval-map from to v]
-  (ialter interval-map from to conj v))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(defn idissoc [interval-map from to v]
-  (ialter interval-map from to disj v))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(defn iget [interval-map x]
-  (get interval-map [x x]))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(defn iget-range [interval-map x y]
-  (apply union (map #(iget interval-map %) (range x y))))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#bcbio.run.broad" name="bcbio.run.broad"><h1 class="project-name">bcbio.run.broad</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>High level functions to run software from Broad: GATK, Picard</p>
+  (reorder-bam bam-file ref-file {} {:sample sample-name}))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#bcbio.run.broad" name="bcbio.run.broad"><h1 class="project-name">bcbio.run.broad</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>High level functions to run software from Broad: GATK, Picard</p>
 </td><td class="codes"><pre class="brush: clojure">(ns bcbio.run.broad
   (:import [org.broadinstitute.sting.gatk CommandLineGATK]
            [net.sf.samtools SAMFileReader SAMFileReader$ValidationStringency]
@@ -3182,9 +3142,9 @@ net.brehaut.ClojureTools = (function (SH) {
     (let [std-args [&quot;-T&quot; program]]
       (itx/with-tx-files [tx-file-info file-info (get map-info :out [])]
         (CommandLineGATK/start (CommandLineGATK.)
-                               (into-array (itx/subs-kw-files
-                                            (concat std-args args)
-                                            tx-file-info)))))))</pre></td></tr><tr><td class="docs"><p>Generate BAM index, skipping if already present.</p>
+                               (into-array (map str (itx/subs-kw-files
+                                                     (concat std-args args)
+                                                     tx-file-info))))))))</pre></td></tr><tr><td class="docs"><p>Generate BAM index, skipping if already present.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn index-bam
   [in-bam]
   (let [index-file (str in-bam &quot;.bai&quot;)]
@@ -3342,10 +3302,11 @@ partially finished output files if long-running processes fail.</p>
                 (format &quot;%.2f&quot;))}))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#bcbio.variation.annotation" name="bcbio.variation.annotation"><h1 class="project-name">bcbio.variation.annotation</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>Annotate variant calls with metrics for assessing false positives
   http://www.broadinstitute.org/gsa/wiki/index.php/VariantAnnotator</p>
 </td><td class="codes"><pre class="brush: clojure">(ns bcbio.variation.annotation
+  (:use [bcbio.variation.utils.cgmetrics :only [add-cgmetrics]])
   (:require [fs.core :as fs]
             [bcbio.run.itx :as itx]
             [bcbio.run.broad :as broad]))</pre></td></tr><tr><td class="docs"><p>Add GATK annotation metrics to variant calls.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn add-variant-annotations
+</td><td class="codes"><pre class="brush: clojure">(defn add-gatk-annotations
   [in-vcf align-bam ref &amp; {:keys [out-dir]}]
   {:pre [(not (nil? align-bam))]}
   (let [file-info {:out-vcf (itx/add-file-part in-vcf &quot;annotated&quot; out-dir)}
@@ -3361,7 +3322,18 @@ partially finished output files if long-running processes fail.</p>
                      (reduce #(concat %1 [&quot;-A&quot; %2]) [] annotations))]
     (broad/index-bam align-bam)
     (broad/run-gatk &quot;VariantAnnotator&quot; args file-info {:out [:out-vcf]})
-    (:out-vcf file-info)))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#bcbio.variation.callable" name="bcbio.variation.callable"><h1 class="project-name">bcbio.variation.callable</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>Identify callable bases from a BAM alignment file.
+    (:out-vcf file-info)))</pre></td></tr><tr><td class="docs"><p>Flexible addition of additions to a variant file.
+  Handles GATK annotations and Complete Genomics metrics.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn add-variant-annotations
+  [vcf-file bam-file ref-file call &amp; {:keys [out-dir]}]
+  (let [x (get call :annotate &quot;&quot;)
+        ann (if (true? x) &quot;gatk&quot; x)]
+    (cond
+     (and (= ann &quot;gatk&quot;) (not (nil? bam-file)))
+     (add-gatk-annotations vcf-file bam-file ref-file :out-dir out-dir)
+     (.contains ann &quot;masterVar&quot;)
+     (add-cgmetrics vcf-file ann ref-file :out-dir out-dir)
+     :else vcf-file)))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#bcbio.variation.callable" name="bcbio.variation.callable"><h1 class="project-name">bcbio.variation.callable</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>Identify callable bases from a BAM alignment file.
   Help differentiate positions where we can not assess variation</p>
 </td><td class="codes"><pre class="brush: clojure">(ns bcbio.variation.callable
   (:import [org.broad.tribble.bed BEDCodec]
@@ -3554,7 +3526,31 @@ partially finished output files if long-running processes fail.</p>
     (let [merged (combine-variants vcfs ref :merge-type :minimal :intervals intervals
                                    :out-dir out-dir)]
       (map (fn [[v b merge?]] (if merge? (merge-vcf v merged b ref) v))
-           (map vector vcfs align-bams do-merges)))))</pre></td></tr><tr><td class="docs"><p>Prepare call information for VCF comparisons by normalizing through GATK.
+           (map vector vcfs align-bams do-merges)))))</pre></td></tr><tr><td class="docs"><p>Prepare input file for comparisons based on configuration:
+    - Selecting a single sample from multi-sample files
+    - Resorting and fixing chromosome naming
+    - Removing reference call genotypes
+   This organizes the logic which get convoluted for different cases.
+   The approach is to select a single sample and remove refcalls if we have
+   a multiple sample file, so the sample name will be correct.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn- dirty-prep-work
+  [in-file call exp out-dir out-fname]
+  (letfn [(run-sample-select [in-file]
+            (select-by-sample (:sample exp) in-file (:name call)
+                              (get call :ref (:ref exp))
+                              :out-dir out-dir
+                              :remove-refcalls (get call :remove-refcalls false)))]
+    (let [sample-file (if (multiple-samples? in-file)
+                        (run-sample-select in-file)
+                        in-file)
+          prep-file (if (true? (:prep call))
+                      (prep-vcf sample-file (:ref exp) (:sample exp) :out-dir out-dir
+                                :out-fname out-fname :orig-ref-file (:ref call))
+                      sample-file)
+          noref-file (if (and (not (multiple-samples? in-file)) (:remove-refcalls call))
+                       (run-sample-select prep-file)
+                       prep-file)]
+      noref-file)))</pre></td></tr><tr><td class="docs"><p>Prepare call information for VCF comparisons by normalizing through GATK.
   Handles:</p>
 
 <ol>
@@ -3578,16 +3574,7 @@ partially finished output files if long-running processes fail.</p>
           merge-file (if (&gt; (count clean-files) 1)
                        (merge-call-files call clean-files)
                        (first clean-files))
-          sample-file (if (or (multiple-samples? merge-file) (:remove-refcalls call))
-                        (select-by-sample (:sample exp) merge-file (:name call)
-                                          (get call :ref (:ref exp))
-                                          :out-dir out-dir
-                                          :remove-refcalls (get call :remove-refcalls false))
-                        merge-file)
-          prep-file (if (true? (:prep call))
-                      (prep-vcf sample-file (:ref exp) (:sample exp) :out-dir out-dir
-                                :out-fname out-fname :orig-ref-file (:ref call))
-                      sample-file)]
+          prep-file (dirty-prep-work merge-file call exp out-dir out-fname)]
       (assoc call :file (if (true? (get call :normalize true))
                           (normalize-variants prep-file (:ref exp) out-dir
                                               :out-fname out-fname)
@@ -3618,6 +3605,7 @@ partially finished output files if long-running processes fail.</p>
         [bcbio.variation.phasing :only [is-haploid? compare-two-vcf-phased]]
         [bcbio.variation.callable :only [get-callable-bed]]
         [bcbio.variation.multiple :only [prep-cmp-name-lookup pipeline-compare-multiple]]
+        [bcbio.variation.validate :only [pipeline-validate]]
         [bcbio.align.reorder :only [reorder-bam]]
         [ordered.map :only [ordered-map]]
         [clojure.math.combinatorics :only [combinations]]
@@ -3723,12 +3711,11 @@ differences for tweaking filters.</p>
         all-intervals (remove nil? (map :intervals (cons exp (:calls exp))))
         merged-vcfs (create-merged (map :file start-vcfs)
                                    align-bams
-                                   (map #(get % :refcalls true) (:calls exp))
-                                   (:ref exp) :out-dir out-dir 
+                                   (map #(get % :refcalls false) (:calls exp))
+                                   (:ref exp) :out-dir out-dir
                                    :intervals all-intervals)
-        ann-vcfs (map (fn [[v b c]] (if (get c :annotate false)
-                                        (add-variant-annotations v b (:ref exp) :out-dir out-dir)
-                                        v))
+        ann-vcfs (map (fn [[v b c]]
+                        (add-variant-annotations v b (:ref exp) c :out-dir out-dir))
                       (map vector merged-vcfs align-bams (:calls exp)))
         filter-vcfs (map (fn [[v c]] (if-not (nil? (:filters c))
                                        (variant-filter v (:filters c) (:ref exp))
@@ -3772,24 +3759,36 @@ differences for tweaking filters.</p>
       (compare-two-vcf-phased (first (get phased-vcfs false))
                               (first (get phased-vcfs true))
                               exp config)
-      (compare-two-vcf-standard c1 c2 exp config))))</pre></td></tr><tr><td class="docs"><p>Finalize all comparisons with finished initial pass data.</p>
+      (compare-two-vcf-standard c1 c2 exp config))))</pre></td></tr><tr><td class="docs"><h2>Customizable finalizer comparisons</h2>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>Run a post-pairwise comparison function, returning updated comparison details,</p>
+</td><td class="codes"><pre class="brush: clojure">(defmulti run-finalizer
+  (fn [cmps finalizer exp config] (-&gt; finalizer :method keyword)))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defmethod run-finalizer :recal-filter
+  [&amp; args]
+  (apply pipeline-recalibration args))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defmethod run-finalizer :multiple
+  [&amp; args]
+  (apply pipeline-compare-multiple args))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defmethod run-finalizer :validate
+  [&amp; args]
+  (apply pipeline-validate args))</pre></td></tr><tr><td class="docs"><p>Finalize all comparisons with finished initial pass data.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn finalize-comparisons
   [cmps exp config]
-  (let [finalize-fns {&quot;recal-filter&quot; pipeline-recalibration
-                      &quot;multiple&quot; pipeline-compare-multiple}
-        cmps-by-name (prep-cmp-name-lookup cmps)]
-    (letfn [(add-summary [x]
-              (-&gt; x
-                  (assoc :exp exp)
-                  (#(assoc % :summary (top-level-metrics %)))))
-            (update-w-finalizer [cur-cmps finalizer]
-              &quot;Update the current comparisons with a defined finalizer.&quot;
-              (let [updated-cmp ((get finalize-fns (:method finalizer))
-                                 cmps-by-name finalizer exp config)]
-                (assoc cur-cmps (map #(get-in updated-cmp [% :name]) [:c1 :c2])
-                       (if-not (:re-compare updated-cmp) updated-cmp
-                               (compare-two-vcf (:c1 updated-cmp) (:c2 updated-cmp) exp config)))))]
-      (map add-summary (vals (reduce update-w-finalizer cmps-by-name (:finalize exp)))))))</pre></td></tr><tr><td class="docs"><p>Load configuration file, handling conversion of relative to absolute paths.</p>
+  (letfn [(add-summary [x]
+            (-&gt; x
+                (assoc :exp exp)
+                (#(assoc % :summary (top-level-metrics %)))))
+          (update-w-finalizer [cur-cmps finalizer]
+            &quot;Update the current comparisons with a defined finalizer.&quot;
+            (let [updated-cmp (run-finalizer cur-cmps finalizer exp config)]
+              (assoc cur-cmps (map #(get-in updated-cmp [% :name]) [:c1 :c2])
+                     (if-not (:re-compare updated-cmp) updated-cmp
+                             (compare-two-vcf (:c1 updated-cmp) (:c2 updated-cmp) exp config)))))]
+    (-&gt;&gt; (reduce update-w-finalizer
+                 (prep-cmp-name-lookup cmps) (:finalize exp))
+         vals
+         (map add-summary))))</pre></td></tr><tr><td class="docs"><h2>Top-level</h2>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>Load configuration file, handling conversion of relative to absolute paths.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn load-config
   [config-file]
   (let [config (-&gt; config-file slurp yaml/parse-string)
@@ -3797,16 +3796,17 @@ differences for tweaking filters.</p>
         to-process #{[:dir :out] [:dir :prep]
                      [:experiments :ref] [:experiments :intervals]
                      [:experiments :align] [:experiments :calls :file]
-                     [:experiments :calls :align]}]
+                     [:experiments :calls :align] [:experiments :calls :annotate]}]
     (letfn [(make-absolute [x]
               (if (.isAbsolute (file x))
                 x
                 (str (fs/file base-dir x))))
             (maybe-process [val path]
               (if (contains? to-process path)
-                (if (seq? val)
-                  (map make-absolute val)
-                  (make-absolute val))
+                (cond
+                 (seq? val) (map make-absolute val)
+                 (string? val) (make-absolute val)
+                 :else val)
                 val))
             (update-tree [config path]
               (cond (map? config)
@@ -4006,20 +4006,23 @@ differences for tweaking filters.</p>
         [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template
                                                get-vcf-source]])
   (:require [bcbio.run.broad :as broad]
-            [bcbio.run.itx :as itx]))</pre></td></tr><tr><td class="docs"><p>Perform hard variant filtering with supplied JEXL expression criteria.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn variant-filter
-  [in-vcf jexl-filters ref]
+            [bcbio.run.itx :as itx]))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn jexl-from-config [jexl-filters]
+  &quot;Retrieve GATK JEXL commandline expressions from filters.&quot;
   (letfn [(jexl-args [x]
             [&quot;--filterName&quot; (str (first (split x #&quot;\s+&quot;)) &quot;Filter&quot;)
              &quot;--filterExpression&quot; x])]
-    (let [file-info {:out-vcf (itx/add-file-part in-vcf &quot;filter&quot;)}
-          args (concat [&quot;-R&quot; ref
-                        &quot;--variant&quot; in-vcf
-                        &quot;-o&quot; :out-vcf
-                        &quot;-l&quot; &quot;ERROR&quot;]
-                       (flatten (map jexl-args jexl-filters)))]
-      (broad/run-gatk &quot;VariantFiltration&quot; args file-info {:out [:out-vcf]})
-      (:out-vcf file-info))))</pre></td></tr><tr><td class="docs"><p>Perform the variant recalibration step with input training VCF files.
+    (flatten (map jexl-args jexl-filters))))</pre></td></tr><tr><td class="docs"><p>Perform hard variant filtering with supplied JEXL expression criteria.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn variant-filter
+  [in-vcf jexl-filters ref]
+  (let [file-info {:out-vcf (itx/add-file-part in-vcf &quot;filter&quot;)}
+        args (concat [&quot;-R&quot; ref
+                      &quot;--variant&quot; in-vcf
+                      &quot;-o&quot; :out-vcf
+                      &quot;-l&quot; &quot;ERROR&quot;]
+                      (jexl-from-config jexl-filters))]
+    (broad/run-gatk &quot;VariantFiltration&quot; args file-info {:out [:out-vcf]})
+    (:out-vcf file-info)))</pre></td></tr><tr><td class="docs"><p>Perform the variant recalibration step with input training VCF files.
   training-vcfs is a list of <code>{:file vcf-file :name name-to-use :prior probability}</code></p>
 </td><td class="codes"><pre class="brush: clojure">(defn- variant-recalibration
   [in-vcf training-vcfs annotations ref]
@@ -4037,9 +4040,11 @@ differences for tweaking filters.</p>
                       &quot;--mode&quot; &quot;BOTH&quot;]
                      (flatten (map (fn [x] [&quot;-an&quot; x]) annotations))
                      (flatten (map (fn [x] [(str &quot;-resource:&quot; (:name x)
-                                                 &quot;,known=true,training=true,&quot;
-                                                 &quot;truth=&quot; (:truth x)
-                                                 &quot;,prior=&quot; (:prior x))
+                                                 &quot;,known=true&quot;
+                                                 &quot;,training=true&quot;
+                                                 &quot;,truth=&quot; (:truth x)
+                                                 &quot;,prior=&quot; (:prior x)
+                                                 &quot;,bad=&quot; (:bad x))
                                             (:file x)])
                                    training-vcfs)))]
     (broad/run-gatk &quot;VariantRecalibrator&quot; args file-info {:out [:out-recal :out-tranch]})
@@ -4078,36 +4083,44 @@ differences for tweaking filters.</p>
    - Support specified and a specific comparison pair
    - Support specified as a single target: use target versus all comparison</p>
 </td><td class="codes"><pre class="brush: clojure">(defn- get-train-info
-  [cmps-by-name finalizer config]
-  (let [support (get finalizer :support (:target finalizer))
-        support-vcfs (if (coll? support)
+  [cmps-by-name support config]
+  (let [support-vcfs (if (coll? support)
                        (take 2 (-&gt; cmps-by-name (get support) :c-files vals))
                        (let [x (multiple-overlap-analysis cmps-by-name config support)]
                          [(:true-positives x) (:false-positives x)]))]
       [{:file (first support-vcfs)
         :name &quot;concordant&quot;
         :truth &quot;true&quot;
+        :bad &quot;false&quot;
         :prior 10.0}
        {:file (second support-vcfs)
         :name &quot;discordant&quot;
         :truth &quot;false&quot;
+        :bad &quot;true&quot;
         :prior 10.0}]))</pre></td></tr><tr><td class="docs"><p>Perform variant recalibration and filtration as part of processing pipeline.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn pipeline-recalibration
   [cmps-by-name finalizer exp config]
-  (let [target (get cmps-by-name (:target finalizer))
-        in-vcf (remove-cur-filters (-&gt; target :c1 :file) (:ref exp))
-        hard-filters (get-in finalizer [:params :filters])
-        anns (get-in finalizer [:params :annotations])
-        train-info (get-train-info cmps-by-name finalizer config)]
-    (-&gt; target
-        (assoc-in [:c1 :file] (-&gt; in-vcf
-                                  (#(if-not anns % (variant-recal-filter % train-info
-                                                                         anns (:ref exp))))
-                                  (#(if-not hard-filters % (variant-filter % hard-filters
-                                                                           (:ref exp))))))
-        (#(assoc-in % [:c1 :name] (format &quot;%s-%s&quot; (get-in % [:c1 :name]) &quot;recal&quot;)))
-        (assoc-in [:c1 :mod] &quot;recal&quot;)
-        (assoc :re-compare true))))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#bcbio.variation.metrics" name="bcbio.variation.metrics"><h1 class="project-name">bcbio.variation.metrics</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>Accumulate and analyze metrics associated with each variant.
+  (let [init-target (get cmps-by-name (:target finalizer))
+        all-params (let [x (:params finalizer)] (if (map? x) [x] x))]
+    (reduce (fn [target [params fkey]]
+              (let [in-vcf (remove-cur-filters (-&gt; target fkey :file) (:ref exp))
+                    hard-filters (:filters params)
+                    anns (:annotations params)
+                    train-info (get-train-info cmps-by-name
+                                               (get params :support (:target finalizer))
+                                               config)]
+                (-&gt; target
+                    (assoc-in [fkey :file] (-&gt; in-vcf
+                                               (#(if-not anns %
+                                                         (variant-recal-filter % train-info
+                                                                               anns (:ref exp))))
+                                               (#(if-not hard-filters %
+                                                         (variant-filter % hard-filters
+                                                                         (:ref exp))))))
+                    (#(assoc-in % [fkey :name] (format &quot;%s-%s&quot; (get-in % [fkey :name]) &quot;recal&quot;)))
+                    (assoc-in [fkey :mod] &quot;recal&quot;)
+                    (assoc :re-compare true))))
+            init-target (map vector all-params [:c1 :c2]))))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#bcbio.variation.metrics" name="bcbio.variation.metrics"><h1 class="project-name">bcbio.variation.metrics</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>Accumulate and analyze metrics associated with each variant.
    This provides summaries intended to identify characteristic
    metrics to use for filtering.</p>
 </td><td class="codes"><pre class="brush: clojure">(ns bcbio.variation.metrics
@@ -4274,6 +4287,7 @@ classification.</p>
   High level API to consolidate pairwise variant comparisons.</p>
 </td><td class="codes"><pre class="brush: clojure">(ns bcbio.variation.multiple
   (:use [ordered.map :only [ordered-map]]
+        [bcbio.variation.annotation :only [add-variant-annotations]]
         [bcbio.variation.combine :only [combine-variants]]
         [bcbio.variation.metrics :only [nonref-passes-filter?]]
         [bcbio.variation.variantcontext :only [parse-vcf get-vcf-retriever
@@ -4281,15 +4295,31 @@ classification.</p>
   (:require [clojure.string :as string]
             [fs.core :as fs]
             [bcbio.run.itx :as itx]
-            [bcbio.run.broad :as broad]))</pre></td></tr><tr><td class="docs"><p>Lookup map of comparisons by method names.</p>
+            [bcbio.run.broad :as broad]))</pre></td></tr><tr><td class="docs"><h2>Utility functions</h2>
+</td><td class="codes"></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn- remove-mod-name [x &amp; {:keys [mods] :or {mods [&quot;recal&quot;]}}]
+  &quot;Removes modification names from an approach name.&quot;
+  (reduce (fn [final mod]
+            (string/replace final (str &quot;-&quot; mod) ))
+          x mods))</pre></td></tr><tr><td class="docs"><p>Lookup map of comparisons by method names.
+   - ignore: a list of method names to ignore when creating the lookup map.
+   - remove-mods?: Flag to remove naming modifications. This
+                   will replace original comparisons with recalibrated.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn prep-cmp-name-lookup
-  [cmps &amp; {:keys [ignore] :or {ignore #{}}}]
+  [cmps &amp; {:keys [ignore remove-mods?] :or {ignore #{}}}]
   (reduce (fn [m x]
-            (let [names [(-&gt; x :c1 :name) (-&gt; x :c2 :name)]]
+            (let [cmps [:c1 :c2]
+                  names (map #(let [n (get-in x [% :name])]
+                                (if-not remove-mods? n
+                                        (remove-mod-name n :mods [(get-in x [% :mod])])))
+                             cmps)]
               (if (some #(contains? ignore %) names) m
                   (assoc m names x))))
           (ordered-map)
-          cmps))</pre></td></tr><tr><td class="docs"><p>Select samples based on name of a 'set' from CombineVariants.</p>
+          cmps))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn- not-target? [target-name xs]
+  (not (contains? (set (map remove-mod-name xs)) target-name)))</pre></td></tr><tr><td class="docs"><h2>Prepare multi-overlap sets</h2>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>Select samples based on name of a 'set' from CombineVariants.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn- select-variant-by-set
   [vcf-in ref set-name &amp; {:keys [out-dir]}]
   (let [file-info {:out-vcf (itx/add-file-part vcf-in set-name out-dir)}
@@ -4308,8 +4338,6 @@ classification.</p>
                                    m))
                                (ordered-map) cmps-by-name)
         ref (-&gt; cmps-by-name vals first :exp :ref)
-        out-dir (str (fs/file (get-in config [:dir :prep] (get-in config [:dir :out]))
-                              &quot;multiple&quot;))
         union-vcf (combine-variants (keys concordant-map) ref :merge-type :full :out-dir out-dir
                                     :name-map concordant-map :base-ext base-ext)]
     {:union union-vcf
@@ -4323,8 +4351,9 @@ classification.</p>
           (get-shared-discordant [xs fetch]
             (let [pass-and-shared? (check-shared fetch)]
               (map :vc (filter pass-and-shared? xs))))]
-    (let [disc-vcfs (map (fn [v] (get (:c-files v) (format &quot;%s-discordant&quot; target-name)))
-                         (vals target-cmps))
+    (let [disc-vcfs (remove nil? (map (fn [v]
+                                        (get (:c-files v) (format &quot;%s-discordant&quot; target-name)))
+                                      (vals target-cmps)))
           disc-vcf (-&gt; (combine-variants disc-vcfs ref :merge-type :full :out-dir out-dir
                                          :base-ext (format &quot;dis%s&quot; target-name))
                        (select-variant-by-set ref &quot;Intersection&quot;))
@@ -4337,24 +4366,22 @@ classification.</p>
                                 ref)))
       out-file)))</pre></td></tr><tr><td class="docs"><p>Create files of false negatives and positives from target-name.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn- gen-target-problems
-  [target-name cmps-by-name true-p-vcf out-dir config]
-  (letfn [(not-target? [x]
-            (not (contains? (set x) target-name)))]
-    (let [ref (-&gt; cmps-by-name vals first :exp :ref)
-          notarget-concordant (gen-all-concordant cmps-by-name out-dir config
-                                                  :do-include? not-target?
-                                                  :base-ext (format &quot;multino%s&quot; target-name))]
-      {:false-negatives
-       (-&gt; (combine-variants [true-p-vcf (:intersection notarget-concordant)]
-                             ref :merge-type :full :out-dir out-dir
-                             :name-map {true-p-vcf &quot;truep&quot;
-                                        (:intersection notarget-concordant) target-name}
-                             :base-ext (format &quot;multiall-no%s&quot; target-name))
-           (select-variant-by-set ref target-name))
-       :false-positives (gen-target-fps (remove #(not-target? (first %))
-                                                cmps-by-name)
-                                        target-name (:union notarget-concordant)
-                                        ref out-dir)})))</pre></td></tr><tr><td class="docs"><p>Provide high level concordance overlap comparisons for multiple call approaches.
+  [target-name target-call cmps-by-name true-p-vcf ref out-dir config]
+  (let [notarget-concordant (gen-all-concordant cmps-by-name out-dir config
+                                                :do-include? (partial not-target? target-name)
+                                                :base-ext (format &quot;multino%s&quot; target-name))]
+    {:false-negatives
+     (-&gt; (combine-variants [true-p-vcf (:intersection notarget-concordant)]
+                           ref :merge-type :full :out-dir out-dir
+                           :name-map {true-p-vcf &quot;truep&quot;
+                                      (:intersection notarget-concordant) target-name}
+                           :base-ext (format &quot;multiall-no%s&quot; target-name))
+         (select-variant-by-set ref target-name)
+         (add-variant-annotations (:align target-call) ref target-call :out-dir out-dir))
+     :false-positives (gen-target-fps (remove #(not-target? target-name (first %))
+                                              cmps-by-name)
+                                      target-name (:union notarget-concordant)
+                                      ref out-dir)}))</pre></td></tr><tr><td class="docs"><p>Provide high level concordance overlap comparisons for multiple call approaches.
   Organizes relative to the given target name generating:
    - VCF of calls concordant in all methods: intersection of all concordant calls.
      These are true positives.
@@ -4365,15 +4392,27 @@ classification.</p>
      methods. We restrict to shared calls to avoid penalizing unique calls.
      These are false positives.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn multiple-overlap-analysis
-  [cmps config target-name]
-  (let [cmps-by-name (if-not (map? cmps) (prep-cmp-name-lookup cmps :ignore #{&quot;all&quot;}) cmps)
+  [cmps config target-name &amp; {:keys [dirname] :or {dirname &quot;multiple&quot;}}]
+  (let [cmps-by-name (if (map? cmps) cmps
+                         (prep-cmp-name-lookup cmps :ignore #{&quot;all&quot; &quot;validate&quot;}))
         out-dir (str (fs/file (get-in config [:dir :prep] (get-in config [:dir :out]))
-                              &quot;multiple&quot;))]
+                              dirname))
+        ref (-&gt; cmps-by-name vals first :exp :ref)
+        target-call (-&gt;&gt; cmps-by-name
+                         (remove #(not-target? target-name (first %)))
+                         first
+                         second
+                         ((juxt :c1 :c2))
+                         (filter #(= (remove-mod-name (:name %)) target-name))
+                         first)]
     (when-not (fs/exists? out-dir)
       (fs/mkdirs out-dir))
-    (let [true-p-vcf (:intersection (gen-all-concordant cmps-by-name out-dir config))
-          target-problems (gen-target-problems target-name cmps-by-name true-p-vcf
-                                               out-dir config)]
+    (let [true-p-vcf (-&gt; (gen-all-concordant cmps-by-name out-dir config)
+                         :intersection
+                         (add-variant-annotations (:align target-call) ref target-call
+                                                  :out-dir out-dir))
+          target-problems (gen-target-problems target-name target-call cmps-by-name
+                                               true-p-vcf ref out-dir config)]
       (ordered-map :true-positives true-p-vcf
                    :false-negatives (:false-negatives target-problems)
                    :false-positives (:false-positives target-problems)))))</pre></td></tr><tr><td class="docs"><p>Perform high level pipeline comparison of a target with multiple experiments.</p>
@@ -4684,18 +4723,23 @@ keyed on the organism name. Currently only a human GRCh37 remap.</p>
   [vc ref-vcs]
   {:pre [(every? #(= 1 (count (-&gt; % :genotypes first :alleles))) ref-vcs)
          (= 1 (count (:genotypes vc)))]}
-  (highest-count
-   (map #(.indexOf (get-alleles vc) (-&gt; % get-alleles first)) ref-vcs)))</pre></td></tr><tr><td class="docs"><p>Compare the haploid allele of a variant against the reference call.</p>
+  (if (empty? ref-vcs)
+    (.indexOf (get-alleles vc) (:ref-allele vc))
+    (highest-count
+     (map #(.indexOf (get-alleles vc) (-&gt; % get-alleles first)) ref-vcs))))</pre></td></tr><tr><td class="docs"><p>Compare the haploid allele of a variant against the reference call.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn cmp-allele-to-ref
   [vc ref-vcs i]
   {:pre [(= 2 (count (get-alleles vc)))]}
-  (let [ref-alleles (set (map #(-&gt; % get-alleles first) ref-vcs))
-        call-hap (nth (get-alleles vc) i)]
-    (cond
-     (empty? ref-alleles) :discordant
-     (contains? ref-alleles call-hap) :concordant
-     (some (partial contains? ref-alleles) (get-alleles vc)) :phasing-error
-     :else :discordant)))</pre></td></tr><tr><td class="docs"><p>Retrieve the type of a set of variants involved in a comparison.</p>
+  (letfn [(is-ref-allele? [x]
+            (= (.getBaseString x) (-&gt; vc :ref-allele .getBaseString)))]
+    (let [ref-alleles (set (map #(-&gt; % get-alleles first) ref-vcs))
+          call-hap (nth (get-alleles vc) i)]
+      (cond
+       (and (empty? ref-alleles) (is-ref-allele? call-hap)) :ref-concordant
+       (empty? ref-alleles) :discordant
+       (contains? ref-alleles call-hap) :concordant
+       (some (partial contains? ref-alleles) (get-alleles vc)) :phasing-error
+       :else :discordant))))</pre></td></tr><tr><td class="docs"><p>Retrieve the type of a set of variants involved in a comparison.</p>
 
 <ul>
 <li><code>:indel</code> -- insertions or deletions of more than 1bp</li>
@@ -4755,7 +4799,8 @@ keyed on the organism name. Currently only a human GRCh37 remap.</p>
     (if-not (fs/exists? base-dir)
       (fs/mkdirs base-dir))
     (write-vcf-w-template (:file base-info) out-files
-                          (map (juxt :comparison :vc) (flatten vc-info))
+                          (map (juxt :comparison :vc)
+                               (remove #(= :ref-concordant (:comparison %)) (flatten vc-info)))
                           ref)
     out-files))</pre></td></tr><tr><td class="docs"><p>Provide counts for comparison: entire region plus user specified regions</p>
 </td><td class="codes"><pre class="brush: clojure">(defn count-comparison-bases
@@ -4787,7 +4832,7 @@ keyed on the organism name. Currently only a human GRCh37 remap.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn- get-phasing-metrics
   [vc-info exp-interval-file call-interval-file ref-file]
   (letfn [(count-nomatch-het-alt [xs]
-            (count (filter #(and (= (:comparison %) :concordant)
+            (count (filter #(and (contains? #{:concordant :ref-concordant} (:comparison %))
                                  (:nomatch-het-alt %))
                            (flatten vc-info))))
           (blank-count-dict []
@@ -4800,6 +4845,7 @@ keyed on the organism name. Currently only a human GRCh37 remap.</p>
              :total-bases (count-comparison-bases exp-interval-file call-interval-file ref-file)
              :nonmatch-het-alt (count-nomatch-het-alt vc-info)
              :concordant (blank-count-dict)
+             :ref-concordant (blank-count-dict)
              :discordant (blank-count-dict)
              :phasing-error (blank-count-dict)}
             (flatten vc-info))))</pre></td></tr><tr><td class="docs"><p>Compare two VCF files including phasing with a haplotype reference.</p>
@@ -4921,9 +4967,10 @@ keyed on the organism name. Currently only a human GRCh37 remap.</p>
              :nonref_concordant (count-variants (first c-files) ref-file
                                                 nonref-passes-filter?)
              :discordant1 (all-vrn-counts (second c-files) :c2 compared)
-             :discordant2 (all-vrn-counts (nth c-files 2) :c1 compared)
-             :discordant_both (apply discordance-metrics (conj (vec (rest c-files))
-                                                               ref-file)))]
+             :discordant2 (when (&gt; (count c-files) 2) (all-vrn-counts (nth c-files 2) :c1 compared))
+             :discordant_both (when (&gt; (count c-files) 2)
+                                (apply discordance-metrics (conj (vec (rest c-files))
+                                                                 ref-file))))]
         (if-not (= sum-level :full) base
             (assoc base
               :ml_metrics (ml-on-vcf-metrics ref-file (take 2 c-files))))))))</pre></td></tr><tr><td class="docs"><p>Calculate an overall accuracy score from input metrics.
@@ -5007,22 +5054,24 @@ keyed on the organism name. Currently only a human GRCh37 remap.</p>
             (sort-by :count &gt;
                      (map (fn [[m c]] {:metric m :count c}) (get-metric-counts in-vcf))))]
     (.write wrtr &quot;** GATK recalibration filter metrics\n&quot;)
-    (.write wrtr (str (doric/table [:metric :count]
-                                   (get-recal-metrics (get-in cmp-info [:c1 :file])))
-                      &quot;\n&quot;))))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#bcbio.variation.structural" name="bcbio.variation.structural"><h1 class="project-name">bcbio.variation.structural</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>Handle structural variations for larger insertions, deletions and
+    (doseq [call (map (partial get cmp-info) [:c1 :c2])]
+      (when (= (:mod call) &quot;recal&quot;)
+        (.write wrtr (str (doric/table [:metric :count]
+                                       (get-recal-metrics (:file call)))
+                          &quot;\n&quot;))))))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#bcbio.variation.structural" name="bcbio.variation.structural"><h1 class="project-name">bcbio.variation.structural</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>Handle structural variations for larger insertions, deletions and
   genome rearrangements.</p>
 </td><td class="codes"><pre class="brush: clojure">(ns bcbio.variation.structural
   (:import [org.broadinstitute.sting.utils.codecs.vcf VCFCodec]
            [org.broadinstitute.sting.utils.variantcontext VariantContextBuilder
             Allele]
-           [java.io StringReader])
+           [java.io StringReader]
+           [net.sf.picard.util IntervalTree])
   (:use [bcbio.variation.variantcontext :only [get-vcf-source parse-vcf
                                                from-vc write-vcf-w-template]]
         [bcbio.variation.callable :only [get-bed-source]])
   (:require [clojure.string :as string]
             [fs.core :as fs]
-            [bcbio.run.itx :as itx]
-            [bcbio.itree :as itree]))</pre></td></tr><tr><td class="docs"><p>Determine the type of a structural variant. Expected types are:</p>
+            [bcbio.run.itx :as itx]))</pre></td></tr><tr><td class="docs"><p>Determine the type of a structural variant. Expected types are:</p>
 
 <pre><code>- DEL: Deletion
 - INS: Insertion
@@ -5079,14 +5128,16 @@ keyed on the organism name. Currently only a human GRCh37 remap.</p>
           (when-let [vc (proxy-super decode work-line)]
             vc))))))</pre></td></tr><tr><td class="docs"><p>Retrieve normalized integer values from an attribute.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn value-from-attr
-  [vc attr-name attr-index]
-  (-&gt; vc
-      :attributes
-      (get attr-name (repeat (inc attr-index) &quot;0&quot;))
-      (#(if (string? %) [%] %))
-      (nth attr-index)
-      (Integer/parseInt)
-      Math/abs))</pre></td></tr><tr><td class="docs"><p>Parse VCF file returning structural variants with confidence intervals.
+  ([vc attr-name]
+     (value-from-attr vc attr-name 0))
+  ([vc attr-name attr-index]
+      (-&gt; vc
+          :attributes
+          (get attr-name (repeat (inc attr-index) &quot;0&quot;))
+          (#(if (string? %) [%] %))
+          (nth attr-index)
+          (Integer/parseInt)
+          Math/abs)))</pre></td></tr><tr><td class="docs"><p>Parse VCF file returning structural variants with confidence intervals.
   The :out-format keyword specifies how to return the parsed structural variants:
    - :itree -- Interval tree for variant lookup by chromosome and start/end.
    - default -- List of variants (non-lazy).</p>
@@ -5103,9 +5154,10 @@ keyed on the organism name. Currently only a human GRCh37 remap.</p>
                   (assoc :end-ci (+ (:end cur-vc) (end-adjust cur-vc)))
                   (assoc :sv-type sv-type))))
           (prep-itree [vc-iter]
-            (reduce (fn [coll vc] (assoc coll (:chr vc)
-                                         (itree/iassoc (get coll (:chr vc) itree/empty-interval-map)
-                                                       (:start-ci vc) (:end-ci vc) vc)))
+            (reduce (fn [coll vc]
+                      (assoc coll (:chr vc)
+                             (doto (get coll (:chr vc) (IntervalTree.))
+                               (.put (:start-ci vc) (inc (:end-ci vc)) vc))))
                     {} vc-iter))
           (in-intervals? [bed-source vc]
             (or (instance? StringReader bed-source)
@@ -5118,47 +5170,91 @@ keyed on the organism name. Currently only a human GRCh37 remap.</p>
         (case out-format
           :itree (prep-itree vs-iter)
           (vec vs-iter))))))</pre></td></tr><tr><td class="docs"><h2>Concordance checking</h2>
-</td><td class="codes"></td></tr><tr><td class="docs"><p>Retrieve the coordinates of a variant context with confidence intervals.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn- coords-with-ci
-  [s e vc]
+</td><td class="codes"></td></tr><tr><td class="docs"><p>Retrieve start and end with confidence intervals for a variation.
+  length-fn returns the length of the item or a string for well-known items.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn get-ci-start-end
+  [vc length-fn]
   (letfn [(get-ci-range [orig attr]
             [(- orig (value-from-attr vc attr 0))
              (+ orig (value-from-attr vc attr 1))])]
-    [(get-ci-range s &quot;CIPOS&quot;)
-     (get-ci-range e &quot;CIEND&quot;)]))</pre></td></tr><tr><td class="docs"><p>Check if coordinates from two structural variants overlap.
+    (let [start (:start vc)
+          length (length-fn vc)
+          end (if (string? length) length
+                  (max (+ start length) (:end vc)))]
+      [(get-ci-range start &quot;CIPOS&quot;)
+       (if (string? end) end
+           (get-ci-range end &quot;CIEND&quot;))])))</pre></td></tr><tr><td class="docs"><p>Check if coordinates from two structural variants overlap.
   Considered an overlap if the two confidence intervals
   have shared bases.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn sv-ends-overlap?
+</td><td class="codes"><pre class="brush: clojure">(defmulti sv-ends-overlap?
+  (fn [[end1 end2]] (type end1)))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defmethod sv-ends-overlap? clojure.lang.PersistentVector
   [[[s1 e1] [s2 e2]]]
   (or (and (&gt;= s2 s1) (&lt;= s2 e1))
-      (and (&gt;= e2 s1) (&lt;= e2 e1))))</pre></td></tr><tr><td class="docs"><p>Check for concordance of large deletion variants.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn sv-del-concordant?
-  [sv1 sv2]
-  (letfn [(get-start-end [x]
-            (let [start (:start x)
-                  end (max (+ start (value-from-attr x &quot;SVLEN&quot; 0))
-                           (:end x))]
-              (coords-with-ci start end x)))]
+      (and (&gt;= e2 s1) (&lt;= e2 e1))))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defmethod sv-ends-overlap? java.lang.String
+  [[end1 end2]]
+  (= end1 end2))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn- length-from-svlen [x] (value-from-attr x &quot;SVLEN&quot;))</pre></td></tr><tr><td class="docs"><p>Length of insertion variation, handling ALT allele, INSEQ
+  and well-known named insertions.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn- insertion-length
+  [x]
+  (letfn [(get-insseq [x]
+            (-&gt; x :attributes (get &quot;INSSEQ&quot;)))
+          (length-by-insert-name [alt-allele]
+            (cond
+             (.startsWith alt-allele &quot;&lt;INS:ME:&quot;) (-&gt; alt-allele
+                                                     (subs 1 (dec (count alt-allele)))
+                                                     (string/split #&quot;:&quot;)
+                                                     last)
+             :else (throw (Exception. (str &quot;Unknown insert allele&quot; alt-allele)))))
+          (get-allele-insert [x]
+            (let [alt-allele (-&gt; x :alt-alleles first .getDisplayString)]
+              (if (.startsWith alt-allele &quot;&lt;&quot;)
+                (length-by-insert-name alt-allele)
+                (dec (count alt-allele)))))]
+    (if-let [seq (get-insseq x)]
+      (count seq)
+      (get-allele-insert x))))</pre></td></tr><tr><td class="docs"><p>Length of duplication variation, handling SVLEN and END.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn- duplication-length
+  [x]
+  (max (length-from-svlen x)
+       (- (value-from-attr x &quot;END&quot;) (:start x))))</pre></td></tr><tr><td class="docs"><p>Check for concordance of variants based on reported length:
+  handles deletions, inversions. insertions and duplications.
+  length-fn is a custom function to retrieve the variation length.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn sv-len-concordant?
+  [sv1 sv2 length-fn]
+  (letfn []
     (every? sv-ends-overlap?
-            (partition 2 (interleave (get-start-end sv1) (get-start-end sv2))))))</pre></td></tr><tr><td class="docs"><p>Check if structural variants are concordant.</p>
+            (partition 2 (interleave (get-ci-start-end sv1 length-fn)
+                                     (get-ci-start-end sv2 length-fn))))))</pre></td></tr><tr><td class="docs"><p>Check if structural variants are concordant.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn sv-concordant?
   [sv1 sv2]
   (and (apply = (map :sv-type [sv1 sv2]))
        (case (:sv-type sv1)
-         :DEL (sv-del-concordant? sv1 sv2)
-         :INS true
-         :INV true
-         :DUP true
+         :DEL (sv-len-concordant? sv1 sv2 length-from-svlen)
+         :INS (sv-len-concordant? sv1 sv2 insertion-length)
+         :INV (sv-len-concordant? sv1 sv2 length-from-svlen)
+         :DUP (sv-len-concordant? sv1 sv2 duplication-length)
          :BND true
-         (throw (Exception. (str &quot;Structural variant type not handled: &quot; (:sv-type sv1)))))))</pre></td></tr><tr><td class="docs"><p>Compare two structural variant files, returning variant contexts keyed by concordance.</p>
+         (throw (Exception. (str &quot;Structural variant type not handled: &quot; (:sv-type sv1)))))))</pre></td></tr><tr><td class="docs"><p>Lazy sequence of items that overlap a region in a nested IntervalTree.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn get-itree-overlap
+  [itree chrom start end]
+  (letfn [(itree-seq [iter]
+            (lazy-seq
+             (when (.hasNext iter)
+               (cons (.getValue (.next iter)) (itree-seq iter)))))]
+    (-&gt; itree
+        (get chrom)
+        (.overlappers start end)
+        itree-seq)))</pre></td></tr><tr><td class="docs"><p>Compare two structural variant files, returning variant contexts keyed by concordance.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn- find-concordant-svs
   [fname1 fname2 ref interval-file]
   (let [cmp-tree (parse-vcf-sv fname2 ref :out-format :itree :interval-file interval-file)]
     (letfn [(check-sv-concordance [vc]
               (let [matches (filter (partial sv-concordant? vc)
-                                    (-&gt; cmp-tree
-                                        (get (:chr vc))
-                                        (itree/iget-range (:start-ci vc) (:end-ci vc))))]
+                                    (get-itree-overlap cmp-tree (:chr vc)
+                                                       (:start-ci vc) (inc (:end-ci vc))))]
               [(if (seq matches) :concordant :discordant1) (:vc vc)]))]
       (map check-sv-concordance (parse-vcf-sv fname1 ref :interval-file interval-file)))))</pre></td></tr><tr><td class="docs"><p>Compare structural variants, producing concordant and discordant outputs</p>
 </td><td class="codes"><pre class="brush: clojure">(defn compare-sv
@@ -5179,8 +5275,9 @@ keyed on the organism name. Currently only a human GRCh37 remap.</p>
   (:use [clojure.java.io]
         [bcbio.variation.compare :only [load-config]]
         [bcbio.variation.combine :only [select-by-sample combine-variants]]
-        [bcbio.variation.annotation :only [add-variant-annotations]])
+        [bcbio.variation.annotation :only [add-gatk-annotations]])
   (:require [clojure.java.shell :as shell]
+            [clojure.string :as string]
             [clj-yaml.core :as yaml]
             [fs.core :as fs]
             [bcbio.run.itx :as itx]))</pre></td></tr><tr><td class="docs"><h2>Combine and annotate VCFs</h2>
@@ -5188,12 +5285,12 @@ keyed on the organism name. Currently only a human GRCh37 remap.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn- download-sample-bam
   [sample ftp-config out-dir]
   (letfn [(download [url fname]
-            (if-not (fs/exists? fname)
+            (when-not (fs/exists? fname)
               (println &quot;Downloading&quot; url &quot;to&quot; fname)
               (shell/with-sh-dir out-dir
                 (shell/sh &quot;wget&quot; &quot;-O&quot; fname url))))]
     (let [dl-url (format (:bam-url ftp-config) sample sample)
-          local-file (str (fs/file out-dir (fs/base-name dl-url)))]
+          local-file (str (fs/file out-dir (string/replace (fs/base-name dl-url) &quot;.*&quot; &quot;&quot;)))]
       (download dl-url local-file)
       (download (str dl-url &quot;.bai&quot;) (str local-file &quot;.bai&quot;))
       local-file)))</pre></td></tr><tr><td class="docs"><p>Annotate genome sample VCFs with GATK metrics.</p>
@@ -5202,7 +5299,7 @@ keyed on the organism name. Currently only a human GRCh37 remap.</p>
   (let [final-file (str (fs/file out-dir (format &quot;%s-annotated.vcf&quot; (:sample sample-info))))]
     (when (itx/needs-run? final-file)
       (let [sample-bam (download-sample-bam (:sample sample-info) ftp-config prep-dir)
-            ann-vcf (add-variant-annotations (:file sample-info) sample-bam ref)]
+            ann-vcf (add-gatk-annotations (:file sample-info) sample-bam ref)]
         (fs/rename ann-vcf final-file)
         (itx/remove-path sample-bam)))
     final-file))</pre></td></tr><tr><td class="docs"><p>Combine sample VCFs split by chromosome.</p>
@@ -5210,7 +5307,8 @@ keyed on the organism name. Currently only a human GRCh37 remap.</p>
   [sample-info ref out-dir]
   (letfn [(combine-sample [[name xs]]
             {:sample name
-             :file (combine-variants (map :file xs) ref :out-dir out-dir)})]
+             :file (combine-variants (map :file xs) ref :merge-type :full
+                                     :out-dir out-dir)})]
     (map combine-sample
          (group-by :sample (flatten sample-info)))))</pre></td></tr><tr><td class="docs"><h2>Subset VCF by sample</h2>
 </td><td class="codes"></td></tr><tr><td class="docs"><p>Download chromosome VCF from 1000 genomes for processing.</p>
@@ -5255,7 +5353,81 @@ keyed on the organism name. Currently only a human GRCh37 remap.</p>
           ann-samples (map #(annotate-sample % (:ref config) (:ftp config)
                                              prep-dir (get-in config [:dir :out]))
                            combo-samples)]
-      (println ann-samples))))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#bcbio.variation.utils.popfreq" name="bcbio.variation.utils.popfreq"><h1 class="project-name">bcbio.variation.utils.popfreq</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>Associate population allele frequency with a list of variants.
+      (println ann-samples))))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#bcbio.variation.utils.cgmetrics" name="bcbio.variation.utils.cgmetrics"><h1 class="project-name">bcbio.variation.utils.cgmetrics</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>Add metrics from Complete Genomics masterVar file to a VCF.
+  This updates a converted VCF from Complete Genomics with metrics information
+  allowing assessment and filtering.</p>
+</td><td class="codes"><pre class="brush: clojure">(ns bcbio.variation.utils.cgmetrics
+  (:import [org.broadinstitute.sting.utils.variantcontext VariantContextBuilder]
+           [org.broadinstitute.sting.utils.codecs.vcf VCFHeader VCFInfoHeaderLine
+            VCFHeaderLineCount VCFHeaderLineType])
+  (:use [clojure.java.io]
+        [ordered.set :only (ordered-set)]
+        [bcbio.variation.normalize :only [hg19-map]]
+        [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template
+                                               get-vcf-source]])
+  (:require [clojure.data.csv :as csv]
+            [bcbio.run.itx :as itx]))</pre></td></tr><tr><td class="docs"><p>Get lookup dictionary of CG variant metrics by position.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn- get-masterVar-metrics
+  [in-file]
+  (letfn [(variant-score [line name]
+            (let [alleles [&quot;1&quot; &quot;2&quot;]]
+              (/ (apply + (map #(Float/parseFloat (get line (format &quot;allele%sVarScore%s&quot; % name)))
+                               alleles))
+                 (count alleles))))
+          (allele-balance [line]
+            (/ (Float/parseFloat (get line &quot;referenceAlleleReadCount&quot;))
+               (Float/parseFloat (get line &quot;totalReadCount&quot;))))]
+    (with-open [rdr (reader in-file)]
+      (let [csv-iter (drop-while #(&lt; (count %) 3)
+                                 (csv/read-csv rdr :separator \tab))
+            header (first csv-iter)]
+        (reduce (fn [coll xs]
+                  (let [line (zipmap header xs)]
+                    (assoc coll [(get hg19-map (get line &quot;chromosome&quot;))
+                                 (inc (Integer/parseInt (get line &quot;begin&quot;)))]
+                           {:depth (get line &quot;totalReadCount&quot;)
+                            :qual-eaf (variant-score line &quot;EAF&quot;)
+                            :qual-vaf (variant-score line &quot;VAF&quot;)
+                            :ab (allele-balance line)})))
+                {} (rest csv-iter))))))</pre></td></tr><tr><td class="docs"><p>Provide iterator of variants with CG metrics added</p>
+</td><td class="codes"><pre class="brush: clojure">(defn- add-cgmetrics-iter
+  [vcf-source metrics]
+  (letfn [(update-cgmetrics [vc x]
+            (-&gt; (VariantContextBuilder. (:vc vc))
+                (.attributes (assoc (:attributes vc)
+                               &quot;DPCALL&quot; (:depth x)
+                               &quot;AB&quot; (:ab x)
+                               &quot;QUALEAF&quot; (:qual-eaf x)
+                               &quot;QUALVAF&quot; (:qual-vaf x)))
+                .make))]
+    (map (fn [vc]
+           (if-let [cur-metrics (get metrics [(:chr vc) (:start vc)])]
+             (update-cgmetrics vc cur-metrics)
+             (:vc vc)))
+         (parse-vcf vcf-source))))</pre></td></tr><tr><td class="docs"><p>Add CG metrics definitions to the VCF input header.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn- add-cgmetrics-header
+  [header]
+  (let [new #{(VCFInfoHeaderLine. &quot;DPCALL&quot; 1
+                                  VCFHeaderLineType/Integer &quot;Total depth used for calls&quot;)
+              (VCFInfoHeaderLine. &quot;QUALEAF&quot; 1
+                                  VCFHeaderLineType/Float
+                                  &quot;Variant quality under equal allele fraction model (EAF)&quot;)
+              (VCFInfoHeaderLine. &quot;QUALVAF&quot; 1
+                                  VCFHeaderLineType/Float
+                                  &quot;Variant quality under maximum likelihood variable allele fraction model (VAF)&quot;)
+              (VCFInfoHeaderLine. &quot;AB&quot; 1
+                                  VCFHeaderLineType/Float &quot;Allele Balance&quot;)}]
+    (VCFHeader. (apply ordered-set (concat (.getMetaData header) new))
+                (.getGenotypeSamples header))))</pre></td></tr><tr><td class="docs"><p>Add metrics from Complete Genomics masterVar file to VCF.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn add-cgmetrics
+  [vcf-file mastervar-file ref-file &amp; {:keys [out-dir]}]
+  (let [out-file (itx/add-file-part vcf-file &quot;cgmetrics&quot; out-dir)
+        metrics (get-masterVar-metrics mastervar-file)]
+    (with-open [vcf-source (get-vcf-source vcf-file ref-file)]
+      (write-vcf-w-template vcf-file {:out out-file}
+                            (add-cgmetrics-iter vcf-source metrics)
+                            ref-file :header-update-fn add-cgmetrics-header))
+    out-file))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#bcbio.variation.utils.popfreq" name="bcbio.variation.utils.popfreq"><h1 class="project-name">bcbio.variation.utils.popfreq</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>Associate population allele frequency with a list of variants.
   Annotates the original file with population frequencies if found.</p>
 </td><td class="codes"><pre class="brush: clojure">(ns bcbio.variation.utils.popfreq
   (:import [org.broadinstitute.sting.utils.variantcontext VariantContextBuilder])
@@ -5295,7 +5467,102 @@ keyed on the organism name. Currently only a human GRCh37 remap.</p>
       (write-vcf-w-template orig-vcf {:out out-file}
                             (add-pop-freqs vcf-source allele-freqs)
                             ref-file))
-    out-file))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#bcbio.variation.variantcontext" name="bcbio.variation.variantcontext"><h1 class="project-name">bcbio.variation.variantcontext</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>Helper functions to retrieve information from GATK VariantContext
+    out-file))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#bcbio.variation.validate" name="bcbio.variation.validate"><h1 class="project-name">bcbio.variation.validate</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>Combine calls from a multiple technology comparison to produce a set of final
+  variants plus a list for validation. The inputs are:
+   - Target technology: The outlier technology for picking additional targets. This
+     should be well understood enough to set threshold for validation.
+   - Validation info: Details for prepping a set of variants for validation
+      - thresholds: min and max thresholds for validation
+      - approach: validation along the full range of thresholds, or validate top variants
+      - count: total number of variants for validation.
+  Produces:
+   - Final calls
+       - calls that overlap in all of the technologies
+       - calls that overlap in all but the target, where the target technology quality
+         is below the validation threshold.
+   - Validate calls
+       - calls that overlap in all but the target and fall below configurable threshold.
+         These are either sampled from the distribution or picked off the top.</p>
+</td><td class="codes"><pre class="brush: clojure">(ns bcbio.variation.validate
+  (:use [ordered.map :only [ordered-map]]
+        [bcbio.variation.combine :only [combine-variants]]
+        [bcbio.variation.multiple :only [prep-cmp-name-lookup
+                                         multiple-overlap-analysis]]
+        [bcbio.variation.variantcontext :only [parse-vcf get-vcf-source
+                                               write-vcf-w-template]])
+  (:require [bcbio.run.broad :as broad]
+            [bcbio.run.itx :as itx]))</pre></td></tr><tr><td class="docs"><p>Base functionality for subsetting a file with SelectVariants.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn- select-by-general
+  [select-args ext in-vcf ref]
+  (let [file-info {:out-vcf (itx/add-file-part in-vcf ext)}
+        args (concat [&quot;-R&quot; ref
+                      &quot;--variant&quot; in-vcf
+                      &quot;-o&quot; :out-vcf]
+                      select-args)]
+    (broad/run-gatk &quot;SelectVariants&quot; args file-info {:out [:out-vcf]})
+    (:out-vcf file-info)))</pre></td></tr><tr><td class="docs"><p>Subset a VCF file with specific hard filters.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn select-by-filters
+  [filters in-vcf ext ref]
+  (select-by-general (interleave (repeat &quot;--select_expressions&quot;) filters)
+                     ext in-vcf ref))</pre></td></tr><tr><td class="docs"><h2>Validation targets by random sampling</h2>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>Subset a VCF file with a random number of variants.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn select-by-random
+  [count in-vcf ref]
+  (select-by-general [&quot;--select_random_number&quot; count] &quot;randsubset&quot; in-vcf ref))</pre></td></tr><tr><td class="docs"><p>Select set of variants to validate from total set of potentials.</p>
+</td><td class="codes"><pre class="brush: clojure">(defmulti get-to-validate
+  (fn [in-vcf params ref] (keyword (get-in params [:validate :approach]))))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defmethod get-to-validate :random
+  [in-vcf params ref]
+  (select-by-random (get-in params [:validate :count]) in-vcf ref))</pre></td></tr><tr><td class="docs"><p>Provide function to extract metric used in sorting from a variant context.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn- extract-sort-metrics
+  [params]
+  {:pre [(= 1 (count (:top-metric params)))]}
+  (let [metric (get-in params [:top-metric 0 :name])
+        mod (get-in params [:top-metric 0 :mod])]
+    (fn [vc]
+      (when-let [base (-&gt; vc :attributes (get metric) (Float/parseFloat))]
+        (if mod (* mod base) base)))))</pre></td></tr><tr><td class="docs"><p>Retrieve top variants sorted by metrics of interest.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn- get-top-variants
+  [vcf-file params ref]
+  (with-open [vcf-source (get-vcf-source vcf-file ref)]
+    (let [metric-gettr (extract-sort-metrics (:validate params))]
+      (set
+       (map (juxt :chr :start)
+            (take (get-in params [:validate :count])
+                  (sort-by metric-gettr &gt; (parse-vcf vcf-source))))))))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defmethod get-to-validate :top
+  [in-vcf params ref]
+  (let [out-file (itx/add-file-part in-vcf &quot;topsubset&quot;)]
+    (when (itx/needs-run? out-file)
+      (let [to-keep (get-top-variants in-vcf params ref)]
+        (with-open [vcf-source (get-vcf-source in-vcf ref)]
+          (write-vcf-w-template in-vcf {:out out-file}
+                                (map :vc
+                                     (filter #(contains? to-keep ((juxt :chr :start) %))
+                                             (parse-vcf vcf-source)))
+                                ref))))
+    out-file))</pre></td></tr><tr><td class="docs"><p>Prepare files of calls: finalized and validation targets.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn get-final-and-tovalidate
+  [cmps finalizer config]
+  (let [cmps-by-name (prep-cmp-name-lookup (vals cmps) :remove-mods? true
+                                           :ignore #{&quot;all&quot; &quot;validate&quot;})
+        ref (-&gt; cmps-by-name vals first :exp :ref)
+        multi-prep (multiple-overlap-analysis cmps-by-name config (:target finalizer)
+                                              :dirname &quot;validate&quot;)]
+    (ordered-map
+     :final (combine-variants [(:true-positives multi-prep)
+                               (select-by-filters (get-in finalizer [:params :filters :keep])
+                                                  (:false-negatives multi-prep) &quot;keepsubset&quot; ref)]
+                              ref :merge-type :full)
+     :validate (get-to-validate (select-by-filters (get-in finalizer [:params :filters :validate])
+                                                   (:false-negatives multi-prep) &quot;checksubset&quot; ref)
+                                (:params finalizer) ref))))</pre></td></tr><tr><td class="docs"><p>High level pipeline entry for producing final and to-validate call sets.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn pipeline-validate
+  [cmps finalizer exp config]
+  {:c-files (get-final-and-tovalidate cmps finalizer config)
+   :c1 {:name (:target finalizer)}
+   :c2 {:name &quot;validate&quot;}
+   :exp exp :dir (:dir config)})</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#bcbio.variation.variantcontext" name="bcbio.variation.variantcontext"><h1 class="project-name">bcbio.variation.variantcontext</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>Helper functions to retrieve information from GATK VariantContext
    objects, which represent variant data stored in VCF files.</p>
 </td><td class="codes"><pre class="brush: clojure">(ns bcbio.variation.variantcontext
   (:import [org.broad.tribble.index IndexFactory]
@@ -5456,9 +5723,12 @@ single line in a VCF file</li>
                          :ref (-&gt; config :ref :genome)
                          :intervals (-&gt; config :ref :intervals)
                          :calls [{:name &quot;reference&quot;
-                                  :file (-&gt; config :ref :variants)}
+                                  :file (-&gt; config :ref :variants)
+                                  :remove-refcalls true}
                                  {:name &quot;contestant&quot;
                                   :prep true
+                                  :preclean true
+                                  :remove-refcalls true
                                   :file (if-let [x (:variant-file in-files)]
                                           x
                                           (-&gt; config :ref :default-compare))
