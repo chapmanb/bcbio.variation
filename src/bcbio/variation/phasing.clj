@@ -71,20 +71,25 @@
   [vc ref-vcs]
   {:pre [(every? #(= 1 (count (-> % :genotypes first :alleles))) ref-vcs)
          (= 1 (count (:genotypes vc)))]}
-  (highest-count
-   (map #(.indexOf (get-alleles vc) (-> % get-alleles first)) ref-vcs)))
+  (if (empty? ref-vcs)
+    (.indexOf (get-alleles vc) (:ref-allele vc))
+    (highest-count
+     (map #(.indexOf (get-alleles vc) (-> % get-alleles first)) ref-vcs))))
 
 (defn cmp-allele-to-ref
   "Compare the haploid allele of a variant against the reference call."
   [vc ref-vcs i]
   {:pre [(= 2 (count (get-alleles vc)))]}
-  (let [ref-alleles (set (map #(-> % get-alleles first) ref-vcs))
-        call-hap (when-not (nil? i) (nth (get-alleles vc) i))]
-    (cond
-     (empty? ref-alleles) :discordant
-     (contains? ref-alleles call-hap) :concordant
-     (some (partial contains? ref-alleles) (get-alleles vc)) :phasing-error
-     :else :discordant)))
+  (letfn [(is-ref-allele? [x]
+            (= (.getBaseString x) (-> vc :ref-allele .getBaseString)))]
+    (let [ref-alleles (set (map #(-> % get-alleles first) ref-vcs))
+          call-hap (nth (get-alleles vc) i)]
+      (cond
+       (and (empty? ref-alleles) (is-ref-allele? call-hap)) :ref-concordant
+       (empty? ref-alleles) :discordant
+       (contains? ref-alleles call-hap) :concordant
+       (some (partial contains? ref-alleles) (get-alleles vc)) :phasing-error
+       :else :discordant))))
 
 (defn get-variant-type
   "Retrieve the type of a set of variants involved in a comparison.
@@ -155,7 +160,8 @@
     (if-not (fs/exists? base-dir)
       (fs/mkdirs base-dir))
     (write-vcf-w-template (:file base-info) out-files
-                          (map (juxt :comparison :vc) (flatten vc-info))
+                          (map (juxt :comparison :vc)
+                               (remove #(= :ref-concordant (:comparison %)) (flatten vc-info)))
                           ref)
     out-files))
 
@@ -191,7 +197,7 @@
   "Collect summary metrics for concordant/discordant and phasing calls"
   [vc-info exp-interval-file call-interval-file ref-file]
   (letfn [(count-nomatch-het-alt [xs]
-            (count (filter #(and (= (:comparison %) :concordant)
+            (count (filter #(and (contains? #{:concordant :ref-concordant} (:comparison %))
                                  (:nomatch-het-alt %))
                            (flatten vc-info))))
           (blank-count-dict []
@@ -204,6 +210,7 @@
              :total-bases (count-comparison-bases exp-interval-file call-interval-file ref-file)
              :nonmatch-het-alt (count-nomatch-het-alt vc-info)
              :concordant (blank-count-dict)
+             :ref-concordant (blank-count-dict)
              :discordant (blank-count-dict)
              :phasing-error (blank-count-dict)}
             (flatten vc-info))))

@@ -24,9 +24,12 @@
                          :ref (-> config :ref :genome)
                          :intervals (-> config :ref :intervals)
                          :calls [{:name "reference"
-                                  :file (-> config :ref :variants)}
+                                  :file (-> config :ref :variants)
+                                  :remove-refcalls true}
                                  {:name "contestant"
                                   :prep true
+                                  :preclean true
+                                  :remove-refcalls true
                                   :file (if-let [x (:variant-file in-files)]
                                           x
                                           (-> config :ref :default-compare))

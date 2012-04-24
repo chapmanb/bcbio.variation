@@ -12,8 +12,10 @@ experiments:
     calls:
       - name: reference
         file: test/data/phasing-reference.vcf
+        remove-refcalls: true
       - name: contestant
         prep: true
         preclean: true
+        remove-refcalls: true
         file: test/data/phasing-contestant.vcf
         intervals: test/data/phasing-contestant-regions.bed
