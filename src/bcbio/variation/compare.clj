@@ -181,7 +181,8 @@
           c-eval (calc-variant-eval-metrics (:sample exp) (:file c1) (:file c2) (:ref exp)
                                             :out-base (itx/add-file-part (first c-files) "callable")
                                             :intervals (callable-intervals exp c1 c2))]
-      {:c-files (zipmap-ordered ["concordant" (discordant-name c1) (discordant-name c2)]
+      {:c-files (zipmap-ordered (map keyword
+                                     ["concordant" (discordant-name c1) (discordant-name c2)])
                                 c-files)
        :c1 c1 :c2 c2 :exp exp :dir (config :dir)
        :metrics (first (concordance-report-metrics (:sample exp) eval))

@@ -55,14 +55,13 @@
 
 (defn- gen-all-concordant
   "Create VCF of the intersection of all concordant calls."
-  [cmps-by-name out-dir config & {:keys [do-include? base-ext]
+  [cmps-by-name ref out-dir config & {:keys [do-include? base-ext]
                                   :or {base-ext "multiall"}}]
   (let [concordant-map (reduce (fn [m [k v]]
                                  (if (or (nil? do-include?) (do-include? k))
-                                   (assoc m (-> v :c-files (get "concordant")) (string/join "-" k))
+                                   (assoc m (get-in v [:c-files :concordant]) (string/join "-" k))
                                    m))
                                (ordered-map) cmps-by-name)
-        ref (-> cmps-by-name vals first :exp :ref)
         union-vcf (combine-variants (keys concordant-map) ref :merge-type :full :out-dir out-dir
                                     :name-map concordant-map :base-ext base-ext)]
     {:union union-vcf
@@ -79,7 +78,8 @@
             (let [pass-and-shared? (check-shared fetch)]
               (map :vc (filter pass-and-shared? xs))))]
     (let [disc-vcfs (remove nil? (map (fn [v]
-                                        (get (:c-files v) (format "%s-discordant" target-name)))
+                                        (get-in v [:c-files
+                                                   (keyword (format "%s-discordant" target-name))]))
                                       (vals target-cmps)))
           disc-vcf (-> (combine-variants disc-vcfs ref :merge-type :full :out-dir out-dir
                                          :base-ext (format "dis%s" target-name))
@@ -96,7 +96,7 @@
 (defn- gen-target-problems
   "Create files of false negatives and positives from target-name."
   [target-name target-call cmps-by-name true-p-vcf ref out-dir config]
-  (let [notarget-concordant (gen-all-concordant cmps-by-name out-dir config
+  (let [notarget-concordant (gen-all-concordant cmps-by-name ref out-dir config
                                                 :do-include? (partial not-target? target-name)
                                                 :base-ext (format "multino%s" target-name))]
     {:false-negatives
@@ -138,7 +138,7 @@
                          first)]
     (when-not (fs/exists? out-dir)
       (fs/mkdirs out-dir))
-    (let [true-p-vcf (-> (gen-all-concordant cmps-by-name out-dir config)
+    (let [true-p-vcf (-> (gen-all-concordant cmps-by-name ref out-dir config)
                          :intersection
                          (add-variant-annotations (:align target-call) ref target-call
                                                   :out-dir out-dir))
