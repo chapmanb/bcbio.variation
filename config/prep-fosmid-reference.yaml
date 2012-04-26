@@ -12,7 +12,6 @@ experiments:
     calls:
       - name: fosmid
         file: test/data/phasing-reference.vcf
-        align: test/data/aligned-reads.bam
         remove-refcalls: true
         annotate: true
       - name: illumina
@@ -21,7 +20,12 @@ experiments:
         remove-refcalls: true
         annotate: true
         file: test/data/phasing-contestant.vcf
-        align: test/data/aligned-reads.bam
-    #finalize:
-    #  - method: multiple
-    #    target: fosmid
+      - name: cg
+        prep: true
+        preclean: true
+        remove-refcalls: true
+        annotate: true
+        file: test/data/phasing-comparison.vcf
+    finalize:
+      - method: multiple
+        target: fosmid

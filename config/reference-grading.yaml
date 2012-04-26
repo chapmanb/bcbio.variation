@@ -9,6 +9,7 @@ experiments:
     ref: test/data/GRCh37.fa
     intervals: test/data/phasing-reference-regions.bed
     summary-level: quick
+    approach: grade
     calls:
       - name: reference
         file: test/data/phasing-reference.vcf

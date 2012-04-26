@@ -23,6 +23,7 @@
           :experiments [{:sample (-> config :ref :sample)
                          :ref (-> config :ref :genome)
                          :intervals (-> config :ref :intervals)
+                         :approach "grade"
                          :calls [{:name "reference"
                                   :file (-> config :ref :variants)
                                   :remove-refcalls true}

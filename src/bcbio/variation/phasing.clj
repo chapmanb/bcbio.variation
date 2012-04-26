@@ -128,7 +128,8 @@
   {:comparison (cmp-allele-to-ref vc ref-vcs i)
    :variant-type (get-variant-type (cons vc ref-vcs))
    :nomatch-het-alt (nomatch-het-alt? vc ref-vcs)
-   :vc (:vc vc)})
+   :vc (:vc vc)
+   :ref-vcs (map :vc ref-vcs)})
 
 (defn- score-phased-region
   "Provide scoring metrics for a phased region against a haplotype reference."
@@ -151,17 +152,18 @@
 
 (defn- write-concordance-output
   "Write concordant and discordant variants to VCF output files."
-  [vc-info sample-name base-info out-dir ref]
+  [vc-info to-capture sample-name base-info out-dir ref]
   (let [base-dir (if (nil? out-dir) (fs/parent (:file base-info)) out-dir)
         gen-file-name (fn [x] (str (fs/file base-dir (format "%s-%s-%s.vcf" sample-name
                                                              (:name base-info) (name x)))))
         out-files (apply ordered-map (flatten (map (juxt identity gen-file-name)
-                                                   [:concordant :discordant :phasing-error])))]
+                                                   to-capture)))]
     (if-not (fs/exists? base-dir)
       (fs/mkdirs base-dir))
     (write-vcf-w-template (:file base-info) out-files
-                          (map (juxt :comparison :vc)
-                               (remove #(= :ref-concordant (:comparison %)) (flatten vc-info)))
+                          (filter #(contains? (set to-capture) (first %))
+                                  (map (juxt :comparison :vc)
+                                       (flatten vc-info)))
                           ref)
     out-files))
 
@@ -215,16 +217,59 @@
              :phasing-error (blank-count-dict)}
             (flatten vc-info))))
 
-(defn compare-two-vcf-phased
-  "Compare two VCF files including phasing with a haplotype reference."
-  [call ref exp config]
-  (with-open [ref-vcf-s (get-vcf-source (:file ref) (:ref exp))
-              call-vcf-s (get-vcf-source (:file call) (:ref exp))]
-    (let [compared-calls (score-phased-calls call-vcf-s ref-vcf-s)]
-      {:c-files (write-concordance-output compared-calls (:sample exp) call
-                                          (get-in config [:dir :out]) (:ref exp))
-       :metrics (get-phasing-metrics compared-calls (:intervals exp) (:intervals call) (:ref exp)) 
-       :c1 call :c2 ref :sample (:sample exp) :exp exp})))
+;; ## Entry point for phased haploid VCF comparisons
+
+(defmulti compare-two-vcf-phased
+  "Compare two VCF files including phasing with a haplotype reference
+  Handle grading special case as well as standard comparisons."
+  (fn [_ exp _] (keyword (get exp :approach "compare"))))
+
+(defmethod compare-two-vcf-phased :grade
+  [phased-calls exp config]
+  {:pre [(= 1 (count (get phased-calls true)))
+         (= 1 (count (get phased-calls false)))]}
+  (let [ref (first (get phased-calls true))
+        call (first (get phased-calls false))]
+    (with-open [ref-vcf-s (get-vcf-source (:file ref) (:ref exp))
+                call-vcf-s (get-vcf-source (:file call) (:ref exp))]
+      (let [compared-calls (score-phased-calls call-vcf-s ref-vcf-s)]
+        {:c-files (write-concordance-output compared-calls
+                                            [:concordant :discordant :phasing-error]
+                                            (:sample exp) call
+                                            (get-in config [:dir :out]) (:ref exp))
+         :metrics (get-phasing-metrics compared-calls (:intervals exp)
+                                       (:intervals call) (:ref exp))
+         :c1 call :c2 ref :sample (:sample exp) :exp exp}))))
+
+(defn- convert-vcs-to-compare
+  "Convert stream of variant context haploid comparison to standard,
+  keyed by :concordant and :discordant-name keywords."
+  [name1 name2 cmps]
+  (letfn [(update-keyword [x]
+            (println x))]
+    (remove nil?
+            (flatten
+             (map update-keyword
+                  (flatten cmps))))))
+
+(defmethod compare-two-vcf-phased :compare
+  [phased-calls exp config]
+  {:pre [(= 1 (count (get phased-calls true)))
+         (= 1 (count (get phased-calls false)))]}
+  ;; Only support haploid to diploid phased now.
+  ;; Eventually should handle two haploid comparisons.
+  (let [hap (first (get phased-calls true))
+        dip (first (get phased-calls false))
+        to-capture (concat [:concordant]
+                           (map #(keyword (format "discordant-%s" (:name %)))
+                                [hap dip]))]
+    (with-open [hap-vcf-s (get-vcf-source (:file hap) (:ref exp))
+                dip-vcf-s (get-vcf-source (:file dip) (:ref exp))]
+      (let [compared-calls (score-phased-calls dip-vcf-s hap-vcf-s)]
+        (println to-capture)
+        (println (write-concordance-output compared-calls to-capture
+                                            (:sample exp) hap
+                                            (get-in config [:dir :out]) (:ref exp)))))))
 
 ;; ## Utility functions
 

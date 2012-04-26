@@ -193,9 +193,7 @@
   [c1 c2 exp config]
   (let [phased-vcfs (group-by #(-> % :file (is-haploid? (:ref exp))) [c1 c2])]
     (if (get phased-vcfs true)
-      (compare-two-vcf-phased (first (get phased-vcfs false))
-                              (first (get phased-vcfs true))
-                              exp config)
+      (compare-two-vcf-phased phased-vcfs exp config)
       (compare-two-vcf-standard c1 c2 exp config))))
 
 ;; ## Customizable finalizer comparisons

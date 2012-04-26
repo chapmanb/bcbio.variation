@@ -77,6 +77,9 @@ provide example starting points and details on available options are below:
        ref: Reference genome in FASTA format.
        intervals: Intervals to process in BED format (optional).
        align: Alignments for all calls in BAM format (optional).
+       summary-level: Amount of summary information to provide,
+                      [full,quick] (default:full)
+       approach: Type of comparison to do [compare,grade]. Default compare.
        calls: # two or more calls to compare
          - name: Name of call type
            file: One or more input files in VCF format
