@@ -152,10 +152,11 @@
 
 (defn- write-concordance-output
   "Write concordant and discordant variants to VCF output files."
-  [vc-info to-capture sample-name base-info out-dir ref]
+  [vc-info to-capture sample-name base-info other-info out-dir ref]
   (let [base-dir (if (nil? out-dir) (fs/parent (:file base-info)) out-dir)
-        gen-file-name (fn [x] (str (fs/file base-dir (format "%s-%s-%s.vcf" sample-name
-                                                             (:name base-info) (name x)))))
+        gen-file-name (fn [x] (str (fs/file base-dir (format "%s-%s-%s-%s.vcf"
+                                                             sample-name (:name base-info)
+                                                             (:name other-info) (name x)))))
         out-files (apply ordered-map (flatten (map (juxt identity gen-file-name)
                                                    to-capture)))]
     (if-not (fs/exists? base-dir)
@@ -235,7 +236,7 @@
       (let [compared-calls (score-phased-calls call-vcf-s ref-vcf-s)]
         {:c-files (write-concordance-output compared-calls
                                             [:concordant :discordant :phasing-error]
-                                            (:sample exp) call
+                                            (:sample exp) call ref
                                             (get-in config [:dir :out]) (:ref exp))
          :metrics (get-phasing-metrics compared-calls (:intervals exp)
                                        (:intervals call) (:ref exp))
@@ -246,11 +247,17 @@
   keyed by :concordant and :discordant-name keywords."
   [name1 name2 cmps]
   (letfn [(update-keyword [x]
-            (println x))]
+            (let [new-xs (map #(-> x (assoc :vc %) (dissoc :ref-vcs)) (:ref-vcs x))
+                  [dis-kw1 dis-kw2] (map #(keyword (format "%s-discordant" %)) [name1 name2])]
+              (case (:comparison x)
+                :concordant new-xs
+                (:discordant :phasing-error) (cons
+                                              (assoc x :comparison dis-kw2)
+                                              (map #(assoc % :comparison dis-kw1) new-xs))
+                nil)))]
     (remove nil?
             (flatten
-             (map update-keyword
-                  (flatten cmps))))))
+             (map update-keyword (flatten cmps))))))
 
 (defmethod compare-two-vcf-phased :compare
   [phased-calls exp config]
@@ -261,15 +268,16 @@
   (let [hap (first (get phased-calls true))
         dip (first (get phased-calls false))
         to-capture (concat [:concordant]
-                           (map #(keyword (format "discordant-%s" (:name %)))
+                           (map #(keyword (format "%s-discordant" (:name %)))
                                 [hap dip]))]
     (with-open [hap-vcf-s (get-vcf-source (:file hap) (:ref exp))
                 dip-vcf-s (get-vcf-source (:file dip) (:ref exp))]
-      (let [compared-calls (score-phased-calls dip-vcf-s hap-vcf-s)]
-        (println to-capture)
-        (println (write-concordance-output compared-calls to-capture
-                                            (:sample exp) hap
-                                            (get-in config [:dir :out]) (:ref exp)))))))
+      (let [compared-calls (convert-vcs-to-compare (:name hap) (:name dip)
+                                                   (score-phased-calls dip-vcf-s hap-vcf-s))]
+        {:c-files (write-concordance-output compared-calls to-capture
+                                            (:sample exp) hap dip
+                                            (get-in config [:dir :out]) (:ref exp))
+         :c1 hap :c2 dip :sample (:sample exp) :exp exp}))))
 
 ;; ## Utility functions
 
