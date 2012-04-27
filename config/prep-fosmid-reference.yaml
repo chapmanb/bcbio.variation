@@ -29,3 +29,12 @@ experiments:
     finalize:
       - method: multiple
         target: fosmid
+      - method: validate
+        target: fosmid
+        params:
+          validate:
+            approach: top
+            count: 1
+            top-metric:
+              - name: "QD"
+                mod: -1

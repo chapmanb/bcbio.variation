@@ -65,7 +65,7 @@
   (let [metric (get-in params [:top-metric 0 :name])
         mod (get-in params [:top-metric 0 :mod])]
     (fn [vc]
-      (when-let [base (-> vc :attributes (get metric) (Float/parseFloat))]
+      (when-let [base (-> vc :attributes (get metric "-1000.0") (Float/parseFloat))]
         (if mod (* mod base) base)))))
 
 (defn- get-top-variants
@@ -100,13 +100,18 @@
         multi-prep (multiple-overlap-analysis cmps-by-name config (:target finalizer)
                                               :dirname "validate")]
     (ordered-map
-     :final (combine-variants [(:true-positives multi-prep)
-                               (select-by-filters (get-in finalizer [:params :filters :keep])
-                                                  (:false-negatives multi-prep) "keepsubset" ref)]
-                              ref :merge-type :full)
-     :validate (get-to-validate (select-by-filters (get-in finalizer [:params :filters :validate])
-                                                   (:false-negatives multi-prep) "checksubset" ref)
-                                (:params finalizer) ref))))
+     :final (if-let [keep-filters (get-in finalizer [:params :filters :keep])]
+              (combine-variants [(:true-positives multi-prep)
+                                 (select-by-filters keep-filters (:false-negatives multi-prep)
+                                                    "keepsubset" ref)]
+                                ref :merge-type :full)
+              (:true-positives multi-prep))
+     :validate (get-to-validate
+                (if-let [val-filters (get-in finalizer [:params :filters :validate])]
+                  (select-by-filters val-filters (:false-negatives multi-prep)
+                                     "checksubset" ref)
+                  (:false-negatives multi-prep))
+                (:params finalizer) ref))))
 
 (defn pipeline-validate
   "High level pipeline entry for producing final and to-validate call sets."
