@@ -44,12 +44,15 @@
 
 (defn- select-variant-by-set
   "Select samples based on name of a 'set' from CombineVariants."
-  [vcf-in ref set-name & {:keys [out-dir]}]
+  [vcf-in ref set-name & {:keys [out-dir allow-partial?]}]
   (let [file-info {:out-vcf (itx/add-file-part vcf-in set-name out-dir)}
         args ["-R" ref
               "-o" :out-vcf
               "--variant" vcf-in
-              "-select" (format "set == '%s'" set-name)]]
+              "-select" (if allow-partial?
+                          (format "vc.getAttributeAsString('set','').contains('%s')"
+                                  set-name)
+                          (format "set == '%s'" set-name))]]
     (broad/run-gatk "SelectVariants" args file-info {:out [:out-vcf]})
     (:out-vcf file-info)))
 
@@ -138,15 +141,19 @@
                          first)]
     (when-not (fs/exists? out-dir)
       (fs/mkdirs out-dir))
-    (let [true-p-vcf (-> (gen-all-concordant cmps-by-name ref out-dir config)
-                         :intersection
-                         (add-variant-annotations (:align target-call) ref target-call
-                                                  :out-dir out-dir))
+    (let [all-overlap (gen-all-concordant cmps-by-name ref out-dir config)
+          true-p-vcf (add-variant-annotations (:intersection all-overlap) (:align target-call)
+                                              ref target-call :out-dir out-dir)
           target-problems (gen-target-problems target-name target-call cmps-by-name
                                                true-p-vcf ref out-dir config)]
       (ordered-map :true-positives true-p-vcf
                    :false-negatives (:false-negatives target-problems)
-                   :false-positives (:false-positives target-problems)))))
+                   :false-positives (:false-positives target-problems)
+                   :target-overlaps (-> all-overlap
+                                        :union
+                                        (select-variant-by-set ref target-name :allow-partial? true)
+                                        (add-variant-annotations (:align target-call) ref
+                                                                 target-call :out-dir out-dir))))))
 
 (defn pipeline-compare-multiple
   "Perform high level pipeline comparison of a target with multiple experiments."

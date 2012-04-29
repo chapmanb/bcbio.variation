@@ -114,7 +114,7 @@
              :discordant1 (all-vrn-counts (second c-files) :c2 compared)
              :discordant2 (when (> (count c-files) 2) (all-vrn-counts (nth c-files 2) :c1 compared))
              :discordant_both (when (> (count c-files) 2)
-                                (apply discordance-metrics (conj (vec (rest c-files))
+                                (apply discordance-metrics (conj (vec (take 2 (rest c-files)))
                                                                  ref-file))))]
         (if-not (= sum-level :full) base
             (assoc base

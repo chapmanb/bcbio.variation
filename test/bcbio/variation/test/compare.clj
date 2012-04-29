@@ -171,7 +171,9 @@
              :false-negatives
              (str (fs/file out-dir (format "Test1-multiall-no%s-fullcombine-%s%s.vcf" x x ext)))
              :false-positives
-             (str (fs/file out-dir (format "Test1-dis%s-fullcombine-Intersection-shared.vcf" x)))})]
+             (str (fs/file out-dir (format "Test1-dis%s-fullcombine-Intersection-shared.vcf" x)))
+             :target-overlaps
+             (str (fs/file out-dir (format "Test1-multiall-fullcombine-%s%s.vcf" x ext)))})]
     (against-background [(before :facts (vec (map remove-path [out-dir])))]
       (facts "Handle multiple variant approach comparisons."
         (multiple-overlap-analysis cmps config "cg") => (get-out-files "cg" "")
