@@ -264,23 +264,23 @@
 
 (defmethod compare-two-vcf-phased :compare
   [phased-calls exp config]
-  {:pre [(= 1 (count (get phased-calls true)))
-         (= 1 (count (get phased-calls false)))]}
-  ;; Only support haploid to diploid phased now.
-  ;; Eventually should handle two haploid comparisons.
-  (let [hap (first (get phased-calls true))
-        dip (first (get phased-calls false))
+  {:pre [(= 2 (count (flatten (vals phased-calls))))
+         (pos? (count (get phased-calls true)))]}
+  (let [cmp1 (first (get phased-calls true))
+        cmp2 (if-let [nophased (get phased-calls false)]
+               (first nophased)
+               (second (get phased-calls true)))
         to-capture (concat [:concordant]
                            (map #(keyword (format "%s-discordant" (:name %)))
-                                [hap dip]))]
-    (with-open [hap-vcf-s (get-vcf-source (:file hap) (:ref exp))
-                dip-vcf-s (get-vcf-source (:file dip) (:ref exp))]
-      (let [compared-calls (convert-vcs-to-compare (:name hap) (:name dip)
-                                                   (score-phased-calls dip-vcf-s hap-vcf-s))]
+                                [cmp1 cmp2]))]
+    (with-open [vcf1-s (get-vcf-source (:file cmp1) (:ref exp))
+                vcf2-s (get-vcf-source (:file cmp2) (:ref exp))]
+      (let [compared-calls (convert-vcs-to-compare (:name cmp1) (:name cmp2)
+                                                   (score-phased-calls vcf2-s vcf1-s))]
         {:c-files (write-concordance-output compared-calls to-capture
-                                            (:sample exp) hap dip
+                                            (:sample exp) cmp1 cmp2 
                                             (get-in config [:dir :out]) (:ref exp))
-         :c1 hap :c2 dip :sample (:sample exp) :exp exp}))))
+         :c1 cmp1 :c2 cmp2 :sample (:sample exp) :exp exp}))))
 
 ;; ## Utility functions
 
