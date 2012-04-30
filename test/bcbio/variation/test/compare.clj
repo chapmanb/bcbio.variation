@@ -113,7 +113,8 @@
 (let [data-dir (str (fs/file "." "test" "data"))
       ref (str (fs/file data-dir "GRCh37.fa"))
       pvcf (str (fs/file data-dir "phasing-contestant.vcf"))
-      ref-vcf (str (fs/file data-dir "phasing-reference.vcf"))]
+      ref-vcf (str (fs/file data-dir "phasing-reference.vcf"))
+      ref2-vcf (str (fs/file data-dir "phasing-reference2.vcf"))]
   (facts "Handle haplotype phasing specified in VCF output files."
     (with-open [pvcf-source (get-vcf-source pvcf ref)]
       (let [haps (parse-phased-haplotypes pvcf-source)]
@@ -129,6 +130,13 @@
         (map :variant-type (first cmps)) => [:snp :snp :indel :snp :snp]
         (map :comparison (last cmps)) => [:concordant :phasing-error :concordant :discordant]
         (map :nomatch-het-alt (first cmps)) => [true false true false true])))
+  (facts "Compare two sets of haploid reference calls"
+    (with-open [ref-vcf-s (get-vcf-source ref-vcf ref)
+                ref2-vcf-s (get-vcf-source ref2-vcf ref)]
+      (let [cmps (score-phased-calls ref2-vcf-s ref-vcf-s)]
+        (count cmps) => 1
+        (count (first cmps)) => 11
+        (map :comparison (first cmps)) => (concat (repeat 10 :concordant) [:discordant]))))
   (facts "Check is a variant file is a haploid reference."
     (is-haploid? pvcf ref) => false
     (is-haploid? ref-vcf ref) => true))

@@ -26,7 +26,9 @@
   "Check for phasing on a single genotype variant context."
   [vc]
   {:pre [(= 1 (count (:genotypes vc)))]}
-  (-> vc :genotypes first :genotype .isPhased))
+  (let [g (-> vc :genotypes first)]
+    (or (= 1 (count (:alleles g)))
+        (.isPhased (:genotype g)))))
 
 (defn parse-phased-haplotypes
   "Separate phased haplotypes provided in diploid input genome.
@@ -74,17 +76,18 @@
   (if (empty? ref-vcs)
     (.indexOf (get-alleles vc) (:ref-allele vc))
     (highest-count
-     (map #(.indexOf (get-alleles vc) (-> % get-alleles first)) ref-vcs))))
+     (remove neg?
+             (map #(.indexOf (get-alleles vc) (-> % get-alleles first)) ref-vcs)))))
 
 (defn cmp-allele-to-ref
   "Compare the haploid allele of a variant against the reference call."
   [vc ref-vcs i]
-  {:pre [(= 2 (count (get-alleles vc)))]}
   (letfn [(is-ref-allele? [x]
             (= (.getBaseString x) (-> vc :ref-allele .getBaseString)))]
     (let [ref-alleles (set (map #(-> % get-alleles first) ref-vcs))
-          call-hap (nth (get-alleles vc) i)]
+          call-hap (when-not (nil? i) (nth (get-alleles vc) i))]
       (cond
+       (nil? call-hap) :discordant
        (and (empty? ref-alleles) (is-ref-allele? call-hap)) :ref-concordant
        (empty? ref-alleles) :discordant
        (contains? ref-alleles call-hap) :concordant
