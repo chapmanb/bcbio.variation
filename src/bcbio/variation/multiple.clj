@@ -127,8 +127,8 @@
      methods. We restrict to shared calls to avoid penalizing unique calls.
      These are false positives."
   [cmps config target-name & {:keys [dirname] :or {dirname "multiple"}}]
-  (let [cmps-by-name (if (map? cmps) cmps
-                         (prep-cmp-name-lookup cmps :ignore #{"all" "validate"}))
+  (let [cmps-by-name (prep-cmp-name-lookup (if (map? cmps) (vals cmps) cmps)
+                                           :ignore #{"all" "validate"})
         out-dir (str (fs/file (get-in config [:dir :prep] (get-in config [:dir :out]))
                               dirname))
         ref (-> cmps-by-name vals first :exp :ref)
