@@ -26,7 +26,8 @@
                          :approach "grade"
                          :calls [{:name "reference"
                                   :file (-> config :ref :variants)
-                                  :remove-refcalls true}
+                                  :remove-refcalls true
+                                  :refcalls true}
                                  {:name "contestant"
                                   :prep true
                                   :preclean true

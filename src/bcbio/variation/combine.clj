@@ -12,7 +12,8 @@
                                                get-vcf-header]]
         [bcbio.variation.callable :only [callable-checker]]
         [bcbio.variation.complex :only [normalize-variants]]
-        [bcbio.variation.normalize :only [prep-vcf clean-problem-vcf]])
+        [bcbio.variation.normalize :only [prep-vcf clean-problem-vcf]]
+        [bcbio.variation.phasing :only [is-haploid?]])
   (:require [fs.core :as fs]
             [clojure.string :as string]
             [bcbio.run.itx :as itx]
@@ -62,14 +63,16 @@
 
 (defn convert-no-calls
   "Convert no-calls into callable reference and real no-calls."
-  [in-vcf align-bam ref & {:keys [out-dir] :or {out-dir nil}}]
+  [in-vcf align-bam ref & {:keys [out-dir num-alleles]}]
   (let [out-file (itx/add-file-part in-vcf "wrefs")
         [is-callable? call-source] (callable-checker align-bam ref :out-dir out-dir)]
     (letfn [(ref-genotype [g vc]
               (doto (-> vc :vc .getGenotypes GenotypesContext/copy)
                 (.replace
                  (Genotype/modifyAlleles (:genotype g)
-                                         (repeat (count (:alleles g))
+                                         (repeat (if (nil? num-alleles)
+                                                   (count (:alleles g))
+                                                   num-alleles)
                                                  (:ref-allele vc))))))
             (maybe-callable-vc [vc]
               {:pre (= 1 (count (:genotypes vc)))}
@@ -139,8 +142,10 @@
   (letfn [(merge-vcf [vcf all-vcf align-bam ref]
             (let [ready-vcf (combine-variants [vcf all-vcf] ref
                                               :merge-type :full :intervals intervals
-                                              :out-dir out-dir)]
-              (convert-no-calls ready-vcf align-bam ref :out-dir out-dir)))]
+                                              :out-dir out-dir)
+                  num-alleles (when (is-haploid? vcf ref) 1)]
+              (convert-no-calls ready-vcf align-bam ref :out-dir out-dir
+                                :num-alleles num-alleles)))]
     (let [merged (combine-variants vcfs ref :merge-type :minimal :intervals intervals
                                    :out-dir out-dir)]
       (map (fn [[v b merge?]] (if merge? (merge-vcf v merged b ref) v))

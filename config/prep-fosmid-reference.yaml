@@ -13,10 +13,12 @@ experiments:
       - name: fosmid
         file: test/data/phasing-reference.vcf
         remove-refcalls: true
+        refcalls: true
         annotate: true
       - name: fosmid2
         file: test/data/phasing-reference2.vcf
         remove-refcalls: true
+        refcalls: true
         annotate: true
       - name: illumina
         prep: true
