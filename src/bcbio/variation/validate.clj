@@ -50,39 +50,45 @@
 
 (defmulti get-to-validate
   "Select set of variants to validate from total set of potentials."
-  (fn [in-vcf params ref] (keyword (get-in params [:validate :approach]))))
+  (fn [in-vcf finalizer ref] (keyword (get-in finalizer [:params :validate :approach]))))
 
 (defmethod get-to-validate :random
-  [in-vcf params ref]
-  (select-by-random (get-in params [:validate :count]) in-vcf ref))
+  [in-vcf finalizer ref]
+  (select-by-random (get-in finalizer [:params :validate :count]) in-vcf ref))
 
 ; ## Validation targets by sorting
 
 (defn- extract-sort-metrics
-  "Provide function to extract metric used in sorting from a variant context."
-  [params]
-  {:pre [(= 1 (count (:top-metric params)))]}
-  (let [metric (get-in params [:top-metric 0 :name])
-        mod (get-in params [:top-metric 0 :mod])]
+  "Provide function to extract metric used in sorting from a variant context.
+  Returns a list with the first being the count of items found in set overlap
+  and the second the metric to sort by. Currently only handles a single metric
+  for sorting."
+  [finalizer]
+  {:pre [(= 1 (count (get-in finalizer [:params :validate :top-metric])))]}
+  (let [metric (get-in finalizer [:params :validate :top-metric 0 :name])
+        mod (get-in finalizer [:params :validate :top-metric 0 :mod])]
     (fn [vc]
-      (when-let [base (-> vc :attributes (get metric "-1000.0") (Float/parseFloat))]
-        (if mod (* mod base) base)))))
+      (let [base (-> vc :attributes (get metric "-1000.0") (Float/parseFloat))]
+        [(count (re-seq (re-pattern (:target finalizer))
+                           (-> vc :attributes (get "set" ""))))
+         (if mod (* mod base) base)]))))
 
 (defn- get-top-variants
   "Retrieve top variants sorted by metrics of interest."
-  [vcf-file params ref]
+  [vcf-file finalizer ref]
   (with-open [vcf-source (get-vcf-source vcf-file ref)]
-    (let [metric-gettr (extract-sort-metrics (:validate params))]
+    (let [metric-gettr (extract-sort-metrics finalizer)]
       (set
        (map (juxt :chr :start)
-            (take (get-in params [:validate :count])
-                  (sort-by metric-gettr > (parse-vcf vcf-source))))))))
+            (take (get-in finalizer [:params :validate :count])
+                  (reverse
+                   (sort-by metric-gettr (parse-vcf vcf-source)))))))))
 
 (defmethod get-to-validate :top
-  [in-vcf params ref]
+  [in-vcf finalizer ref]
   (let [out-file (itx/add-file-part in-vcf "topsubset")]
     (when (itx/needs-run? out-file)
-      (let [to-keep (get-top-variants in-vcf params ref)]
+      (let [to-keep (get-top-variants in-vcf finalizer ref)]
         (with-open [vcf-source (get-vcf-source in-vcf ref)]
           (write-vcf-w-template in-vcf {:out out-file}
                                 (map :vc
@@ -107,11 +113,11 @@
                                 ref :merge-type :full)
               (:true-positives multi-prep))
      :validate (get-to-validate
-                (if-let [val-filters (get-in finalizer [:params :filters :validate])]
-                  (select-by-filters val-filters (:false-negatives multi-prep)
-                                     "checksubset" ref)
-                  (:false-negatives multi-prep))
-                (:params finalizer) ref))))
+                (let [orig (:target-overlaps multi-prep)]
+                  (if-let [val-filters (get-in finalizer [:params :filters :validate])]
+                    (select-by-filters val-filters orig "checksubset" ref)
+                    orig))
+                finalizer ref))))
 
 (defn pipeline-validate
   "High level pipeline entry for producing final and to-validate call sets."

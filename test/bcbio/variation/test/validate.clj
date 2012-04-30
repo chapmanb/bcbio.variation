@@ -15,7 +15,8 @@
              (itx/remove-path x))
            ?form)))
 
-(let [params {:validate {:approach "top" :count 5
-                         :top-metric [{:name "QD" "mod" 1}]}}]
+(let [finalizer {:target "gatk"
+                 :params {:validate {:approach "top" :count 5
+                                     :top-metric [{:name "QD" "mod" 1}]}}}]
   (facts "Prepare top variants sorted by metrics."
-    (get-to-validate top-vcf params ref) => top-out))
+    (get-to-validate top-vcf finalizer ref) => top-out))
