@@ -98,7 +98,7 @@
 
 (defmulti upload-result-vcf
   "Upload prepared sample VCF bgzipped and tabix indexed."
-  (fn [_ config] (keyword (get-in config :upload :target))))
+  (fn [_ config] (keyword (get-in config [:upload :target]))))
 
 (defmethod upload-result-vcf :s3
   [vcf config]
@@ -133,6 +133,6 @@
           combo-samples (combine-samples samples (:ref config) prep-dir)
           ann-samples (map #(annotate-sample % (:ref config) (:ftp config)
                                              prep-dir (get-in config [:dir :out]))
-                           combo-samples)]
+                           (sort-by :sample combo-samples))]
       (doseq [ready-vcf ann-samples]
         (upload-result-vcf ready-vcf config)))))
