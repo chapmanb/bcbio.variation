@@ -117,10 +117,11 @@
   "Retrieve processed output file for web display."
   [request]
   (letfn [(sample-file [ext]
-            (str (-> request :config :ref :sample) ext))]
-    (let [file-map {"concordant" (sample-file "-contestant-concordant.vcf")
-                    "discordant" (sample-file "-contestant-discordant.vcf")
-                    "phasing" (sample-file "-contestant-phasing-error.vcf")}
+            (let [base-name "contestant-reference"]
+              (format "%s-%s-%s" (-> request :config :ref :sample) base-name ext)))]
+    (let [file-map {"concordant" (sample-file "concordant.vcf")
+                    "discordant" (sample-file "discordant.vcf")
+                    "phasing" (sample-file "phasing-error.vcf")}
           base-dir (-> request :session :work-info :dir)
           work-dir (if-not (nil? base-dir) (fs/file base-dir "grading"))
           name (get file-map (-> request :params :name))
