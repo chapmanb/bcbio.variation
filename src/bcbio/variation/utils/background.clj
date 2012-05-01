@@ -10,6 +10,7 @@
             [clojure.string :as string]
             [clj-yaml.core :as yaml]
             [fs.core :as fs]
+            [aws.sdk.s3 :as s3]
             [bcbio.run.itx :as itx]))
 
 ;; ## Combine and annotate VCFs
@@ -32,7 +33,7 @@
   "Annotate genome sample VCFs with GATK metrics."
   [sample-info ref ftp-config prep-dir out-dir]
   (let [final-file (str (fs/file out-dir (format "%s-annotated.vcf" (:sample sample-info))))]
-    (when (itx/needs-run? final-file)
+    (when (every? itx/needs-run? [final-file (str final-file ".gz")])
       (let [sample-bam (download-sample-bam (:sample sample-info) ftp-config prep-dir)
             ann-vcf (add-gatk-annotations (:file sample-info) sample-bam ref)]
         (fs/rename ann-vcf final-file)
@@ -80,6 +81,42 @@
         (itx/remove-path chrom-vcf)))
     sample-info))
 
+;; ## Prep and upload
+
+(defn- tabix-prep-vcf
+  "Prep VCF for tabix access by bgzipping and indexing."
+  [vcf]
+  (let [out-dir (str (fs/parent vcf))
+        vcf-gz (str vcf ".gz")
+        tbi-gz (str vcf-gz ".tbi")]
+    (shell/with-sh-dir out-dir
+      (when (itx/needs-run? vcf-gz)
+        (shell/sh "bgzip" (str (fs/base-name vcf))))
+      (when (itx/needs-run? tbi-gz)
+        (shell/sh "tabix" "-p" "vcf" (str (fs/base-name vcf-gz)))))
+    [vcf-gz tbi-gz]))
+
+(defmulti upload-result-vcf
+  "Upload prepared sample VCF bgzipped and tabix indexed."
+  (fn [_ config] (keyword (get-in config :upload :target))))
+
+(defmethod upload-result-vcf :s3
+  [vcf config]
+  (let [cred {:access-key (System/getenv "AWS_ACCESS_KEY_ID")
+              :secret-key (System/getenv "AWS_SECRET_ACCESS_KEY")}
+        bucket (get-in config [:upload :bucket])]
+    (when-not (s3/bucket-exists? cred bucket)
+      (s3/create-bucket cred bucket)
+      (s3/update-bucket-acl cred bucket (s3/grant :all-users :read)))
+    (doseq [fname (tabix-prep-vcf vcf)]
+      (let [s3-key (format "%s/%s" (get-in config [:upload :folder])
+                           (str (fs/base-name fname)))]
+        (when-not (s3/object-exists? cred bucket s3-key)
+          (s3/put-object cred bucket s3-key (file fname))
+          (s3/update-object-acl cred bucket s3-key
+                                (s3/grant :all-users :read)))
+        (println s3-key)))))
+
 (defn make-work-dirs [config]
   (doseq [dir-name (-> config :dir keys)]
     (let [cur-dir (get-in config [:dir dir-name])]
@@ -97,4 +134,5 @@
           ann-samples (map #(annotate-sample % (:ref config) (:ftp config)
                                              prep-dir (get-in config [:dir :out]))
                            combo-samples)]
-      (println ann-samples))))
+      (doseq [ready-vcf ann-samples]
+        (upload-result-vcf ready-vcf config)))))

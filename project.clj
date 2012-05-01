@@ -12,6 +12,7 @@
                  [clj-yaml "0.3.1"]
                  [doric "0.7.0-SNAPSHOT"]
                  [ordered "1.0.0"]
+                 [clj-aws-s3 "0.3.1"]
                  [compojure "1.0.1"]
                  [ring "1.0.2"]
                  [enlive "1.0.0"]]
