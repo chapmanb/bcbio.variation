@@ -81,7 +81,22 @@
         (itx/remove-path chrom-vcf)))
     sample-info))
 
-;; ## Prep and upload
+;; ## Create combined background file
+
+(defn prep-combined-background
+  "Prepare combined VCF file with background information from multiple inputs."
+  [vcfs config]
+  (letfn [(maybe-bgzip-vcf [x]
+            (first (filter fs/exists? [x (str x ".gz")])))]
+    (let [out-dir (get-in config [:dir :out])
+          out-file (str (fs/file out-dir (get-in config [:upload :combined-vcf])))]
+      (when (itx/needs-run? out-file)
+        (-> (combine-variants (map maybe-bgzip-vcf vcfs) (:ref config)
+                              :merge-type :full :out-dir out-dir)
+            (fs/rename out-file)))
+      out-file)))
+
+;; ## Tabix prep and upload
 
 (defn- tabix-prep-vcf
   "Prep VCF for tabix access by bgzipping and indexing."
@@ -134,5 +149,6 @@
           ann-samples (map #(annotate-sample % (:ref config) (:ftp config)
                                              prep-dir (get-in config [:dir :out]))
                            (sort-by :sample combo-samples))]
-      (doseq [ready-vcf ann-samples]
+      (doseq [ready-vcf (cons (prep-combined-background ann-samples config)
+                              ann-samples)]
         (upload-result-vcf ready-vcf config)))))
