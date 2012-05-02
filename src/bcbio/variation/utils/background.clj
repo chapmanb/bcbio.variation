@@ -29,11 +29,16 @@
       (download (str dl-url ".bai") (str local-file ".bai"))
       local-file)))
 
+(defn- gzip-needs-run?
+  "Check if a file exists, also checking for gzipped versions."
+  [x]
+  (every? itx/needs-run? [x (str x ".gz")]))
+
 (defn- annotate-sample
   "Annotate genome sample VCFs with GATK metrics."
   [sample-info ref ftp-config prep-dir out-dir]
   (let [final-file (str (fs/file out-dir (format "%s-annotated.vcf" (:sample sample-info))))]
-    (when (every? itx/needs-run? [final-file (str final-file ".gz")])
+    (when (gzip-needs-run? final-file)
       (let [sample-bam (download-sample-bam (:sample sample-info) ftp-config prep-dir)
             ann-vcf (add-gatk-annotations (:file sample-info) sample-bam ref)]
         (fs/rename ann-vcf final-file)
@@ -90,7 +95,7 @@
             (first (filter fs/exists? [x (str x ".gz")])))]
     (let [out-dir (get-in config [:dir :out])
           out-file (str (fs/file out-dir (get-in config [:upload :combined-vcf])))]
-      (when (itx/needs-run? out-file)
+      (when (gzip-needs-run? out-file)
         (-> (combine-variants (map maybe-bgzip-vcf vcfs) (:ref config)
                               :merge-type :full :out-dir out-dir)
             (fs/rename out-file)))
