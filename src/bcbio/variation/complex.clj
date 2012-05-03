@@ -126,25 +126,27 @@
              (nil? prev) false
              (and (= (:chr prev) (:chr cur))
                   (> (mnp-end prev) (:start cur))) true
-                  :else false))]
+                  :else false))
+          (maybe-cur [items]
+            (let [prevs (butlast items)
+                  cur (last items)]
+              (when (not-any? (partial mnp-overlap? cur) prevs)
+                  cur)))]
     (let [num-prev 5]
       (remove nil?
-              (for [[prev cur] (map (juxt butlast last)
-                                    (partition num-prev 1 (concat (repeat (dec num-prev) nil)
-                                                                  vc-iter)))]
-                (if (not-any? (partial mnp-overlap? cur) prev)
-                  cur))))))
+              (map maybe-cur
+                   (partition num-prev 1
+                              (lazy-cat (repeat (dec num-prev) nil) vc-iter)))))))
 
 (defn- get-normalized-vcs
   "Lazy list of variant context with MNPs split into single genotypes and indels stripped."
   [vcf-source]
-  (map (fn [x] [:out x])
-   (flatten
-    (for [vc (vcs-no-mnp-overlaps (parse-vcf vcf-source))]
-      (condp = (:type vc)
-        "MNP" (split-mnp vc)
-        "INDEL" (maybe-strip-indel vc)
-        (:vc vc))))))
+  (letfn [(process-vc [vc]
+            (condp = (:type vc)
+              "MNP" (split-mnp vc)
+              "INDEL" (maybe-strip-indel vc)
+              (:vc vc)))]
+    (flatten (map process-vc (vcs-no-mnp-overlaps (parse-vcf vcf-source))))))
 
 (defn normalize-variants
   "Convert MNPs and indels into normalized representation."
