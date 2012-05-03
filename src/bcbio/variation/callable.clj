@@ -11,15 +11,16 @@
 
 (defn identify-callable
   "Identify callable bases from the provided alignment file."
-  [align-bam ref & {:keys [out-dir] :or {out-dir nil}}]
+  [align-bam ref & {:keys [out-dir intervals]}]
   (let [base-dir (if (nil? out-dir) (fs/parent align-bam) out-dir)
         base-fname (str (file base-dir (-> align-bam fs/base-name itx/file-root)))
         file-info {:out-bed (format "%s-callable.bed" base-fname)
                    :out-summary (format "%s-callable-summary.txt" base-fname)}
-        args ["-R" ref
-              "-I" align-bam
-              "--out" :out-bed
-              "--summary" :out-summary]]
+        args (concat ["-R" ref
+                      "-I" align-bam
+                      "--out" :out-bed
+                      "--summary" :out-summary]
+                     (broad/gatk-cl-intersect-intervals intervals))]
     (if-not (fs/exists? base-dir)
       (fs/mkdirs base-dir))
     (broad/index-bam align-bam)
@@ -45,9 +46,10 @@
 (defn callable-checker
   "Provide function to check if a region (chromsome start end) is callable.
   Calculates based on reads in input BAM file."
-  [align-bam ref & {:keys [out-dir] :or {out-dir nil}}]
+  [align-bam ref & {:keys [out-dir intervals]}]
   (if (nil? align-bam) [(fn [& _] true) (java.io.StringReader. "")]
-      (let [source (get-bed-source (identify-callable align-bam ref :out-dir out-dir))]
+      (let [source (get-bed-source (identify-callable align-bam ref :out-dir out-dir
+                                                      :intervals intervals))]
         (letfn [(is-callable? [space start end]
                   (> (count (filter #(= (:name %) "CALLABLE")
                                     (features-in-region source space start end)))

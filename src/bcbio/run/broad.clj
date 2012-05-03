@@ -27,3 +27,12 @@
         (SAMFileReader/setDefaultValidationStringency SAMFileReader$ValidationStringency/LENIENT)
         (BuildBamIndex/createIndex (SAMFileReader. (file in-bam)) (file index-file))))
     index-file))
+
+(defn gatk-cl-intersect-intervals
+  "Supply GATK commandline arguments for interval files, merging via intersection."
+  [intervals]
+  (cond
+   (nil? intervals) []
+   (coll? intervals) (concat (flatten (map #(list "-L" %) intervals))
+                             ["--interval_set_rule" "INTERSECTION"])
+   :else ["-L", intervals]))

@@ -6,9 +6,10 @@
             [bcbio.run.itx :as itx]
             [bcbio.run.broad :as broad]))
 
+
 (defn add-gatk-annotations
   "Add GATK annotation metrics to variant calls."
-  [in-vcf align-bam ref & {:keys [out-dir]}]
+  [in-vcf align-bam ref & {:keys [out-dir intervals]}]
   {:pre [(not (nil? align-bam))]}
   (let [file-info {:out-vcf (itx/add-file-part in-vcf "annotated" out-dir)}
         annotations ["AlleleBalance" "BaseQualityRankSumTest" "DepthOfCoverage"
@@ -20,7 +21,8 @@
                       "-I" align-bam
                       "--variant" in-vcf
                       "-o" :out-vcf]
-                     (reduce #(concat %1 ["-A" %2]) [] annotations))]
+                     (reduce #(concat %1 ["-A" %2]) [] annotations)
+                     (broad/gatk-cl-intersect-intervals intervals))]
     (broad/index-bam align-bam)
     (broad/run-gatk "VariantAnnotator" args file-info {:out [:out-vcf]})
     (:out-vcf file-info)))

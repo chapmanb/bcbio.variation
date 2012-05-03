@@ -12,21 +12,13 @@
                                                get-vcf-header]]
         [bcbio.variation.callable :only [callable-checker]]
         [bcbio.variation.complex :only [normalize-variants]]
+        [bcbio.variation.haploid :only [diploid-calls-to-haploid]]
         [bcbio.variation.normalize :only [prep-vcf clean-problem-vcf]]
         [bcbio.variation.phasing :only [is-haploid?]])
   (:require [fs.core :as fs]
             [clojure.string :as string]
             [bcbio.run.itx :as itx]
             [bcbio.run.broad :as broad]))
-
-(defn gatk-cl-intersect-intervals
-  "Supply GATK commandline arguments for interval files, merging via intersection."
-  [intervals]
-  (cond
-   (nil? intervals) []
-   (coll? intervals) (concat (flatten (map #(list "-L" %) intervals))
-                             ["--interval_set_rule" "INTERSECTION"])
-   :else ["-L", intervals]))
 
 (defn combine-variants
   "Combine multiple variant files with GATK CombineVariants."
@@ -51,7 +43,7 @@
                         "--rod_priority_list" (string/join "," (map unique-name vcfs))]
                        (if unsafe ["--unsafe" "ALLOW_SEQ_DICT_INCOMPATIBILITY"] [])
                        (flatten (map #(list (str "--variant:" (unique-name %)) %) vcfs))
-                       (gatk-cl-intersect-intervals intervals)
+                       (broad/gatk-cl-intersect-intervals intervals)
                        (case merge-type
                              :full ["--genotypemergeoption" "PRIORITIZE"]
                              :unique ["--genotypemergeoption" "UNIQUIFY"]
@@ -63,9 +55,10 @@
 
 (defn convert-no-calls
   "Convert no-calls into callable reference and real no-calls."
-  [in-vcf align-bam ref & {:keys [out-dir num-alleles]}]
+  [in-vcf align-bam ref & {:keys [out-dir intervals num-alleles]}]
   (let [out-file (itx/add-file-part in-vcf "wrefs")
-        [is-callable? call-source] (callable-checker align-bam ref :out-dir out-dir)]
+        [is-callable? call-source] (callable-checker align-bam ref :out-dir out-dir
+                                                     :intervals intervals)]
     (letfn [(ref-genotype [g vc]
               (doto (-> vc :vc .getGenotypes GenotypesContext/copy)
                 (.replace
@@ -129,7 +122,7 @@
                       "--unsafe" "ALLOW_SEQ_DICT_INCOMPATIBILITY"
                       "--out" :out-vcf]
                      (if remove-refcalls ["--excludeNonVariants" "--excludeFiltered"] [])
-                     (if-not (nil? intervals) ["-L" intervals] []))]
+                     (broad/gatk-cl-intersect-intervals intervals))]
     (if-not (fs/exists? base-dir)
       (fs/mkdirs base-dir))
     (broad/run-gatk "SelectVariants" args file-info {:out [:out-vcf]})
@@ -137,15 +130,14 @@
 
 (defn create-merged
   "Create merged VCF files with no-call/ref-calls for each of the inputs."
-  [vcfs align-bams do-merges ref & {:keys [out-dir intervals]
-                                    :or {out-dir nil intervals nil}}]
+  [vcfs align-bams do-merges ref & {:keys [out-dir intervals]}]
   (letfn [(merge-vcf [vcf all-vcf align-bam ref]
             (let [ready-vcf (combine-variants [vcf all-vcf] ref
                                               :merge-type :full :intervals intervals
                                               :out-dir out-dir)
                   num-alleles (when (is-haploid? vcf ref) 1)]
               (convert-no-calls ready-vcf align-bam ref :out-dir out-dir
-                                :num-alleles num-alleles)))]
+                                :intervals intervals :num-alleles num-alleles)))]
     (let [merged (combine-variants vcfs ref :merge-type :minimal :intervals intervals
                                    :out-dir out-dir)]
       (map (fn [[v b merge?]] (if merge? (merge-vcf v merged b ref) v))
@@ -159,11 +151,11 @@
    This organizes the logic which get convoluted for different cases.
    The approach is to select a single sample and remove refcalls if we have
    a multiple sample file, so the sample name will be correct."
-  [in-file call exp out-dir out-fname]
+  [in-file call exp intervals out-dir out-fname]
   (letfn [(run-sample-select [in-file]
             (select-by-sample (:sample exp) in-file (:name call)
                               (get call :ref (:ref exp))
-                              :out-dir out-dir
+                              :out-dir out-dir :intervals intervals
                               :remove-refcalls (get call :remove-refcalls false)))]
     (let [sample-file (if (multiple-samples? in-file)
                         (run-sample-select in-file)
@@ -172,9 +164,12 @@
                       (prep-vcf sample-file (:ref exp) (:sample exp) :out-dir out-dir
                                 :out-fname out-fname :orig-ref-file (:ref call))
                       sample-file)
+          hap-file (if (true? (:make-haploid call))
+                     (diploid-calls-to-haploid prep-file (:ref exp) :out-dir out-dir)
+                     prep-file)
           noref-file (if (and (not (multiple-samples? in-file)) (:remove-refcalls call))
-                       (run-sample-select prep-file)
-                       prep-file)]
+                       (run-sample-select hap-file)
+                       hap-file)]
       noref-file)))
 
 (defn gatk-normalize
@@ -184,13 +179,13 @@
    1. Combining multiple input files
    2. Fixing reference and sample information.
    3. Splitting combined MNPs into phased SNPs"
-  [call exp out-dir]
+  [call exp intervals out-dir]
   (if-not (fs/exists? out-dir)
     (fs/mkdirs out-dir))
   (letfn [(merge-call-files [call in-files]
             (combine-variants in-files (get call :ref (:ref exp))
                               :merge-type :full :out-dir out-dir
-                              :unsafe true))]
+                              :intervals intervals :unsafe true))]
     (let [out-fname (format "%s-%s.vcf" (:sample exp) (:name call))
           in-files (if (coll? (:file call)) (:file call) [(:file call)])
           clean-files (map #(if-not (:preclean call) %
@@ -199,7 +194,7 @@
           merge-file (if (> (count clean-files) 1)
                        (merge-call-files call clean-files)
                        (first clean-files))
-          prep-file (dirty-prep-work merge-file call exp out-dir out-fname)]
+          prep-file (dirty-prep-work merge-file call exp intervals out-dir out-fname)]
       (assoc call :file (if (true? (get call :normalize true))
                           (normalize-variants prep-file (:ref exp) out-dir
                                               :out-fname out-fname)

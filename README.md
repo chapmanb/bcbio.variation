@@ -90,9 +90,13 @@ provide example starting points and details on available options are below:
            annotate: Annotate calls with GATK annotations (boolean; default false).
            normalize: Normalize MNPs and indels (boolean: default true).
            prep: Prep with in-order chromosomes and sample names (boolean; default false).
-           preclean: Remove problematic characters from input VCFs (boolean; default false). 
-           remove-refcalls: Remove reference, non-variant calls. (boolean; default false). 
-
+           preclean: Remove problematic characters from input VCFs
+                     (boolean; default false). 
+           remove-refcalls: Remove reference, non-variant calls.
+                            (boolean; default false). 
+           make-haploid: Convert a set of diploid calls to haploid variants
+                        (boolean; default false)
+           
 [u1]: https://github.com/technomancy/leiningen
 [u2]: http://en.wikipedia.org/wiki/YAML
 [u3]: https://github.com/chapmanb/bcbio.variation/blob/master/config/method-comparison.yaml

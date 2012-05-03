@@ -17,7 +17,7 @@
                                        top-level-metrics
                                        write-classification-metrics]]
         [bcbio.variation.combine :only [combine-variants create-merged
-                                        gatk-normalize gatk-cl-intersect-intervals]]
+                                        gatk-normalize]]
         [bcbio.variation.annotation :only [add-variant-annotations]]
         [bcbio.variation.filter :only [variant-filter pipeline-recalibration]]
         [bcbio.variation.phasing :only [is-haploid? compare-two-vcf-phased]]
@@ -55,13 +55,13 @@
                "--evalModule" "ValidationReport"
                "--stratificationModule" "Sample"
                "--stratificationModule" "Filter"]
-              (gatk-cl-intersect-intervals intervals))]
+              (broad/gatk-cl-intersect-intervals intervals))]
     (broad/run-gatk "VariantEval" args file-info {:out [:out-eval]})
     (:out-eval file-info)))
 
 (defn select-by-concordance
   "Variant comparison producing 3 files: concordant and both directions discordant"
-  [sample call1 call2 ref & {:keys [out-dir interval-file]}]
+  [sample call1 call2 ref & {:keys [out-dir intervals]}]
   (let [base-dir (if (nil? out-dir) (fs/parent (:file call1)) out-dir)]
     (if-not (fs/exists? base-dir)
       (fs/mkdirs base-dir))
@@ -78,7 +78,7 @@
                     "--variant" (:file c1)
                     (str "--" cmp-type) (:file c2)
                     "--out" :out-vcf]
-                   (if-not (nil? interval-file) ["-L:bed" interval-file] []))]
+                   (broad/gatk-cl-intersect-intervals intervals))]
          (broad/run-gatk "SelectVariants" args file-info {:out [:out-vcf]})
          (:out-vcf file-info))))))
 
@@ -139,15 +139,17 @@
   [exp config]
   (let [out-dir (get-in config [:dir :prep] (get-in config [:dir :out]))
         align-bams (prepare-input-bams exp out-dir)
-        start-vcfs (map #(gatk-normalize % exp out-dir) (:calls exp))
         all-intervals (remove nil? (map :intervals (cons exp (:calls exp))))
+        start-vcfs (map #(gatk-normalize % exp all-intervals out-dir)
+                        (:calls exp))
         merged-vcfs (create-merged (map :file start-vcfs)
                                    align-bams
                                    (map #(get % :refcalls false) (:calls exp))
                                    (:ref exp) :out-dir out-dir
                                    :intervals all-intervals)
         ann-vcfs (map (fn [[v b c]]
-                        (add-variant-annotations v b (:ref exp) c :out-dir out-dir))
+                        (add-variant-annotations v b (:ref exp) c :out-dir out-dir
+                                                 :intervals all-intervals))
                       (map vector merged-vcfs align-bams (:calls exp)))
         filter-vcfs (map (fn [[v c]] (if-not (nil? (:filters c))
                                        (variant-filter v (:filters c) (:ref exp))
@@ -174,7 +176,7 @@
             (apply ordered-map (interleave xs1 xs2)))]
     (let [c-files (select-by-concordance (:sample exp) c1 c2 (:ref exp)
                                          :out-dir (get-in config [:dir :out])
-                                         :interval-file (:intervals exp))
+                                         :intervals (:intervals exp))
           eval (calc-variant-eval-metrics (:sample exp) (:file c1) (:file c2) (:ref exp)
                                           :out-base (first c-files)
                                           :intervals (:intervals exp))
