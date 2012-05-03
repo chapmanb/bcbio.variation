@@ -143,6 +143,15 @@
       (map (fn [[v b merge?]] (if merge? (merge-vcf v merged b ref) v))
            (map vector vcfs align-bams do-merges)))))
 
+(defn- genome-safe-intervals
+  "Check if interval BED files overlap with current analysis genome build.
+  This is useful when an input VCF is from an alternate genome and needs
+  conversion. In this case we shouldn't yet be using interval selection."
+  [intervals ref exp]
+  (if (or (nil? ref) (= ref (:ref exp)))
+    intervals
+    []))
+
 (defn- dirty-prep-work
   "Prepare input file for comparisons based on configuration:
     - Selecting a single sample from multi-sample files
@@ -152,13 +161,13 @@
    The approach is to select a single sample and remove refcalls if we have
    a multiple sample file, so the sample name will be correct."
   [in-file call exp intervals out-dir out-fname]
-  (letfn [(run-sample-select [in-file]
-            (select-by-sample (:sample exp) in-file (:name call)
-                              (get call :ref (:ref exp))
-                              :out-dir out-dir :intervals intervals
+  (letfn [(run-sample-select [in-file ref]
+            (select-by-sample (:sample exp) in-file (:name call) ref
+                              :out-dir out-dir
+                              :intervals (genome-safe-intervals intervals ref exp)
                               :remove-refcalls (get call :remove-refcalls false)))]
     (let [sample-file (if (multiple-samples? in-file)
-                        (run-sample-select in-file)
+                        (run-sample-select in-file (get call :ref (:ref exp)))
                         in-file)
           prep-file (if (true? (:prep call))
                       (prep-vcf sample-file (:ref exp) (:sample exp) :out-dir out-dir
@@ -168,7 +177,7 @@
                      (diploid-calls-to-haploid prep-file (:ref exp) :out-dir out-dir)
                      prep-file)
           noref-file (if (and (not (multiple-samples? in-file)) (:remove-refcalls call))
-                       (run-sample-select hap-file)
+                       (run-sample-select hap-file (:ref exp))
                        hap-file)]
       noref-file)))
 
@@ -183,9 +192,11 @@
   (if-not (fs/exists? out-dir)
     (fs/mkdirs out-dir))
   (letfn [(merge-call-files [call in-files]
-            (combine-variants in-files (get call :ref (:ref exp))
-                              :merge-type :full :out-dir out-dir
-                              :intervals intervals :unsafe true))]
+            (let [ref (get call :ref (:ref exp))]
+              (combine-variants in-files ref
+                                :merge-type :full :out-dir out-dir
+                                :intervals (genome-safe-intervals intervals ref exp)
+                                :unsafe true)))]
     (let [out-fname (format "%s-%s.vcf" (:sample exp) (:name call))
           in-files (if (coll? (:file call)) (:file call) [(:file call)])
           clean-files (map #(if-not (:preclean call) %
