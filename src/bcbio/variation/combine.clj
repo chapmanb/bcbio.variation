@@ -103,7 +103,8 @@
             (let [do-match (filter #(when (.contains % x) %) choices)]
               (when (= 1 (count do-match))
                 (first do-match))))]
-    (let [vcf-samples (with-open [vcf-source (get-vcf-source in-vcf ref-file)]
+    (let [vcf-samples (with-open [vcf-source (get-vcf-source in-vcf ref-file
+                                                             :ensure-safe false)]
                         (-> vcf-source .getHeader .getGenotypeSamples set))]
       (if (contains? vcf-samples sample)
         sample
