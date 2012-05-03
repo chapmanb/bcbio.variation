@@ -115,16 +115,17 @@
   [tmpl-file out-file-map vc-iter ref & {:keys [header-update-fn]}]
   (letfn [(make-vcf-writer [f ref]
             (StandardVCFWriter. (file f) (get-seq-dict ref)))]
-    (let [tmpl-header (get-vcf-header tmpl-file)
-          writer-map (zipmap (keys out-file-map)
-                             (map #(make-vcf-writer % ref) (vals out-file-map)))]
-      (itx/with-open-map writer-map
-        (doseq [out-vcf (vals writer-map)]
-          (.writeHeader out-vcf (if-not (nil? header-update-fn)
-                                  (header-update-fn tmpl-header)
-                                  tmpl-header)))
-        (doseq [info vc-iter]
-          (let [[category vc] (if (and (coll? info) (= 2 (count info)))
-                                info
-                                [:out info])]
-            (.add (get writer-map category) vc)))))))
+    (itx/with-tx-files [tx-out-files out-file-map (keys out-file-map)]
+      (let [tmpl-header (get-vcf-header tmpl-file)
+            writer-map (zipmap (keys tx-out-files)
+                               (map #(make-vcf-writer % ref) (vals tx-out-files)))]
+        (itx/with-open-map writer-map
+          (doseq [out-vcf (vals writer-map)]
+            (.writeHeader out-vcf (if-not (nil? header-update-fn)
+                                    (header-update-fn tmpl-header)
+                                    tmpl-header)))
+          (doseq [info vc-iter]
+            (let [[category vc] (if (and (coll? info) (= 2 (count info)))
+                                  info
+                                  [:out info])]
+              (.add (get writer-map category) vc))))))))
