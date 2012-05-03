@@ -127,16 +127,14 @@
              (and (= (:chr prev) (:chr cur))
                   (> (mnp-end prev) (:start cur))) true
                   :else false))
-          (maybe-cur [items]
-            (let [prevs (butlast items)
-                  cur (last items)]
-              (when (not-any? (partial mnp-overlap? cur) prevs)
-                  cur)))]
+          (cur-nooverlap [items]
+            (when (not-any? (partial mnp-overlap? (last items)) (drop-last items))
+              (last items)))]
     (let [num-prev 5]
       (remove nil?
-              (map maybe-cur
+              (map cur-nooverlap
                    (partition num-prev 1
-                              (lazy-cat (repeat (dec num-prev) nil) vc-iter)))))))
+                              (concat (repeat (dec num-prev) nil) vc-iter)))))))
 
 (defn- get-normalized-vcs
   "Lazy list of variant context with MNPs split into single genotypes and indels stripped."
