@@ -18,7 +18,8 @@
         [bcbio.align.ref :only [get-seq-dict]]
         [bcbio.variation.callable :only [get-bed-source]]
         [ordered.map :only [ordered-map]])
-  (:require [fs.core :as fs]))
+  (:require [fs.core :as fs]
+            [bcbio.run.itx :as itx]))
 
 ;; ## Find phased haplotypes in VCF
 
@@ -164,11 +165,12 @@
                                                    to-capture)))]
     (if-not (fs/exists? base-dir)
       (fs/mkdirs base-dir))
-    (write-vcf-w-template (:file base-info) out-files
-                          (filter #(contains? (set to-capture) (first %))
-                                  (map (juxt :comparison :vc)
-                                       (flatten vc-info)))
-                          ref)
+    (when (itx/needs-run? (vals out-files))
+      (write-vcf-w-template (:file base-info) out-files
+                            (filter #(contains? (set to-capture) (first %))
+                                    (map (juxt :comparison :vc)
+                                         (flatten vc-info)))
+                            ref))
     out-files))
 
 (defn count-comparison-bases
@@ -254,9 +256,10 @@
                   [dis-kw1 dis-kw2] (map #(keyword (format "%s-discordant" %)) [name1 name2])]
               (case (:comparison x)
                 :concordant new-xs
-                (:discordant :phasing-error) (cons
-                                              (assoc x :comparison dis-kw2)
-                                              (map #(assoc % :comparison dis-kw1) new-xs))
+                (:discordant :phasing-error) (sort-by #(get-in % [:vc :start])
+                                                      (cons
+                                                       (assoc x :comparison dis-kw2)
+                                                       (map #(assoc % :comparison dis-kw1) new-xs)))
                 nil)))]
     (remove nil?
             (flatten
