@@ -30,12 +30,12 @@
 (defn add-variant-annotations
   "Flexible addition of additions to a variant file.
   Handles GATK annotations and Complete Genomics metrics."
-  [vcf-file bam-file ref-file call & {:keys [out-dir]}]
+  [vcf-file bam-file ref-file call & {:keys [out-dir intervals]}]
   (let [x (get call :annotate "")
         ann (if (true? x) "gatk" x)]
     (cond
      (and (= ann "gatk") (not (nil? bam-file)))
-     (add-gatk-annotations vcf-file bam-file ref-file :out-dir out-dir)
+     (add-gatk-annotations vcf-file bam-file ref-file :out-dir out-dir :intervals intervals)
      (.contains ann "masterVar")
      (add-cgmetrics vcf-file ann ref-file :out-dir out-dir)
      :else vcf-file)))

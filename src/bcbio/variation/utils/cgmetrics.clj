@@ -76,8 +76,9 @@
   [vcf-file mastervar-file ref-file & {:keys [out-dir]}]
   (let [out-file (itx/add-file-part vcf-file "cgmetrics" out-dir)
         metrics (get-masterVar-metrics mastervar-file)]
-    (with-open [vcf-source (get-vcf-source vcf-file ref-file)]
-      (write-vcf-w-template vcf-file {:out out-file}
-                            (add-cgmetrics-iter vcf-source metrics)
-                            ref-file :header-update-fn add-cgmetrics-header))
+    (when (itx/needs-run? out-file)
+      (with-open [vcf-source (get-vcf-source vcf-file ref-file)]
+        (write-vcf-w-template vcf-file {:out out-file}
+                              (add-cgmetrics-iter vcf-source metrics)
+                              ref-file :header-update-fn add-cgmetrics-header)))
     out-file))
