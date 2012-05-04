@@ -162,13 +162,13 @@
    The approach is to select a single sample and remove refcalls if we have
    a multiple sample file, so the sample name will be correct."
   [in-file call exp intervals out-dir out-fname]
-  (letfn [(run-sample-select [in-file ref]
-            (select-by-sample (:sample exp) in-file (:name call) ref
-                              :out-dir out-dir
+  (letfn [(run-sample-select [in-file ref ext]
+            (select-by-sample (:sample exp) in-file (str (:name call) ext)
+                              ref :out-dir out-dir
                               :intervals (genome-safe-intervals intervals ref exp)
                               :remove-refcalls (get call :remove-refcalls false)))]
     (let [sample-file (if (multiple-samples? in-file)
-                        (run-sample-select in-file (get call :ref (:ref exp)))
+                        (run-sample-select in-file (get call :ref (:ref exp)) "")
                         in-file)
           prep-file (if (true? (:prep call))
                       (prep-vcf sample-file (:ref exp) (:sample exp) :out-dir out-dir
@@ -177,8 +177,9 @@
           hap-file (if (true? (:make-haploid call))
                      (diploid-calls-to-haploid prep-file (:ref exp) :out-dir out-dir)
                      prep-file)
-          noref-file (if (and (not (multiple-samples? in-file)) (:remove-refcalls call))
-                       (run-sample-select hap-file (:ref exp))
+          noref-file (if (or (and (not (multiple-samples? in-file)) (:remove-refcalls call))
+                             (and (not (nil? (:ref call))) (not (empty? intervals))))
+                       (run-sample-select hap-file (:ref exp) "-noref")
                        hap-file)]
       noref-file)))
 
