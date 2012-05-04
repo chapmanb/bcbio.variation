@@ -89,7 +89,9 @@
           call-hap (when-not (nil? i) (nth (get-alleles vc) i))]
       (cond
        (nil? call-hap) :discordant
-       (and (empty? ref-alleles) (is-ref-allele? call-hap)) :ref-concordant
+       (and (is-ref-allele? call-hap)
+            (or (empty? ref-alleles)
+                (contains? ref-alleles call-hap))) :ref-concordant
        (empty? ref-alleles) :discordant
        (contains? ref-alleles call-hap) :concordant
        (some (partial contains? ref-alleles) (get-alleles vc)) :phasing-error
@@ -252,14 +254,14 @@
   keyed by :concordant and :discordant-name keywords."
   [name1 name2 cmps]
   (letfn [(update-keyword [x]
-            (let [new-xs (map #(-> x (assoc :vc %) (dissoc :ref-vcs)) (:ref-vcs x))
+            (let [new-xs (sort-by #(get-in % [:vc :start])
+                                  (map #(-> x (assoc :vc %) (dissoc :ref-vcs)) (:ref-vcs x)))
                   [dis-kw1 dis-kw2] (map #(keyword (format "%s-discordant" %)) [name1 name2])]
               (case (:comparison x)
                 :concordant new-xs
-                (:discordant :phasing-error) (sort-by #(get-in % [:vc :start])
-                                                      (cons
-                                                       (assoc x :comparison dis-kw2)
-                                                       (map #(assoc % :comparison dis-kw1) new-xs)))
+                (:discordant :phasing-error) (cons
+                                              (assoc x :comparison dis-kw2)
+                                              (map #(assoc % :comparison dis-kw1) new-xs))
                 nil)))]
     (remove nil?
             (flatten
