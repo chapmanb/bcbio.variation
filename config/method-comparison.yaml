@@ -5,7 +5,7 @@ dir:
 experiments:
   - sample: Test1
     ref: test/data/GRCh37.fa
-    intervals: test/data/target-regions.bed
+    #intervals: test/data/target-regions.bed
     calls:
       - name: gatk
         file: test/data/gatk-calls.vcf
