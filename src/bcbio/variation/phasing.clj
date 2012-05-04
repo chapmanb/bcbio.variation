@@ -285,10 +285,12 @@
 ;; ## Utility functions
 
 (defn is-haploid?
-  "Is the provided VCF file a haploid genome (one genotype or all homozygous)"
+  "Is the provided VCF file a haploid genome (one genotype or all homozygous).
+  Samples the first set of variants, checking for haploid calls."
   [vcf-file ref-file]
-  (letfn [(is-vc-haploid? [vc]
-            (or (= 1 (apply max (map #(count (:alleles %)) (:genotypes vc))))
-                (contains? #{"HOM_REF" "HOM_VAR"} (:type vc))))]
-    (with-open [vcf-source (get-vcf-source vcf-file ref-file)]
-      (every? is-vc-haploid? (parse-vcf vcf-source)))))
+  (let [sample-size 1000]
+    (letfn [(is-vc-haploid? [vc]
+              (or (= 1 (apply max (map #(count (:alleles %)) (:genotypes vc))))
+                  (contains? #{"HOM_REF" "HOM_VAR"} (:type vc))))]
+      (with-open [vcf-source (get-vcf-source vcf-file ref-file)]
+        (every? is-vc-haploid? (take sample-size (parse-vcf vcf-source)))))))
