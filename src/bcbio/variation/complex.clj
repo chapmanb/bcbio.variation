@@ -153,7 +153,7 @@
   ([in-file ref out-dir & {:keys [out-fname]}]
      (let [base-name (if (nil? out-fname) (itx/remove-zip-ext in-file) out-fname)
            out-file (itx/add-file-part base-name "nomnp" out-dir)]
-       (if (itx/needs-run? [out-file])
+       (when (itx/needs-run? out-file)
          (with-open [vcf-source (get-vcf-source in-file ref)]
            (write-vcf-w-template in-file {:out out-file} (get-normalized-vcs vcf-source) ref)))
        out-file)))

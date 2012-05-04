@@ -140,12 +140,12 @@
 (defn- score-phased-region
   "Provide scoring metrics for a phased region against a haplotype reference."
   [vcs ref-fetch]
-  (letfn [(ref-alleles [x]
+  (letfn [(get-ref-vcs [x]
             (ref-fetch (:chr x) (:start x) (:end x)))
           (ref-match-allele [x]
-            (matching-allele x (ref-alleles x)))]
+            (matching-allele x (get-ref-vcs x)))]
     (let [cmp-allele-i (highest-count (map ref-match-allele vcs))]
-      (map #(comparison-metrics % (ref-alleles %) cmp-allele-i) vcs))))
+      (map #(comparison-metrics % (get-ref-vcs %) cmp-allele-i) vcs))))
 
 (defn score-phased-calls
   "Score a called VCF against reference based on phased regions."
@@ -254,8 +254,10 @@
   keyed by :concordant and :discordant-name keywords."
   [name1 name2 cmps]
   (letfn [(update-keyword [x]
-            (let [new-xs (sort-by #(get-in % [:vc :start])
-                                  (map #(-> x (assoc :vc %) (dissoc :ref-vcs)) (:ref-vcs x)))
+            (let [new-xs (remove #(< (.getStart (:vc %)) (.getStart (:vc x)))
+                                 (sort-by #(get-in % [:vc :start])
+                                          (map #(-> x (assoc :vc %) (dissoc :ref-vcs))
+                                               (:ref-vcs x))))
                   [dis-kw1 dis-kw2] (map #(keyword (format "%s-discordant" %)) [name1 name2])]
               (case (:comparison x)
                 :concordant new-xs

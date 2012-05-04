@@ -82,7 +82,7 @@
             (convert-vcs [vcf-source]
               (for [vc (parse-vcf vcf-source)]
                 [:out (maybe-callable-vc vc)]))]
-      (if (itx/needs-run? out-file)
+      (when (itx/needs-run? out-file)
         (with-open [in-vcf-s (get-vcf-source in-vcf ref)
                     _ call-source]
           (write-vcf-w-template in-vcf {:out out-file} (convert-vcs in-vcf-s) ref)))
