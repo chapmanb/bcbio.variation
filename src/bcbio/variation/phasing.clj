@@ -91,7 +91,7 @@
           (get-all-alleles [vc]
             (map #(get-cmp-allele % vc) (range (count (get-alleles vc)))))]
     (let [ref-alleles (set (map (partial get-cmp-allele 0) ref-vcs))
-          call-hap (when-not (nil? i) (get-cmp-allele i vc))]
+          call-hap (when-not (or (neg? i) (nil? i)) (get-cmp-allele i vc))]
       (cond
        (nil? call-hap) :discordant
        (and (is-ref-allele? call-hap)
