@@ -84,9 +84,14 @@
   "Compare the haploid allele of a variant against the reference call."
   [vc ref-vcs i]
   (letfn [(is-ref-allele? [x]
-            (= (.getBaseString x) (-> vc :ref-allele .getBaseString)))]
-    (let [ref-alleles (set (map #(-> % get-alleles first) ref-vcs))
-          call-hap (when-not (nil? i) (nth (get-alleles vc) i))]
+            (apply = (map #(.getBaseString (% x)) [:cmp :ref])))
+          (get-cmp-allele [i vc]
+            {:ref (:ref-allele vc)
+             :cmp (nth (get-alleles vc) i)})
+          (get-all-alleles [vc]
+            (map #(get-cmp-allele % vc) (range (count (get-alleles vc)))))]
+    (let [ref-alleles (set (map (partial get-cmp-allele 0) ref-vcs))
+          call-hap (when-not (nil? i) (get-cmp-allele i vc))]
       (cond
        (nil? call-hap) :discordant
        (and (is-ref-allele? call-hap)
@@ -94,7 +99,7 @@
                 (contains? ref-alleles call-hap))) :ref-concordant
        (empty? ref-alleles) :discordant
        (contains? ref-alleles call-hap) :concordant
-       (some (partial contains? ref-alleles) (get-alleles vc)) :phasing-error
+       (some (partial contains? ref-alleles) (get-all-alleles vc)) :phasing-error
        :else :discordant))))
 
 (defn get-variant-type
