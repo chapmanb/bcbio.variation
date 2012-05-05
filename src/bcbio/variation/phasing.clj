@@ -258,9 +258,11 @@
   "Convert stream of variant context haploid comparison to standard,
   keyed by :concordant and :discordant-name keywords."
   [name1 name2 cmps]
-  (letfn [(update-keyword [x]
-            (let [new-xs (remove #(< (.getStart (:vc %)) (.getStart (:vc x)))
-                                 (sort-by #(get-in % [:vc :start])
+  (letfn [(get-start [x]
+            (.getStart (:vc x)))
+          (update-keyword [x]
+            (let [new-xs (remove #(< (get-start %) (get-start x))
+                                 (sort-by get-start
                                           (map #(-> x (assoc :vc %) (dissoc :ref-vcs))
                                                (:ref-vcs x))))
                   [dis-kw1 dis-kw2] (map #(keyword (format "%s-discordant" %)) [name1 name2])]
