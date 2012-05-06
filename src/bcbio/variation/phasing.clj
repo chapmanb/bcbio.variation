@@ -91,7 +91,7 @@
           (get-all-alleles [vc]
             (map #(get-cmp-allele % vc) (range (count (get-alleles vc)))))]
     (let [ref-alleles (set (map (partial get-cmp-allele 0) ref-vcs))
-          call-hap (when-not (or (neg? i) (nil? i)) (get-cmp-allele i vc))]
+          call-hap (when-not (or (nil? i) (neg? i)) (get-cmp-allele i vc))]
       (cond
        (nil? call-hap) :discordant
        (and (is-ref-allele? call-hap)
@@ -261,7 +261,7 @@
   (letfn [(get-start [x]
             (.getStart (:vc x)))
           (update-keyword [x]
-            (let [new-xs (remove #(< (get-start %) (get-start x))
+            (let [new-xs (filter #(= (get-start %) (get-start x))
                                  (sort-by get-start
                                           (map #(-> x (assoc :vc %) (dissoc :ref-vcs))
                                                (:ref-vcs x))))
