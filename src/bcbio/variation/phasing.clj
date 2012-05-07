@@ -126,8 +126,8 @@
 
 (defn- nomatch-het-alt?
   "Determine if the variant has a non-matching heterozygous alternative allele."
-  [vc ref-vcs]
-  (let [match-allele-i (matching-allele vc ref-vcs)
+  [vc ref-vc]
+  (let [match-allele-i (matching-allele vc [ref-vc])
         no-match-alleles (remove nil? (map-indexed
                                        (fn [i x] (if-not (= i match-allele-i) x))
                                        (get-alleles vc)))]
@@ -136,12 +136,15 @@
 
 (defn- comparison-metrics
   "Provide metrics for comparison of haploid allele to reference calls."
-  [vc ref-vcs i]
-  {:comparison (cmp-allele-to-ref vc ref-vcs i)
-   :variant-type (get-variant-type (cons vc ref-vcs))
-   :nomatch-het-alt (nomatch-het-alt? vc ref-vcs)
-   :vc (:vc vc)
-   :ref-vcs (map :vc ref-vcs)})
+  [cmp-itree i ref-vc]
+  (let [cmp-vc (->> (get-itree-overlap cmp-itree (:chr ref-vc) (:start ref-vc) (:end ref-vc))
+                    (filter #(= (:start %) (:start ref-vc)))
+                    first)]
+    {:comparison (cmp-allele-to-ref cmp-vc [ref-vc] i)
+     :variant-type (get-variant-type [cmp-vc ref-vc])
+     :nomatch-het-alt (nomatch-het-alt? cmp-vc ref-vc)
+     :vc (:vc cmp-vc)
+     :ref-vcs [(:vc ref-vc)]}))
 
 (defn- score-phased-region
   "Provide scoring metrics for a phased region against a haplotype reference."
@@ -149,7 +152,7 @@
   (letfn [(get-ref-vcs [x]
             (ref-fetch (:chr x) (:start x) (:end x)))
           (ref-match-allele [x]
-            (matching-allele x (get-ref-vcs x)))
+            (matching-allele x (ref-fetch (:chr x) (:start x) (:end x))))
           (get-regional-ref-vcs
             [itree]
             {:pre [(= 1 (count (keys itree)))]}
@@ -159,8 +162,8 @@
                                   (dec (-> tree .max .getEnd))))))]
     (let [cmp-allele-i (highest-count (map ref-match-allele vcs))
           vc-itree (prep-itree vcs :start :end)]
-      ;(println (map :start (get-regional-ref-vcs vc-itree)))
-      (map #(comparison-metrics % (get-ref-vcs %) cmp-allele-i) vcs))))
+      (map (partial comparison-metrics vc-itree cmp-allele-i)
+           (get-regional-ref-vcs vc-itree)))))
 
 (defn score-phased-calls
   "Score a called VCF against reference based on phased regions."
