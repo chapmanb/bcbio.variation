@@ -3,6 +3,7 @@
   variations and MNPs"
   (:use [midje.sweet]
         [bcbio.variation.complex]
+        [bcbio.variation.deletion]
         [bcbio.variation.structural]
         [bcbio.variation.variantcontext])
   (:require [fs.core :as fs]
@@ -22,7 +23,9 @@
                         :discordant1 (str (fs/file data-dir "Test-sv1-sv2-svdiscordance.vcf"))
                         :discordant2 (str (fs/file data-dir "Test-sv2-sv1-svdiscordance.vcf"))}
                indel-vcf (str (fs/file data-dir "freebayes-calls-indels.vcf"))
-               nomnp-out (itx/add-file-part indel-vcf "nomnp")]
+               nomnp-out (itx/add-file-part indel-vcf "nomnp")
+               pvcf-in (str (fs/file data-dir "phasing-contestant.vcf"))
+               pvcf-ref (str (fs/file data-dir "phasing-reference.vcf"))]
            (doseq [x (concat [nomnp-out] (vals sv-out) (vals sv-out2))]
              (itx/remove-path x))
            ?form)))
@@ -49,3 +52,6 @@
               {:name "svIll" :file sv-vcf2} ref) => sv-out
   (compare-sv "Test" {:name "sv1" :file sv-vcf1}
               {:name "sv2" :file sv-vcf1} ref) => sv-out2)
+
+(facts "Comparisons in haploid references with deletions."
+  (map :comparison (compare-deletions pvcf-ref pvcf-in ref)) => [:discordant])
