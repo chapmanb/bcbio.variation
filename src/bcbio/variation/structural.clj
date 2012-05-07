@@ -13,6 +13,31 @@
             [fs.core :as fs]
             [bcbio.run.itx :as itx]))
 
+;; ## Interval tree lookup
+
+(defn prep-itree
+  "Retrieve an Interval with the specified start/end keywords."
+  [vc-iter start-kw end-kw]
+  (reduce (fn [coll vc]
+            (assoc coll (:chr vc)
+                   (doto (get coll (:chr vc) (IntervalTree.))
+                     (.put (get vc start-kw) (inc (get vc end-kw)) vc))))
+          {} vc-iter))
+
+(defn get-itree-overlap
+  "Lazy sequence of items that overlap a region in a nested IntervalTree."
+  [itree chrom start end]
+  (letfn [(itree-seq [iter]
+            (lazy-seq
+             (when (.hasNext iter)
+               (cons (.getValue (.next iter)) (itree-seq iter)))))]
+    (-> itree
+        (get chrom)
+        (.overlappers start end)
+        itree-seq)))
+
+;; ## Structural variation helpers
+
 (defn get-sv-type
   "Determine the type of a structural variant. Expected types are:
 
@@ -72,6 +97,8 @@
           (when-let [vc (proxy-super decode work-line)]
             vc))))))
 
+;; ## Parsing structural variants
+
 (defn value-from-attr
   "Retrieve normalized integer values from an attribute."
   ([vc attr-name]
@@ -101,12 +128,7 @@
                   (assoc :start-ci (- (:start cur-vc) (start-adjust cur-vc)))
                   (assoc :end-ci (+ (:end cur-vc) (end-adjust cur-vc)))
                   (assoc :sv-type sv-type))))
-          (prep-itree [vc-iter]
-            (reduce (fn [coll vc]
-                      (assoc coll (:chr vc)
-                             (doto (get coll (:chr vc) (IntervalTree.))
-                               (.put (:start-ci vc) (inc (:end-ci vc)) vc))))
-                    {} vc-iter))
+          
           (in-intervals? [bed-source vc]
             (or (instance? StringReader bed-source)
                 (not (nil? (first (.query bed-source (:chr vc) (:start-ci vc) (:end-ci vc)))))))]
@@ -116,7 +138,7 @@
       (let [vs-iter (filter (partial in-intervals? bed-source)
                             (keep updated-sv-vc (parse-vcf vcf-source)))]
         (case out-format
-          :itree (prep-itree vs-iter)
+          :itree (prep-itree vs-iter :start-ci :end-ci)
           (vec vs-iter))))))
 
 ;; ## Concordance checking
@@ -202,18 +224,6 @@
          :DUP (sv-len-concordant? sv1 sv2 duplication-length)
          :BND true
          (throw (Exception. (str "Structural variant type not handled: " (:sv-type sv1)))))))
-
-(defn get-itree-overlap
-  "Lazy sequence of items that overlap a region in a nested IntervalTree."
-  [itree chrom start end]
-  (letfn [(itree-seq [iter]
-            (lazy-seq
-             (when (.hasNext iter)
-               (cons (.getValue (.next iter)) (itree-seq iter)))))]
-    (-> itree
-        (get chrom)
-        (.overlappers start end)
-        itree-seq)))
 
 (defn- find-concordant-svs
   "Compare two structural variant files, returning variant contexts keyed by concordance."

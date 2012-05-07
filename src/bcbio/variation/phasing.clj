@@ -13,7 +13,8 @@
        - If mismatch and neither allele matches, then calling error"
   (:import [org.broadinstitute.sting.utils.interval IntervalUtils IntervalSetRule]
            [org.broadinstitute.sting.utils GenomeLocParser GenomeLoc])
-  (:use [bcbio.variation.variantcontext :only [parse-vcf get-vcf-retriever get-vcf-source
+  (:use [bcbio.variation.structural :only [prep-itree get-itree-overlap]]
+        [bcbio.variation.variantcontext :only [parse-vcf get-vcf-retriever get-vcf-source
                                                write-vcf-w-template]]
         [bcbio.align.ref :only [get-seq-dict]]
         [bcbio.variation.callable :only [get-bed-source]]
@@ -148,8 +149,17 @@
   (letfn [(get-ref-vcs [x]
             (ref-fetch (:chr x) (:start x) (:end x)))
           (ref-match-allele [x]
-            (matching-allele x (get-ref-vcs x)))]
-    (let [cmp-allele-i (highest-count (map ref-match-allele vcs))]
+            (matching-allele x (get-ref-vcs x)))
+          (get-regional-ref-vcs
+            [itree]
+            {:pre [(= 1 (count (keys itree)))]}
+            (let [[chr tree] (first itree)]
+              (sort-by :start
+                       (ref-fetch chr (-> tree .min .getStart)
+                                  (dec (-> tree .max .getEnd))))))]
+    (let [cmp-allele-i (highest-count (map ref-match-allele vcs))
+          vc-itree (prep-itree vcs :start :end)]
+      ;(println (map :start (get-regional-ref-vcs vc-itree)))
       (map #(comparison-metrics % (get-ref-vcs %) cmp-allele-i) vcs))))
 
 (defn score-phased-calls
