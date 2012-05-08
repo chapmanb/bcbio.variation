@@ -27,7 +27,7 @@
                          :calls [{:name "reference"
                                   :file (-> config :ref :variants)
                                   :remove-refcalls true
-                                  :refcalls true}
+                                  :refcalls false}
                                  {:name "contestant"
                                   :prep true
                                   :preclean true

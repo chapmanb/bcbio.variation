@@ -81,26 +81,28 @@
      (remove neg?
              (map #(.indexOf (get-alleles vc) (-> % get-alleles first)) ref-vcs)))))
 
-(defn cmp-allele-to-ref
-  "Compare the haploid allele of a variant against the reference call."
-  [vc ref-vcs i]
+(defn cmp-allele-to-expected
+  "Compare the haploid allele of a variant against the expected call."
+  [vc e-vc i]
   (letfn [(is-ref-allele? [x]
             (apply = (map #(.getBaseString (% x)) [:cmp :ref])))
-          (get-cmp-allele [i vc]
-            {:ref (:ref-allele vc)
-             :cmp (nth (get-alleles vc) i)})
-          (get-all-alleles [vc]
-            (map #(get-cmp-allele % vc) (range (count (get-alleles vc)))))]
-    (let [ref-alleles (set (map (partial get-cmp-allele 0) ref-vcs))
-          call-hap (when-not (or (nil? i) (neg? i)) (get-cmp-allele i vc))]
+          (get-cmp-allele [i x]
+            {:ref (:ref-allele x)
+             :cmp (nth (get-alleles x) i)})
+          (get-all-alleles [x]
+            (map #(get-cmp-allele % x) (range (count (get-alleles x)))))]
+    (let [e-allele (when-not (nil? e-vc)
+                       (get-cmp-allele 0 e-vc))
+          call-hap (when-not (or (nil? i) (nil? vc) (neg? i))
+                     (get-cmp-allele i vc))]
       (cond
        (nil? call-hap) :discordant
        (and (is-ref-allele? call-hap)
-            (or (empty? ref-alleles)
-                (contains? ref-alleles call-hap))) :ref-concordant
-       (empty? ref-alleles) :discordant
-       (contains? ref-alleles call-hap) :concordant
-       (some (partial contains? ref-alleles) (get-all-alleles vc)) :phasing-error
+            (or (nil? e-allele)
+                (= e-allele call-hap))) :ref-concordant
+       (nil? e-allele) :discordant
+       (= e-allele call-hap) :concordant
+       (some (partial = e-allele) (get-all-alleles vc)) :phasing-error
        :else :discordant))))
 
 (defn get-variant-type
@@ -126,51 +128,53 @@
 
 (defn- nomatch-het-alt?
   "Determine if the variant has a non-matching heterozygous alternative allele."
-  [vc ref-vc]
-  (let [match-allele-i (matching-allele vc [ref-vc])
+  [vc e-vc]
+  (let [match-allele-i (matching-allele vc [e-vc])
         no-match-alleles (remove nil? (map-indexed
                                        (fn [i x] (if-not (= i match-allele-i) x))
                                        (get-alleles vc)))]
-    (and (= "HET" (-> vc :genotypes first :type))
+    (and
+         (= "HET" (-> vc :genotypes first :type))
          (not-every? #(.isReference %) no-match-alleles))))
 
 (defn- comparison-metrics
-  "Provide metrics for comparison of haploid allele to reference calls."
-  [cmp-itree i ref-vc]
-  (let [cmp-vc (->> (get-itree-overlap cmp-itree (:chr ref-vc) (:start ref-vc) (:end ref-vc))
-                    (filter #(= (:start %) (:start ref-vc)))
+  "Provide metrics for comparison of haploid expected alleles to variant calls."
+  [cmp-itree i e-vc]
+  (let [cmp-vc (->> (get-itree-overlap cmp-itree (:chr e-vc) (:start e-vc) (:end e-vc))
+                    (filter #(= (:start %) (:start e-vc)))
                     first)]
-    {:comparison (cmp-allele-to-ref cmp-vc [ref-vc] i)
-     :variant-type (get-variant-type [cmp-vc ref-vc])
-     :nomatch-het-alt (nomatch-het-alt? cmp-vc ref-vc)
+    {:comparison (cmp-allele-to-expected cmp-vc e-vc i)
+     :variant-type (get-variant-type [cmp-vc e-vc])
+     :nomatch-het-alt (when (not-any? nil? [cmp-vc e-vc]) (nomatch-het-alt? cmp-vc e-vc))
+     :start (if (nil? e-vc) (:start cmp-vc) (:start e-vc))
      :vc (:vc cmp-vc)
-     :ref-vcs [(:vc ref-vc)]}))
+     :ref-vc (:vc e-vc)}))
 
 (defn- score-phased-region
-  "Provide scoring metrics for a phased region against a haplotype reference."
-  [vcs ref-fetch]
+  "Provide scoring metrics for a phased region against expected haplotype variants."
+  [expect-fetch vcs]
   (letfn [(get-ref-vcs [x]
-            (ref-fetch (:chr x) (:start x) (:end x)))
+            (expect-fetch (:chr x) (:start x) (:end x)))
           (ref-match-allele [x]
-            (matching-allele x (ref-fetch (:chr x) (:start x) (:end x))))
-          (get-regional-ref-vcs
+            (matching-allele x (expect-fetch (:chr x) (:start x) (:end x))))
+          (get-regional-expected-vcs
             [itree]
             {:pre [(= 1 (count (keys itree)))]}
             (let [[chr tree] (first itree)]
               (sort-by :start
-                       (ref-fetch chr (-> tree .min .getStart)
-                                  (dec (-> tree .max .getEnd))))))]
+                       (expect-fetch chr (-> tree .min .getStart)
+                                     (dec (-> tree .max .getEnd))))))]
     (let [cmp-allele-i (highest-count (map ref-match-allele vcs))
           vc-itree (prep-itree vcs :start :end)]
-      (map (partial comparison-metrics vc-itree cmp-allele-i)
-           (get-regional-ref-vcs vc-itree)))))
+      (sort-by :start
+               (map (partial comparison-metrics vc-itree cmp-allele-i)
+                    (get-regional-expected-vcs vc-itree))))))
 
 (defn score-phased-calls
-  "Score a called VCF against reference based on phased regions."
+  "Score a called VCF against expected haploid variants based on phased regions."
   [call-vcf-s ref-vcf-s]
-  (let [ref-fetch (get-vcf-retriever ref-vcf-s)]
-    (map #(score-phased-region % ref-fetch)
-         (parse-phased-haplotypes call-vcf-s))))
+  (map (partial score-phased-region (get-vcf-retriever ref-vcf-s))
+       (parse-phased-haplotypes call-vcf-s)))
 
 ;; ## Summarize phased comparisons
 
@@ -271,21 +275,17 @@
   "Convert stream of variant context haploid comparison to standard,
   keyed by :concordant and :discordant-name keywords."
   [name1 name2 cmps]
-  (letfn [(get-start [x]
-            (.getStart (:vc x)))
-          (update-keyword [x]
-            (let [new-xs (filter #(= (get-start %) (get-start x))
-                                 (sort-by get-start
-                                          (map #(-> x (assoc :vc %) (dissoc :ref-vcs))
-                                               (:ref-vcs x))))
+  (letfn [(update-keyword [x]
+            (let [ref-x (-> x
+                            (assoc :vc (:ref-vc x))
+                            (dissoc :ref-vc))
                   [dis-kw1 dis-kw2] (map #(keyword (format "%s-discordant" %)) [name1 name2])]
               (case (:comparison x)
-                :concordant new-xs
-                (:discordant :phasing-error) (cons
-                                              (assoc x :comparison dis-kw2)
-                                              (map #(assoc % :comparison dis-kw1) new-xs))
+                :concordant [ref-x]
+                (:discordant :phasing-error) [(assoc x :comparison dis-kw2)
+                                              (assoc ref-x :comparison dis-kw1)]
                 nil)))]
-    (remove nil?
+    (remove #(or (nil? %) (nil? (:vc %)))
             (flatten
              (map update-keyword (flatten cmps))))))
 
