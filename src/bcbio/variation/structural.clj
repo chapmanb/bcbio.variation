@@ -24,17 +24,36 @@
                      (.put (get vc start-kw) (inc (get vc end-kw)) vc))))
           {} vc-iter))
 
+(defn- itree-seq
+  "Convert IntervalTree Iterator into clojure seq."
+  [iter]
+  (lazy-seq
+   (when (.hasNext iter)
+     (cons (.getValue (.next iter)) (itree-seq iter)))))
+
 (defn get-itree-overlap
   "Lazy sequence of items that overlap a region in a nested IntervalTree."
   [itree chrom start end]
-  (letfn [(itree-seq [iter]
-            (lazy-seq
-             (when (.hasNext iter)
-               (cons (.getValue (.next iter)) (itree-seq iter)))))]
-    (-> itree
-        (get chrom)
-        (.overlappers start end)
-        itree-seq)))
+  (-> itree
+      (get chrom)
+      (.overlappers start end)
+      itree-seq))
+
+(defn get-itree-all
+  "Lazy sequence of all items in an IntervalTree."
+  [itree]
+  (flatten
+   (for [item (vals itree)]
+     (itree-seq (.iterator item)))))
+
+(defn remove-itree-vc
+  "Remove variant contest from an IntervalTree"
+  [itree chr start end]
+  (if (not-any? nil? [chr start end])
+    (assoc itree chr
+           (doto (get itree chr)
+             (.remove start (inc end))))
+    itree))
 
 ;; ## Structural variation helpers
 

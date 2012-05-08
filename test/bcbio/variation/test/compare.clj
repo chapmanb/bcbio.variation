@@ -119,18 +119,19 @@
     (with-open [pvcf-source (get-vcf-source pvcf ref)]
       (let [haps (parse-phased-haplotypes pvcf-source)]
         (count haps) => 4
-        (count (first haps)) => 5
-        (-> haps first first :start) => 10
+        (count (first haps)) => 6
+        (-> haps first first :start) => 9
         (count (second haps)) => 1
         (-> haps (nth 2) first :start) => 16)))
   (facts "Compare phased calls to haploid reference genotypes."
     (with-open [ref-vcf-s (get-vcf-source ref-vcf ref)
                 pvcf-s (get-vcf-source pvcf ref)]
       (let [cmps (score-phased-calls pvcf-s ref-vcf-s)]
-        (map :variant-type (first cmps)) => [:snp :snp :indel :snp :snp]
+        (map :variant-type (first cmps)) => [:snp :snp :snp :indel :snp :snp]
+        (:comparison (ffirst cmps)) => :discordant
         (map :comparison (last cmps)) => [:ref-concordant :phasing-error
                                           :ref-concordant :discordant]
-        (map :nomatch-het-alt (first cmps)) => [true false true false true])))
+        (map :nomatch-het-alt (first cmps)) => [false true false false false true])))
   (facts "Compare two sets of haploid reference calls"
     (with-open [ref-vcf-s (get-vcf-source ref-vcf ref)
                 ref2-vcf-s (get-vcf-source ref2-vcf ref)]

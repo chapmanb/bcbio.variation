@@ -13,7 +13,8 @@
        - If mismatch and neither allele matches, then calling error"
   (:import [org.broadinstitute.sting.utils.interval IntervalUtils IntervalSetRule]
            [org.broadinstitute.sting.utils GenomeLocParser GenomeLoc])
-  (:use [bcbio.variation.structural :only [prep-itree get-itree-overlap]]
+  (:use [bcbio.variation.structural :only [prep-itree get-itree-overlap
+                                           remove-itree-vc get-itree-all]]
         [bcbio.variation.variantcontext :only [parse-vcf get-vcf-retriever get-vcf-source
                                                write-vcf-w-template]]
         [bcbio.align.ref :only [get-seq-dict]]
@@ -146,7 +147,8 @@
     {:comparison (cmp-allele-to-expected cmp-vc e-vc i)
      :variant-type (get-variant-type [cmp-vc e-vc])
      :nomatch-het-alt (when (not-any? nil? [cmp-vc e-vc]) (nomatch-het-alt? cmp-vc e-vc))
-     :start (if (nil? e-vc) (:start cmp-vc) (:start e-vc))
+     :start (if (nil? cmp-vc) (:start e-vc) (:start cmp-vc))
+     :end (when-not (nil? cmp-vc) (:end cmp-vc))
      :vc (:vc cmp-vc)
      :ref-vc (:vc e-vc)}))
 
@@ -163,12 +165,29 @@
             (let [[chr tree] (first itree)]
               (sort-by :start
                        (expect-fetch chr (-> tree .min .getStart)
-                                     (dec (-> tree .max .getEnd))))))]
+                                     (dec (-> tree .max .getEnd))))))
+          (compare-and-update-itree [info e-vc]
+            (let [cmp (comparison-metrics (:itree info) (:cmp-i info) e-vc)]
+              (-> info
+                  (assoc :itree (remove-itree-vc (:itree info) (:chr e-vc)
+                                                 (:start cmp) (:end cmp)))
+                  (assoc :out (cons cmp (:out info))))))
+          (add-unmapped-cmps [info]
+            (concat (:out info)
+                    (map (fn [vc] {:comparison (cmp-allele-to-expected vc nil (:cmp-i info))
+                                   :variant-type (get-variant-type [vc])
+                                   :nomatch-het-alt false
+                                   :start (:start vc)
+                                   :vc (:vc vc)
+                                   :ref-vc nil})
+                         (get-itree-all (:itree info)))))]
     (let [cmp-allele-i (highest-count (map ref-match-allele vcs))
           vc-itree (prep-itree vcs :start :end)]
-      (sort-by :start
-               (map (partial comparison-metrics vc-itree cmp-allele-i)
-                    (get-regional-expected-vcs vc-itree))))))
+      (->> (reduce compare-and-update-itree
+                   {:itree vc-itree :cmp-i cmp-allele-i :out []}
+                   (get-regional-expected-vcs vc-itree))
+           add-unmapped-cmps
+           (sort-by :start)))))
 
 (defn score-phased-calls
   "Score a called VCF against expected haploid variants based on phased regions."
