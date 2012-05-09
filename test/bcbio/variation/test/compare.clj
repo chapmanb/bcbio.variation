@@ -127,18 +127,18 @@
     (with-open [ref-vcf-s (get-vcf-source ref-vcf ref)
                 pvcf-s (get-vcf-source pvcf ref)]
       (let [cmps (score-phased-calls pvcf-s ref-vcf-s)]
-        (map :variant-type (first cmps)) => [:snp :snp :snp :indel :snp :snp]
+        (map :variant-type (first cmps)) => [:snp :snp :indel :snp :snp]
         (:comparison (ffirst cmps)) => :discordant
         (map :comparison (last cmps)) => [:ref-concordant :phasing-error
                                           :ref-concordant :discordant]
-        (map :nomatch-het-alt (first cmps)) => [false true false false false true])))
+        (map :nomatch-het-alt (first cmps)) => [false true false false true])))
   (facts "Compare two sets of haploid reference calls"
     (with-open [ref-vcf-s (get-vcf-source ref-vcf ref)
                 ref2-vcf-s (get-vcf-source ref2-vcf ref)]
       (let [cmps (score-phased-calls ref2-vcf-s ref-vcf-s)]
         (count cmps) => 1
-        (count (first cmps)) => 11
-        (drop 7 (map :comparison (first cmps))) => [:ref-concordant :concordant
+        (count (first cmps)) => 10
+        (drop 6 (map :comparison (first cmps))) => [:ref-concordant :concordant
                                                     :ref-concordant :discordant])))
   (facts "Check is a variant file is a haploid reference."
     (is-haploid? pvcf ref) => false

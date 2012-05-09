@@ -118,7 +118,8 @@
           (is-multi-indel? [x]
             (and (is-indel? x)
                  (not-every? #(contains? #{0 1} %)
-                             (map #(-> % .getBaseString count) (get-alleles x)))))
+                             (map #(-> % .getBaseString count) (cons (:ref-allele x)
+                                                                     (:alt-alleles x))))))
           (is-snp? [x]
             (= "SNP" (:type x)))]
     (cond
@@ -138,6 +139,15 @@
          (= "HET" (-> vc :genotypes first :type))
          (not-every? #(.isReference %) no-match-alleles))))
 
+(defn- deleted-bases
+  [vc]
+  (letfn [(is-deletion? [vc]
+            (and (= (:type vc) "INDEL")
+                 (pos? (.length (:ref-allele vc)))))]
+    (if (is-deletion? vc)
+      (map vector (repeat (:chr vc)) (range (:start vc) (inc (:end vc))))
+      [])))
+
 (defn- comparison-metrics
   "Provide metrics for comparison of haploid expected alleles to variant calls."
   [cmp-itree i e-vc]
@@ -148,12 +158,20 @@
      :variant-type (get-variant-type [cmp-vc e-vc])
      :nomatch-het-alt (when (not-any? nil? [cmp-vc e-vc]) (nomatch-het-alt? cmp-vc e-vc))
      :start (if (nil? cmp-vc) (:start e-vc) (:start cmp-vc))
-     :end (when-not (nil? cmp-vc) (:end cmp-vc))
+     :end (:end cmp-vc)
+     :end-ref (:end e-vc)
+     :deleted (deleted-bases e-vc)
      :vc (:vc cmp-vc)
      :ref-vc (:vc e-vc)}))
 
 (defn- score-phased-region
-  "Provide scoring metrics for a phased region against expected haplotype variants."
+  "Provide scoring metrics for a phased region against expected haplotype variants.
+    - Fetch all expected variants in the phased region.
+    - Iterate over expected variants comparing to the called variants:
+       - Keep IntervalTree of called variants, removing variants as evaluated.
+       - Keep coordinates of expected deletion regions.
+    - Add discordant variants for extra calls not in expected variants, avoiding
+      variants in deleted regions."
   [expect-fetch vcs]
   (letfn [(get-ref-vcs [x]
             (expect-fetch (:chr x) (:start x) (:end x)))
@@ -166,12 +184,15 @@
               (sort-by :start
                        (expect-fetch chr (-> tree .min .getStart)
                                      (dec (-> tree .max .getEnd))))))
-          (compare-and-update-itree [info e-vc]
+          (compare-and-update [info e-vc]
             (let [cmp (comparison-metrics (:itree info) (:cmp-i info) e-vc)]
               (-> info
                   (assoc :itree (remove-itree-vc (:itree info) (:chr e-vc)
                                                  (:start cmp) (:end cmp)))
-                  (assoc :out (cons cmp (:out info))))))
+                  (assoc :out (cons cmp (:out info)))
+                  (assoc :deleted (concat (:deleted info) (:deleted cmp))))))
+          (in-deleted-region? [regions vc]
+            (contains? regions [(:chr vc) (:start vc)]))
           (add-unmapped-cmps [info]
             (concat (:out info)
                     (map (fn [vc] {:comparison (cmp-allele-to-expected vc nil (:cmp-i info))
@@ -180,11 +201,12 @@
                                    :start (:start vc)
                                    :vc (:vc vc)
                                    :ref-vc nil})
-                         (get-itree-all (:itree info)))))]
+                         (remove (partial in-deleted-region? (set (:deleted info)))
+                                 (get-itree-all (:itree info))))))]
     (let [cmp-allele-i (highest-count (map ref-match-allele vcs))
           vc-itree (prep-itree vcs :start :end)]
-      (->> (reduce compare-and-update-itree
-                   {:itree vc-itree :cmp-i cmp-allele-i :out []}
+      (->> (reduce compare-and-update
+                   {:itree vc-itree :cmp-i cmp-allele-i :deleted [] :out []}
                    (get-regional-expected-vcs vc-itree))
            add-unmapped-cmps
            (sort-by :start)))))
