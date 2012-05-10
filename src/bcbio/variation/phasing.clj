@@ -131,12 +131,12 @@
 (defn- nomatch-het-alt?
   "Determine if the variant has a non-matching heterozygous alternative allele."
   [vc e-vc]
-  (let [match-allele-i (matching-allele vc [e-vc])
+  {:pre [(not (nil? vc))]}
+  (let [match-allele-i (matching-allele vc (if (nil? e-vc) [] [e-vc]))
         no-match-alleles (remove nil? (map-indexed
                                        (fn [i x] (if-not (= i match-allele-i) x))
                                        (get-alleles vc)))]
-    (and
-         (= "HET" (-> vc :genotypes first :type))
+    (and (= "HET" (-> vc :genotypes first :type))
          (not-every? #(.isReference %) no-match-alleles))))
 
 (defn- deleted-bases
@@ -156,7 +156,7 @@
                     first)]
     {:comparison (cmp-allele-to-expected cmp-vc e-vc i)
      :variant-type (get-variant-type [cmp-vc e-vc])
-     :nomatch-het-alt (when (not-any? nil? [cmp-vc e-vc]) (nomatch-het-alt? cmp-vc e-vc))
+     :nomatch-het-alt (nomatch-het-alt? cmp-vc e-vc)
      :start (if (nil? cmp-vc) (:start e-vc) (:start cmp-vc))
      :end (:end cmp-vc)
      :end-ref (:end e-vc)
@@ -197,7 +197,7 @@
             (concat (:out info)
                     (map (fn [vc] {:comparison (cmp-allele-to-expected vc nil (:cmp-i info))
                                    :variant-type (get-variant-type [vc])
-                                   :nomatch-het-alt false
+                                   :nomatch-het-alt (nomatch-het-alt? vc nil)
                                    :start (:start vc)
                                    :vc (:vc vc)
                                    :ref-vc nil})
