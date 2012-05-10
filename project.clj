@@ -7,7 +7,7 @@
                  [org.clojars.chapmanb/picard "1.64"]
                  [incanter/incanter-core "1.3.0-SNAPSHOT"]
                  [incanter/incanter-charts "1.3.0-SNAPSHOT"]
-                 [com.leadtune/clj-ml "0.2.0"]
+                 [com.leadtune/clj-ml "0.2.2"]
                  [fs "1.1.2"]
                  [clj-yaml "0.3.1"]
                  [doric "0.7.0-SNAPSHOT"]
@@ -18,6 +18,7 @@
                  [enlive "1.0.0"]]
   :dev-dependencies [[midje "1.3.0" :exclusions [org.clojure/clojure]]
                      [lein-midje "1.0.8"]]
+  :plugins [[lein-cljsbuild "0.1.9"]]
   :java-source-path "src/java"
   :omit-source true
   :aot [bcbio.variation.vcfwalker bcbio.variation.core bcbio.variation.annotate.nbq]
@@ -27,7 +28,10 @@
                 :popfreq bcbio.variation.utils.popfreq
                 :background bcbio.variation.utils.background
                 :reorder bcbio.align.reorder}
-  :cljsbuild {:source-path "src/cljs"
-              :compiler {:output-to "public/js/score.js"
-                         :optimizations :advanced
-                         :pretty-print false}})
+  :cljsbuild {:builds
+              [{:builds nil,
+                :source-path "src/cljs",
+                :compiler
+                {:output-to "public/js/score.js",
+                 :optimizations :advanced,
+                 :pretty-print false}}]})

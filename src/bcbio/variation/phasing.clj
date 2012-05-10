@@ -156,7 +156,7 @@
                     first)]
     {:comparison (cmp-allele-to-expected cmp-vc e-vc i)
      :variant-type (get-variant-type [cmp-vc e-vc])
-     :nomatch-het-alt (nomatch-het-alt? cmp-vc e-vc)
+     :nomatch-het-alt (when-not (nil? cmp-vc) (nomatch-het-alt? cmp-vc e-vc))
      :start (if (nil? cmp-vc) (:start e-vc) (:start cmp-vc))
      :end (:end cmp-vc)
      :end-ref (:end e-vc)
