@@ -118,7 +118,7 @@
   (facts "Handle haplotype phasing specified in VCF output files."
     (with-open [pvcf-source (get-vcf-source pvcf ref)]
       (let [haps (parse-phased-haplotypes pvcf-source)]
-        (count haps) => 4
+        (count haps) => 5
         (count (first haps)) => 6
         (-> haps first first :start) => 9
         (count (second haps)) => 1
@@ -129,8 +129,9 @@
       (let [cmps (score-phased-calls pvcf-s ref-vcf-s)]
         (map :variant-type (first cmps)) => [:snp :snp :indel :snp :snp]
         (:comparison (ffirst cmps)) => :discordant
-        (map :comparison (last cmps)) => [:ref-concordant :phasing-error
-                                          :ref-concordant :discordant]
+        (map :comparison (nth cmps 3)) => [:ref-concordant :phasing-error
+                                           :ref-concordant :discordant]
+        (map :comparison (nth cmps 4)) => [:discordant :concordant :concordant]
         (map :nomatch-het-alt (first cmps)) => [false true false false true])))
   (facts "Compare two sets of haploid reference calls"
     (with-open [ref-vcf-s (get-vcf-source ref-vcf ref)
@@ -149,8 +150,8 @@
       cbed (str (fs/file data-dir "phasing-contestant-regions.bed"))
       rbed (str (fs/file data-dir "phasing-reference-regions.bed"))]
   (facts "Merging and count info for reference and contestant analysis regions."
-    (count-comparison-bases rbed cbed ref) => (contains {:compared 12 :total 13})
-    (count-comparison-bases rbed nil ref) => (contains {:compared 13 :total 13})))
+    (count-comparison-bases rbed cbed ref) => (contains {:compared 17 :total 18})
+    (count-comparison-bases rbed nil ref) => (contains {:compared 18 :total 18})))
 
 (facts "Calculate final accuracy score for contestant/reference comparison."
   (calc-accuracy {:total-bases {:compared 10}

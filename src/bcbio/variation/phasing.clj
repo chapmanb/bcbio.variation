@@ -212,10 +212,35 @@
            (sort-by :start)))))
 
 (defn score-phased-calls
-  "Score a called VCF against expected haploid variants based on phased regions."
-  [call-vcf-s ref-vcf-s]
-  (map (partial score-phased-region (get-vcf-retriever ref-vcf-s))
-       (parse-phased-haplotypes call-vcf-s)))
+  "Score a called VCF against expected haploid variants based on phased regions.
+  Partitions phased regions into blocks of two concurrent regions. For each block:
+   - Evaluate second region with standard scoring: expected to called
+   - Collect expected variants in the intervening region between phased blocks,
+     these are missing in the called and reported as errors."
+  [call-vcf-s expect-vcf-s]
+  (let [expect-retriever (get-vcf-retriever expect-vcf-s)]
+    (letfn [(prep-discordant-ref [e-vc]
+              (println e-vc))
+            (get-intervene-expect [region1 region2]
+              (let [vc1 (last region1)
+                    vc2 (first region2)]
+                (if (or (nil? vc1) (not= (:chr vc1) (:chr vc2)))
+                  []
+                  (->> (expect-retriever (:chr vc1) (inc (:end vc1))
+                                         (dec (:start vc2)))
+                       (map (fn [x] {:comparison :discordant
+                                     :variant-type (get-variant-type [x])
+                                     :nomatch-het-alt false
+                                     :start (:start x)
+                                     :vc nil
+                                     :ref-vc (:vc x)}))
+                       (sort-by :start)))))
+            (score-phased-and-intervene [[region1 region2]]
+              (concat (get-intervene-expect region1 region2)
+                      (score-phased-region expect-retriever region2)))]
+      (map score-phased-and-intervene
+           (partition 2 1
+                      (cons nil (parse-phased-haplotypes call-vcf-s)))))))
 
 ;; ## Summarize phased comparisons
 
@@ -295,6 +320,20 @@
   Handle grading special case as well as standard comparisons."
   (fn [_ exp _] (keyword (get exp :approach "compare"))))
 
+(defn- convert-cmps-to-grade
+  "Convert comparisons into ready to write keywords for grading.
+  Deals with discordant comparisons where the competition call
+  is missing."
+  [cmps]
+  (letfn [(check-missing-discordant [x]
+            (if (and (= (:comparison x) :discordant)
+                     (nil? (:vc x)))
+              (-> x
+                  (assoc :comparison :discordant-missing)
+                  (assoc :vc (:ref-vc x)))
+              x))]
+    (map check-missing-discordant (flatten cmps))))
+
 (defmethod compare-two-vcf-phased :grade
   [phased-calls exp config]
   {:pre [(= 1 (count (get phased-calls true)))
@@ -304,15 +343,16 @@
     (with-open [ref-vcf-s (get-vcf-source (:file ref) (:ref exp))
                 call-vcf-s (get-vcf-source (:file call) (:ref exp))]
       (let [compared-calls (score-phased-calls call-vcf-s ref-vcf-s)]
-        {:c-files (write-concordance-output compared-calls
-                                            [:concordant :discordant :phasing-error]
+        {:c-files (write-concordance-output (convert-cmps-to-grade compared-calls)
+                                            [:concordant :discordant
+                                             :discordant-missing :phasing-error]
                                             (:sample exp) call ref
                                             (get-in config [:dir :out]) (:ref exp))
          :metrics (get-phasing-metrics compared-calls (:intervals exp)
                                        (:intervals call) (:ref exp))
          :c1 call :c2 ref :sample (:sample exp) :exp exp}))))
 
-(defn- convert-vcs-to-compare
+(defn- convert-cmps-to-compare
   "Convert stream of variant context haploid comparison to standard,
   keyed by :concordant and :discordant-name keywords."
   [name1 name2 cmps]
@@ -343,10 +383,10 @@
                                 [cmp1 cmp2]))]
     (with-open [vcf1-s (get-vcf-source (:file cmp1) (:ref exp))
                 vcf2-s (get-vcf-source (:file cmp2) (:ref exp))]
-      (let [compared-calls (convert-vcs-to-compare (:name cmp1) (:name cmp2)
-                                                   (score-phased-calls vcf2-s vcf1-s))]
+      (let [compared-calls (convert-cmps-to-compare (:name cmp1) (:name cmp2)
+                                                    (score-phased-calls vcf2-s vcf1-s))]
         {:c-files (write-concordance-output compared-calls to-capture
-                                            (:sample exp) cmp1 cmp2 
+                                            (:sample exp) cmp1 cmp2
                                             (get-in config [:dir :out]) (:ref exp))
          :c1 cmp1 :c2 cmp2 :sample (:sample exp) :exp exp}))))
 

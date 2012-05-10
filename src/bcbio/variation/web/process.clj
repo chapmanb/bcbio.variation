@@ -121,6 +121,7 @@
               (format "%s-%s-%s" (-> request :config :ref :sample) base-name ext)))]
     (let [file-map {"concordant" (sample-file "concordant.vcf")
                     "discordant" (sample-file "discordant.vcf")
+                    "discordant-missing" (sample-file "discordant-missing.vcf")
                     "phasing" (sample-file "phasing-error.vcf")}
           base-dir (-> request :session :work-info :dir)
           work-dir (if-not (nil? base-dir) (fs/file base-dir "grading"))
