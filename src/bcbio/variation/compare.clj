@@ -187,8 +187,8 @@
                                      ["concordant" (discordant-name c1) (discordant-name c2)])
                                 c-files)
        :c1 c1 :c2 c2 :exp exp :dir (config :dir)
-       :metrics (first (concordance-report-metrics (:sample exp) eval))
-       :callable-metrics (first (concordance-report-metrics (:sample exp) c-eval))})))
+       :metrics (concordance-report-metrics (:sample exp) eval)
+       :callable-metrics (concordance-report-metrics (:sample exp) c-eval)})))
 
 (defn- compare-two-vcf
   "Compare two VCF files, handling standard and haploid specific comparisons."

@@ -3,7 +3,7 @@
   :dependencies [[org.clojure/clojure "1.3.0"]
                  [org.clojure/math.combinatorics "0.0.2"]
                  [org.clojure/data.csv "0.1.2"]
-                 [org.clojars.chapmanb/gatk "1.5.2"]
+                 [org.clojars.chapmanb/gatk "1.6.5"]
                  [org.clojars.chapmanb/picard "1.64"]
                  [incanter/incanter-core "1.3.0-SNAPSHOT"]
                  [incanter/incanter-charts "1.3.0-SNAPSHOT"]

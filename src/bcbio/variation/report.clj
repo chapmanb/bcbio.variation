@@ -14,17 +14,18 @@
   "Retrieve high level concordance metrics from GATK VariantEval report."
   [sample in-file]
   (letfn [(sample-in-row? [x]
-            (and (= (:row x) sample)
-                 (= (:Sample x) sample)
+            (and (= (:Sample x) sample)
                  (= (:Novelty x) "all")
                  (= (:Filter x) "called")))]
-    (let [table (-> (GATKReport. in-file) (.getTable "GenotypeConcordance.simplifiedStats"))
+    (let [table (-> (GATKReport. in-file) (.getTable "GenotypeConcordance"))
           cols (rest (.getColumns table))
           headers (map #(-> % (.getColumnName) keyword) cols)]
-      (filter sample-in-row?
-              (for [i (range (count (.values (first cols))))]
-                (zipmap headers
-                        (map #(nth (vec (.values %)) i) cols)))))))
+      (->> (for [i (range (count (.values (first cols))))]
+             (zipmap headers
+                     (map #(nth (vec (.values %)) i) cols)))
+           (filter sample-in-row?)
+           (map (fn [x] [(keyword (:variable x)) (:value x)]))
+           (into {})))))
 
 (defn- count-variants
   "Count variants that pass an optional checker function."

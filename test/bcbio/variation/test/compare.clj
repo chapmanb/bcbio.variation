@@ -41,7 +41,7 @@
   (against-background [(before :facts (vec (map #(if (fs/exists? %)
                                                    (fs/delete %))
                                                 (concat
-                                                 [combo-out compare-out 
+                                                 [combo-out compare-out
                                                   annotated-out filter-out nofilter-out]
                                                  combine-out combine-out-xtra
                                                  (vals match-out)
@@ -54,7 +54,7 @@
       (calc-variant-eval-metrics sample vcf1 vcf2 ref
                                  :intervals intervals) => compare-out
       (-> (concordance-report-metrics sample compare-out)
-          first :percent_non_reference_sensitivity) => "88.89"
+          :percent_non_reference_sensitivity) => "88.89"
       (add-gatk-annotations vcf2 align-bam ref) => annotated-out)
     (facts "Create merged VCF files for comparison"
       (create-merged [vcf1 vcf2] [align-bam align-bam] [true true] ref) => combine-out)
