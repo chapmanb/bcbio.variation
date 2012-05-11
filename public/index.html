@@ -19,6 +19,7 @@
       }
     </style>
     <link href="css/bootstrap-responsive.css" rel="stylesheet">
+    <script src="js/score.js"></script>
   </head>
 
   <body>
@@ -49,8 +50,9 @@
           <label class="control-label" for="upload-method">Upload method</label>
           <div class="controls">
           <ul class="nav nav-pills">
-            <li class="active"><a href="#">Web upload</a></li>
-            <li><a href="#">Amazon S3</a></li>
+            <li id="menu-choice-upload" class="active">
+              <a id="file-choice-upload" href="#">Web upload</a></li>
+            <li id="menu-choice-s3"><a id="file-choice-s3" href="#">Amazon S3</a></li>
           </ul>
           </div>
         </div>
@@ -58,8 +60,6 @@
           <label class="control-label" for="variant-file">Variations</label>
           <div class="controls">
             <input class="input-file" id="variant-file" name="variant-file" type="file"></input>
-            <!--<input type"text" id="s3-variant-file" name="s3-variant-file"
-                   placeholder="s3://bucketname/filename.vcf"></input>-->
             <p class="help-block">Sequence differences, in <a href="http://www.1000genomes.org/wiki/Analysis/Variant%20Call%20Format/vcf-variant-call-format-version-41">VCF format</a>, relative to the
               <a href="http://www.ncbi.nlm.nih.gov/projects/genome/assembly/grc/human/index.shtml">GRCh37 reference genome<a>
               (<a href="ftp://gsapubftp-anonymous@ftp.broadinstitute.org/bundle/1.5/b37/human_g1k_v37.fasta.gz">FASTA download</a>).
@@ -84,5 +84,6 @@
         </div>
       </form>
     </div> <!-- /container -->
+    <script>bcbio.variation.score.upload_generalize();</script>
   </body>
 </html>
