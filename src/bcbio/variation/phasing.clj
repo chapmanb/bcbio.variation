@@ -40,22 +40,16 @@
 
 (defn parse-phased-haplotypes
   "Separate phased haplotypes provided in diploid input genome.
-   3 conditions:
-
-   1. Out of variants; add the current one to the list and done
-   2. No current haplotype variants or phased with the previous variant:
-      add to the current haplotype
-   3. A new haplotype: add existing haplotype to list and create new"
+   We split at each phase break, returning a lazy list of variant
+   contexts grouped into phases."
   [vcf-source]
-  (loop [vcs (parse-vcf vcf-source)
-         cur-hap []
-         all-haps []]
-    (cond
-     (nil? (first vcs)) (if (empty? cur-hap) all-haps (conj all-haps cur-hap))
-     (or (empty? cur-hap)
-         (is-phased? (first vcs) (last cur-hap))) (recur (rest vcs)
-                                                         (conj cur-hap (first vcs)) all-haps)
-     :else (recur (rest vcs) [(first vcs)] (conj all-haps cur-hap)))))
+  (let [prev (atom nil)]
+    (letfn [(split-at-phased [vc]
+              (let [continue-phase (or (nil? @prev)
+                                       (is-phased? vc @prev))]
+                (reset! prev vc)
+                continue-phase))]
+      (partition-by split-at-phased (parse-vcf vcf-source)))))
 
 ;; ## Compare phased variants
 
