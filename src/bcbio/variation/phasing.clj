@@ -25,13 +25,18 @@
 
 ;; ## Find phased haplotypes in VCF
 
-(defn is-phased?
-  "Check for phasing on a single genotype variant context."
-  [vc]
+(defn- is-phased?
+  "Check for phasing on a single genotype variant context based on:
+   - variant has a single allele
+   - variant has phasing specified (VCF | notation)
+   - variant range overlaps previous variant (overlapping indels)"
+  [vc prev-vc]
   {:pre [(= 1 (count (:genotypes vc)))]}
   (let [g (-> vc :genotypes first)]
     (or (= 1 (count (:alleles g)))
-        (.isPhased (:genotype g)))))
+        (.isPhased (:genotype g))
+        (and (= (:chr vc) (:chr prev-vc))
+             (<= (:start vc) (:end prev-vc))))))
 
 (defn parse-phased-haplotypes
   "Separate phased haplotypes provided in diploid input genome.
@@ -42,15 +47,15 @@
       add to the current haplotype
    3. A new haplotype: add existing haplotype to list and create new"
   [vcf-source]
-  (lazy-seq
-   (loop [vcs (parse-vcf vcf-source)
-          cur-hap []
-          all-haps []]
-     (cond
-      (nil? (first vcs)) (if (empty? cur-hap) all-haps (conj all-haps cur-hap))
-      (or (empty? cur-hap)
-          (is-phased? (first vcs))) (recur (rest vcs) (conj cur-hap (first vcs)) all-haps)
-          :else (recur (rest vcs) [(first vcs)] (conj all-haps cur-hap))))))
+  (loop [vcs (parse-vcf vcf-source)
+         cur-hap []
+         all-haps []]
+    (cond
+     (nil? (first vcs)) (if (empty? cur-hap) all-haps (conj all-haps cur-hap))
+     (or (empty? cur-hap)
+         (is-phased? (first vcs) (last cur-hap))) (recur (rest vcs)
+                                                         (conj cur-hap (first vcs)) all-haps)
+     :else (recur (rest vcs) [(first vcs)] (conj all-haps cur-hap)))))
 
 ;; ## Compare phased variants
 
@@ -181,9 +186,10 @@
             [itree]
             {:pre [(= 1 (count (keys itree)))]}
             (let [[chr tree] (first itree)]
-              (sort-by :start
-                       (expect-fetch chr (-> tree .min .getStart)
-                                     (dec (-> tree .max .getEnd))))))
+              (let [start (-> tree .min .getStart)]
+                (->> (expect-fetch chr start (dec (-> tree .max .getEnd)))
+                     (remove #(< (:start %) start))
+                     (sort-by :start)))))
           (compare-and-update [info e-vc]
             (let [cmp (comparison-metrics (:itree info) (:cmp-i info) e-vc)]
               (-> info
@@ -219,15 +225,14 @@
      these are missing in the called and reported as errors."
   [call-vcf-s expect-vcf-s]
   (let [expect-retriever (get-vcf-retriever expect-vcf-s)]
-    (letfn [(prep-discordant-ref [e-vc]
-              (println e-vc))
-            (get-intervene-expect [region1 region2]
+    (letfn [(get-intervene-expect [region1 region2]
               (let [vc1 (last region1)
                     vc2 (first region2)]
                 (if (or (nil? vc1) (not= (:chr vc1) (:chr vc2)))
                   []
                   (->> (expect-retriever (:chr vc1) (inc (:end vc1))
                                          (dec (:start vc2)))
+                       (remove #(< (:start %) (:end vc1)))
                        (map (fn [x] {:comparison :discordant
                                      :variant-type (get-variant-type [x])
                                      :nomatch-het-alt false
