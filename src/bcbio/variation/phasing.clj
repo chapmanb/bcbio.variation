@@ -365,11 +365,15 @@
                 :concordant [ref-x]
                 (:discordant :phasing-error) [(assoc x :comparison dis-kw2)
                                               (assoc ref-x :comparison dis-kw1)]
-                nil)))
-          (update-keyword-block [xs]
-            (remove #(or (nil? %) (nil? (:vc %)))
-                    (flatten (map update-keyword xs))))]
-    (map update-keyword-block cmps)))
+                [nil])))
+          (update-keyword-hapblock [xs]
+            (reduce (fn [coll ready-xs]
+                      (reduce #(if-not (or (nil? %2) (nil? (:vc %2)))
+                              (conj %1 %2)
+                              %1)
+                              coll ready-xs))
+                    [] (map update-keyword xs)))]
+    (map update-keyword-hapblock cmps)))
 
 (defmethod compare-two-vcf-phased :compare
   [phased-calls exp config]
