@@ -367,10 +367,9 @@
                                               (assoc ref-x :comparison dis-kw1)]
                 nil)))
           (update-keyword-block [xs]
-            (apply concat (map update-keyword xs)))]
-    (remove #(or (nil? %) (nil? (:vc %)))
-            (apply concat
-                   (map update-keyword-block cmps)))))
+            (remove #(or (nil? %) (nil? (:vc %)))
+                    (flatten (map update-keyword xs))))]
+    (map update-keyword-block cmps)))
 
 (defmethod compare-two-vcf-phased :compare
   [phased-calls exp config]
@@ -385,12 +384,11 @@
                                 [cmp1 cmp2]))]
     (with-open [vcf1-s (get-vcf-source (:file cmp1) (:ref exp))
                 vcf2-s (get-vcf-source (:file cmp2) (:ref exp))]
-      (let [compared-calls (convert-cmps-to-compare (:name cmp1) (:name cmp2)
-                                                    (score-phased-calls vcf2-s vcf1-s))]
-        {:c-files (write-concordance-output compared-calls to-capture
-                                            (:sample exp) cmp1 cmp2
-                                            (get-in config [:dir :out]) (:ref exp))
-         :c1 cmp1 :c2 cmp2 :sample (:sample exp) :exp exp}))))
+      {:c-files (-> (convert-cmps-to-compare (:name cmp1) (:name cmp2)
+                                             (score-phased-calls vcf2-s vcf1-s))
+                    (write-concordance-output to-capture (:sample exp) cmp1 cmp2
+                                              (get-in config [:dir :out]) (:ref exp)))
+         :c1 cmp1 :c2 cmp2 :sample (:sample exp) :exp exp})))
 
 ;; ## Utility functions
 
