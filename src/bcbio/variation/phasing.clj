@@ -218,7 +218,8 @@
    - Collect expected variants in the intervening region between phased blocks,
      these are missing in the called and reported as errors."
   [call-vcf-s expect-vcf-s]
-  (let [expect-retriever (get-vcf-retriever expect-vcf-s)]
+  (let [expect-retriever (get-vcf-retriever expect-vcf-s)
+        prev (atom nil)]
     (letfn [(get-intervene-expect [region1 region2]
               (let [vc1 (last region1)
                     vc2 (first region2)]
@@ -234,12 +235,12 @@
                                      :vc nil
                                      :ref-vc (:vc x)}))
                        (sort-by :start)))))
-            (score-phased-and-intervene [[region1 region2]]
-              (concat (get-intervene-expect region1 region2)
-                      (score-phased-region expect-retriever region2)))]
-      (map score-phased-and-intervene
-           (partition 2 1
-                      (cons nil (parse-phased-haplotypes call-vcf-s)))))))
+            (score-phased-and-intervene [region]
+              (let [out (concat (get-intervene-expect @prev region)
+                                (score-phased-region expect-retriever region))]
+                (reset! prev region)
+                out))]
+      (map score-phased-and-intervene (parse-phased-haplotypes call-vcf-s)))))
 
 ;; ## Summarize phased comparisons
 
@@ -364,10 +365,12 @@
                 :concordant [ref-x]
                 (:discordant :phasing-error) [(assoc x :comparison dis-kw2)
                                               (assoc ref-x :comparison dis-kw1)]
-                nil)))]
+                nil)))
+          (update-keyword-block [xs]
+            (apply concat (map update-keyword xs)))]
     (remove #(or (nil? %) (nil? (:vc %)))
-            (flatten
-             (map update-keyword (flatten cmps))))))
+            (apply concat
+                   (map update-keyword-block cmps)))))
 
 (defmethod compare-two-vcf-phased :compare
   [phased-calls exp config]
