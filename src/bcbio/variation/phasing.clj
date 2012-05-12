@@ -33,9 +33,9 @@
   [vc prev-vc]
   {:pre [(= 1 (count (:genotypes vc)))]}
   (let [g (-> vc :genotypes first)]
-    (or (= 1 (count (:alleles g)))
-        (.isPhased (:genotype g))
-        (and (= (:chr vc) (:chr prev-vc))
+    (and (= (:chr vc) (:chr prev-vc))
+         (or (= 1 (count (:alleles g)))
+             (.isPhased (:genotype g))
              (<= (:start vc) (:end prev-vc))))))
 
 (defn parse-phased-haplotypes
