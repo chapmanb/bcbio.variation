@@ -172,44 +172,44 @@
     - Add discordant variants for extra calls not in expected variants, avoiding
       variants in deleted regions."
   [expect-fetch vcs]
-  (letfn [(get-ref-vcs [x]
-            (expect-fetch (:chr x) (:start x) (:end x)))
-          (ref-match-allele [x]
-            (matching-allele x (expect-fetch (:chr x) (:start x) (:end x))))
-          (get-regional-expected-vcs
-            [itree]
-            {:pre [(= 1 (count (keys itree)))]}
-            (let [[chr tree] (first itree)]
-              (let [start (-> tree .min .getStart)]
-                (->> (expect-fetch chr start (dec (-> tree .max .getEnd)))
-                     (remove #(< (:start %) start))
-                     (sort-by :start)))))
-          (compare-and-update [info e-vc]
-            (let [cmp (comparison-metrics (:itree info) (:cmp-i info) e-vc)]
-              (-> info
-                  (assoc :itree (remove-itree-vc (:itree info) (:chr e-vc)
-                                                 (:start cmp) (:end cmp)))
-                  (assoc :out (cons cmp (:out info)))
-                  (assoc :deleted (concat (:deleted info) (:deleted cmp))))))
-          (in-deleted-region? [regions vc]
-            (contains? regions [(:chr vc) (:start vc)]))
-          (add-unmapped-cmps [info]
-            (concat (:out info)
-                    (map (fn [vc] {:comparison (cmp-allele-to-expected vc nil (:cmp-i info))
-                                   :variant-type (get-variant-type [vc])
-                                   :nomatch-het-alt (nomatch-het-alt? vc nil)
-                                   :start (:start vc)
-                                   :vc (:vc vc)
-                                   :ref-vc nil})
-                         (remove (partial in-deleted-region? (set (:deleted info)))
-                                 (get-itree-all (:itree info))))))]
-    (let [cmp-allele-i (highest-count (map ref-match-allele vcs))
-          vc-itree (prep-itree vcs :start :end)]
-      (->> (reduce compare-and-update
-                   {:itree vc-itree :cmp-i cmp-allele-i :deleted [] :out []}
-                   (get-regional-expected-vcs vc-itree))
-           add-unmapped-cmps
-           (sort-by :start)))))
+  (let [vc-itree (atom (prep-itree vcs :start :end))]
+    (letfn [(get-ref-vcs [x]
+              (expect-fetch (:chr x) (:start x) (:end x)))
+            (ref-match-allele [x]
+              (matching-allele x (expect-fetch (:chr x) (:start x) (:end x))))
+            (get-regional-expected-vcs
+              [itree]
+              {:pre [(= 1 (count (keys itree)))]}
+              (let [[chr tree] (first itree)]
+                (let [start (-> tree .min .getStart)]
+                  (->> (expect-fetch chr start (dec (-> tree .max .getEnd)))
+                       (remove #(< (:start %) start))
+                       (sort-by :start)))))
+            (compare-and-update [cmp-i info e-vc]
+              (let [cmp (comparison-metrics @vc-itree cmp-i e-vc)]
+                (reset! vc-itree (remove-itree-vc @vc-itree (:chr e-vc)
+                                                  (:start cmp) (:end cmp)))
+                (-> info
+                    (assoc :out (cons cmp (:out info)))
+                    (assoc :deleted (concat (:deleted info) (:deleted cmp))))))
+            (in-deleted-region? [regions vc]
+              (contains? regions [(:chr vc) (:start vc)]))
+            (add-unmapped-cmps [cmp-i info]
+              (concat (:out info)
+                      (map (fn [vc] {:comparison (cmp-allele-to-expected vc nil cmp-i)
+                                     :variant-type (get-variant-type [vc])
+                                     :nomatch-het-alt (nomatch-het-alt? vc nil)
+                                     :start (:start vc)
+                                     :vc (:vc vc)
+                                     :ref-vc nil})
+                           (remove (partial in-deleted-region? (set (:deleted info)))
+                                   (get-itree-all @vc-itree)))))]
+      (let [cmp-allele-i (highest-count (map ref-match-allele vcs))]
+        (->> (reduce (partial compare-and-update cmp-allele-i)
+                     {:deleted [] :out []}
+                     (get-regional-expected-vcs @vc-itree))
+             (add-unmapped-cmps cmp-allele-i)
+             (sort-by :start))))))
 
 (defn score-phased-calls
   "Score a called VCF against expected haploid variants based on phased regions.
@@ -350,29 +350,26 @@
                                             (get-in config [:dir :out]) (:ref exp))
          :metrics (get-phasing-metrics compared-calls (:intervals exp)
                                        (:intervals call) (:ref exp))
-         :c1 call :c2 ref :sample (:sample exp) :exp exp}))))
+         :c1 call :c2 ref :sample (:sample exp) :exp exp :dir (:dir config)}))))
 
 (defn- convert-cmps-to-compare
   "Convert stream of variant context haploid comparison to standard,
   keyed by :concordant and :discordant-name keywords."
   [name1 name2 cmps]
-  (letfn [(update-keyword [x]
+  (letfn [(update-keyword [coll x]
             (let [ref-x (-> x
                             (assoc :vc (:ref-vc x))
                             (dissoc :ref-vc))
                   [dis-kw1 dis-kw2] (map #(keyword (format "%s-discordant" %)) [name1 name2])]
               (case (:comparison x)
-                :concordant [ref-x]
-                (:discordant :phasing-error) [(assoc x :comparison dis-kw2)
-                                              (assoc ref-x :comparison dis-kw1)]
-                [nil])))
+                :concordant (conj coll ref-x)
+                (:discordant :phasing-error) (-> coll
+                                                 (conj (assoc x :comparison dis-kw2))
+                                                 (conj (assoc ref-x :comparison dis-kw1)))
+                coll)))
           (update-keyword-hapblock [xs]
-            (reduce (fn [coll ready-xs]
-                      (reduce #(if-not (or (nil? %2) (nil? (:vc %2)))
-                              (conj %1 %2)
-                              %1)
-                              coll ready-xs))
-                    [] (map update-keyword xs)))]
+            (remove #(or (nil? %) (nil? (:vc %)))
+                    (reduce update-keyword [] xs)))]
     (map update-keyword-hapblock cmps)))
 
 (defmethod compare-two-vcf-phased :compare
