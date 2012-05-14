@@ -21,14 +21,18 @@
                sv-out2 {:concordant (str (fs/file data-dir "Test-sv1-sv2-svconcordance.vcf"))
                         :discordant1 (str (fs/file data-dir "Test-sv1-sv2-svdiscordance.vcf"))
                         :discordant2 (str (fs/file data-dir "Test-sv2-sv1-svdiscordance.vcf"))}
-               indel-vcf (str (fs/file data-dir "freebayes-calls-indels.vcf"))
-               nomnp-out (itx/add-file-part indel-vcf "nomnp")]
-           (doseq [x (concat [nomnp-out] (vals sv-out) (vals sv-out2))]
+               mnp-vcf (str (fs/file data-dir "freebayes-calls-indels.vcf"))
+               indel-vcf1 (str (fs/file data-dir "sv-indels-fb.vcf"))
+               indel-vcf2 (str (fs/file data-dir "sv-indels-gatk.vcf"))
+               indel-out (str (fs/file data-dir "Test-svindfb-svindgatk-svconcordance.vcf"))
+               nomnp-out (itx/add-file-part mnp-vcf "nomnp")
+               params {:min-indel 100}]
+           (doseq [x (concat [nomnp-out indel-out] (vals sv-out) (vals sv-out2))]
              (itx/remove-path x))
            ?form)))
 
 (facts "Deal with multi-nucleotide polymorphisms"
-  (normalize-variants indel-vcf ref) => nomnp-out)
+  (normalize-variants mnp-vcf ref) => nomnp-out)
 
 (facts "Parse structural variations"
   (let [vcf-list (parse-vcf-sv sv-vcf2 ref)
@@ -39,13 +43,22 @@
     (count vcf-by-region) => 1
     (with-open [vcf-source1 (get-vcf-source sv-vcf1 ref)
                 vcf-source2 (get-vcf-source sv-vcf2 ref)]
-      (doall (map get-sv-type (parse-vcf vcf-source1))) =>
+      (doall (map #(get-sv-type % params) (parse-vcf vcf-source1))) =>
       (concat [:INS] (repeat 6 :BND)
               [nil :DEL :INS :DEL :DUP :INV :INS])
-      (doall (map get-sv-type (parse-vcf vcf-source2))) => [:DUP :BND :BND :INS :CNV :DEL :INV])))
+      (doall (map #(get-sv-type % params) (parse-vcf vcf-source2))) =>
+      [:DUP :BND :BND :INS :CNV :DEL :INV])))
 
 (facts "Compare structural variation calls from two inputs."
   (compare-sv "Test" {:name "sv1000g" :file sv-vcf1}
-              {:name "svIll" :file sv-vcf2} ref) => sv-out
+              {:name "svIll" :file sv-vcf2} ref) =future=> sv-out
   (compare-sv "Test" {:name "sv1" :file sv-vcf1}
-              {:name "sv2" :file sv-vcf1} ref) => sv-out2)
+              {:name "sv2" :file sv-vcf1} ref) =future=> sv-out2)
+
+(facts "Combine indels from different calling methodologies that overlap."
+  (-> (compare-sv "Test" {:name "svindfb" :file indel-vcf1} {:name "svindgatk" :file indel-vcf2}
+                  ref :params {:min-indel 2 :method "partial-overlap"})
+      :concordant
+      (get-vcf-source ref)
+      parse-vcf
+      count) =future=> 22)
