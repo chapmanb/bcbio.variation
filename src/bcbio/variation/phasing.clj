@@ -13,12 +13,12 @@
        - If mismatch and neither allele matches, then calling error"
   (:import [org.broadinstitute.sting.utils.interval IntervalUtils IntervalSetRule]
            [org.broadinstitute.sting.utils GenomeLocParser GenomeLoc])
-  (:use [bcbio.variation.structural :only [prep-itree get-itree-overlap
+  (:use [bcbio.variation.callable :only [get-bed-source features-in-region]]
+        [bcbio.variation.structural :only [prep-itree get-itree-overlap
                                            remove-itree-vc get-itree-all]]
         [bcbio.variation.variantcontext :only [parse-vcf get-vcf-retriever get-vcf-source
                                                write-vcf-w-template]]
         [bcbio.align.ref :only [get-seq-dict]]
-        [bcbio.variation.callable :only [get-bed-source]]
         [ordered.map :only [ordered-map]])
   (:require [fs.core :as fs]
             [bcbio.run.itx :as itx]))
@@ -30,23 +30,33 @@
    - variant has a single allele
    - variant has phasing specified (VCF | notation)
    - variant range overlaps previous variant (overlapping indels)"
-  [vc prev-vc]
+  [vc prev-vc bed-s]
   {:pre [(= 1 (count (:genotypes vc)))]}
-  (let [g (-> vc :genotypes first)]
-    (and (= (:chr vc) (:chr prev-vc))
-         (or (= 1 (count (:alleles g)))
-             (.isPhased (:genotype g))
-             (<= (:start vc) (:end prev-vc))))))
+  (letfn [(safe-same-regions? [[a b]]
+            (if (not-any? nil? [a b]) (= a b) true))
+          (same-regions? [prev cur]
+            (if (or (nil? bed-s) (instance? java.io.StringReader bed-s))
+              true
+              (safe-same-regions?
+               (map #((juxt :chr :start :end)
+                      (first (features-in-region bed-s (:chr %) (:start %) (:end %))))
+                    [prev cur]))))]
+    (let [g (-> vc :genotypes first)]
+      (and (= (:chr vc) (:chr prev-vc))
+           (same-regions? prev-vc vc)
+           (or (= 1 (count (:alleles g)))
+               (.isPhased (:genotype g))
+               (<= (:start vc) (:end prev-vc)))))))
 
 (defn parse-phased-haplotypes
   "Separate phased haplotypes provided in diploid input genome.
    We split at each phase break, returning a lazy list of variant
    contexts grouped into phases."
-  [vcf-source]
+  [vcf-source & {:keys [bed-source]}]
   (let [prev (atom nil)]
     (letfn [(split-at-phased [vc]
               (let [continue-phase (or (nil? @prev)
-                                       (is-phased? vc @prev))]
+                                       (is-phased? vc @prev bed-source))]
                 (reset! prev vc)
                 continue-phase))]
       (partition-by split-at-phased (parse-vcf vcf-source)))))
@@ -217,7 +227,7 @@
    - Evaluate second region with standard scoring: expected to called
    - Collect expected variants in the intervening region between phased blocks,
      these are missing in the called and reported as errors."
-  [call-vcf-s expect-vcf-s]
+  [call-vcf-s expect-vcf-s & {:keys [bed-source]}]
   (let [expect-retriever (get-vcf-retriever expect-vcf-s)
         prev (atom nil)]
     (letfn [(get-intervene-expect [region1 region2]
@@ -240,7 +250,8 @@
                                 (score-phased-region expect-retriever region))]
                 (reset! prev region)
                 out))]
-      (map score-phased-and-intervene (parse-phased-haplotypes call-vcf-s)))))
+      (map score-phased-and-intervene (parse-phased-haplotypes call-vcf-s
+                                                               :bed-source bed-source)))))
 
 ;; ## Summarize phased comparisons
 
@@ -341,8 +352,10 @@
   (let [ref (first (get phased-calls true))
         call (first (get phased-calls false))]
     (with-open [ref-vcf-s (get-vcf-source (:file ref) (:ref exp))
-                call-vcf-s (get-vcf-source (:file call) (:ref exp))]
-      (let [compared-calls (score-phased-calls call-vcf-s ref-vcf-s)]
+                call-vcf-s (get-vcf-source (:file call) (:ref exp))
+                bed-s (if-let [f (get call :intervals (:intervals exp))]
+                        (get-bed-source f) (java.io.StringReader. ""))]
+      (let [compared-calls (score-phased-calls call-vcf-s ref-vcf-s :bed-source bed-s)]
         {:c-files (write-concordance-output (convert-cmps-to-grade compared-calls)
                                             [:concordant :discordant
                                              :discordant-missing :phasing-error]
@@ -384,9 +397,12 @@
                            (map #(keyword (format "%s-discordant" (:name %)))
                                 [cmp1 cmp2]))]
     (with-open [vcf1-s (get-vcf-source (:file cmp1) (:ref exp))
-                vcf2-s (get-vcf-source (:file cmp2) (:ref exp))]
+                vcf2-s (get-vcf-source (:file cmp2) (:ref exp))
+                bed-s (if-let [f (get cmp2 :intervals (:intervals exp))]
+                        (get-bed-source f) (java.io.StringReader. ""))]
       {:c-files (-> (convert-cmps-to-compare (:name cmp1) (:name cmp2)
-                                             (score-phased-calls vcf2-s vcf1-s))
+                                             (score-phased-calls vcf2-s vcf1-s
+                                                                 :bed-source bed-s))
                     (write-concordance-output to-capture (:sample exp) cmp1 cmp2
                                               (get-in config [:dir :out]) (:ref exp)))
          :c1 cmp1 :c2 cmp2 :sample (:sample exp) :exp exp})))

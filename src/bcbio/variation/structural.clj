@@ -47,7 +47,7 @@
      (itree-seq (.iterator item)))))
 
 (defn remove-itree-vc
-  "Remove variant contest from an IntervalTree"
+  "Remove variant context from an IntervalTree"
   [itree chr start end]
   (if (not-any? nil? [chr start end])
     (assoc itree chr
