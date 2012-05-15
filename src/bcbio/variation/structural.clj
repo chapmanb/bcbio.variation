@@ -6,10 +6,12 @@
             Allele]
            [java.io StringReader]
            [net.sf.picard.util IntervalTree])
-  (:use [bcbio.variation.variantcontext :only [get-vcf-source parse-vcf
+  (:use [clojure.set :only [intersection]]
+        [ordered.map :only [ordered-map]]
+        [bcbio.variation.variantcontext :only [get-vcf-source parse-vcf
                                                from-vc write-vcf-w-template]]
         [bcbio.variation.callable :only [get-bed-source]]
-        [ordered.map :only [ordered-map]])
+        )
   (:require [clojure.string :as string]
             [fs.core :as fs]
             [bcbio.run.itx :as itx]))
@@ -26,11 +28,15 @@
           (ordered-map) vc-iter))
 
 (defn- itree-seq
-  "Convert IntervalTree Iterator into clojure seq."
+  "Convert IntervalTree Iterator into clojure seq.
+  Catch deleted sequences and continue ignoring the deleted node."
   [iter]
   (lazy-seq
    (when (.hasNext iter)
-     (cons (.getValue (.next iter)) (itree-seq iter)))))
+     (try
+       (cons (.getValue (.next iter)) (itree-seq iter))
+       (catch java.util.ConcurrentModificationException e
+         (itree-seq iter))))))
 
 (defn get-itree-overlap
   "Lazy sequence of items that overlap a region in a nested IntervalTree."
@@ -72,7 +78,8 @@
   (letfn [(max-allele-size [vc]
             (apply max (map #(.length %) (cons (:ref-allele vc) (:alt-alleles vc)))))
           (indel-type [vc]
-            (if (> (.length (:ref-allele vc)) 0) :DEL :INS))
+            (if (> (.length (:ref-allele vc))
+                   (apply max (map #(.length %) (:alt-alleles vc)))) :DEL :INS))
           (sv-type-from-symbol [allele]
             (->> allele
                  (re-find #"^<(\w+)(:|>)" )
@@ -162,20 +169,25 @@
 
 ;; ## Concordance checking
 
-(defn get-ci-start-end
+(defn- get-ci-start-end
   "Retrieve start and end with confidence intervals for a variation.
   length-fn returns the length of the item or a string for well-known items."
-  [vc length-fn]
-  (letfn [(get-ci-range [orig attr]
-            [(- orig (value-from-attr vc attr 0))
-             (+ orig (value-from-attr vc attr 1))])]
+  [vc params length-fn]
+  (letfn [(get-ci-range [orig attr default-ci]
+            (let [left-ci (value-from-attr vc attr 0)
+                  right-ci (value-from-attr vc attr 1)]
+              [(- orig (if (pos? left-ci) left-ci default-ci))
+               (+ orig (if (pos? right-ci) right-ci default-ci))]))]
     (let [start (:start vc)
           length (length-fn vc)
+          default-ci (if-let [ci-pct (:default-ci params)]
+                       (Math/round (* ci-pct length))
+                       0)
           end (if (string? length) length
                   (max (+ start length) (:end vc)))]
-      [(get-ci-range start "CIPOS")
+      [(get-ci-range start "CIPOS" default-ci)
        (if (string? end) end
-           (get-ci-range end "CIEND"))])))
+           (get-ci-range end "CIEND" default-ci))])))
 
 (defmulti sv-ends-overlap?
   "Check if coordinates from two structural variants overlap.
@@ -185,8 +197,8 @@
 
 (defmethod sv-ends-overlap? clojure.lang.PersistentVector
   [[[s1 e1] [s2 e2]]]
-  (or (and (>= s2 s1) (<= s2 e1))
-      (and (>= e2 s1) (<= e2 e1))))
+  (seq (intersection (set (range s1 (inc e1)))
+                     (set (range s2 (inc e2))))))
 
 (defmethod sv-ends-overlap? java.lang.String
   [[end1 end2]]
@@ -216,45 +228,42 @@
       (count seq)
       (get-allele-insert x))))
 
+(defn- deletion-length
+  "Length of deletion variations, handling SVLEN and allele specifications."
+  [vc]
+  (let [svlen (length-from-svlen vc)]
+    (if (pos? svlen)
+      svlen
+      (- (-> vc :ref-allele .length)
+         (apply min (map #(.length %) (:alt-alleles vc)))))))
+
 (defn- duplication-length
   "Length of duplication variation, handling SVLEN and END."
   [x]
   (max (length-from-svlen x)
        (- (value-from-attr x "END") (:start x))))
 
-(defn sv-len-concordant?
+(defn- sv-len-concordant?
   "Check for concordance of variants based on reported length:
   handles deletions, inversions. insertions and duplications.
   length-fn is a custom function to retrieve the variation length."
-  [sv1 sv2 length-fn]
-  (letfn []
-    (every? sv-ends-overlap?
-            (partition 2 (interleave (get-ci-start-end sv1 length-fn)
-                                     (get-ci-start-end sv2 length-fn))))))
-
-(defn sv-partial-match?
-  "Allow partial matching of structural variants based on overlaps"
-  [sv1 sv2]
-  (and (= (:chr sv1) (:chr sv2)))
-  (println (map (juxt :start :end) [sv1 sv2])))
+  [sv1 sv2 params length-fn]
+  (every? sv-ends-overlap?
+          (partition 2 (interleave (get-ci-start-end sv1 params length-fn)
+                                   (get-ci-start-end sv2 params length-fn)))))
 
 (defn sv-concordant?
   "Check if structural variants are concordant."
   [params sv1 sv2]
   (and (apply = (map :sv-type [sv1 sv2]))
-       (case (keyword (get params :method "end-ci"))
-         :end-ci (case (:sv-type sv1)
-                   :DEL (sv-len-concordant? sv1 sv2 length-from-svlen)
-                   :INS (sv-len-concordant? sv1 sv2 insertion-length)
-                   :INV (sv-len-concordant? sv1 sv2 length-from-svlen)
-                   :DUP (sv-len-concordant? sv1 sv2 duplication-length)
-                   :BND false
-                   (throw (Exception. (str "Structural variant type not handled: "
-                                           (:sv-type sv1)))))
-         :partial-overlap (case (:sv-type sv1)
-                    (:DEL :INS) (sv-partial-match? sv1 sv2)
-                    (throw (Exception. (str "Structural variant type not handled: "
-                                           (:sv-type sv1))))))))
+       (case (:sv-type sv1)
+         :DEL (sv-len-concordant? sv1 sv2 params deletion-length)
+         :INS (sv-len-concordant? sv1 sv2 params insertion-length)
+         :INV (sv-len-concordant? sv1 sv2 params length-from-svlen)
+         :DUP (sv-len-concordant? sv1 sv2 params duplication-length)
+         :BND false
+         (throw (Exception. (str "Structural variant type not handled: "
+                                 (:sv-type sv1)))))))
 
 (defn- find-concordant-svs
   "Compare two structural variant files, returning variant contexts keyed by concordance."

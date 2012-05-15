@@ -51,14 +51,14 @@
 
 (facts "Compare structural variation calls from two inputs."
   (compare-sv "Test" {:name "sv1000g" :file sv-vcf1}
-              {:name "svIll" :file sv-vcf2} ref) =future=> sv-out
+              {:name "svIll" :file sv-vcf2} ref) => sv-out
   (compare-sv "Test" {:name "sv1" :file sv-vcf1}
-              {:name "sv2" :file sv-vcf1} ref) =future=> sv-out2)
+              {:name "sv2" :file sv-vcf1} ref) => sv-out2)
 
 (facts "Combine indels from different calling methodologies that overlap."
   (-> (compare-sv "Test" {:name "svindfb" :file indel-vcf1} {:name "svindgatk" :file indel-vcf2}
-                  ref :params {:min-indel 2 :method "partial-overlap"})
+                  ref :params {:min-indel 2 :default-ci 0.9})
       :concordant
       (get-vcf-source ref)
       parse-vcf
-      count) =future=> 22)
+      count) => 18)
