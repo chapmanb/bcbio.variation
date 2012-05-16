@@ -90,6 +90,8 @@ provide example starting points and details on available options are below:
            annotate: Annotate calls with GATK annotations (boolean; default false).
            normalize: Normalize MNPs and indels (boolean: default true).
            prep: Prep with in-order chromosomes and sample names (boolean; default false).
+           prep-sort-pos: Sort by position during prep. Required if variants are
+                          not coordinate sorted within chromosomes. (boolean; default false).
            preclean: Remove problematic characters from input VCFs
                      (boolean; default false). 
            remove-refcalls: Remove reference, non-variant calls.
