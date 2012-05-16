@@ -6,9 +6,12 @@
             Allele]
            [java.io StringReader]
            [net.sf.picard.util IntervalTree])
-  (:use [bcbio.variation.variantcontext :only [get-vcf-source parse-vcf
+  (:use [clojure.set :only [intersection]]
+        [ordered.map :only [ordered-map]]
+        [bcbio.variation.variantcontext :only [get-vcf-source parse-vcf
                                                from-vc write-vcf-w-template]]
-        [bcbio.variation.callable :only [get-bed-source]])
+        [bcbio.variation.callable :only [get-bed-source]]
+        )
   (:require [clojure.string :as string]
             [fs.core :as fs]
             [bcbio.run.itx :as itx]))
@@ -22,14 +25,18 @@
             (assoc coll (:chr vc)
                    (doto (get coll (:chr vc) (IntervalTree.))
                      (.put (get vc start-kw) (inc (get vc end-kw)) vc))))
-          {} vc-iter))
+          (ordered-map) vc-iter))
 
 (defn- itree-seq
-  "Convert IntervalTree Iterator into clojure seq."
+  "Convert IntervalTree Iterator into clojure seq.
+  Catch deleted sequences and continue ignoring the deleted node."
   [iter]
   (lazy-seq
    (when (.hasNext iter)
-     (cons (.getValue (.next iter)) (itree-seq iter)))))
+     (try
+       (cons (.getValue (.next iter)) (itree-seq iter))
+       (catch java.util.ConcurrentModificationException e
+         (itree-seq iter))))))
 
 (defn get-itree-overlap
   "Lazy sequence of items that overlap a region in a nested IntervalTree."
@@ -47,7 +54,7 @@
      (itree-seq (.iterator item)))))
 
 (defn remove-itree-vc
-  "Remove variant contest from an IntervalTree"
+  "Remove variant context from an IntervalTree"
   [itree chr start end]
   (if (not-any? nil? [chr start end])
     (assoc itree chr
@@ -67,28 +74,28 @@
     - BND: Breakpoint end; paired with second variant
     - CNV: Copy number variation
     - nil: Not a structural variant."
-  [vc]
-  (let [min-indel 100]
-    (letfn [(max-allele-size [vc]
-              (apply max (map #(.length %) (cons (:ref-allele vc) (:alt-alleles vc)))))
-            (indel-type [vc]
-              (if (> (.length (:ref-allele vc)) 0) :DEL :INS))
-            (sv-type-from-symbol [allele]
-              (->> allele
-                   (re-find #"^<(\w+)(:|>)" )
-                   second
-                   keyword))
-            (alt-sv-type [vc]
-              (let [allele (-> vc :alt-alleles first .getDisplayString)]
-                (cond
-                 (.startsWith allele "<") (sv-type-from-symbol allele)
-                 (or (.contains allele "[")
-                     (.contains allele "]")) :BND)))]
-      (cond
-       (and (= "INDEL" (:type vc))
-            (> (max-allele-size vc) min-indel)) (indel-type vc)
-       (= "SYMBOLIC" (:type vc)) (alt-sv-type vc)
-       :else nil))))
+  [vc params]
+  (letfn [(max-allele-size [vc]
+            (apply max (map #(.length %) (cons (:ref-allele vc) (:alt-alleles vc)))))
+          (indel-type [vc]
+            (if (> (.length (:ref-allele vc))
+                   (apply max (map #(.length %) (:alt-alleles vc)))) :DEL :INS))
+          (sv-type-from-symbol [allele]
+            (->> allele
+                 (re-find #"^<(\w+)(:|>)" )
+                 second
+                 keyword))
+          (alt-sv-type [vc]
+            (let [allele (-> vc :alt-alleles first .getDisplayString)]
+              (cond
+               (.startsWith allele "<") (sv-type-from-symbol allele)
+               (or (.contains allele "[")
+                   (.contains allele "]")) :BND)))]
+    (cond
+     (and (= "INDEL" (:type vc))
+          (> (max-allele-size vc) (get params :min-indel 100))) (indel-type vc)
+     (= "SYMBOLIC" (:type vc)) (alt-sv-type vc)
+     :else nil)))
 
 (defn nochange-alt?
   "Check a VCF input line for identical REF and ALT calls"
@@ -136,18 +143,18 @@
   The :out-format keyword specifies how to return the parsed structural variants:
    - :itree -- Interval tree for variant lookup by chromosome and start/end.
    - default -- List of variants (non-lazy)."
-  [vcf-file ref-file & {:keys [out-format interval-file]}]
+  [vcf-file ref-file & {:keys [out-format interval-file params]
+                        :or {params {}}}]
   (letfn [(start-adjust [vc]
             (value-from-attr vc "CIPOS" 0))
           (end-adjust [vc]
             (value-from-attr vc "CIEND" 1))
           (updated-sv-vc [cur-vc]
-            (when-let [sv-type (get-sv-type cur-vc)]
+            (when-let [sv-type (get-sv-type cur-vc params)]
               (-> cur-vc
                   (assoc :start-ci (- (:start cur-vc) (start-adjust cur-vc)))
                   (assoc :end-ci (+ (:end cur-vc) (end-adjust cur-vc)))
                   (assoc :sv-type sv-type))))
-          
           (in-intervals? [bed-source vc]
             (or (instance? StringReader bed-source)
                 (not (nil? (first (.query bed-source (:chr vc) (:start-ci vc) (:end-ci vc)))))))]
@@ -162,20 +169,25 @@
 
 ;; ## Concordance checking
 
-(defn get-ci-start-end
+(defn- get-ci-start-end
   "Retrieve start and end with confidence intervals for a variation.
   length-fn returns the length of the item or a string for well-known items."
-  [vc length-fn]
-  (letfn [(get-ci-range [orig attr]
-            [(- orig (value-from-attr vc attr 0))
-             (+ orig (value-from-attr vc attr 1))])]
+  [vc params length-fn]
+  (letfn [(get-ci-range [orig attr default-ci]
+            (let [left-ci (value-from-attr vc attr 0)
+                  right-ci (value-from-attr vc attr 1)]
+              [(- orig (if (pos? left-ci) left-ci default-ci))
+               (+ orig (if (pos? right-ci) right-ci default-ci))]))]
     (let [start (:start vc)
           length (length-fn vc)
+          default-ci (if-let [ci-pct (:default-ci params)]
+                       (Math/round (* ci-pct length))
+                       0)
           end (if (string? length) length
                   (max (+ start length) (:end vc)))]
-      [(get-ci-range start "CIPOS")
+      [(get-ci-range start "CIPOS" default-ci)
        (if (string? end) end
-           (get-ci-range end "CIEND"))])))
+           (get-ci-range end "CIEND" default-ci))])))
 
 (defmulti sv-ends-overlap?
   "Check if coordinates from two structural variants overlap.
@@ -185,8 +197,8 @@
 
 (defmethod sv-ends-overlap? clojure.lang.PersistentVector
   [[[s1 e1] [s2 e2]]]
-  (or (and (>= s2 s1) (<= s2 e1))
-      (and (>= e2 s1) (<= e2 e1))))
+  (seq (intersection (set (range s1 (inc e1)))
+                     (set (range s2 (inc e2))))))
 
 (defmethod sv-ends-overlap? java.lang.String
   [[end1 end2]]
@@ -216,48 +228,69 @@
       (count seq)
       (get-allele-insert x))))
 
+(defn- deletion-length
+  "Length of deletion variations, handling SVLEN and allele specifications."
+  [vc]
+  (let [svlen (length-from-svlen vc)]
+    (if (pos? svlen)
+      svlen
+      (- (-> vc :ref-allele .length)
+         (apply min (map #(.length %) (:alt-alleles vc)))))))
+
 (defn- duplication-length
   "Length of duplication variation, handling SVLEN and END."
   [x]
   (max (length-from-svlen x)
        (- (value-from-attr x "END") (:start x))))
 
-(defn sv-len-concordant?
+(defn- sv-len-concordant?
   "Check for concordance of variants based on reported length:
   handles deletions, inversions. insertions and duplications.
   length-fn is a custom function to retrieve the variation length."
-  [sv1 sv2 length-fn]
-  (letfn []
-    (every? sv-ends-overlap?
-            (partition 2 (interleave (get-ci-start-end sv1 length-fn)
-                                     (get-ci-start-end sv2 length-fn))))))
+  [sv1 sv2 params length-fn]
+  (every? sv-ends-overlap?
+          (partition 2 (interleave (get-ci-start-end sv1 params length-fn)
+                                   (get-ci-start-end sv2 params length-fn)))))
 
 (defn sv-concordant?
   "Check if structural variants are concordant."
-  [sv1 sv2]
+  [params sv1 sv2]
   (and (apply = (map :sv-type [sv1 sv2]))
        (case (:sv-type sv1)
-         :DEL (sv-len-concordant? sv1 sv2 length-from-svlen)
-         :INS (sv-len-concordant? sv1 sv2 insertion-length)
-         :INV (sv-len-concordant? sv1 sv2 length-from-svlen)
-         :DUP (sv-len-concordant? sv1 sv2 duplication-length)
-         :BND true
-         (throw (Exception. (str "Structural variant type not handled: " (:sv-type sv1)))))))
+         :DEL (sv-len-concordant? sv1 sv2 params deletion-length)
+         :INS (sv-len-concordant? sv1 sv2 params insertion-length)
+         :INV (sv-len-concordant? sv1 sv2 params length-from-svlen)
+         :DUP (sv-len-concordant? sv1 sv2 params duplication-length)
+         :BND false
+         (throw (Exception. (str "Structural variant type not handled: "
+                                 (:sv-type sv1)))))))
 
 (defn- find-concordant-svs
   "Compare two structural variant files, returning variant contexts keyed by concordance."
-  [fname1 fname2 ref interval-file]
-  (let [cmp-tree (parse-vcf-sv fname2 ref :out-format :itree :interval-file interval-file)]
+  [fname1 fname2 ref interval-file params]
+  (let [cmp-tree (atom (parse-vcf-sv fname2 ref :out-format :itree :interval-file interval-file
+                                     :params params))]
     (letfn [(check-sv-concordance [vc]
-              (let [matches (filter (partial sv-concordant? vc)
-                                    (get-itree-overlap cmp-tree (:chr vc)
+              (let [matches (filter (partial sv-concordant? params vc)
+                                    (get-itree-overlap @cmp-tree (:chr vc)
                                                        (:start-ci vc) (inc (:end-ci vc))))]
-              [(if (seq matches) :concordant :discordant1) (:vc vc)]))]
-      (map check-sv-concordance (parse-vcf-sv fname1 ref :interval-file interval-file)))))
+                (doseq [m-vc matches]
+                  (reset! cmp-tree (remove-itree-vc @cmp-tree (:chr m-vc)
+                                                    (:start m-vc) (:end m-vc))))
+                [(if (seq matches) :concordant :discordant1) (:vc vc)]))
+            (remaining-cmp-svs [itree]
+              (partition 2
+                         (interleave (repeat :discordant2) (map :vc (get-itree-all itree)))))]
+
+      (concat
+       (map check-sv-concordance (parse-vcf-sv fname1 ref :interval-file interval-file
+                                               :params params))
+       (remaining-cmp-svs @cmp-tree)))))
 
 (defn compare-sv
   "Compare structural variants, producing concordant and discordant outputs"
-  [sample c1 c2 ref & {:keys [out-dir interval-file]}]
+  [sample c1 c2 ref & {:keys [out-dir interval-file params]
+                       :or {params {}}}]
   (let [base-out (str (fs/file (if (nil? out-dir) (fs/parent (:file c1)) out-dir)
                                (str sample "-%s-%s-%s.vcf")))
         out-files {:concordant (format base-out (:name c1) (:name c2) "svconcordance")
@@ -265,6 +298,32 @@
                    :discordant2 (format base-out (:name c2) (:name c1) "svdiscordance")}]
     (when (itx/needs-run? (vals out-files))
       (write-vcf-w-template (:file c1) out-files
-                            (find-concordant-svs (:file c1) (:file c2) ref interval-file)
+                            (find-concordant-svs (:file c1) (:file c2) ref interval-file
+                                                 params)
                             ref))
+    out-files))
+
+;; ## Utility functions
+
+(defn- find-overlapping-svs
+  "Lazy stream of structural variants overlapping in both inputs."
+  [f1 f2 ref params]
+  (letfn [(find-overlaps [cmp-tree vc]
+            (when-let [cmp-vc (first (get-itree-overlap cmp-tree (:chr vc)
+                                                        (:start-ci vc) (inc (:end-ci vc))))]
+              [:out1 (:vc vc) :out2 (:vc cmp-vc)]))]
+    (let [cmp-tree (parse-vcf-sv f2 ref :out-format :itree :params params)]
+      (->> (parse-vcf-sv f1 ref :params params)
+           (map (partial find-overlaps cmp-tree))
+           (remove nil?)
+           flatten
+           (partition 2)))))
+
+(defn overlapping-svs
+  "Prepare VCF files of only overlapping structural variants present in both."
+  [f1 f2 ref params]
+  (let [out-files {:out1 (itx/add-file-part f1 "overlap")
+                   :out2 (itx/add-file-part f2 "overlap")}]
+    (when (itx/needs-run? (vals out-files))
+      (write-vcf-w-template f1 out-files (find-overlapping-svs f1 f2 ref params) ref))
     out-files))
