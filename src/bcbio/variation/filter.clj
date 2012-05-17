@@ -7,6 +7,7 @@
         [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template
                                                get-vcf-source]])
   (:require [clojure.string :as string]
+            [incanter.stats :as stats]
             [bcbio.run.broad :as broad]
             [bcbio.run.itx :as itx]))
 
@@ -124,26 +125,26 @@
         all-params (let [x (:params finalizer)] (if (map? x) [x] x))]
     (reduce (fn [target [params fkey]]
               (let [in-vcf (remove-cur-filters (-> target fkey :file) (:ref exp))
-                    hard-filters (:filters params)
-                    anns (:annotations params)
                     train-info (get-train-info cmps-by-name
                                                (get params :support (:target finalizer))
                                                config)]
                 (-> target
-                    (assoc-in [fkey :file] (-> in-vcf
-                                               (#(if-not anns %
-                                                         (variant-recal-filter % train-info
-                                                                               anns (:ref exp)
-                                                                               :lenient (:lenient params))))
-                                               (#(if-not hard-filters %
-                                                         (variant-filter % hard-filters
-                                                                         (:ref exp))))))
+                    (assoc-in [fkey :file]
+                              (-> in-vcf
+                                  (#(if-let [anns (:annotations params)]
+                                      (variant-recal-filter % train-info
+                                                            anns (:ref exp)
+                                                            :lenient (:lenient params))
+                                      %))
+                                  (#(if-let [hard-filters (:filters params)]
+                                      (variant-filter % hard-filters (:ref exp))
+                                      %))))
                     (#(assoc-in % [fkey :name] (format "%s-%s" (get-in % [fkey :name]) "recal")))
                     (assoc-in [fkey :mod] "recal")
                     (assoc :re-compare true))))
             init-target (map vector all-params [:c1 :c2]))))
 
-;; ## Normalize attribute access
+;; ## Normalized attribute access
 
 (defmulti get-vc-attr
   "Generalized retrieval of attributes from variant with a single genotype."
@@ -158,7 +159,7 @@
         alleles (cons (:ref-allele vc) (:alt-alleles vc))
         ref-count (first ads)
         allele-count (apply + (map #(nth ads (.indexOf alleles %)) (set (:alleles g))))]
-    (when-let [e-pct (get {"HOM_VAR" 1.0 "HET_VAR" 0.5 "HOM_REF" 0.0} (:type g))]
+    (when-let [e-pct (get {"HOM_VAR" 1.0 "HET" 0.5 "HOM_REF" 0.0} (:type g))]
       (Math/abs (- e-pct (/ allele-count (+ allele-count ref-count)))))))
 
 (defmethod get-vc-attr "QUAL"
@@ -171,9 +172,38 @@
     (try (Float/parseFloat x)
          (catch java.lang.NumberFormatException _ x))))
 
-(defn get-vc-attrs-normalized
-  "Retrieve normalized attributes from variants"
+(defn get-vc-attrs
+  "Retrieve attributes from variants independent of location."
   [vc attrs]
   {:pre [(= 1 (count (:genotypes vc)))
          (contains? #{1 2} (-> vc :genotypes first :alleles count))]}
   (zipmap attrs (map (partial get-vc-attr vc) attrs)))
+
+(defn get-vc-attr-ranges
+  "Retrieve first/third quantile ranges of attributes for min/max normalization."
+  [attrs in-vcf ref]
+  (letfn [(get-quartiles [[k v]]
+            [k (stats/quantile v :probs [0.25 0.75])])]
+    (with-open [vcf-s (get-vcf-source in-vcf ref)]
+      (->> (reduce (fn [coll vc]
+                    (reduce (fn [icoll [k v]]
+                              (assoc icoll k (cons v (get icoll k))))
+                            coll (get-vc-attrs vc attrs)))
+                  (zipmap attrs (repeat [])) (parse-vcf vcf-s))
+           (map get-quartiles)
+           (into {})))))
+
+(defn get-vc-attrs-normalized
+  "Min-max Normalized attributes for each variant context in an input file."
+  [attrs in-vcf ref]
+  (letfn [(min-max-norm [x [minv maxv]]
+            (let [trunc-score-max (if (< x maxv) x maxv)
+                  trunc-score (if (> trunc-score-max minv) trunc-score-max minv)]
+              (/ (- trunc-score minv) (- maxv minv))))
+          (min-max-norm-ranges [mm-ranges [k v]]
+            [k (min-max-norm v (get mm-ranges k))])]
+    (let [mm-ranges (get-vc-attr-ranges attrs in-vcf ref)]
+      (fn [vc]
+        (->> (get-vc-attrs vc attrs)
+             (map (partial min-max-norm-ranges mm-ranges))
+             (into {}))))))

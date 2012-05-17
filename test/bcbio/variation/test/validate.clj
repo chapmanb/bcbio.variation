@@ -30,6 +30,11 @@
   (diploid-calls-to-haploid dip-vcf ref) => dip-out)
 
 (facts "Generalized attribute retrieval from variant contexts"
+  (-> (get-vc-attr-ranges ["AD" "QUAL" "DP"] top-vcf ref)
+      (get "DP")) => [241.5 250.0]
   (with-open [vcf-s (get-vcf-source top-vcf ref)]
-    (get-vc-attrs-normalized (first (parse-vcf vcf-s)) ["AD" "QUAL" "DP"]) =>
-    {"AD" 0.0 "QUAL" 5826.09 "DP" 250.0}))
+    (let [vcf-iter (parse-vcf vcf-s)
+          attrs ["AD" "QUAL" "DP"]
+          normalizer (get-vc-attrs-normalized attrs top-vcf ref)]
+      (get-vc-attrs (first vcf-iter) attrs) => {"AD" 0.0 "QUAL" 5826.09 "DP" 250.0}
+      (-> (first vcf-iter) normalizer (get "QUAL")) => (roughly 0.2943))))
