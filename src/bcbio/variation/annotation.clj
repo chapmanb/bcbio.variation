@@ -16,7 +16,8 @@
                      "FisherStrand" "GCContent" "HaplotypeScore" "HomopolymerRun"
                      "MappingQualityRankSumTest" "MappingQualityZero"
                      "MeanNeighboringBaseQuality" "QualByDepth"
-                     "ReadPosRankSumTest" "RMSMappingQuality"]
+                     "ReadPosRankSumTest" "RMSMappingQuality"
+                     "DepthPerAlleleBySample"]
         args (concat ["-R" ref
                       "-I" align-bam
                       "--variant" in-vcf

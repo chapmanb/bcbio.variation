@@ -6,7 +6,8 @@
         [bcbio.variation.multiple :only [multiple-overlap-analysis]]
         [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template
                                                get-vcf-source]])
-  (:require [bcbio.run.broad :as broad]
+  (:require [clojure.string :as string]
+            [bcbio.run.broad :as broad]
             [bcbio.run.itx :as itx]))
 
 (defn jexl-from-config [jexl-filters]
@@ -141,3 +142,38 @@
                     (assoc-in [fkey :mod] "recal")
                     (assoc :re-compare true))))
             init-target (map vector all-params [:c1 :c2]))))
+
+;; ## Normalize attribute access
+
+(defmulti get-vc-attr
+  "Generalized retrieval of attributes from variant with a single genotype."
+  (fn [vc attr] attr))
+
+(defmethod get-vc-attr "AD"
+  [vc attr]
+  "AD: Allelic depth for ref and alt alleles. Converted to percent
+   deviation from expected for haploid/diploid calls."
+  (let [g (-> vc :genotypes first)
+        ads (map #(Integer/parseInt %) (string/split (get-in g [:attributes attr]) #","))
+        alleles (cons (:ref-allele vc) (:alt-alleles vc))
+        ref-count (first ads)
+        allele-count (apply + (map #(nth ads (.indexOf alleles %)) (set (:alleles g))))]
+    (when-let [e-pct (get {"HOM_VAR" 1.0 "HET_VAR" 0.5 "HOM_REF" 0.0} (:type g))]
+      (Math/abs (- e-pct (/ allele-count (+ allele-count ref-count)))))))
+
+(defmethod get-vc-attr "QUAL"
+  [vc attr]
+  (:qual vc))
+
+(defmethod get-vc-attr :default
+  [vc attr]
+  (let [x (get-in vc [:attributes attr])]
+    (try (Float/parseFloat x)
+         (catch java.lang.NumberFormatException _ x))))
+
+(defn get-vc-attrs-normalized
+  "Retrieve normalized attributes from variants"
+  [vc attrs]
+  {:pre [(= 1 (count (:genotypes vc)))
+         (contains? #{1 2} (-> vc :genotypes first :alleles count))]}
+  (zipmap attrs (map (partial get-vc-attr vc) attrs)))

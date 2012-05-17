@@ -405,7 +405,7 @@
                                                                  :bed-source bed-s))
                     (write-concordance-output to-capture (:sample exp) cmp1 cmp2
                                               (get-in config [:dir :out]) (:ref exp)))
-         :c1 cmp1 :c2 cmp2 :sample (:sample exp) :exp exp})))
+         :c1 cmp1 :c2 cmp2 :sample (:sample exp) :exp exp :dir (:dir config)})))
 
 ;; ## Utility functions
 

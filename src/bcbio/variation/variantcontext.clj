@@ -46,6 +46,7 @@
    :type (-> vc .getType .name)
    :filters (set (.getFilters vc))
    :attributes (into {} (.getAttributes vc))
+   :qual (.getPhredScaledQual vc)
    :genotypes (map from-genotype
                    (-> vc .getGenotypes .toArray vec))
    :vc vc})

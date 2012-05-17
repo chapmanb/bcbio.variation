@@ -2,7 +2,9 @@
   "Final variant filtration and preparation for validation."
   (:use [midje.sweet]
         [bcbio.variation.haploid]
-        [bcbio.variation.validate])
+        [bcbio.variation.filter]
+        [bcbio.variation.validate]
+        [bcbio.variation.variantcontext])
   (:require [fs.core :as fs]
             [bcbio.run.itx :as itx]))
 
@@ -26,3 +28,8 @@
 
 (facts "Convert diploid calls into haploid reference variants."
   (diploid-calls-to-haploid dip-vcf ref) => dip-out)
+
+(facts "Generalized attribute retrieval from variant contexts"
+  (with-open [vcf-s (get-vcf-source top-vcf ref)]
+    (get-vc-attrs-normalized (first (parse-vcf vcf-s)) ["AD" "QUAL" "DP"]) =>
+    {"AD" 0.0 "QUAL" 5826.09 "DP" 250.0}))
