@@ -68,9 +68,10 @@
   "Min-max Normalized attributes for each variant context in an input file."
   [attrs in-vcf ref]
   (letfn [(min-max-norm [x [minv maxv]]
-            (let [trunc-score-max (if (< x maxv) x maxv)
+            (let [safe-maxv (if (= minv maxv) (inc maxv) maxv)
+                  trunc-score-max (if (< x safe-maxv) x safe-maxv)
                   trunc-score (if (> trunc-score-max minv) trunc-score-max minv)]
-              (/ (- trunc-score minv) (- maxv minv))))
+              (/ (- trunc-score minv) (- safe-maxv minv))))
           (min-max-norm-ranges [mm-ranges [k v]]
             [k (min-max-norm v (get mm-ranges k))])]
     (let [mm-ranges (get-vc-attr-ranges attrs in-vcf ref)]
@@ -127,7 +128,7 @@
 (defn- filter-vc
   "Update a variant context with filter information from classifier."
   [classifier normalizer config vc]
-  (let [attrs (vec (:attrs config))
+  (let [attrs (vec (:classifiers config))
         score (-> (make-dataset "ds" (conj attrs :c)
                                  [(get-vc-inputs attrs normalizer -1 vc)]
                                  {:class :c})
@@ -135,7 +136,7 @@
                   (#(classifier-classify classifier %)))]
     (-> (VariantContextBuilder. (:vc vc))
         (.attributes (assoc (:attributes vc) "CSCORE" score))
-        (.filters (when (< score (:thresh config))
+        (.filters (when (< score (:min-cscore config))
                     #{"CScoreFilter"}))
         .make)))
 
@@ -143,13 +144,23 @@
   "Filter an input VCF file using a trained classifer on true/false variants."
   [base-vcf true-vcf false-vcf ref config]
   (let [out-file (itx/add-file-part base-vcf "cfilter")
-        c (build-vcf-classifier (:attrs config) base-vcf
+        c (build-vcf-classifier (:classifiers config) base-vcf
                                 true-vcf false-vcf ref)
-        normalizer (get-vc-attrs-normalized (:attrs config) base-vcf ref)]
+        normalizer (get-vc-attrs-normalized (:classifiers config) base-vcf ref)]
     (when (itx/needs-run? out-file)
       (with-open [vcf-s (get-vcf-source base-vcf ref)]
         (write-vcf-w-template base-vcf {:out out-file}
                               (map (partial filter-vc c normalizer config)
                                    (parse-vcf vcf-s))
-                              ref :header-update-fn (add-cfilter-header (:attrs config)))))
+                              ref :header-update-fn (add-cfilter-header (:classifiers config)))))
     out-file))
+
+(defn pipeline-classify-filter
+  "Fit VCF classification-based filtering into analysis pipeline."
+  [in-vcf train-info ref config]
+  (letfn [(get-train-vcf [type]
+            (-> (filter #(= type (:name %)) train-info)
+                       first
+                       :file))]
+    (filter-vcf-w-classifier in-vcf (get-train-vcf "concordant")
+                             (get-train-vcf "discordant") ref config)))

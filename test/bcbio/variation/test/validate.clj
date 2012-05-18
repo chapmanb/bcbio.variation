@@ -45,4 +45,4 @@
 
 (facts "Final filtration of variants using classifier"
   (filter-vcf-w-classifier top-vcf top-vcf c-neg-vcf ref
-                           {:attrs ["AD" "QUAL" "DP"] :thresh 0.5}) => c-out)
+                           {:classifiers ["AD" "QUAL" "DP"] :min-cscore 0.5}) => c-out)

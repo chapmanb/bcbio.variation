@@ -3,6 +3,7 @@
   (:import [org.broadinstitute.sting.utils.variantcontext
             VariantContextBuilder])
   (:use [clojure.string :only [split]]
+        [bcbio.variation.filter.classify :only [pipeline-classify-filter]]
         [bcbio.variation.multiple :only [multiple-overlap-analysis]]
         [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template
                                                get-vcf-source]])
@@ -136,7 +137,10 @@
                                       %))
                                   (#(if-let [hard-filters (:filters params)]
                                       (variant-filter % hard-filters (:ref exp))
-                                      %))))
+                                      %))
+                                  (#(if-not (:classifiers params) %
+                                            (pipeline-classify-filter % train-info
+                                                                      (:ref exp) params)))))
                     (#(assoc-in % [fkey :name] (format "%s-%s" (get-in % [fkey :name]) "recal")))
                     (assoc-in [fkey :mod] "recal")
                     (assoc :re-compare true))))

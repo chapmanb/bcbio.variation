@@ -98,11 +98,63 @@ provide example starting points and details on available options are below:
                             (boolean; default false). 
            make-haploid: Convert a set of diploid calls to haploid variants
                         (boolean; default false)
+
+## Finalizer configuration
+
+In addition to the pairwise comparisons, the configuration allows specification
+of additional filtration and all-by-all comparisons based on the pairwise
+results. Like `calls`, specify these under an experiment with the `finalize`
+tag. Available methods are:
+
+* `multiple` which does a comparison of a target call method to all other
+  calls. A comparison of GATK calls to all other methods looks like:
+
+    finalize:
+      - method: multiple
+        target: gatk
+
+  and produces three output files:
+
+  - true positives -- calls detected in all methods
+  - false negatives -- calls not found in gatk, but detected in all other methods
+  - false positives -- calls found in gatk but discordant with one of the other methods
+
+* `recal-filter` to do post-comparisons filtering of calls. This can use either
+  the results of a pairwise comparison or `multiple` comparison. An example
+  demonstrating all of the filtering options re-filters a GATK versus FreeBayes
+  comparison:
+
+    finalize: 
+      - method: recal-filter
+        target: [gatk, freebayes]
+        params:
+          filters: [HRun > 5.0]
+          annotations:  [QD, HaplotypeScore, MQRankSum, ReadPosRankSum]
+          classifiers: [AD, DP, QUAL]
+          min-cscore: 0.5
+
+  The three options for filtering are:
+
+  - `filters` -- Perform hard filtering of the file with specified expressions.
+  - `annotations` -- Perform [GATK Variant Quality Score Recalibration][u5]
+   using the supplied annotations.
+  - `classifiers` and `min-cscore` -- Perform classification of true/false reads
+   based on the provided attributes.
+
+  You can specify the background to use for training with `support`. There are
+  two options:
+
+  - `support: gatk` -- Use an all-by-all comparison based on GATK to establish
+   true and false positives.
+  - `support: [gatk, freebayes]` -- Use the gatk/freebayes pairwise comparison
+   for true and false positives.
+  
            
 [u1]: https://github.com/technomancy/leiningen
 [u2]: http://en.wikipedia.org/wiki/YAML
 [u3]: https://github.com/chapmanb/bcbio.variation/blob/master/config/method-comparison.yaml
 [u4]: https://github.com/chapmanb/bcbio.variation/blob/master/config/reference-grading.yaml
+[u5]: http://www.broadinstitute.org/gsa/wiki/index.php/Variant_quality_score_recalibration
 
 ## License
 
