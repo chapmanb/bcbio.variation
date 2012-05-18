@@ -30,9 +30,9 @@
 
 (defn gatk-cl-intersect-intervals
   "Supply GATK commandline arguments for interval files, merging via intersection."
-  [intervals]
+  [intervals & {:keys [vcf]}]
   (cond
-   (nil? intervals) []
+   (nil? intervals) (if vcf ["-L" vcf] [])
    (coll? intervals) (concat (flatten (map #(list "-L" %) intervals))
                              ["--interval_set_rule" "INTERSECTION"])
-   :else ["-L", intervals]))
+   :else ["-L" intervals]))
