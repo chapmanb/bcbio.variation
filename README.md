@@ -109,9 +109,9 @@ tag. Available methods are:
 * `multiple` which does a comparison of a target call method to all other
   calls. A comparison of GATK calls to all other methods looks like:
 
-      finalize:
-        - method: multiple
-          target: gatk
+        finalize:
+          - method: multiple
+            target: gatk
 
   and produces three output files:
 

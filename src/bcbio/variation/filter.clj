@@ -96,13 +96,24 @@
                               ref))
       out-file)))
 
+
+(defn- pairwise-only?
+  "Check if a comparison set is only pairwise and not multiple."
+  [base cmp-names]
+  (letfn [(has-name? [x cmps]
+            (some #(.startsWith % x) cmps))]
+    (empty? (remove (partial has-name? base) cmp-names))))
+
 (defn- get-train-info
   "Retrieve training information for GATK recalibration:
    - No support specified: use the target comparison
    - Support specified and a specific comparison pair
    - Support specified as a single target: use target versus all comparison"
   [cmps-by-name support config]
-  (let [support-vcfs (if (coll? support)
+  (let [support (if (and (not (coll? support)) (pairwise-only? support (keys cmps-by-name)))
+                  (first (keys cmps-by-name))
+                  support)
+        support-vcfs (if (coll? support)
                        (take 2 (-> cmps-by-name (get support) :c-files vals))
                        (let [x (multiple-overlap-analysis cmps-by-name config support)]
                          [(:true-positives x) (:false-positives x)]))]
