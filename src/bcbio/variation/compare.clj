@@ -236,9 +236,17 @@
 
 ;; ## Top-level
 
+(defn- no-duplicate-names?
+  "Do not allow duplicate names in experiments."
+  [config]
+  (letfn [(exp-no-duplicate? [exp]
+            (every? (fn [[_ x]] (= 1 x)) (frequencies (map :name (:calls exp)))))]
+    (every? exp-no-duplicate? (:experiments config))))
+
 (defn load-config
   "Load configuration file, handling conversion of relative to absolute paths."
   [config-file]
+  {:post [(no-duplicate-names? %)]}
   (let [config (-> config-file slurp yaml/parse-string)
         base-dir (fs/file (get-in config [:dir :base] "."))
         to-process #{[:dir :out] [:dir :prep]

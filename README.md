@@ -109,9 +109,9 @@ tag. Available methods are:
 * `multiple` which does a comparison of a target call method to all other
   calls. A comparison of GATK calls to all other methods looks like:
 
-    finalize:
-      - method: multiple
-        target: gatk
+      finalize:
+        - method: multiple
+          target: gatk
 
   and produces three output files:
 
@@ -124,16 +124,16 @@ tag. Available methods are:
   demonstrating all of the filtering options re-filters a GATK versus FreeBayes
   comparison:
 
-    finalize: 
-      - method: recal-filter
-        target: [gatk, freebayes]
-        params:
-          filters: [HRun > 5.0]
-          annotations:  [QD, HaplotypeScore, MQRankSum, ReadPosRankSum]
-          classifiers: [AD, DP, QUAL]
-          min-cscore: 0.5
-
-  The three options for filtering are:
+        finalize: 
+          - method: recal-filter
+            target: [gatk, freebayes]
+            params:
+              filters: [HRun > 5.0]
+              annotations:  [QD, HaplotypeScore, MQRankSum, ReadPosRankSum]
+              classifiers: [AD, DP, QUAL]
+              min-cscore: 0.5
+    
+The three options for filtering are:
 
   - `filters` -- Perform hard filtering of the file with specified expressions.
   - `annotations` -- Perform [GATK Variant Quality Score Recalibration][u5]
@@ -148,7 +148,6 @@ tag. Available methods are:
    true and false positives.
   - `support: [gatk, freebayes]` -- Use the gatk/freebayes pairwise comparison
    for true and false positives.
-  
            
 [u1]: https://github.com/technomancy/leiningen
 [u2]: http://en.wikipedia.org/wiki/YAML
