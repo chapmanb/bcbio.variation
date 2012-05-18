@@ -13,10 +13,13 @@
          (let [data-dir (str (fs/file "." "test" "data"))
                ref (str (fs/file data-dir "GRCh37.fa"))
                top-vcf (str (fs/file data-dir "gatk-calls.vcf"))
+               c-neg-vcf (str (fs/file data-dir "sv-indels-gatk.vcf"))
                top-out (itx/add-file-part top-vcf "topsubset")
                dip-vcf (str (fs/file data-dir "phasing-input-diploid.vcf"))
-               dip-out (itx/add-file-part dip-vcf "haploid")]
-           (doseq [x (concat [top-out dip-out])]
+               dip-out (itx/add-file-part dip-vcf "haploid")
+               c-out (itx/add-file-part top-vcf "cfilter")
+               cbin-out (str (itx/file-root top-vcf) "-classifier.bin")]
+           (doseq [x (concat [top-out dip-out c-out cbin-out])]
              (itx/remove-path x))
            ?form)))
 
@@ -30,11 +33,16 @@
   (diploid-calls-to-haploid dip-vcf ref) => dip-out)
 
 (facts "Generalized attribute retrieval from variant contexts"
-  (-> (get-vc-attr-ranges ["AD" "QUAL" "DP"] top-vcf ref)
-      (get "DP")) => [241.5 250.0]
   (with-open [vcf-s (get-vcf-source top-vcf ref)]
     (let [vcf-iter (parse-vcf vcf-s)
           attrs ["AD" "QUAL" "DP"]
           normalizer (get-vc-attrs-normalized attrs top-vcf ref)]
+      (first (#'bcbio.variation.filter.classify/get-train-inputs
+              1 top-vcf attrs normalizer ref)) => (just [0.0 (roughly 0.2943) 1.0 1])
+      (-> (get-vc-attr-ranges attrs top-vcf ref) (get "DP")) => [241.5 250.0]
       (get-vc-attrs (first vcf-iter) attrs) => {"AD" 0.0 "QUAL" 5826.09 "DP" 250.0}
       (-> (first vcf-iter) normalizer (get "QUAL")) => (roughly 0.2943))))
+
+(facts "Final filtration of variants using classifier"
+  (filter-vcf-w-classifier top-vcf top-vcf c-neg-vcf ref
+                           {:attrs ["AD" "QUAL" "DP"] :thresh 0.5}) => c-out)

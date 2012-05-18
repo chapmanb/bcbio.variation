@@ -20,7 +20,7 @@
                  [enlive "1.0.0"]
                  [domina "1.0.0-beta4" :exclusions [org.clojure/clojurescript]]]
   :dev-dependencies [[midje "1.3.0" :exclusions [org.clojure/clojure]]
-                     [lein-midje "1.0.8"]]
+                     [lein-midje "1.0.10"]]
   :plugins [[lein-cljsbuild "0.1.9"]]
   :java-source-path "src/java"
   :omit-source true
