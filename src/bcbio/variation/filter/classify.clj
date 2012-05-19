@@ -24,14 +24,28 @@
 (defmethod get-vc-attr "AD"
   [vc attr]
   "AD: Allelic depth for ref and alt alleles. Converted to percent
-   deviation from expected for haploid/diploid calls."
-  (let [g (-> vc :genotypes first)
-        ads (map #(Integer/parseInt %) (string/split (get-in g [:attributes attr]) #","))
-        alleles (cons (:ref-allele vc) (:alt-alleles vc))
-        ref-count (first ads)
-        allele-count (apply + (map #(nth ads (.indexOf alleles %)) (set (:alleles g))))]
-    (when-let [e-pct (get {"HOM_VAR" 1.0 "HET" 0.5 "HOM_REF" 0.0} (:type g))]
-      (Math/abs (- e-pct (/ allele-count (+ allele-count ref-count)))))))
+   deviation from expected for haploid/diploid calls.
+   Also calculates allele depth from AO and DP used by FreeBayes.
+   AO is the count of the alternative allele."
+  (letfn [(calc-expected [g ref-count allele-count]
+            {:pre [(not (neg? ref-count))]}
+            (when-let [e-pct (get {"HOM_VAR" 1.0 "HET" 0.5 "HOM_REF" 0.0} (:type g))]
+              (Math/abs (- e-pct (/ allele-count (+ allele-count ref-count))))))
+          (from-ad [g]
+            (let [ads (map #(Float/parseFloat %) (string/split (get-in g [:attributes attr]) #","))
+                  alleles (cons (:ref-allele vc) (:alt-alleles vc))
+                  ref-count (first ads)
+                  allele-count (apply + (map #(nth ads (.indexOf alleles %)) (set (:alleles g))))]
+              (calc-expected g ref-count allele-count)))
+          (from-ao [g]
+            (let [alt-count (Float/parseFloat (get-in g [:attributes "AO"]))
+                  total-count (Float/parseFloat (get-in g [:attributes "DP"]))]
+              (calc-expected g (- total-count alt-count) alt-count)))]
+    (let [g (-> vc :genotypes first)]
+      (cond
+       (get-in g [:attributes attr]) (from-ad g)
+       (get-in g [:attributes "AO"]) (from-ao g)
+       :else (Exception. (str "AD not found in attributes" (:attributes g)))))))
 
 (defmethod get-vc-attr "QUAL"
   [vc attr]
