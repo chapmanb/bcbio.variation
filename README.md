@@ -117,7 +117,8 @@ tag. Available methods are:
 
   - true positives -- calls detected in all methods
   - false negatives -- calls not found in gatk, but detected in all other methods
-  - false positives -- calls found in gatk but discordant with one of the other methods
+  - false positives -- calls found in gatk but callable and discordant
+   in one of the other methods
 
 * `recal-filter` to do post-comparisons filtering of calls. This can use either
   the results of a pairwise comparison or `multiple` comparison. An example

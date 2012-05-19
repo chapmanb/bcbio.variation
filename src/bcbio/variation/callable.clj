@@ -69,3 +69,34 @@
           (.write wtr (format "%s\t%s\t%s\n" (.getChr f)
                               (dec (.getStart f)) (inc (.getEnd f)))))))
     out-file))
+
+;; ## Multiple callables
+
+(defprotocol CloseableCallable
+  "Provide callable checker for potentially multiple inputs"
+  (has-callers? [this])
+  (is-callable? [this space start end])
+  (close [this]))
+
+(defrecord BamCallable [callables sources check-fn]
+  CloseableCallable
+  (has-callers? [_]
+    (not (empty? callables)))
+  (is-callable? [_ space start end]
+    (check-fn #(% space start end) callables))
+  (close [_]
+    (doseq [x sources]
+      (.close x))))
+
+(defn check-any-callable
+  "High level checker if any reads in a set of targets have callable bases."
+  [target-cmps ref out-dir]
+  (let [other-bams (reduce (fn [coll x] (conj coll x))
+                           #{} (->> (vals target-cmps)
+                                    (map (juxt :c1 :c2))
+                                    flatten
+                                    (map :align)
+                                    (remove nil?)))
+        checkers (map #(callable-checker % ref :out-dir out-dir)
+                      other-bams)]
+    (BamCallable. (map first checkers) (map second checkers) some)))

@@ -3,6 +3,7 @@
   High level API to consolidate pairwise variant comparisons."
   (:use [ordered.map :only [ordered-map]]
         [bcbio.variation.annotation :only [add-variant-annotations]]
+        [bcbio.variation.callable :only [check-any-callable is-callable? has-callers?]]
         [bcbio.variation.combine :only [combine-variants]]
         [bcbio.variation.metrics :only [nonref-passes-filter?]]
         [bcbio.variation.variantcontext :only [parse-vcf get-vcf-retriever
@@ -73,12 +74,14 @@
 (defn- gen-target-fps
   "Generate false positives: discordant calls also called in other samples."
   [target-cmps target-name other-conc-vcf ref out-dir]
-  (letfn [(check-shared [fetch]
+  (letfn [(check-shared [fetch any-callable]
             (fn [x]
-              (and (not (empty? (fetch (:chr x) (:start x) (:end x))))
-                   (nonref-passes-filter? x))))
-          (get-shared-discordant [xs fetch]
-            (let [pass-and-shared? (check-shared fetch)]
+              (and (nonref-passes-filter? x)
+                   (if (has-callers? any-callable)
+                     (is-callable? any-callable (:chr x) (:start x) (:end x))
+                     (not (empty? (fetch (:chr x) (:start x) (:end x))))))))
+          (get-shared-discordant [xs fetch any-callable]
+            (let [pass-and-shared? (check-shared fetch any-callable)]
               (map :vc (filter pass-and-shared? xs))))]
     (let [disc-vcfs (remove nil? (map (fn [v]
                                         (get-in v [:c-files
@@ -89,10 +92,12 @@
                        (select-variant-by-set ref "Intersection"))
           out-file (itx/add-file-part disc-vcf "shared")]
       (with-open [disc-source (get-vcf-source disc-vcf ref)
-                  other-source (get-vcf-source other-conc-vcf ref)]
+                  other-source (get-vcf-source other-conc-vcf ref)
+                  any-callable (check-any-callable target-cmps ref out-dir)]
         (let [vrn-fetch (get-vcf-retriever other-source)]
           (write-vcf-w-template disc-vcf {:out out-file}
-                                (get-shared-discordant (parse-vcf disc-source) vrn-fetch)
+                                (get-shared-discordant (parse-vcf disc-source)
+                                                       vrn-fetch any-callable)
                                 ref)))
       out-file)))
 
