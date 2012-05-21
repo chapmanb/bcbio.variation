@@ -39,12 +39,12 @@
           attrs ["AD" "QUAL" "DP"]
           normalizer (get-vc-attrs-normalized attrs top-vcf ref)]
       (first (#'bcbio.variation.filter.classify/get-train-inputs
-              1 top-vcf attrs normalizer ref)) => (just [0.0 (roughly 0.2943) 1.0 1])
-      (-> (get-vc-attr-ranges attrs top-vcf ref) (get "DP")) => [241.5 250.0]
-      (-> (get-vc-attr-ranges attrs fb-vcf ref) (get "AD")) => (just [(roughly 6.045E-4)
-                                                                      (roughly 0.024326)])
+              1 top-vcf attrs normalizer ref)) => (just [0.0 (roughly 0.621) 1.0 1])
+      (-> (get-vc-attr-ranges attrs top-vcf ref) (get "DP")) => [193.5 250.0]
+      (-> (get-vc-attr-ranges attrs fb-vcf ref) (get "AD")) => (just [0.0
+                                                                      (roughly 0.41239)])
       (get-vc-attrs (first vcf-iter) attrs) => {"AD" 0.0 "QUAL" 5826.09 "DP" 250.0}
-      (-> (first vcf-iter) normalizer (get "QUAL")) => (roughly 0.2943))))
+      (-> (first vcf-iter) normalizer (get "QUAL")) => (roughly 0.621))))
 
 (facts "Final filtration of variants using classifier"
   (filter-vcf-w-classifier top-vcf top-vcf c-neg-vcf ref

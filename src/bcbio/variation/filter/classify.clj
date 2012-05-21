@@ -65,10 +65,10 @@
   (zipmap attrs (map (partial get-vc-attr vc) attrs)))
 
 (defn get-vc-attr-ranges
-  "Retrieve first/third quantile ranges of attributes for min/max normalization."
+  "Retrieve quantile ranges of attributes for min/max normalization."
   [attrs in-vcf ref]
   (letfn [(get-quartiles [[k v]]
-            [k (stats/quantile v :probs [0.25 0.75])])]
+            [k (stats/quantile v :probs [0.05 0.95])])]
     (with-open [vcf-s (get-vcf-source in-vcf ref)]
       (->> (reduce (fn [coll vc]
                     (reduce (fn [icoll [k v]]
