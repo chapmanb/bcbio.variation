@@ -4,7 +4,7 @@
             VariantContextBuilder])
   (:use [clojure.string :only [split]]
         [bcbio.variation.filter.classify :only [pipeline-classify-filter]]
-        [bcbio.variation.multiple :only [multiple-overlap-analysis]]
+        [bcbio.variation.multiple :only [multiple-overlap-analysis remove-mod-name]]
         [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template
                                                get-vcf-source]])
   (:require [bcbio.run.broad :as broad]
@@ -99,10 +99,8 @@
 
 (defn- pairwise-only?
   "Check if a comparison set is only pairwise and not multiple."
-  [base cmp-names]
-  (letfn [(has-name? [x cmps]
-            (some #(.startsWith % x) cmps))]
-    (empty? (remove (partial has-name? base) cmp-names))))
+  [cmp-names]
+  (= 1 (count (set (map (fn [xs] (vec (map remove-mod-name xs))) cmp-names)))))
 
 (defn- get-train-info
   "Retrieve training information for GATK recalibration:
@@ -110,7 +108,7 @@
    - Support specified and a specific comparison pair
    - Support specified as a single target: use target versus all comparison"
   [cmps-by-name support config]
-  (let [support (if (and (not (coll? support)) (pairwise-only? support (keys cmps-by-name)))
+  (let [support (if (and (not (coll? support)) (pairwise-only? (keys cmps-by-name)))
                   (first (keys cmps-by-name))
                   support)
         support-vcfs (if (coll? support)

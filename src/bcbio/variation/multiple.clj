@@ -15,7 +15,7 @@
 
 ;; ## Utility functions
 
-(defn- remove-mod-name [x & {:keys [mods] :or {mods ["recal"]}}]
+(defn remove-mod-name [x & {:keys [mods] :or {mods ["recal"]}}]
   "Removes modification names from an approach name."
   (reduce (fn [final mod]
             (string/replace final (str "-" mod) ""))
