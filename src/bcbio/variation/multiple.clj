@@ -93,7 +93,7 @@
           out-file (itx/add-file-part disc-vcf "shared")]
       (with-open [disc-source (get-vcf-source disc-vcf ref)
                   other-source (get-vcf-source other-conc-vcf ref)
-                  any-callable (check-any-callable target-cmps ref out-dir)]
+                  any-callable (check-any-callable target-cmps ref (str (fs/parent out-dir)))]
         (let [vrn-fetch (get-vcf-retriever other-source)]
           (write-vcf-w-template disc-vcf {:out out-file}
                                 (get-shared-discordant (parse-vcf disc-source)
