@@ -130,7 +130,7 @@
           (cur-nooverlap [items]
             (when (not-any? (partial mnp-overlap? (last items)) (drop-last items))
               (last items)))]
-    (let [num-prev 5]
+    (let [num-prev 15]
       (remove nil?
               (map cur-nooverlap
                    (partition num-prev 1

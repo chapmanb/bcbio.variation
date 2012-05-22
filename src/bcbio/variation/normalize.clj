@@ -274,7 +274,13 @@
     - Gap characters (-) found in REF or ALT indels.
     - Filter out call with extra N padding on 5' side of indels."
   [in-vcf-file & {:keys [out-dir]}]
-  (letfn [(remove-gap [n xs]
+  (letfn [(fix-bad-alt-header [x]
+            (str "##ALT=<ID" (string/replace-first x "##ALT=Type" "") ">"))
+          (clean-header [x]
+            (cond
+             (.startsWith x "##ALT=Type=") (fix-bad-alt-header x)
+             :else x))
+          (remove-gap [n xs]
             (assoc xs n
                    (string/replace (nth xs n) "-" "")))
           (is-5pad-n? [xs]
@@ -284,12 +290,13 @@
           (remove-5pad-n [xs]
             (if (is-5pad-n? xs) [] xs))
           (clean-line [line]
-            (if (.startsWith line "#") line
-                (->> (string/split line #"\t")
-                     (remove-gap 3)
-                     (remove-gap 4)
-                     (remove-5pad-n)
-                     (string/join "\t"))))]
+            (if (.startsWith line "#")
+              (clean-header line)
+              (->> (string/split line #"\t")
+                   (remove-gap 3)
+                   (remove-gap 4)
+                   (remove-5pad-n)
+                   (string/join "\t"))))]
     (let [out-file (itx/add-file-part in-vcf-file "preclean" out-dir)]
       (when (itx/needs-run? out-file)
         (with-open [rdr (reader in-vcf-file)
