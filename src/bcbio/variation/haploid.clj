@@ -25,9 +25,14 @@
                   (when (> variant-prob haploid-thresh)
                     (first (filter #(and (.isNonReference %) (.isCalled %))
                                    (.getAlleles g)))))))
+            (extract-mixed-allele [alleles]
+              (let [ready (remove #(.isNoCall %) alleles)]
+                (when (= 1 (count ready))
+                  (first ready))))
             (get-haploid-allele [g]
               (case (:type g)
                 "HOM_VAR" (first (:alleles g))
+                "MIXED" (extract-mixed-allele (:alleles g))
                 "HET" (maybe-variant-haploid (:genotype g))
                 nil))]
       (when-let [allele (get-haploid-allele g)]

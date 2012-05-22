@@ -12,7 +12,8 @@
         [bcbio.variation.variantcontext :only [write-vcf-w-template
                                                get-vcf-source
                                                get-vcf-retriever
-                                               get-vcf-line-parser]]
+                                               get-vcf-line-parser
+                                               from-genotype]]
         [bcbio.align.ref :only [get-seq-dict]]
         [bcbio.variation.structural :only [nochange-alt?]]
         [ordered.map :only (ordered-map)]
@@ -131,6 +132,33 @@
          (sort-by first)
          (map second))))
 
+(defn- normalize-sv-genotype
+  "Provide genotype calls for structural variants to a single ref call.
+  Structural variants often don't have proper genotype references since
+  individual haplotypes are not called. This makes them a single reference
+  if not specified or mixed."
+  [config sample orig]
+  (letfn [(maybe-fix-vc [g alt-allele]
+            (if (= "MIXED" (:type g))
+              (Genotype/modifyAlleles (:genotype g)
+                                      (remove #(.isNoCall %) (:alleles g)))
+              (:genotype g)))
+          (ref-vc-genotype [gs alt-allele]
+            (case (count gs)
+              0 [(Genotype. sample [alt-allele])]
+              1 [(maybe-fix-vc (first gs) alt-allele)]
+              (map :genotype gs)))]
+    (if (:sv-genotype config)
+      (let [new-gs (ref-vc-genotype (:genotypes orig)
+                                   (first (:alt-alleles orig)))]
+        (-> orig
+            (assoc :vc
+                   (-> (VariantContextBuilder. (:vc orig))
+                       (.genotypes new-gs)
+                       .make))
+            (assoc :genotypes (map from-genotype new-gs))))
+      orig)))
+
 (defn- ordered-vc-iter
   "Provide VariantContexts ordered by chromosome and normalized."
   [rdr vcf-decoder sample config]
@@ -139,6 +167,7 @@
        (#(if (:sort-pos config) (sort-by-position %) %))
        (remove nochange-alt?)
        (map vcf-decoder)
+       (map (partial normalize-sv-genotype config sample))
        (remove no-call-genotype?)
        (map (partial fix-vc sample config))
        (map :vc)))
@@ -224,9 +253,9 @@
   Assumes by position sorting of variants in the input VCF. Chromosomes do
   not require a specific order, but positions internal to a chromosome do.
   Currently configured for human preparation."
-  [in-vcf-file ref-file sample & {:keys [out-dir out-fname sort-pos]
+  [in-vcf-file ref-file sample & {:keys [out-dir out-fname sort-pos sv-genotype]
                                   :or {sort-pos false}}]
-  (let [config {:org :GRCh37 :allele-count 2 :sort-pos sort-pos}
+  (let [config {:org :GRCh37 :allele-count 2 :sort-pos sort-pos :sv-genotype sv-genotype}
         base-name (if (nil? out-fname) (itx/remove-zip-ext in-vcf-file) out-fname)
         out-file (itx/add-file-part base-name "prep" out-dir)]
     (when (itx/needs-run? out-file)

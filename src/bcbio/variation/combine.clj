@@ -173,7 +173,8 @@
           prep-file (if (true? (:prep call))
                       (prep-vcf sample-file (:ref exp) (:sample exp) :out-dir out-dir
                                 :out-fname out-fname :orig-ref-file (:ref call)
-                                :sort-pos (get call :prep-sort-pos false))
+                                :sort-pos (get call :prep-sort-pos false)
+                                :sv-genotype (get call :prep-sv-genotype false))
                       sample-file)
           hap-file (if (true? (:make-haploid call))
                      (diploid-calls-to-haploid prep-file (:ref exp) :out-dir out-dir)
