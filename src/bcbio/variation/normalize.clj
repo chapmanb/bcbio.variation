@@ -224,13 +224,16 @@
 
 (defn- update-header
   "Update header information, removing contig and adding sample names."
-  [sample]
-  (fn [header]
-    (case (count (.getGenotypeSamples header))
-     1 (VCFHeader. (apply ordered-set (remove #(= "contig" (.getKey %)) (.getMetaData header)))
-                   (ordered-set sample))
-     0 (VCFHeader. (apply ordered-set (remove #(= "contig" (.getKey %)) (.getMetaData header))) #{})
-     header)))
+  [sample config]
+  (letfn [(clean-metadata [header]
+            (apply ordered-set (remove #(= "contig" (.getKey %)) (.getMetaData header))))]
+    (fn [header]
+      (case (count (.getGenotypeSamples header))
+        1 (VCFHeader. (clean-metadata header) (ordered-set sample))
+        0 (if (:sv-genotype config)
+            (VCFHeader. (clean-metadata header) (ordered-set sample))
+            (VCFHeader. (clean-metadata header) #{}))
+        header))))
 
 (defn- write-prepped-vcf
   "Write VCF file with correctly ordered and cleaned variants."
@@ -246,7 +249,7 @@
                                    (for [rdr (vals reader-by-chr)]
                                      (ordered-vc-iter rdr vcf-decoder sample config)))
                                   ref-file
-                                  :header-update-fn (update-header sample))))))))
+                                  :header-update-fn (update-header sample config))))))))
 
 (defn prep-vcf
   "Prepare VCF for comparison by normalizing high level attributes
