@@ -93,7 +93,7 @@
                    (.contains allele "]")) :BND)))]
     (cond
      (and (= "INDEL" (:type vc))
-          (> (max-allele-size vc) (get params :min-indel 100))) (indel-type vc)
+          (> (max-allele-size vc) (get params :min-indel 10))) (indel-type vc)
      (= "SYMBOLIC" (:type vc)) (alt-sv-type vc)
      :else nil)))
 
@@ -267,7 +267,7 @@
 
 (defn- find-concordant-svs
   "Compare two structural variant files, returning variant contexts keyed by concordance."
-  [fname1 fname2 ref interval-file params]
+  [fname1 fname2 disc-kwds ref interval-file params]
   (let [cmp-tree (atom (parse-vcf-sv fname2 ref :out-format :itree :interval-file interval-file
                                      :params params))]
     (letfn [(check-sv-concordance [vc]
@@ -277,15 +277,24 @@
                 (doseq [m-vc matches]
                   (reset! cmp-tree (remove-itree-vc @cmp-tree (:chr m-vc)
                                                     (:start m-vc) (:end m-vc))))
-                [(if (seq matches) :concordant :discordant1) (:vc vc)]))
+                [(if (seq matches) :sv-concordant (:1 disc-kwds)) (:vc vc)]))
             (remaining-cmp-svs [itree]
               (partition 2
-                         (interleave (repeat :discordant2) (map :vc (get-itree-all itree)))))]
+                         (interleave (repeat (:2 disc-kwds)) (map :vc (get-itree-all itree)))))]
 
       (concat
        (map check-sv-concordance (parse-vcf-sv fname1 ref :interval-file interval-file
                                                :params params))
        (remaining-cmp-svs @cmp-tree)))))
+
+(defn find-non-svs
+  "Retrieve list of non-structural variants in the provided input file."
+  [kwd vcf-source params]
+  (->> (parse-vcf vcf-source)
+       (filter #(nil? (get-sv-type % params)))
+       (map :vc)
+       (interleave (repeat kwd))
+       (partition 2)))
 
 (defn compare-sv
   "Compare structural variants, producing concordant and discordant outputs"
@@ -293,15 +302,39 @@
                        :or {params {}}}]
   (let [base-out (str (fs/file (if (nil? out-dir) (fs/parent (:file c1)) out-dir)
                                (str sample "-%s-%s-%s.vcf")))
-        out-files {:concordant (format base-out (:name c1) (:name c2) "svconcordance")
-                   :discordant1 (format base-out (:name c1) (:name c2) "svdiscordance")
-                   :discordant2 (format base-out (:name c2) (:name c1) "svdiscordance")}]
+        disc-kwds {:1 (keyword (str "sv-" (:name c1) "-discordant"))
+                   :2 (keyword (str "sv-" (:name c2) "-discordant"))}
+        out-files (ordered-map
+                   :sv-concordant (format base-out (:name c1) (:name c2) "svconcordance")
+                   (:1 disc-kwds) (format base-out (:name c1) (:name c2) "svdiscordance")
+                   (:2 disc-kwds) (format base-out (:name c2) (:name c1) "svdiscordance")
+                   :nosv1 (itx/add-file-part (:file c1) "nosv" out-dir)
+                   :nosv2 (itx/add-file-part (:file c2) "nosv" out-dir))]
     (when (itx/needs-run? (vals out-files))
-      (write-vcf-w-template (:file c1) out-files
-                            (find-concordant-svs (:file c1) (:file c2) ref interval-file
-                                                 params)
-                            ref))
+      (with-open [vcf1-s (get-vcf-source (:file c1) ref :codec (structural-vcfcodec))
+                  vcf2-s (get-vcf-source (:file c2) ref :codec (structural-vcfcodec))]
+        (write-vcf-w-template (:file c1) out-files
+                              (concat
+                               (find-concordant-svs (:file c1) (:file c2) disc-kwds
+                                                    ref interval-file params)
+                               (find-non-svs :nosv1 vcf1-s params)
+                               (find-non-svs :nosv2 vcf2-s params))
+                              ref)))
     out-files))
+
+(defn compare-sv-pipeline
+  "Handle input decomposition running SV detection through the standard pipeline."
+  [c1 c2 exp config]
+  (let [out-dir (get-in config [:dir :prep] (get-in config [:dir :out]))
+        intervals (get c1 :intervals (get c2 :intervals (:intervals exp)))
+        params (get exp :params {:min-indel 10 :default-ci 0.10})
+        out-files (compare-sv (:sample exp) c1 c2 (:ref exp) :out-dir out-dir
+                              :interval-file intervals :params params)]
+    [(assoc c1 :file (:nosv1 out-files))
+     (assoc c2 :file (:nosv2 out-files))
+     (-> out-files
+         (dissoc :nosv1)
+         (dissoc :nosv2))]))
 
 ;; ## Utility functions
 

@@ -15,12 +15,16 @@
                target-bed (str (fs/file data-dir "target-regions.bed"))
                sv-vcf1 (str (fs/file data-dir "sv-1000g.vcf"))
                sv-vcf2 (str (fs/file data-dir "sv-illumina.vcf"))
-               sv-out {:concordant (str (fs/file data-dir "Test-sv1000g-svIll-svconcordance.vcf"))
-                       :discordant1 (str (fs/file data-dir "Test-sv1000g-svIll-svdiscordance.vcf"))
-                       :discordant2 (str (fs/file data-dir "Test-svIll-sv1000g-svdiscordance.vcf"))}
-               sv-out2 {:concordant (str (fs/file data-dir "Test-sv1-sv2-svconcordance.vcf"))
-                        :discordant1 (str (fs/file data-dir "Test-sv1-sv2-svdiscordance.vcf"))
-                        :discordant2 (str (fs/file data-dir "Test-sv2-sv1-svdiscordance.vcf"))}
+               sv-out {:sv-concordant
+                       (str (fs/file data-dir "Test-sv1000g-svIll-svconcordance.vcf"))
+                       :sv-sv1000g-discordant
+                       (str (fs/file data-dir "Test-sv1000g-svIll-svdiscordance.vcf"))
+                       :sv-svIll-discordant
+                       (str (fs/file data-dir "Test-svIll-sv1000g-svdiscordance.vcf"))}
+               sv-out2
+               {:sv-concordant (str (fs/file data-dir "Test-sv1-sv2-svconcordance.vcf"))
+                :sv-sv1-discordant (str (fs/file data-dir "Test-sv1-sv2-svdiscordance.vcf"))
+                :sv-sv2-discordant (str (fs/file data-dir "Test-sv2-sv1-svdiscordance.vcf"))}
                mnp-vcf (str (fs/file data-dir "freebayes-calls-indels.vcf"))
                indel-vcf1 (str (fs/file data-dir "sv-indels-fb.vcf"))
                indel-vcf2 (str (fs/file data-dir "sv-indels-gatk.vcf"))
@@ -51,14 +55,14 @@
 
 (facts "Compare structural variation calls from two inputs."
   (compare-sv "Test" {:name "sv1000g" :file sv-vcf1}
-              {:name "svIll" :file sv-vcf2} ref) => sv-out
+              {:name "svIll" :file sv-vcf2} ref) => (contains sv-out)
   (compare-sv "Test" {:name "sv1" :file sv-vcf1}
-              {:name "sv2" :file sv-vcf1} ref) => sv-out2)
+              {:name "sv2" :file sv-vcf1} ref) => (contains sv-out2))
 
 (facts "Combine indels from different calling methodologies that overlap."
   (-> (compare-sv "Test" {:name "svindfb" :file indel-vcf1} {:name "svindgatk" :file indel-vcf2}
                   ref :params {:min-indel 2 :default-ci 0.9})
-      :concordant
+      :sv-concordant
       (get-vcf-source ref)
       parse-vcf
       count) => 18)

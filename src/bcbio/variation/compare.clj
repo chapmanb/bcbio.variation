@@ -8,26 +8,27 @@
    - Use VariantEval to calculate overall concordance statistics
    - Provide output for concordant and discordant regions for
      detailed investigation"
-  (:use [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template
-                                               get-vcf-source]]
+  (:use [clojure.java.io]
+        [clojure.math.combinatorics :only [combinations]]
+        [ordered.map :only [ordered-map]]
+        [bcbio.align.reorder :only [reorder-bam]]
+        [bcbio.variation.annotation :only [add-variant-annotations]]
+        [bcbio.variation.callable :only [get-callable-bed]]
+        [bcbio.variation.combine :only [combine-variants create-merged
+                                        gatk-normalize]]
+        [bcbio.variation.filter :only [variant-filter pipeline-recalibration]]
         [bcbio.variation.metrics :only [vcf-stats write-summary-table]]
+        [bcbio.variation.multiple :only [prep-cmp-name-lookup pipeline-compare-multiple]]
+        [bcbio.variation.phasing :only [is-haploid? compare-two-vcf-phased]]
         [bcbio.variation.report :only [concordance-report-metrics
                                        write-concordance-metrics
                                        write-scoring-table
                                        top-level-metrics
                                        write-classification-metrics]]
-        [bcbio.variation.combine :only [combine-variants create-merged
-                                        gatk-normalize]]
-        [bcbio.variation.annotation :only [add-variant-annotations]]
-        [bcbio.variation.filter :only [variant-filter pipeline-recalibration]]
-        [bcbio.variation.phasing :only [is-haploid? compare-two-vcf-phased]]
-        [bcbio.variation.callable :only [get-callable-bed]]
-        [bcbio.variation.multiple :only [prep-cmp-name-lookup pipeline-compare-multiple]]
+        [bcbio.variation.structural :only [compare-sv-pipeline]]
         [bcbio.variation.validate :only [pipeline-validate]]
-        [bcbio.align.reorder :only [reorder-bam]]
-        [ordered.map :only [ordered-map]]
-        [clojure.math.combinatorics :only [combinations]]
-        [clojure.java.io])
+        [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template
+                                               get-vcf-source]])
   (:require [clojure.string :as string]
             [clojure.data.csv :as csv]
             [fs.core :as fs]
@@ -193,10 +194,14 @@
 (defn- compare-two-vcf
   "Compare two VCF files, handling standard and haploid specific comparisons."
   [c1 c2 exp config]
-  (let [phased-vcfs (group-by #(-> % :file (is-haploid? (:ref exp))) [c1 c2])]
-    (if (get phased-vcfs true)
-      (compare-two-vcf-phased phased-vcfs exp config)
-      (compare-two-vcf-standard c1 c2 exp config))))
+  (let [[c1 c2 sv-cmp] (if-not (:mod c1) (compare-sv-pipeline c1 c2 exp config)
+                               [c1 c2 {}])
+        phased-vcfs (group-by #(-> % :file (is-haploid? (:ref exp))) [c1 c2])
+        out-cmp (if (get phased-vcfs true)
+                  (compare-two-vcf-phased phased-vcfs exp config)
+                  (compare-two-vcf-standard c1 c2 exp config))]
+    (assoc out-cmp :c-files (reduce (fn [coll [k v]] (assoc coll k v))
+                                    (:c-files out-cmp) sv-cmp))))
 
 ;; ## Customizable finalizer comparisons
 
