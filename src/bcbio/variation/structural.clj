@@ -41,10 +41,10 @@
 (defn get-itree-overlap
   "Lazy sequence of items that overlap a region in a nested IntervalTree."
   [itree chrom start end]
-  (-> itree
-      (get chrom)
-      (.overlappers start end)
-      itree-seq))
+  (let [chr-itree (get itree chrom)]
+    (if (nil? chr-itree)
+      []
+      (itree-seq (.overlappers chr-itree start end)))))
 
 (defn get-itree-all
   "Lazy sequence of all items in an IntervalTree."
