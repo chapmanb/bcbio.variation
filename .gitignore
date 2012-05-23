@@ -36,3 +36,5 @@ test/data/grading/
 test/data/method/
 test/data/fosmid/
 test/data/web-test/
+test/data/single/
+test/data/tmp*

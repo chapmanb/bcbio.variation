@@ -1,0 +1,12 @@
+# Example configuration for processing a single input file, writing
+# output to the specified 'out' directory.
+---
+dir:
+  out: test/data/single
+experiments:
+  - sample: Test1
+    ref: test/data/GRCh37.fa
+    calls:
+      - name: gatk
+        file: test/data/gatk-calls.vcf
+        normalize: true
