@@ -215,7 +215,7 @@
               [(- orig (if (pos? left-ci) left-ci default-ci))
                (+ orig (if (pos? right-ci) right-ci default-ci))]))
           (get-default-ci [length]
-            (let [default (if-let [x (-> (:default-ci params) first second)] x 0)
+            (let [default (if-let [x (-> (:default-cis params) first second)] x 0)
                   by-length (when-not (string? length)
                               (second (first (drop-while #(< (first %) length)
                                                          (:default-cis params)))))]
