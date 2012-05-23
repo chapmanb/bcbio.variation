@@ -61,7 +61,7 @@
 
 (facts "Combine indels from different calling methodologies that overlap."
   (-> (compare-sv "Test" {:name "svindfb" :file indel-vcf1} {:name "svindgatk" :file indel-vcf2}
-                  ref :params {:min-indel 2 :default-ci 0.9})
+                  ref :params {:min-indel 2 :default-cis [[100 10]]})
       :sv-concordant
       (get-vcf-source ref)
       parse-vcf

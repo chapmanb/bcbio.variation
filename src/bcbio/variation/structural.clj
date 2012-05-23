@@ -51,7 +51,8 @@
   [itree]
   (flatten
    (for [item (vals itree)]
-     (itree-seq (.iterator item)))))
+     (sort-by :start
+              (itree-seq (.iterator item))))))
 
 (defn remove-itree-vc
   "Remove variant context from an IntervalTree"
@@ -123,8 +124,6 @@
           (when-let [vc (proxy-super decode work-line)]
             vc))))))
 
-;; ## Parsing structural variants
-
 (defn value-from-attr
   "Retrieve normalized integer values from an attribute."
   ([vc attr-name]
@@ -138,56 +137,7 @@
           (Integer/parseInt)
           Math/abs)))
 
-(defn parse-vcf-sv
-  "Parse VCF file returning structural variants with confidence intervals.
-  The :out-format keyword specifies how to return the parsed structural variants:
-   - :itree -- Interval tree for variant lookup by chromosome and start/end.
-   - default -- List of variants (non-lazy)."
-  [vcf-file ref-file & {:keys [out-format interval-file params]
-                        :or {params {}}}]
-  (letfn [(start-adjust [vc]
-            (value-from-attr vc "CIPOS" 0))
-          (end-adjust [vc]
-            (value-from-attr vc "CIEND" 1))
-          (updated-sv-vc [cur-vc]
-            (when-let [sv-type (get-sv-type cur-vc params)]
-              (-> cur-vc
-                  (assoc :start-ci (- (:start cur-vc) (start-adjust cur-vc)))
-                  (assoc :end-ci (+ (:end cur-vc) (end-adjust cur-vc)))
-                  (assoc :sv-type sv-type))))
-          (in-intervals? [bed-source vc]
-            (or (instance? StringReader bed-source)
-                (not (nil? (first (.query bed-source (:chr vc) (:start-ci vc) (:end-ci vc)))))))]
-    (with-open [vcf-source (get-vcf-source vcf-file ref-file :codec (structural-vcfcodec))
-                bed-source (if-not (nil? interval-file) (get-bed-source interval-file)
-                                   (StringReader. ""))]
-      (let [vs-iter (filter (partial in-intervals? bed-source)
-                            (keep updated-sv-vc (parse-vcf vcf-source)))]
-        (case out-format
-          :itree (prep-itree vs-iter :start-ci :end-ci)
-          (vec vs-iter))))))
-
 ;; ## Concordance checking
-
-(defn- get-ci-start-end
-  "Retrieve start and end with confidence intervals for a variation.
-  length-fn returns the length of the item or a string for well-known items."
-  [vc params length-fn]
-  (letfn [(get-ci-range [orig attr default-ci]
-            (let [left-ci (value-from-attr vc attr 0)
-                  right-ci (value-from-attr vc attr 1)]
-              [(- orig (if (pos? left-ci) left-ci default-ci))
-               (+ orig (if (pos? right-ci) right-ci default-ci))]))]
-    (let [start (:start vc)
-          length (length-fn vc)
-          default-ci (if-let [ci-pct (:default-ci params)]
-                       (Math/round (* ci-pct length))
-                       0)
-          end (if (string? length) length
-                  (max (+ start length) (:end vc)))]
-      [(get-ci-range start "CIPOS" default-ci)
-       (if (string? end) end
-           (get-ci-range end "CIEND" default-ci))])))
 
 (defmulti sv-ends-overlap?
   "Check if coordinates from two structural variants overlap.
@@ -243,27 +193,90 @@
   (max (length-from-svlen x)
        (- (value-from-attr x "END") (:start x))))
 
+(defn- get-sv-length
+  "Retrieve length of a structural variant for different variation types."
+  [vc]
+  (case (:sv-type vc)
+         :DEL (deletion-length vc)
+         :INS (insertion-length vc)
+         :INV (length-from-svlen vc)
+         :DUP (duplication-length vc)
+         :CNV (duplication-length vc)
+         :BND 0
+         (throw (Exception. (str "Structural variant type not handled: "
+                                 (:sv-type vc))))))
+
+(defn- get-ci-start-end
+  "Retrieve start and end with confidence intervals for a variation."
+  [vc params & {:keys [allow-named?]}]
+  (letfn [(get-ci-range [orig attr default-ci]
+            (let [left-ci (value-from-attr vc attr 0)
+                  right-ci (value-from-attr vc attr 1)]
+              [(- orig (if (pos? left-ci) left-ci default-ci))
+               (+ orig (if (pos? right-ci) right-ci default-ci))]))
+          (get-default-ci [length]
+            (let [default (if-let [x (-> (:default-ci params) first second)] x 0)
+                  by-length (when-not (string? length)
+                              (second (first (drop-while #(< (first %) length)
+                                                         (:default-cis params)))))]
+              (if-not (nil? by-length) by-length default)))]
+    (let [start (:start vc)
+          length (get-sv-length vc)
+          default-ci (get-default-ci length)
+          end (cond
+               (and allow-named? (string? length)) length
+               (string? length) (:end vc)
+               :else (max (+ start length) (:end vc)))]
+      [(get-ci-range start "CIPOS" default-ci)
+       (if (string? end) end
+           (get-ci-range end "CIEND" default-ci))])))
+
 (defn- sv-len-concordant?
   "Check for concordance of variants based on reported length:
-  handles deletions, inversions. insertions and duplications.
-  length-fn is a custom function to retrieve the variation length."
-  [sv1 sv2 params length-fn]
+  handles deletions, inversions. insertions and duplications."
+  [sv1 sv2 params]
   (every? sv-ends-overlap?
-          (partition 2 (interleave (get-ci-start-end sv1 params length-fn)
-                                   (get-ci-start-end sv2 params length-fn)))))
+          (partition 2 (interleave (get-ci-start-end sv1 params :allow-named? true)
+                                   (get-ci-start-end sv2 params :allow-named? true)))))
 
 (defn sv-concordant?
   "Check if structural variants are concordant."
   [params sv1 sv2]
   (and (apply = (map :sv-type [sv1 sv2]))
        (case (:sv-type sv1)
-         :DEL (sv-len-concordant? sv1 sv2 params deletion-length)
-         :INS (sv-len-concordant? sv1 sv2 params insertion-length)
-         :INV (sv-len-concordant? sv1 sv2 params length-from-svlen)
-         :DUP (sv-len-concordant? sv1 sv2 params duplication-length)
+         (:DEL :INS :INV :DUP) (sv-len-concordant? sv1 sv2 params)
          :BND false
          (throw (Exception. (str "Structural variant type not handled: "
                                  (:sv-type sv1)))))))
+
+;; ## Parsing structural variants
+
+(defn parse-vcf-sv
+  "Parse VCF file returning structural variants with confidence intervals.
+  The :out-format keyword specifies how to return the parsed structural variants:
+   - :itree -- Interval tree for variant lookup by chromosome and start/end.
+   - default -- List of variants (non-lazy)."
+  [vcf-file ref-file & {:keys [out-format interval-file params]
+                        :or {params {}}}]
+  (letfn [(updated-sv-vc [cur-vc]
+            (when-let [sv-type (get-sv-type cur-vc params)]
+              (let [[start-cis end-cis] (get-ci-start-end (assoc cur-vc :sv-type sv-type)
+                                                          params)]
+                (-> cur-vc
+                    (assoc :start-ci (first start-cis))
+                    (assoc :end-ci (second end-cis))
+                    (assoc :sv-type sv-type)))))
+          (in-intervals? [bed-source vc]
+            (or (instance? StringReader bed-source)
+                (not (nil? (first (.query bed-source (:chr vc) (:start-ci vc) (:end-ci vc)))))))]
+    (with-open [vcf-source (get-vcf-source vcf-file ref-file :codec (structural-vcfcodec))
+                bed-source (if-not (nil? interval-file) (get-bed-source interval-file)
+                                   (StringReader. ""))]
+      (let [vs-iter (filter (partial in-intervals? bed-source)
+                            (keep updated-sv-vc (parse-vcf vcf-source)))]
+        (case out-format
+          :itree (prep-itree vs-iter :start-ci :end-ci)
+          (vec vs-iter))))))
 
 (defn- find-concordant-svs
   "Compare two structural variant files, returning variant contexts keyed by concordance."
@@ -327,7 +340,7 @@
   [c1 c2 exp config]
   (let [out-dir (get-in config [:dir :prep] (get-in config [:dir :out]))
         intervals (get c1 :intervals (get c2 :intervals (:intervals exp)))
-        params (get exp :params {:min-indel 10 :default-ci 0.10})
+        params (get exp :params {:min-indel 10 :default-cis [[100 10] [1000 200] [1e6 500]]})
         out-files (compare-sv (:sample exp) c1 c2 (:ref exp) :out-dir out-dir
                               :interval-file intervals :params params)]
     [(assoc c1 :file (:nosv1 out-files))
