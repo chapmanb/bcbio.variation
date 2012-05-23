@@ -8,5 +8,6 @@ experiments:
     ref: test/data/GRCh37.fa
     calls:
       - name: gatk
-        file: test/data/gatk-calls.vcf
+        file: test/data/freebayes-calls-indels.vcf
+        prep: true
         normalize: true
