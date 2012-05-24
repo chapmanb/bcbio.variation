@@ -116,7 +116,7 @@
   [tmpl-file out-file-map vc-iter ref & {:keys [header-update-fn]}]
   (letfn [(make-vcf-writer [f ref]
             (StandardVCFWriter. (file f) (get-seq-dict ref)))]
-    (itx/with-tx-files [tx-out-files out-file-map (keys out-file-map)]
+    (itx/with-tx-files [tx-out-files out-file-map (keys out-file-map) [".idx"]]
       (let [tmpl-header (get-vcf-header tmpl-file)
             writer-map (zipmap (keys tx-out-files)
                                (map #(make-vcf-writer % ref) (vals tx-out-files)))]

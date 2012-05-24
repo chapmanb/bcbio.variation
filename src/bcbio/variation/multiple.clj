@@ -1,7 +1,8 @@
 (ns bcbio.variation.multiple
   "Handle useful comparisons from multiple variation calling approaches.
   High level API to consolidate pairwise variant comparisons."
-  (:use [ordered.map :only [ordered-map]]
+  (:use [clojure.set :only [union]]
+        [ordered.map :only [ordered-map]]
         [bcbio.variation.annotation :only [add-variant-annotations]]
         [bcbio.variation.callable :only [check-any-callable is-callable? has-callers?]]
         [bcbio.variation.combine :only [combine-variants]]
@@ -28,11 +29,10 @@
                    will replace original comparisons with recalibrated."
   [cmps & {:keys [ignore remove-mods?] :or {ignore #{}}}]
   (reduce (fn [m x]
-            (let [cmps [:c1 :c2]
-                  names (map #(let [n (get-in x [% :name])]
+            (let [names (map #(let [n (get-in x [% :name])]
                                 (if-not remove-mods? n
                                         (remove-mod-name n :mods [(get-in x [% :mod])])))
-                             cmps)]
+                             [:c1 :c2])]
               (if (some #(contains? ignore %) names) m
                   (assoc m names x))))
           (ordered-map)
@@ -131,9 +131,10 @@
    - VCF of non-ref calls discordant in the target method and called in any of the other
      methods. We restrict to shared calls to avoid penalizing unique calls.
      These are false positives."
-  [cmps config target-name & {:keys [dirname] :or {dirname "multiple"}}]
+  [cmps config target-name & {:keys [dirname ignore] :or {dirname "multiple"
+                                                          ignore #{}}}]
   (let [cmps-by-name (prep-cmp-name-lookup (if (map? cmps) (vals cmps) cmps)
-                                           :ignore #{"all" "validate"})
+                                           :ignore (union ignore #{"all" "validate"}))
         out-dir (str (fs/file (get-in config [:dir :prep] (get-in config [:dir :out]))
                               dirname))
         ref (-> cmps-by-name vals first :exp :ref)
@@ -163,7 +164,8 @@
 (defn pipeline-compare-multiple
   "Perform high level pipeline comparison of a target with multiple experiments."
   [cmps finalizer exp config]
-  (let [analysis (multiple-overlap-analysis cmps config (:target finalizer))]
+  (let [analysis (multiple-overlap-analysis cmps config (:target finalizer)
+                                            :ignore (set (get finalizer :ignore #{})))]
     {:c-files analysis
      :c1 {:name (:target finalizer)}
      :c2 {:name "all"}

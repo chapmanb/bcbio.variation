@@ -114,6 +114,7 @@ tag. Available methods are:
         finalize:
           - method: multiple
             target: gatk
+            ignore: []
 
   and produces three output files:
 
@@ -121,6 +122,9 @@ tag. Available methods are:
   - false negatives -- calls not found in gatk, but detected in all other methods
   - false positives -- calls found in gatk but callable and discordant
    in one of the other methods
+
+  The `ignore` option provides a list of methods to ignore in the all-by-all
+  overlap comparison.
 
 * `recal-filter` to do post-comparisons filtering of calls. This can use either
   the results of a pairwise comparison or `multiple` comparison. An example

@@ -12,7 +12,7 @@
   [program args file-info map-info]
   (if (itx/needs-run? (map #(% file-info) (get map-info :out [])))
     (let [std-args ["-T" program]]
-      (itx/with-tx-files [tx-file-info file-info (get map-info :out [])]
+      (itx/with-tx-files [tx-file-info file-info (get map-info :out []) [".idx"]]
         (CommandLineGATK/start (CommandLineGATK.)
                                (into-array (map str (itx/subs-kw-files
                                                      (concat std-args args)

@@ -195,8 +195,9 @@
 (defn- compare-two-vcf
   "Compare two VCF files, handling standard and haploid specific comparisons."
   [c1 c2 exp config]
-  (let [[c1 c2 sv-cmp] (if-not (:mod c1) (compare-sv-pipeline c1 c2 exp config)
-                               [c1 c2 {}])
+  (let [[c1 c2 sv-cmp] (if-not (:mod c1)
+                         (compare-sv-pipeline c1 c2 exp config)
+                         [c1 c2 {}])
         phased-vcfs (group-by #(-> % :file (is-haploid? (:ref exp))) [c1 c2])
         out-cmp (if (get phased-vcfs true)
                   (compare-two-vcf-phased phased-vcfs exp config)

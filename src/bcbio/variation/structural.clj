@@ -332,7 +332,12 @@
                                                     ref interval-file params)
                                (find-non-svs :nosv1 vcf1-s params)
                                (find-non-svs :nosv2 vcf2-s params))
-                              ref)))
+                              ref))
+      ;; Remove SV VCF indexes since they use alternative Codecs
+      (doseq [fname (vals out-files)]
+        (let [x (str fname ".idx")]
+          (if (fs/exists? x)
+            (fs/delete x)))))
     out-files))
 
 (defn compare-sv-pipeline

@@ -62,14 +62,19 @@
 
 (defmacro with-tx-files
   "Perform action with files, keeping need-tx files in a transaction."
-  [[tx-file-info file-info need-tx] & body]
+  [[tx-file-info file-info need-tx exts] & body]
   (if (= (count need-tx) 0)
     `(do ~@body)
     `(let [~tx-file-info (safe-tx-files ~file-info ~need-tx)]
        (try
          ~@body
          (doseq [tx-key# ~need-tx]
-           (fs/rename (get ~tx-file-info tx-key#) (get ~file-info tx-key#)))
+           (let [tx-safe# (get ~tx-file-info tx-key#) 
+                 tx-final# (get ~file-info tx-key#)]
+             (fs/rename tx-safe# tx-final#)
+             (doseq [ext# ~exts]
+               (when (fs/exists? (str tx-safe# ext#))
+                 (fs/rename (str tx-safe# ext#) (str tx-final# ext#))))))
          (finally
           (fs/delete-dir (fs/parent (get ~tx-file-info (first ~need-tx)))))))))
 
