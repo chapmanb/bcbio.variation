@@ -80,6 +80,15 @@
     (let [to-check (cartesian-product [:exp :c1 :c2 :call] [:summary-level])]
       (level-from-string (get-string-level config to-check)))))
 
+(defn get-sv-metrics
+  "Retrieve structural variation metrics from SV concordance files."
+  [finfo ref]
+  (reduce (fn [coll [kw vcf-file]]
+            (assoc coll kw
+                   (ordered-map
+                    :total (count-variants vcf-file ref passes-filter?))))
+          (ordered-map) finfo))
+
 (defn top-level-metrics
   "Provide one-line summary of similarity metrics for a VCF comparison."
   [compared]
@@ -103,6 +112,11 @@
             (ordered-map
              :sample (-> compared :exp :sample)
              :ftypes (take 3 (-> compared :c-files keys))
+             :sv (let [xs (->> (:c-files compared)
+                               (drop-while #(not= (first %) :sv-concordant))
+                               (take 3))]
+                   (when-not (empty? xs)
+                     (get-sv-metrics xs ref-file)))
              :genotype_concordance (-> compared :metrics :percent_overall_genotype_concordance)
              :callable_concordance (-> compared :callable-metrics
                                        :percent_overall_genotype_concordance)
@@ -187,7 +201,7 @@
                                                 [:concordant :indel] "indels")
                                   (metrics-info 1
                                                 [:discordant1 :total] "total"
-                                                [:discordant1 :nocoverage] "ynique"
+                                                [:discordant1 :nocoverage] "unique"
                                                 [:discordant1 :snp] "SNPs"
                                                 [:discordant1 :indel] "indels")
                                   (metrics-info 2
@@ -202,6 +216,21 @@
                   {:metric metric :value val}))]
         (.write wrtr (str (doric/table [:metric :value] (remove nil? (map get-value to-write)))
                           "\n"))))))
+
+(defn write-sv-metrics
+  "Summary table of structural variation comparions."
+  [sv-metrics wrtr]
+  (letfn [(get-values [[base xs]]
+            (map (fn [[inner-kw val]]
+                   {:metric (str (name base) ": " (name inner-kw))
+                    :value val})
+                 xs))]
+    (.write wrtr "** Structural variation\n")
+    (.write wrtr (str (doric/table [:metric :value]
+                                   (->> (map get-values sv-metrics)
+                                        flatten
+                                        (remove nil?)))
+                      "\n"))))
 
 ;; ## Classification metrics
 

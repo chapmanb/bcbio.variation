@@ -24,7 +24,8 @@
                                        write-concordance-metrics
                                        write-scoring-table
                                        top-level-metrics
-                                       write-classification-metrics]]
+                                       write-classification-metrics
+                                       write-sv-metrics]]
         [bcbio.variation.structural :only [compare-sv-pipeline]]
         [bcbio.variation.validate :only [pipeline-validate]]
         [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template
@@ -299,6 +300,8 @@
                           (-> x :c1 :name) (-> x :c2 :name)))
         (write-scoring-table (:metrics x) w)
         (write-concordance-metrics (:summary x) w)
+        (when-let [sv-info (get-in x [:summary :sv])]
+          (write-sv-metrics sv-info w))
         (when (get-in x [:c1 :mod])
           (write-classification-metrics x w))
         (doseq [[k f] (:c-files x)]
