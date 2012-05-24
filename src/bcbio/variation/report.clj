@@ -102,8 +102,7 @@
             base
             (ordered-map
              :sample (-> compared :exp :sample)
-             :call1 (-> compared :c1 :name)
-             :call2 (-> compared :c2 :name)
+             :ftypes (take 3 (-> compared :c-files keys))
              :genotype_concordance (-> compared :metrics :percent_overall_genotype_concordance)
              :callable_concordance (-> compared :callable-metrics
                                        :percent_overall_genotype_concordance)
@@ -162,38 +161,47 @@
 (defn write-scoring-table
   "Write high level metrics table in readable format."
   [metrics wrtr]
-  (when-not (nil? metrics)
+  (when-not (or (nil? metrics)
+                (nil? (get-in metrics [:total-bases :total])))
     (.write wrtr (str (doric/table [:metric :value] (prep-scoring-table metrics))
                       "\n"))))
 
 (defn write-concordance-metrics
   "Summary table of metrics for assessing the score of a variant comparison."
   [metrics wrtr]
-  (let [to-write (ordered-map :genotype_concordance "Overall genotype concordance"
-                              :callable_concordance "Callable genotype concordance"
-                              :nonref_discrepency "Non-reference discrepancy rate"
-                              :nonref_sensitivity "Non-reference sensitivity"
-                              [:concordant :total] "Total concordant"
-                              :nonref_concordant "Non-reference concordant count"
-                              [:discordant_both :total] "Shared discordant"
-                              [:concordant :snp] "Concordant SNPs"
-                              [:concordant :indel] "Concordant indels"
-                              [:discordant1 :total] (str "Discordant total: " (:call1 metrics))
-                              [:discordant1 :nocoverage]  (str "Discordant unique: "
-                                                               (:call1 metrics))
-                              [:discordant1 :snp] (str "Discordant SNPs: " (:call1 metrics))
-                              [:discordant1 :indel] (str "Discordant indels: " (:call1 metrics))
-                              [:discordant2 :total] (str "Discordant total: " (:call2 metrics))
-                              [:discordant2 :nocoverage]  (str "Discordant unique: "
-                                                               (:call2 metrics))
-                              [:discordant2 :snp] (str "Discordant SNPs: " (:call2 metrics))
-                              [:discordant2 :indel] (str "Discordant indels: " (:call2 metrics))
-                              [:ml_metrics :top-metrics] "Classification metrics")]
-    (letfn [(get-value [[k metric]]
-              (let [val (if (coll? k) (get-in metrics k) (get metrics k))]
-                {:metric metric :value val}))]
-      (.write wrtr (str (doric/table [:metric :value] (map get-value to-write))
-                        "\n")))))
+  (letfn [(metrics-info [ftype-i & kvs]
+            (if (<= (count (:ftypes metrics)) ftype-i)
+              []
+              (let [cur-name (name (nth (:ftypes metrics) ftype-i))]
+                (apply concat
+                       (map (fn [[k v]] [k (str cur-name ": " v)]) (partition 2 kvs))))))]
+    (let [to-write (apply ordered-map
+                          (concat [:genotype_concordance "Overall genotype concordance"
+                                   :callable_concordance "Callable genotype concordance"
+                                   :nonref_discrepency "Non-reference discrepancy rate"
+                                   :nonref_sensitivity "Non-reference sensitivity"]
+                                  (metrics-info 0
+                                                [:concordant :total] "total"
+                                                :nonref_concordant "non-reference"
+                                                [:concordant :snp] "SNPs"
+                                                [:concordant :indel] "indels")
+                                  (metrics-info 1
+                                                [:discordant1 :total] "total"
+                                                [:discordant1 :nocoverage] "ynique"
+                                                [:discordant1 :snp] "SNPs"
+                                                [:discordant1 :indel] "indels")
+                                  (metrics-info 2
+                                                [:discordant2 :total] "total"
+                                                [:discordant2 :nocoverage] "unique"
+                                                [:discordant2 :snp] "SNPs"
+                                                [:discordant2 :indel] "indels")
+                                  [[:discordant_both :total] "Shared discordant"
+                                   [:ml_metrics :top-metrics] "Classification metrics"]))]
+      (letfn [(get-value [[k metric]]
+                (when-let [val (if (coll? k) (get-in metrics k) (get metrics k))]
+                  {:metric metric :value val}))]
+        (.write wrtr (str (doric/table [:metric :value] (remove nil? (map get-value to-write)))
+                          "\n"))))))
 
 ;; ## Classification metrics
 
