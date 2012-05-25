@@ -122,11 +122,13 @@
   (letfn [(overlaps-previous-mnp? [vc blockers]
             (contains? (get mnp-blockers (:chr vc) #{}) (:start vc)))
           (add-mnp-info [coll vc]
-            (if (= "MNP" (:type vc))
-              (assoc coll (:chr vc)
-                     (union (get coll (:chr vc) #{})
-                            (set (range (inc (:start vc)) (inc (:end vc))))))
-              coll))
+            (let [prev-check 10000] ;; bp to check upstream for overlaps
+              (if (= "MNP" (:type vc))
+                (assoc coll (:chr vc)
+                       (union (set (remove #(< % (- (:start vc) prev-check))
+                                           (get coll (:chr vc) #{})))
+                              (set (range (:start vc) (:end vc)))))
+                coll)))
           (process-vc [vc blockers]
             (if (overlaps-previous-mnp? vc blockers)
               []
