@@ -113,30 +113,31 @@
 ;; Process entire files, normalizing complex variations
 
 (defn- get-normalized-vcs
-  "Lazy list of variant context with MNPs split into single genotypes and indels stripped."
-  [vcs]
-  (letfn [(process-vc [vc]
-            (condp = (:type vc)
-              "MNP" (split-mnp vc)
-              "INDEL" [(maybe-strip-indel vc)]
-              [(:vc vc)]))]
-    (lazy-seq
-     (when (seq vcs)
-       (concat (process-vc (first vcs)) (get-normalized-vcs (rest vcs)))))))
-
-(defn get-mnp-blockers
-  "Prepare lookup dictionary of positions overlapped by MNPs.
+  "Lazy list of variant context with MNPs split into single genotypes and indels stripped.
+  mnp-blockers is a lookup dictionary of positions overlapped by MNPs.
   Variant representations can have a MNP and also a single SNP representing
   the same information. In this case we ignore SNPs overlapping a MNP region
   and rely on MNP splitting to resolve the SNPs."
-  [in-file ref]
-  (letfn [(add-mnp-info [coll vc]
-            (assoc coll (:chr vc)
-                   (union (get coll (:chr vc) #{})
-                          (set (range (inc (:start vc)) (:end vc))))))]
-    (with-open [vcf-source (get-vcf-source in-file ref)]
-      (reduce add-mnp-info {}
-              (filter #(= "MNP" (:type %)) (parse-vcf vcf-source))))))
+  [vcs mnp-blockers]
+  (letfn [(overlaps-previous-mnp? [vc blockers]
+            (contains? (get mnp-blockers (:chr vc) #{}) (:start vc)))
+          (add-mnp-info [coll vc]
+            (if (= "MNP" (:type vc))
+              (assoc coll (:chr vc)
+                     (union (get coll (:chr vc) #{})
+                            (set (range (inc (:start vc)) (inc (:end vc))))))
+              coll))
+          (process-vc [vc blockers]
+            (if (overlaps-previous-mnp? vc blockers)
+              []
+              (condp = (:type vc)
+                "MNP" (split-mnp vc)
+                "INDEL" [(maybe-strip-indel vc)]
+                [(:vc vc)])))]
+    (lazy-seq
+     (when (seq vcs)
+       (concat (process-vc (first vcs) mnp-blockers)
+               (get-normalized-vcs (rest vcs) (add-mnp-info mnp-blockers (first vcs))))))))
 
 (defn normalize-variants
   "Convert MNPs and indels into normalized representation."
@@ -145,14 +146,9 @@
   ([in-file ref out-dir & {:keys [out-fname]}]
      (let [base-name (if (nil? out-fname) (itx/remove-zip-ext in-file) out-fname)
            out-file (itx/add-file-part base-name "nomnp" out-dir)]
-       (letfn [(overlaps-previous-mnp? [mnp-blockers vc]
-                 (contains? (get mnp-blockers (:chr vc) #{}) (:start vc)))]
-         (when (itx/needs-run? out-file)
-           (with-open [vcf-source (get-vcf-source in-file ref)]
-             (write-vcf-w-template in-file {:out out-file}
-                                   (->> (parse-vcf vcf-source)
-                                        (remove (partial overlaps-previous-mnp?
-                                                         (get-mnp-blockers in-file ref)))
-                                        get-normalized-vcs)
-                                   ref))))
+       (when (itx/needs-run? out-file)
+         (with-open [vcf-source (get-vcf-source in-file ref)]
+           (write-vcf-w-template in-file {:out out-file}
+                                 (get-normalized-vcs (parse-vcf vcf-source) {})
+                                 ref)))
        out-file)))
