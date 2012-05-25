@@ -4,7 +4,8 @@
   (:import [org.broadinstitute.sting.utils.variantcontext Allele
             VariantContextBuilder GenotypesContext Genotype
             VariantContextUtils])
-  (:use [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template
+  (:use [clojure.set :only [union]]
+        [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template
                                                get-vcf-source]])
   (:require [bcbio.run.itx :as itx]))
 
@@ -111,40 +112,31 @@
 ;; ## VCF file conversion
 ;; Process entire files, normalizing complex variations
 
-(defn- vcs-no-mnp-overlaps
-  "Provide lazy stream of variants, avoiding MNP overlaps with single variants.
-  Variant representations can have a MNP and also a single SNP representing
-  the same information. In this case we ignore SNPs overlapping a MNP region
-  and rely on MNP splitting to resolve the SNPs."
-  [vc-iter]
-  (letfn [(mnp-end [x]
-            (if (= "MNP" (:type x))
-              (:end x)
-              (:start x)))
-          (mnp-overlap? [cur prev]
-            (cond
-             (nil? prev) false
-             (and (= (:chr prev) (:chr cur))
-                  (> (mnp-end prev) (:start cur))) true
-                  :else false))
-          (cur-nooverlap [items]
-            (when (not-any? (partial mnp-overlap? (last items)) (drop-last items))
-              (last items)))]
-    (let [num-prev 15]
-      (remove nil?
-              (map cur-nooverlap
-                   (partition num-prev 1
-                              (concat (repeat (dec num-prev) nil) vc-iter)))))))
-
 (defn- get-normalized-vcs
   "Lazy list of variant context with MNPs split into single genotypes and indels stripped."
-  [vcf-source]
+  [vcs]
   (letfn [(process-vc [vc]
             (condp = (:type vc)
               "MNP" (split-mnp vc)
-              "INDEL" (maybe-strip-indel vc)
-              (:vc vc)))]
-    (flatten (map process-vc (vcs-no-mnp-overlaps (parse-vcf vcf-source))))))
+              "INDEL" [(maybe-strip-indel vc)]
+              [(:vc vc)]))]
+    (lazy-seq
+     (when (seq vcs)
+       (concat (process-vc (first vcs)) (get-normalized-vcs (rest vcs)))))))
+
+(defn get-mnp-blockers
+  "Prepare lookup dictionary of positions overlapped by MNPs.
+  Variant representations can have a MNP and also a single SNP representing
+  the same information. In this case we ignore SNPs overlapping a MNP region
+  and rely on MNP splitting to resolve the SNPs."
+  [in-file ref]
+  (letfn [(add-mnp-info [coll vc]
+            (assoc coll (:chr vc)
+                   (union (get coll (:chr vc) #{})
+                          (set (range (inc (:start vc)) (:end vc))))))]
+    (with-open [vcf-source (get-vcf-source in-file ref)]
+      (reduce add-mnp-info {}
+              (filter #(= "MNP" (:type %)) (parse-vcf vcf-source))))))
 
 (defn normalize-variants
   "Convert MNPs and indels into normalized representation."
@@ -153,7 +145,14 @@
   ([in-file ref out-dir & {:keys [out-fname]}]
      (let [base-name (if (nil? out-fname) (itx/remove-zip-ext in-file) out-fname)
            out-file (itx/add-file-part base-name "nomnp" out-dir)]
-       (when (itx/needs-run? out-file)
-         (with-open [vcf-source (get-vcf-source in-file ref)]
-           (write-vcf-w-template in-file {:out out-file} (get-normalized-vcs vcf-source) ref)))
+       (letfn [(overlaps-previous-mnp? [mnp-blockers vc]
+                 (contains? (get mnp-blockers (:chr vc) #{}) (:start vc)))]
+         (when (itx/needs-run? out-file)
+           (with-open [vcf-source (get-vcf-source in-file ref)]
+             (write-vcf-w-template in-file {:out out-file}
+                                   (->> (parse-vcf vcf-source)
+                                        (remove (partial overlaps-previous-mnp?
+                                                         (get-mnp-blockers in-file ref)))
+                                        get-normalized-vcs)
+                                   ref))))
        out-file)))
