@@ -53,20 +53,14 @@
 
 ;; ## Parsing VCF files
 
-(defn- vcf-iterator
-  "Lazy iterator over variant contexts in the VCF source iterator."
-  [iter]
-  (lazy-seq
-   (when (.hasNext iter)
-     (cons (from-vc (.next iter)) (vcf-iterator iter)))))
-
 (defn get-vcf-source
   "Create a Tribble FeatureSource for VCF file.
    Handles indexing and parsing of VCF into VariantContexts.
    We treat gzipped files as tabix indexed VCFs."
   [in-file ref-file & {:keys [ensure-safe codec]}]
   (let [cur-codec (if (nil? codec) (VCFCodec.) codec)]
-    (if (.endsWith in-file ".gz")
+    (if (or (.endsWith in-file ".gz")
+            (and (nil? codec) (not (false? ensure-safe))))
       (BasicFeatureSource/getFeatureSource in-file cur-codec false)
       (let [validate (when (false? ensure-safe)
                        ValidationExclusion$TYPE/ALLOW_SEQ_DICT_INCOMPATIBILITY)
@@ -79,12 +73,12 @@
    Returns function that fetches all variants in a region (chromosome:start-end)"
   [vcf-source]
   (fn [chr start end]
-    (vcf-iterator (.query vcf-source chr start end))))
+    (map from-vc (iterator-seq (.query vcf-source chr start end)))))
 
 (defn parse-vcf
   "Lazy iterator of VariantContext information from VCF file."
   [vcf-source]
-  (vcf-iterator (.iterator vcf-source)))
+  (map from-vc (iterator-seq (.iterator vcf-source))))
 
 (defn get-vcf-line-parser
   "Retrieve parser to do line-by-line parsing of VCF files."
@@ -115,7 +109,10 @@
    `out-file-map` is a map of writer-keywords to output filenames."
   [tmpl-file out-file-map vc-iter ref & {:keys [header-update-fn]}]
   (letfn [(make-vcf-writer [f ref]
-            (StandardVCFWriter. (file f) (get-seq-dict ref)))]
+            (StandardVCFWriter. (file f) (get-seq-dict ref) false))
+          (convert-to-output [info]
+            [(if (and (coll? info) (= 2 (count info))) (first info) :out)
+             (if (coll? info) (last info) info)])]
     (itx/with-tx-files [tx-out-files out-file-map (keys out-file-map) [".idx"]]
       (let [tmpl-header (get-vcf-header tmpl-file)
             writer-map (zipmap (keys tx-out-files)
@@ -125,8 +122,5 @@
             (.writeHeader out-vcf (if-not (nil? header-update-fn)
                                     (header-update-fn tmpl-header)
                                     tmpl-header)))
-          (doseq [info vc-iter]
-            (let [[category vc] (if (and (coll? info) (= 2 (count info)))
-                                  info
-                                  [:out info])]
-              (.add (get writer-map category) vc))))))))
+          (doseq [[fkey item] (map convert-to-output vc-iter)]
+            (.add (get writer-map fkey) item)))))))

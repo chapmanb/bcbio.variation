@@ -118,9 +118,9 @@
   Variant representations can have a MNP and also a single SNP representing
   the same information. In this case we ignore SNPs overlapping a MNP region
   and rely on MNP splitting to resolve the SNPs."
-  [vcs mnp-blockers]
+  [vc-iter mnp-blockers]
   (letfn [(overlaps-previous-mnp? [vc blockers]
-            (contains? (get mnp-blockers (:chr vc) #{}) (:start vc)))
+            (contains? (get blockers (:chr vc) #{}) (:start vc)))
           (add-mnp-info [coll vc]
             (let [prev-check 10000] ;; bp to check upstream for overlaps
               (if (= "MNP" (:type vc))
@@ -135,11 +135,12 @@
               (condp = (:type vc)
                 "MNP" (split-mnp vc)
                 "INDEL" [(maybe-strip-indel vc)]
-                [(:vc vc)])))]
-    (lazy-seq
-     (when (seq vcs)
-       (concat (process-vc (first vcs) mnp-blockers)
-               (get-normalized-vcs (rest vcs) (add-mnp-info mnp-blockers (first vcs))))))))
+                [(:vc vc)])))
+          (add-normalized-vcs [vcs blockers]
+            (when (seq vcs)
+              (concat (process-vc (first vcs) blockers)
+                      (get-normalized-vcs (rest vcs) (add-mnp-info blockers (first vcs))))))]
+    (lazy-seq (add-normalized-vcs vc-iter mnp-blockers))))
 
 (defn normalize-variants
   "Convert MNPs and indels into normalized representation."

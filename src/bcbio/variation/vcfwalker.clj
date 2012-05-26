@@ -3,7 +3,7 @@
   quality scores"
   (:import [bcbio.variation BaseVariantWalker])
   (:use [bcbio.variation.variantcontext :only [from-vc]])
-  (:require [incanter.charts :as icharts]
+  (:require ;[incanter.charts :as icharts]
             [incanter.core :as icore])
   (:gen-class
    :name bcbio.variation.vcfwalker.VcfSimpleStatsWalker
@@ -33,7 +33,8 @@
 (defn -onTraversalDone
   "Plot histogram of quality scores."
   [this result]
-  (doto (icharts/histogram result
-                           :x-label "Variant quality"
-                           :nbins 50)
-    (icore/save (.out this) :width 500 :height 400)))
+  (println result))
+;  (doto (icharts/histogram result
+;                           :x-label "Variant quality"
+;                           :nbins 50)
+;    (icore/save (.out this) :width 500 :height 400)))
