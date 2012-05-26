@@ -59,8 +59,7 @@
    We treat gzipped files as tabix indexed VCFs."
   [in-file ref-file & {:keys [ensure-safe codec]}]
   (let [cur-codec (if (nil? codec) (VCFCodec.) codec)]
-    (if (or (.endsWith in-file ".gz")
-            (and (nil? codec) (not (false? ensure-safe))))
+    (if (.endsWith in-file ".gz")
       (BasicFeatureSource/getFeatureSource in-file cur-codec false)
       (let [validate (when (false? ensure-safe)
                        ValidationExclusion$TYPE/ALLOW_SEQ_DICT_INCOMPATIBILITY)
