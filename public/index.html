@@ -26,7 +26,7 @@
 
     <div class="navbar navbar-fixed-top">
       <div class="navbar-inner">
-        <div class="container">
+        <div class="container-fluid">
           <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
@@ -38,6 +38,13 @@
               <!--<li><a href="#about">About</a></li>-->
             </ul>
           </div><!--/.nav-collapse -->
+          <div class="pull-right"> 
+            <form class="navbar-form" action="/login" method="post">
+              <input type="text" name="username" class="input-medium" placeholder="username">
+              <input type="password" name="password" class="input-medium" placeholder="password">
+              <button type="submit" class="btn-info btn">Login</button>
+            </form>
+          </div>
         </div>
       </div>
     </div>

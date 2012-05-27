@@ -95,7 +95,7 @@
               (fs/mkdirs cur-dir)
               {:id work-id :dir (str cur-dir)}))
           (download-file [tmp-dir request name]
-            (let [cur-param (-> request :params (get name))
+            (let [cur-param (get-in request [:params name])
                   out-file (fs/file tmp-dir (:filename cur-param))]
               [(keyword name) (if (> (:size cur-param) 0)
                                 (do
@@ -103,7 +103,7 @@
                                   (str out-file)))]))]
     (let [work-info (prep-tmp-dir request)
           in-files (into {} (map (partial download-file (:dir work-info) request)
-                                 ["variant-file" "region-file"]))]
+                                 [:variant-file :region-file]))]
       (-> (response (scoring-html request))
           (content-type "text/html")
           (assoc :session

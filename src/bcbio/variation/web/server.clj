@@ -1,22 +1,27 @@
 (ns bcbio.variation.web.server
   "Server providing routes for serving up static pages."
   (:use [clojure.java.io]
-        [ring.adapter.jetty :only (run-jetty)]
-        [ring.middleware.file :only (wrap-file)]
-        [ring.middleware.file-info :only (wrap-file-info)]
-        [ring.middleware.params :only (wrap-params)]
-        [ring.middleware.multipart-params :only (wrap-multipart-params)]
-        [ring.middleware.reload :only (wrap-reload)]
-        [ring.middleware.session :only (wrap-session)]
-        [ring.util.response :only (file-response redirect)]
-        [compojure.core :only (defroutes ANY POST GET)])
+        [ring.adapter.jetty :only [run-jetty]]
+        [ring.middleware file file-info keyword-params
+         multipart-params nested-params params reload session]
+        [ring.util.response :only [file-response redirect]]
+        [compojure.core :only [defroutes ANY POST GET]])
   (:require [clj-yaml.core :as yaml]
             [bcbio.variation.web.process :as web-process]))
 
 (def ^:private config (atom nil))
 
+(def ^:private test-usernames
+  {"tester" "tester"})
+
+(defn check-login
+  [{{:keys [username password]} :params}]
+  (when (= (get test-usernames username) password)
+    username))
+
 (defroutes app-routes
   (POST "/score" request web-process/prep-scoring)
+  (POST "/login" request check-login)
   (GET "/summary" request web-process/run-scoring)
   (GET "/scorefile/:name" request web-process/get-variant-file)
   (ANY "*" request (file-response "404.html" {:root (-> @config :dir :html-root)})))
@@ -33,6 +38,7 @@
       (wrap-file (-> @config :dir :html-root))
       wrap-file-info
       wrap-session
+      wrap-keyword-params
       wrap-params
       wrap-multipart-params
       wrap-add-config))
