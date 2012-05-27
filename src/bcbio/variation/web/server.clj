@@ -1,52 +1,33 @@
 (ns bcbio.variation.web.server
   "Server providing routes for serving up static pages."
   (:use [clojure.java.io]
-        [ring.adapter.jetty :only [run-jetty]]
-        [ring.middleware file file-info keyword-params
-         multipart-params nested-params params reload session]
-        [ring.util.response :only [file-response redirect]]
-        [compojure.core :only [defroutes ANY POST GET]])
+        [noir.core :only [defpage]]
+        [bcbio.variation.web.shared :only [web-config]]
+        [ring.middleware file])
   (:require [clj-yaml.core :as yaml]
+            [noir.server :as server]
             [bcbio.variation.web.process :as web-process]))
-
-(def ^:private config (atom nil))
 
 (def ^:private test-usernames
   {"tester" "tester"})
 
-(defn check-login
-  [{{:keys [username password]} :params}]
+(defpage [:post "/login"] {:keys [username password]}
   (when (= (get test-usernames username) password)
     username))
 
-(defroutes app-routes
-  (POST "/score" request web-process/prep-scoring)
-  (POST "/login" request check-login)
-  (GET "/summary" request web-process/run-scoring)
-  (GET "/scorefile/:name" request web-process/get-variant-file)
-  (ANY "*" request (file-response "404.html" {:root (-> @config :dir :html-root)})))
+(defpage [:post "/score"] {:as params}
+  (web-process/prep-scoring params))
 
-(defn wrap-add-config
-  "Add configuration information to the current request, loaded from input YAML file."
-  [handler]
-  (fn [request]
-    (handler (assoc request :config @config))))
+(defpage "/summary" []
+  (web-process/run-scoring))
 
-(defn app []
-  (-> app-routes
-      (wrap-reload '(web-process))
-      (wrap-file (-> @config :dir :html-root))
-      wrap-file-info
-      wrap-session
-      wrap-keyword-params
-      wrap-params
-      wrap-multipart-params
-      wrap-add-config))
+(defpage "/scorefile/:name" {:keys [name]}
+  (web-process/get-variant-file name))
 
 (defn -main
   ([config-file]
      (-main config-file "8080"))
   ([config-file port]
-     (reset! config (-> config-file slurp yaml/parse-string))
-     (println (str "Running server on http://localhost:" port))
-     (run-jetty (app) {:join? false :port (Integer/parseInt port)})))
+     (reset! web-config (-> config-file slurp yaml/parse-string))
+     (server/add-middleware wrap-file (get-in @web-config [:dir :html-root]))
+     (server/start (Integer/parseInt port))))

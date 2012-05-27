@@ -2,11 +2,13 @@
   "Run scoring analysis, handling preparation of input files and run configuration."
   (:import [java.util.UUID])
   (:use [clojure.java.io]
-        [ring.util.response :only (response content-type)]
-        [bcbio.variation.compare :only (variant-comparison-from-config)]
-        [bcbio.variation.report :only (prep-scoring-table)])
+        [bcbio.variation.compare :only [variant-comparison-from-config]]
+        [bcbio.variation.report :only [prep-scoring-table]]
+        [bcbio.variation.web.shared :only [web-config]])
   (:require [fs.core :as fs]
             [clj-yaml.core :as yaml]
+            [noir.session :as session]
+            [noir.response :as response]
             [net.cgrand.enlive-html :as html]
             [doric.core :as doric]))
 
@@ -54,8 +56,8 @@
 
 (defn html-scoring-summary
   "Generate summary of scoring results for display."
-  [request comparisons]
-  (let [template-dir (-> request :config :dir :template)
+  [comparisons]
+  (let [template-dir (get-in @web-config [:dir :template])
         sum-table (html-summary-table comparisons)]
     (html/transform (html/html-resource (fs/file template-dir "scoresum.html"))
                     [:div#score-table]
@@ -63,9 +65,9 @@
 
 (defn scoring-html
   "Update main page HTML with content for scoring."
-  [request]
-  (let [html-dir (-> request :config :dir :html-root)
-        template-dir (-> request :config :dir :template)]
+  []
+  (let [html-dir (get-in @web-config [:dir :html-root])
+        template-dir (get-in @web-config [:dir :template])]
     (apply str (html/emit*
                 (html/transform (html/html-resource (fs/file html-dir "index.html"))
                                 [:div#main-content]
@@ -77,58 +79,55 @@
 
 (defn run-scoring
   "Run scoring analysis from details provided in current session."
-  [request]
-  (let [process-config (create-work-config (-> request :session :in-files)
-                                           (-> request :session :work-info)
-                                           (:config request))
+  []
+  (let [process-config (create-work-config (session/get :in-files)
+                                           (session/get :work-info)
+                                           @web-config)
         comparisons (variant-comparison-from-config process-config)]
     (apply str (html/emit*
-                (html-scoring-summary request comparisons)))))
+                (html-scoring-summary comparisons)))))
 
 (defn prep-scoring
   "Download form-supplied input files and prep directory for scoring analysis."
-  [request]
-  (letfn [(prep-tmp-dir [request]
-            (let [tmp-dir (-> request :config :dir :work)
+  [params]
+  (letfn [(prep-tmp-dir []
+            (let [tmp-dir (get-in @web-config [:dir :work])
                   work-id (str (java.util.UUID/randomUUID))
                   cur-dir (fs/file tmp-dir work-id)]
               (fs/mkdirs cur-dir)
               {:id work-id :dir (str cur-dir)}))
-          (download-file [tmp-dir request name]
-            (let [cur-param (get-in request [:params name])
+          (download-file [tmp-dir params name]
+            (let [cur-param (get params name)
                   out-file (fs/file tmp-dir (:filename cur-param))]
               [(keyword name) (if (> (:size cur-param) 0)
                                 (do
                                   (copy (:tempfile cur-param) out-file)
                                   (str out-file)))]))]
-    (let [work-info (prep-tmp-dir request)
-          in-files (into {} (map (partial download-file (:dir work-info) request)
+    (let [work-info (prep-tmp-dir)
+          in-files (into {} (map (partial download-file (:dir work-info) params)
                                  [:variant-file :region-file]))]
-      (-> (response (scoring-html request))
-          (content-type "text/html")
-          (assoc :session
-            (-> (:session request)
-                (assoc :work-info work-info)
-                (assoc :in-files in-files)))))))
+      (session/put! :work-info work-info)
+      (session/put! :in-files in-files)
+      (scoring-html))))
 
 ;; ## File retrieval from processing
 
 (defn get-variant-file
   "Retrieve processed output file for web display."
-  [request]
+  [name]
   (letfn [(sample-file [ext]
             (let [base-name "contestant-reference"]
-              (format "%s-%s-%s" (-> request :config :ref :sample) base-name ext)))]
+              (format "%s-%s-%s" (get-in @web-config [:ref :sample]) base-name ext)))]
     (let [file-map {"concordant" (sample-file "concordant.vcf")
                     "discordant" (sample-file "discordant.vcf")
                     "discordant-missing" (sample-file "discordant-missing.vcf")
                     "phasing" (sample-file "phasing-error.vcf")}
-          base-dir (-> request :session :work-info :dir)
+          base-dir (:dir (session/get :work-info))
           work-dir (if-not (nil? base-dir) (fs/file base-dir "grading"))
-          name (get file-map (-> request :params :name))
+          name (get file-map name)
           fname (if-not (or (nil? work-dir)
                             (nil? name)) (str (fs/file work-dir name)))]
-      (if (and (not (nil? fname)) (fs/exists? fname))
-        (-> (response (slurp fname))
-            (content-type "text/plain"))
-        "Variant file not found"))))
+      (response/content-type "text/plain"
+                             (if (and (not (nil? fname)) (fs/exists? fname))
+                               (slurp fname)
+                               "Variant file not found")))))
