@@ -17,11 +17,12 @@
                  [clj-aws-s3 "0.3.1"]
                  [noir "1.2.2"]
                  [fetch "0.1.0-alpha2"]
+                 [crate "0.2.0-alpha3"]
                  [enlive "1.0.0"]
                  [domina "1.0.0-beta4" :exclusions [org.clojure/clojurescript]]]
   :dev-dependencies [[midje "1.3.0" :exclusions [org.clojure/clojure]]
                      [lein-midje "1.0.10"]]
-  :plugins [[lein-cljsbuild "0.1.9"]]
+  :plugins [[lein-cljsbuild "0.2.1"]]
   :java-source-path "src/java"
   ;:jvm-opts ["-Xmx4g"]
   :omit-source true

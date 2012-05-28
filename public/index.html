@@ -19,6 +19,8 @@
       }
     </style>
     <link href="css/bootstrap-responsive.css" rel="stylesheet">
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+    <script src="js/bootstrap.js"></script>
     <script src="js/score.js"></script>
   </head>
 
@@ -38,12 +40,14 @@
               <!--<li><a href="#about">About</a></li>-->
             </ul>
           </div><!--/.nav-collapse -->
-          <div class="pull-right"> 
+          <div class="pull-right" id="user-manage">
+            <!--
             <form class="navbar-form" action="/login" method="post">
               <input type="text" name="username" class="input-medium" placeholder="username">
               <input type="password" name="password" class="input-medium" placeholder="password">
-              <button type="submit" class="btn-info btn">Login</button>
+              <button type="submit" id="login-btn" class="btn-info btn">Login</button>
             </form>
+            -->
           </div>
         </div>
       </div>
@@ -92,5 +96,6 @@
       </form>
     </div> <!-- /container -->
     <script>bcbio.variation.score.upload_generalize();</script>
+    <script>bcbio.variation.login.handle_login();</script>
   </body>
 </html>

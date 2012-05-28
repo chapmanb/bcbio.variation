@@ -2,18 +2,27 @@
   "Server providing routes for serving up static pages."
   (:use [clojure.java.io]
         [noir.core :only [defpage]]
+        [noir.fetch.remotes :only [defremote]]
         [bcbio.variation.web.shared :only [web-config]]
         [ring.middleware file])
   (:require [clj-yaml.core :as yaml]
             [noir.server :as server]
+            [noir.session :as session]
             [bcbio.variation.web.process :as web-process]))
 
 (def ^:private test-usernames
   {"tester" "tester"})
 
-(defpage [:post "/login"] {:keys [username password]}
+(defremote login [{:keys [username password]}]
   (when (= (get test-usernames username) password)
+    (session/put! :username username)
     username))
+
+(defremote logout []
+  (session/remove! :username))
+
+(defremote get-username []
+  (session/get :username))
 
 (defpage [:post "/score"] {:as params}
   (web-process/prep-scoring params))
