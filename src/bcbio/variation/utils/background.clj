@@ -3,7 +3,7 @@
   Batch variant calling and recalibration with GATK improves resulting calls. This
   provides a ready to use set of calls to batch with a single sample using 1000 genomes data."
   (:use [clojure.java.io]
-        [bcbio.variation.compare :only [load-config]]
+        [bcbio.variation.config :only [load-config]]
         [bcbio.variation.combine :only [select-by-sample combine-variants]]
         [bcbio.variation.annotation :only [add-gatk-annotations]])
   (:require [clojure.java.shell :as shell]

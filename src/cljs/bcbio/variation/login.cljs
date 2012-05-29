@@ -26,9 +26,9 @@
 (defn- logged-out-html []
   (crate/html
    [:form {:class "navbar-form"}
-    [:input {:type "text" :name "username" :class "input-medium" :placeholder "username"
+    [:input {:type "text" :name "username" :class "input-medium" :placeholder "GenomeSpace Username"
              :style "margin-top: 2px; margin-right: 4px"}]
-    [:input {:type "password" :name "password" :class "input-medium" :placeholder "password"
+    [:input {:type "password" :name "password" :class "input-medium" :placeholder "Password"
              :style "margin-top: 2px;"}]
     [:button {:type "submit" :id "login-btn" :class "btn-info btn"} "Login"]
     [:a {:class "btn btn-success" :href "http://www.genomespace.org/register" :target "_blank"}

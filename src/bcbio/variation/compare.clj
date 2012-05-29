@@ -16,6 +16,7 @@
         [bcbio.variation.callable :only [get-callable-bed]]
         [bcbio.variation.combine :only [combine-variants create-merged
                                         gatk-normalize]]
+        [bcbio.variation.config :only [load-config]]
         [bcbio.variation.filter :only [variant-filter pipeline-recalibration]]
         [bcbio.variation.metrics :only [vcf-stats write-summary-table]]
         [bcbio.variation.multiple :only [prep-cmp-name-lookup pipeline-compare-multiple]]
@@ -33,7 +34,6 @@
   (:require [clojure.string :as string]
             [clojure.data.csv :as csv]
             [fs.core :as fs]
-            [clj-yaml.core :as yaml]
             [bcbio.run.itx :as itx]
             [bcbio.run.broad :as broad]))
 
@@ -242,47 +242,6 @@
          (map add-summary))))
 
 ;; ## Top-level
-
-(defn- no-duplicate-names?
-  "Do not allow duplicate names in experiments."
-  [config]
-  (letfn [(exp-no-duplicate? [exp]
-            (every? (fn [[_ x]] (= 1 x)) (frequencies (map :name (:calls exp)))))]
-    (every? exp-no-duplicate? (:experiments config))))
-
-(defn load-config
-  "Load configuration file, handling conversion of relative to absolute paths."
-  [config-file]
-  {:post [(no-duplicate-names? %)]}
-  (let [config (-> config-file slurp yaml/parse-string)
-        base-dir (fs/file (get-in config [:dir :base] "."))
-        to-process #{[:dir :out] [:dir :prep]
-                     [:experiments :ref] [:experiments :intervals]
-                     [:experiments :align] [:experiments :calls :file]
-                     [:experiments :calls :align] [:experiments :calls :annotate]}]
-    (letfn [(make-absolute [x]
-              (if (.isAbsolute (file x))
-                x
-                (str (fs/file base-dir x))))
-            (maybe-process [val path]
-              (if (contains? to-process path)
-                (cond
-                 (seq? val) (map make-absolute val)
-                 (string? val) (make-absolute val)
-                 :else val)
-                val))
-            (update-tree [config path]
-              (cond (map? config)
-                    (reduce (fn [item [k v]]
-                              (assoc item k (cond
-                                             (map? v) (update-tree v (conj path k))
-                                             (seq? v) (map #(update-tree % (conj path k)) v)
-                                             :else (maybe-process v (conj path k)))))
-                            config
-                            (vec config))
-                    (contains? to-process path) (maybe-process config path)
-                    :else config))]
-      (update-tree config []))))
 
 (defn variant-comparison-from-config
   "Perform comparison between variant calls using inputs from YAML config."

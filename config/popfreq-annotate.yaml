@@ -1,0 +1,28 @@
+# Configuration to annotate a set of VCF files with data from
+# 1000 genomes.
+---
+dir:
+  base: /tmp
+  out: popfreq
+experiments:
+  - ref: test/data/GRCh37.fa
+    calls:
+      - dir: inputs
+        annotate:
+          - file: ALL.wgs.phase1_release_v3.20101123.snps_indels_sv.sites.vcf
+            targets:
+              - orig-id: AF
+                new-id: TG_AF
+                desc: 1000genomes Global Allele Frequency
+              - orig-id: AMR_AF
+                new-id: TG_AMR_AF
+                desc: 1000genomes Allele Frequency for samples from AMR (admixed american)
+              - orig-id: ASN_AF
+                new-id: TG_ASN_AF
+                desc: 1000genomes Allele Frequency for samples from ASN (asian)
+              - orig-id: AFR_AF
+                new-id: TG_AFR_AF
+                desc: 1000genomes Allele Frequency for samples from AFR (african)
+              - orig-id: EUR_AF
+                new-id: TG_EUR_AF
+                desc: 1000genomes Allele Frequency for samples from EUR (european)

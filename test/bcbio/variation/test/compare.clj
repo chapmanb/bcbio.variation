@@ -6,6 +6,7 @@
         [bcbio.variation.callable]
         [bcbio.variation.combine]
         [bcbio.variation.compare]
+        [bcbio.variation.config]
         [bcbio.variation.filter]
         [bcbio.variation.normalize]
         [bcbio.variation.phasing]
