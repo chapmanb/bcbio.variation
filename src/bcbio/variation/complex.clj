@@ -73,7 +73,7 @@
 (defn- split-mnp
   "Split a MNP into individual alleles"
   [vc]
-  {:pre [(= 1 (count (:genotypes vc)))]}
+  {:pre [(= 1 (:num-samples vc))]}
   (let [alleles (split-alleles vc (-> vc :genotypes first))]
     (map (fn [[i x]] (new-split-vc (:vc vc) i x)) (map-indexed vector alleles))))
 
@@ -85,7 +85,7 @@
   Checks both called alleles and potential alleles for extra 5' padding
   removing this if not needed to distinguish any potential alleles."
   [vc]
-  {:pre [(= 1 (count (:genotypes vc)))]}
+  {:pre [(= 1 (:num-samples vc))]}
   (letfn [(strip-indel [vc i alleles]
             (let [start-pos (- i 1)
                   ref-allele (subs (first alleles) start-pos)

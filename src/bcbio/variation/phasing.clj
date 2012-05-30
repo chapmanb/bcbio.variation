@@ -31,7 +31,7 @@
    - variant has phasing specified (VCF | notation)
    - variant range overlaps previous variant (overlapping indels)"
   [vc prev-vc bed-s]
-  {:pre [(= 1 (count (:genotypes vc)))]}
+  {:pre [(= 1 (:num-samples vc))]}
   (letfn [(safe-same-regions? [[a b]]
             (if (not-any? nil? [a b]) (= a b) true))
           (same-regions? [prev cur]
@@ -77,14 +77,14 @@
 (defn- get-alleles
   "Convenience function to get alleles for a single genotype variant context."
   [vc]
-  {:pre [(= 1 (count (:genotypes vc)))]}
+  {:pre [(= 1 (:num-samples vc))]}
   (-> vc :genotypes first :alleles))
 
 (defn- matching-allele
   "Determine allele index where the variant context matches haploid reference."
   [vc ref-vcs]
-  {:pre [(every? #(= 1 (count (-> % :genotypes first :alleles))) ref-vcs)
-         (= 1 (count (:genotypes vc)))]}
+  {:pre [(every? #(= 1 (:num-samples %)) ref-vcs)
+         (= 1 (:num-samples vc))]}
   (if (empty? ref-vcs)
     (.indexOf (get-alleles vc) (:ref-allele vc))
     (highest-count

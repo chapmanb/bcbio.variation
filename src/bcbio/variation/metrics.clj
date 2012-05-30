@@ -40,7 +40,7 @@
               (assoc coll k num-v)
               coll))
    {}
-   (assoc (:attributes vc) "QUAL" (-> vc :genotypes first :qual))))
+   (assoc (:attributes vc) "QUAL" (:qual vc))))
 
 ;; ## Summary metrics
 ;; Provide a summary-style presentation of distribution of metrics values.
@@ -68,7 +68,7 @@
               collect))
           (collect-vc [collect vc]
             (assoc (reduce collect-attributes collect (:attributes vc))
-              "QUAL" (cons (-> vc :genotypes first :qual)
+              "QUAL" (cons (:qual vc)
                            (get collect "QUAL" []))))]
     (with-open [vcf-source (get-vcf-source vcf-file ref-file)]
       (reduce collect-vc {} (filter passes-filter? (parse-vcf vcf-source))))))

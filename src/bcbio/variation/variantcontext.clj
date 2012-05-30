@@ -47,6 +47,7 @@
    :filters (set (.getFilters vc))
    :attributes (into {} (.getAttributes vc))
    :qual (.getPhredScaledQual vc)
+   :num-samples (.getNSamples vc)
    :genotypes (map from-genotype
                    (-> vc .getGenotypes .toArray vec))
    :vc vc})

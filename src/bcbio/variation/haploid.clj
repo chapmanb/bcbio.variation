@@ -42,7 +42,7 @@
 (defn- convert-to-haploid
   "Convert diploid allele to haploid variant."
   [vc]
-  {:pre (= 1 (count (:genotypes vc)))}
+  {:pre (= 1 (:num-samples vc))}
   (when-let [genotype (get-haploid-genotype vc)]
     (-> (VariantContextBuilder. (:vc vc))
         (.genotypes genotype)

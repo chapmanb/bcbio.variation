@@ -16,7 +16,7 @@
     (for [vc (map from-vc
                     (.getValues tracker (.variants (.invrns this))
                                 (.getLocation context)))]
-      (-> vc :genotypes first :qual))))
+      (:qual vc))))
 
 (defn -reduceInit
   "Initialize an empty list to collect our quality information"

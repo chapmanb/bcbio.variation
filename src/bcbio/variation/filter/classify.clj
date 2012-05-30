@@ -60,7 +60,7 @@
 (defn get-vc-attrs
   "Retrieve attributes from variants independent of location."
   [vc attrs]
-  {:pre [(= 1 (count (:genotypes vc)))
+  {:pre [(= 1 (:num-samples vc))
          (contains? #{1 2} (-> vc :genotypes first :alleles count))]}
   (zipmap attrs (map (partial get-vc-attr vc) attrs)))
 

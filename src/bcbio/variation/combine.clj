@@ -68,7 +68,7 @@
                                                    num-alleles)
                                                  (:ref-allele vc))))))
             (maybe-callable-vc [vc]
-              {:pre (= 1 (count (:genotypes vc)))}
+              {:pre (= 1 (:num-samples vc))}
               (let [g (-> vc :genotypes first)]
                 (if (.isNoCall (-> g :alleles first))
                   (if (is-callable? (:chr vc) (:start vc) (:end vc))
