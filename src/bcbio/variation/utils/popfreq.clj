@@ -60,7 +60,7 @@
     (fn [header]
       (let [new (->> new-ids
                      (remove #(header-has-id? header (:new-id %)))
-                     (map #(VCFInfoHeaderLine. (:new-id) 1
+                     (map #(VCFInfoHeaderLine. (:new-id %) 1
                                                VCFHeaderLineType/Float (:desc %)))
                      set)]
         (VCFHeader. (apply ordered-set (concat (.getMetaData header) new))
@@ -69,7 +69,7 @@
 (defn- add-annotations
   [call ref out-dir]
   (let [orig-vcf (if (coll? (:file call))
-                   (combine-variants (:file call) ref :out-dir out-dir)
+                   (combine-variants (:file call) ref :out-dir out-dir :merge-type :full)
                    (:file call))
         out-file (itx/add-file-part orig-vcf "popfreq" out-dir)
         allele-freqs (get-allele-freqs (get-in call [:annotate :file]) ref
@@ -87,6 +87,6 @@
 
 (defn -main [config-file]
   (let [config (load-config config-file)]
-    (doseq [exp (:exps config)]
+    (doseq [exp (:experiments config)]
       (doseq [call (:calls exp)]
         (add-annotations call (:ref exp) (get-in config [:dir :out]))))))
