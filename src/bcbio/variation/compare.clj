@@ -270,11 +270,16 @@
                               (string/replace-first f (str (get-in config [:dir :out]) "/") "")]])
           (write-summary-table (vcf-stats f (get-in x [:exp :ref])) :wrtr w))))
     (with-open [w (get-summary-writer config config-file "summary.csv")]
-      (doseq [[i x] (map-indexed vector (map :summary comparisons))]
-        (when (= i 0)
-          (.write w (format "%s\n" (string/join "," (map name (keys x))))))
-        (.write w (format "%s\n" (string/join "," (for [v (vals x)]
-                                                    (if (map? v) (:total v) v)))))))
+      (doseq [[i [x cmp-orig]] (map-indexed vector (map (juxt identity :summary) comparisons))]
+        (let [header (concat (take 1 (keys cmp-orig)) [:call1 :call2] (nnext (keys cmp-orig)))
+              cmp (-> cmp-orig
+                      (dissoc :ftypes)
+                      (assoc :call1 (-> x :c1 :name))
+                      (assoc :call2 (-> x :c2 :name)))]
+          (when (= i 0)
+            (.write w (format "%s\n" (string/join "," (map name header)))))
+          (.write w (format "%s\n" (string/join "," (for [v (map #(get cmp %) header)]
+                                                      (if (map? v) (:total v) v))))))))
     comparisons))
 
 (defn -main [config-file]
