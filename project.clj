@@ -24,7 +24,7 @@
                      [lein-midje "1.0.10"]]
   :plugins [[lein-cljsbuild "0.2.1"]]
   :java-source-path "src/java"
-  :jvm-opts ["-Xmx12g"]
+  ;:jvm-opts ["-Xmx4g"]
   :omit-source true
   :aot [bcbio.variation.vcfwalker bcbio.variation.core bcbio.variation.annotate.nbq]
   :main bcbio.variation.core
