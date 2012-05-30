@@ -1,26 +1,27 @@
 (defproject bcbio.variation "0.0.1-SNAPSHOT"
   :description "Clojure API for variation data, built on GATK"
-  :dependencies [[org.clojure/clojure "1.3.0"]
-                 [org.clojure/math.combinatorics "0.0.2"]
-                 [org.clojure/data.csv "0.1.2"]
+  :dependencies [[org.clojure/clojure "1.4.0"]
+                 [org.clojure/math.combinatorics "0.0.2" :exclusions [org.clojure/clojure]]
+                 [org.clojure/data.csv "0.1.2" :exclusions [org.clojure/clojure]]
                  [org.clojars.chapmanb/gatk "1.6.5"]
                  [org.clojars.chapmanb/picard "1.64"]
-                 [incanter/incanter-core "1.3.0-SNAPSHOT"]
-                 [incanter/incanter-charts "1.3.0-SNAPSHOT"]
+                 [incanter/incanter-core "1.3.0-SNAPSHOT" :exclusions [org.clojure/clojure]]
+                 [incanter/incanter-charts "1.3.0-SNAPSHOT" :exclusions [org.clojure/clojure]]
                  [nz.ac.waikato.cms.weka/weka-stable "3.6.6"]
                  [org.clojars.chapmanb/fast-random-forest "0.98"]
-                 [com.leadtune/clj-ml "0.2.2" :exclusions [lt/weka hr.irb/fastRandomForest]]
-                 [fs "1.1.2"]
+                 [com.leadtune/clj-ml "0.2.2" :exclusions [lt/weka hr.irb/fastRandomForest
+                                                           org.clojure/clojure]]
+                 [fs "1.1.2" :exclusions [org.clojure/clojure]]
                  [clj-yaml "0.3.1"]
-                 [doric "0.7.0-SNAPSHOT"]
-                 [ordered "1.0.0"]
+                 [doric "0.7.0-SNAPSHOT" :exclusions [org.clojure/clojure]]
+                 [ordered "1.0.0" :exclusions [org.clojure/clojure]]
                  [clj-aws-s3 "0.3.1"]
-                 [noir "1.2.2"]
+                 [noir "1.2.2" :exclusions [org.clojure/clojure]]
                  [fetch "0.1.0-alpha2"]
                  [crate "0.2.0-alpha3"]
                  [enlive "1.0.0"]
                  [domina "1.0.0-beta4" :exclusions [org.clojure/clojurescript]]]
-  :dev-dependencies [[midje "1.3.0" :exclusions [org.clojure/clojure]]
+  :dev-dependencies [[midje "1.4.0" :exclusions [org.clojure/clojure]]
                      [lein-midje "1.0.10"]]
   :plugins [[lein-cljsbuild "0.2.1"]]
   :java-source-path "src/java"
@@ -32,7 +33,8 @@
                 :web bcbio.variation.web.server
                 :popfreq bcbio.variation.utils.popfreq
                 :background bcbio.variation.utils.background
-                :reorder bcbio.align.reorder}
+                :reorder bcbio.align.reorder
+                :test bcbio.variation.variantcontext}
   :cljsbuild {:builds
               [{:builds nil,
                 :source-path "src/cljs",

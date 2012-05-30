@@ -87,6 +87,13 @@
     (fn [line]
       (from-vc (.decode codec line)))))
 
+(defn- line-vcf-parser
+  [vcf]
+  (let [rdr (AsciiLineReader. (input-stream vcf))
+        parser (get-vcf-line-parser rdr)]
+    (.close rdr)
+    (map parser (drop-while #(.startsWith % "#") (line-seq (reader vcf))))))
+
 (defn get-vcf-header
   "Retrieve header from input VCF file."
   [vcf-file]
@@ -108,7 +115,7 @@
    `out-file-map` is a map of writer-keywords to output filenames."
   [tmpl-file out-file-map vc-iter ref & {:keys [header-update-fn]}]
   (letfn [(make-vcf-writer [f ref]
-            (StandardVCFWriter. (file f) (get-seq-dict ref) false))
+            (StandardVCFWriter. (file f) (get-seq-dict ref) true))
           (convert-to-output [info]
             [(if (and (coll? info) (= 2 (count info))) (first info) :out)
              (if (coll? info) (last info) info)])]
@@ -123,3 +130,13 @@
                                     tmpl-header)))
           (doseq [[fkey item] (map convert-to-output vc-iter)]
             (.add (get writer-map fkey) item)))))))
+
+(defn -main [vcf ref approach]
+  (with-open [vcf-s (get-vcf-source vcf ref)]
+    (case approach
+      "line" (take 10 (reduce (fn [coll x]
+                                (conj coll (:id x)))
+                              [] (line-vcf-parser vcf)))
+                                        ;(take 10 (vec (map :id (line-vcf-parser vcf))))
+      "gatk" (take 10 (vec (map #(.getID %) (iterator-seq (.iterator vcf-s)))))
+      "orig" (take 10 (vec (map #(.getID (:vc %)) (parse-vcf vcf-s)))))))

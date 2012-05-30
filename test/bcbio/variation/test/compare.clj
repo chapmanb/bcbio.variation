@@ -13,7 +13,7 @@
         [bcbio.variation.metrics]
         [bcbio.variation.multiple]
         [bcbio.variation.report]
-        [bcbio.variation.variantcontext])
+        [bcbio.variation.variantcontext :exclude [-main]])
   (:require [fs.core :as fs]))
 
 (let [data-dir (str (fs/file "." "test" "data"))
@@ -69,7 +69,7 @@
                                    :prior 10.0}]
                             ["QD" "DP"]
                             ref) => (throws UserException$BadInput
-                                            (contains "Error during negative model training")))))
+                                            #"Error during negative model training"))))
 
 (let [data-dir (str (fs/file "." "test" "data"))
       ref (str (fs/file data-dir "GRCh37.fa"))
