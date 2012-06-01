@@ -24,12 +24,12 @@ experiments:
         remove-refcalls: true
         annotate: true
         file: test/data/phasing-contestant.vcf
-      - name: cg
-        prep: true
-        preclean: true
-        remove-refcalls: true
-        annotate: true
-        file: test/data/phasing-comparison.vcf
+      # - name: cg
+      #   prep: true
+      #   preclean: true
+      #   remove-refcalls: true
+      #   annotate: true
+      #   file: test/data/phasing-comparison.vcf
     finalize:
       - method: multiple
         target: fosmid

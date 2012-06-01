@@ -21,9 +21,17 @@
             [bcbio.run.broad :as broad]))
 
 (defn combine-variants
-  "Combine multiple variant files with GATK CombineVariants."
-  [vcfs ref & {:keys [merge-type out-dir intervals unsafe name-map base-ext]
-               :or {merge-type :unique unsafe false name-map {}}}]
+  "Combine multiple variant files with GATK CombineVariants.
+   Only correctly handles all-by-all comparisons with the same ploidy level."
+  [vcfs ref & {:keys [merge-type out-dir intervals unsafe name-map base-ext check-ploidy?]
+               :or {merge-type :unique
+                    unsafe false
+                    name-map {}
+                    check-ploidy? true}}]
+  (when (and check-ploidy?
+             (> (count (set (remove nil? (map #(is-haploid? % ref) vcfs)))) 1))
+    (throw (Exception. (format "Haploid and non-haploid combinations not supported: %s %s"
+                               (vec vcfs) (vec (map #(is-haploid? % ref) vcfs))))))
   (letfn [(unique-name [f]
             (get name-map f
                  (-> f fs/base-name itx/file-root)))]
@@ -135,12 +143,12 @@
   (letfn [(merge-vcf [vcf all-vcf align-bam ref]
             (let [ready-vcf (combine-variants [vcf all-vcf] ref
                                               :merge-type :full :intervals intervals
-                                              :out-dir out-dir)
+                                              :out-dir out-dir :check-ploidy? false)
                   num-alleles (when (is-haploid? vcf ref) 1)]
               (convert-no-calls ready-vcf align-bam ref :out-dir out-dir
                                 :intervals intervals :num-alleles num-alleles)))]
     (let [merged (combine-variants vcfs ref :merge-type :minimal :intervals intervals
-                                   :out-dir out-dir)]
+                                   :out-dir out-dir :check-ploidy? false)]
       (map (fn [[v b merge?]] (if merge? (merge-vcf v merged b ref) v))
            (map vector vcfs align-bams do-merges)))))
 

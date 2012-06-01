@@ -418,4 +418,6 @@
               (or (= 1 (apply max (map #(count (:alleles %)) (:genotypes vc))))
                   (contains? #{"HOM_REF" "HOM_VAR"} (:type vc))))]
       (with-open [vcf-source (get-vcf-source vcf-file ref-file)]
-        (every? is-vc-haploid? (take sample-size (parse-vcf vcf-source)))))))
+        (let [vcf-iter (parse-vcf vcf-source)]
+          (when-not (empty? vcf-iter)
+            (every? is-vc-haploid? (take sample-size vcf-iter))))))))
