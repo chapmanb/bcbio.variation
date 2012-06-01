@@ -34,7 +34,7 @@
                 :popfreq bcbio.variation.utils.popfreq
                 :background bcbio.variation.utils.background
                 :reorder bcbio.align.reorder
-                :test bcbio.variation.variantcontext}
+                :vctest bcbio.variation.variantcontext}
   :cljsbuild {:builds
               [{:builds nil,
                 :source-path "src/cljs",

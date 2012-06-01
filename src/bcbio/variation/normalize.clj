@@ -212,13 +212,14 @@
     (let [ref-chrs (ref-chr-files ref-file)
           ref-wrtrs (zipmap (keys ref-chrs) (map writer (vals ref-chrs)))]
       (with-open [rdr (reader vcf-file)]
-        (itx/with-open-map ref-wrtrs
-          (->> rdr
-               line-seq
-               (drop-while #(.startsWith % "#"))
-               (map (partial write-by-chrom ref-wrtrs))
-               doall))
-        ref-chrs))))
+        (->> rdr
+             line-seq
+             (drop-while #(.startsWith % "#"))
+             (map (partial write-by-chrom ref-wrtrs))
+             doall)
+        (doseq [x (vals ref-wrtrs)]
+          (.close x)))
+      ref-chrs)))
 
 ;; ## Top level functionality to manage inputs and writing.
 
@@ -241,15 +242,16 @@
   (itx/with-temp-dir [tmp-dir (fs/parent (:out out-info))]
     (let [reader-by-chr (into (ordered-map) (map (fn [[k v]] [k (reader v)])
                                                  (vcf-by-chrom vcf-file ref-file tmp-dir config)))]
-      (itx/with-open-map reader-by-chr
-        (with-open [vcf-reader (AsciiLineReader. (input-stream vcf-file))]
-          (let [vcf-decoder (get-vcf-line-parser vcf-reader)]
-            (write-vcf-w-template vcf-file out-info
-                                  (flatten
-                                   (for [rdr (vals reader-by-chr)]
-                                     (ordered-vc-iter rdr vcf-decoder sample config)))
-                                  ref-file
-                                  :header-update-fn (update-header sample config))))))))
+      (with-open [vcf-reader (AsciiLineReader. (input-stream vcf-file))]
+        (let [vcf-decoder (get-vcf-line-parser vcf-reader)]
+          (write-vcf-w-template vcf-file out-info
+                                (flatten
+                                 (for [rdr (vals reader-by-chr)]
+                                   (ordered-vc-iter rdr vcf-decoder sample config)))
+                                ref-file
+                                :header-update-fn (update-header sample config))))
+      (doseq [x (vals reader-by-chr)]
+        (.close x)))))
 
 (defn prep-vcf
   "Prepare VCF for comparison by normalizing high level attributes

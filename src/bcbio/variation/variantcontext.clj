@@ -90,9 +90,8 @@
 
 (defn- line-vcf-parser
   [vcf]
-  (let [rdr (AsciiLineReader. (input-stream vcf))
-        parser (get-vcf-line-parser rdr)]
-    (.close rdr)
+  (let [parser (with-open [rdr (AsciiLineReader. (input-stream vcf))]
+                 (get-vcf-line-parser rdr))]
     (map parser (drop-while #(.startsWith % "#") (line-seq (reader vcf))))))
 
 (defn get-vcf-header
@@ -100,11 +99,6 @@
   [vcf-file]
   (with-open [vcf-reader (AsciiLineReader. (input-stream vcf-file))]
     (.readHeader (VCFCodec.) vcf-reader)))
-
-(defn parse-vcf-line
-  "Retrieve a VariantContext for a single line from a VCF file."
-  [line]
-  (.decode (VCFCodec.) line))
 
 ;; ## Writing VCF files
 
@@ -124,20 +118,24 @@
       (let [tmpl-header (get-vcf-header tmpl-file)
             writer-map (zipmap (keys tx-out-files)
                                (map #(make-vcf-writer % ref) (vals tx-out-files)))]
-        (itx/with-open-map writer-map
-          (doseq [out-vcf (vals writer-map)]
-            (.writeHeader out-vcf (if-not (nil? header-update-fn)
-                                    (header-update-fn tmpl-header)
-                                    tmpl-header)))
-          (doseq [[fkey item] (map convert-to-output vc-iter)]
-            (.add (get writer-map fkey) item)))))))
+        (doseq [out-vcf (vals writer-map)]
+          (.writeHeader out-vcf (if-not (nil? header-update-fn)
+                                  (header-update-fn tmpl-header)
+                                  tmpl-header)))
+        (doseq [[fkey item] (map convert-to-output vc-iter)]
+          (.add (get writer-map fkey) item))
+        (doseq [x (vals writer-map)]
+          (.close x))))))
 
 (defn -main [vcf ref approach]
   (with-open [vcf-s (get-vcf-source vcf ref)]
-    (case approach
-      "line" (take 10 (reduce (fn [coll x]
-                                (conj coll (:id x)))
-                              [] (line-vcf-parser vcf)))
-                                        ;(take 10 (vec (map :id (line-vcf-parser vcf))))
-      "gatk" (take 10 (vec (map #(.getID %) (iterator-seq (.iterator vcf-s)))))
-      "orig" (take 10 (vec (map #(.getID (:vc %)) (parse-vcf vcf-s)))))))
+    (letfn [(item-iter []
+              (case approach
+                "line" (map :vc (line-vcf-parser vcf))
+                "gatk" (iterator-seq (.iterator vcf-s))
+                "orig" (map :vc (parse-vcf vcf-s))))]
+      (write-vcf-w-template vcf {:out "vctest.vcf"} (item-iter) ref)
+      ;; (doseq [[i x] (map-indexed vector (item-iter))]
+      ;;   (when (= 0 (mod i 10000))
+      ;;      (println x)))
+      )))

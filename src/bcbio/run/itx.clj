@@ -118,14 +118,3 @@
     (if (fs/directory? x)
       (fs/delete-dir x)
       (fs/delete x))))
-
-;; ## Utility macros
-
-(defmacro with-open-map
-  "Emulate with-open using bindings supplied as a map."
-  [binding-map & body]
-  `(try
-     ~@body
-     (finally
-      (vec (map #(.close %) (vals ~binding-map))))))
-
