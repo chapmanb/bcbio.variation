@@ -8,6 +8,7 @@
            [org.broadinstitute.sting.gatk.refdata.tracks RMDTrackBuilder]
            [org.broadinstitute.sting.gatk.arguments ValidationExclusion$TYPE])
   (:use [clojure.java.io]
+        [lazymap.core :only [lazy-hash-map]]
         [bcbio.align.ref :only [get-seq-dict]])
   (:require [clojure.string :as string]
             [bcbio.run.itx :as itx]))
@@ -26,18 +27,20 @@
   "Represent a sample genotype including alleles.
    :genotype stores the original java genotype object for direct access."
   [g]
-  {:sample-name (.getSampleName g)
+  (lazy-hash-map
+   :sample-name (.getSampleName g)
    :qual (.getPhredScaledQual g)
    :type (-> g .getType .name)
    :attributes (into {} (.getAttributes g))
    :alleles (vec (.getAlleles g))
-   :genotype g})
+   :genotype g))
 
 (defn from-vc
   "Provide a top level map of information from a variant context.
    :vc stores the original java VariantContext object for direct access."
   [vc]
-  {:chr (.getChr vc)
+  (lazy-hash-map
+   :chr (.getChr vc)
    :start (.getStart vc)
    :end (.getEnd vc)
    :id (when (.hasID vc) (.getID vc))
@@ -50,7 +53,7 @@
    :num-samples (.getNSamples vc)
    :genotypes (map from-genotype
                    (-> vc .getGenotypes .toArray vec))
-   :vc vc})
+   :vc vc))
 
 ;; ## Parsing VCF files
 
