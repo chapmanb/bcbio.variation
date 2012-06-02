@@ -5,7 +5,8 @@
            [org.broad.tribble.index IndexFactory]
            [org.broad.tribble.source BasicFeatureSource])
   (:use [clojure.java.io])
-  (:require [fs.core :as fs]
+  (:require [clojure.string :as string]
+            [fs.core :as fs]
             [bcbio.run.itx :as itx]
             [bcbio.run.broad :as broad]))
 
@@ -36,12 +37,26 @@
      :score (.getScore f)
      :strand (.getStrand f)}))
 
+(defn sort-bed-file
+  [bed-file]
+  (letfn [(process-line [line]
+            (let [[chr start end] (take 3 (string/split line #"\t"))]
+              [[chr (Integer/parseInt start) (Integer/parseInt end)] line]))]
+    (let [out-file (itx/add-file-part bed-file "sorted")]
+      (when (itx/needs-run? out-file)
+        (with-open [rdr (reader bed-file)
+                    wtr (writer out-file)]
+          (doseq [[_ line] (sort (map process-line (line-seq rdr)))]
+            (.write wtr (str line "\n")))))
+      out-file)))
+
 (defn get-bed-source
   "Provide tribble feature source for a BED formatted file."
   [bed-file]
   (let [batch-size 500
-        idx (IndexFactory/createIntervalIndex (file bed-file) (BEDCodec.) batch-size)]
-    (BasicFeatureSource. bed-file idx (BEDCodec.))))
+        work-bed (sort-bed-file bed-file)
+        idx (IndexFactory/createIntervalIndex (file work-bed) (BEDCodec.) batch-size)]
+    (BasicFeatureSource. work-bed idx (BEDCodec.))))
 
 (defn callable-checker
   "Provide function to check if a region (chromsome start end) is callable.

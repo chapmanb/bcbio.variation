@@ -232,19 +232,26 @@
         prev (atom nil)]
     (letfn [(get-intervene-expect [region1 region2]
               (let [vc1 (last region1)
-                    vc2 (first region2)]
-                (if (or (nil? vc1) (not= (:chr vc1) (:chr vc2)))
-                  []
-                  (->> (expect-retriever (:chr vc1) (inc (:end vc1))
-                                         (dec (:start vc2)))
-                       (remove #(< (:start %) (:end vc1)))
-                       (map (fn [x] {:comparison :discordant
-                                     :variant-type (get-variant-type [x])
-                                     :nomatch-het-alt false
-                                     :start (:start x)
-                                     :vc nil
-                                     :ref-vc (:vc x)}))
-                       (sort-by :start)))))
+                    vc2 (first region2)
+                    filter-end (if (nil? vc1) (dec (:start vc2)) (:end vc1))
+                    vcs (cond
+                         (nil? vc1)
+                         (expect-retriever (:chr vc2) 0 (dec (:start vc2)))
+                         (not= (:chr vc1) (:chr vc2))
+                         (concat (expect-retriever (:chr vc1) (inc (:end vc1)) 1e10)
+                                 (expect-retriever (:chr vc2) 0 (dec (:start vc2))))
+                         :else
+                         (expect-retriever (:chr vc1) (inc (:end vc1))
+                                           (dec (:start vc2))))]
+                (->> vcs
+                     (remove #(< (:start %) filter-end))
+                     (map (fn [x] {:comparison :discordant
+                                   :variant-type (get-variant-type [x])
+                                   :nomatch-het-alt false
+                                   :start (:start x)
+                                   :vc nil
+                                   :ref-vc (:vc x)}))
+                     (sort-by :start))))
             (score-phased-and-intervene [region]
               (let [out (concat (get-intervene-expect @prev region)
                                 (score-phased-region expect-retriever region))]
