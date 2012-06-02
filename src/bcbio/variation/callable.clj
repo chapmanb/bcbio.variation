@@ -40,8 +40,11 @@
 (defn sort-bed-file
   [bed-file]
   (letfn [(process-line [line]
-            (let [[chr start end] (take 3 (string/split line #"\t"))]
-              [[chr (Integer/parseInt start) (Integer/parseInt end)] line]))]
+            (let [parts (if (> (count (string/split line #"\t")) 1)
+                          (string/split line #"\t")
+                          (string/split line #" "))]
+              (let [[chr start end] (take 3 parts)]
+                [[chr (Integer/parseInt start) (Integer/parseInt end)] line])))]
     (let [out-file (itx/add-file-part bed-file "sorted")]
       (when (itx/needs-run? out-file)
         (with-open [rdr (reader bed-file)

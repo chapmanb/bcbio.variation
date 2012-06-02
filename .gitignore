@@ -30,6 +30,7 @@ test/data/*-*haploid.vcf
 test/data/*-*cfilter.vcf
 test/data/*-*nosv.vcf
 test/data/*-classifier.bin
+test/data/*-sorted.bed
 test/data/method-comparison-summary*
 test/data/prep/
 test/data/grading/
