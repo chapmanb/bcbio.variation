@@ -79,9 +79,13 @@
            (map get-quartiles)
            (into {})))))
 
-(defn get-vc-attrs-normalized
-  "Min-max Normalized attributes for each variant context in an input file."
-  [attrs in-vcf ref]
+(defmulti get-vc-attrs-normalized
+  "Normalized attributes for each variant context in an input file."
+  (fn [_ _ _ config] (keyword (get config :normalize "default"))))
+
+;; Min-max normalization
+(defmethod get-vc-attrs-normalized :minmax
+  [attrs in-vcf ref config]
   (letfn [(min-max-norm [x [minv maxv]]
             (let [safe-maxv (if (= minv maxv) (inc maxv) maxv)
                   trunc-score-max (if (< x safe-maxv) x safe-maxv)
@@ -94,6 +98,12 @@
         (->> (get-vc-attrs vc attrs)
              (map (partial min-max-norm-ranges mm-ranges))
              (into {}))))))
+
+;; No normalization
+(defmethod get-vc-attrs-normalized :default
+  [attrs in-vcf ref config]
+  (fn [vc]
+    (into {} (get-vc-attrs vc attrs))))
 
 ;; ## Linear classifier
 
@@ -111,21 +121,24 @@
 
 (defn- train-vcf-classifier
   "Do the work of training a variant classifier."
-  [attrs base-vcf true-vcf false-vcf ref]
-  (let [normalizer (get-vc-attrs-normalized attrs base-vcf ref)]
-    (-> (make-classifier :regression :linear)
-        (classifier-train (make-dataset "ds" (conj attrs :c)
-                                        (concat (get-train-inputs 1 true-vcf attrs normalizer ref)
-                                                (get-train-inputs 0 false-vcf attrs normalizer ref))
-                                        {:class :c})))))
+  [attrs base-vcf true-vcf false-vcf ref config]
+  (let [normalizer (get-vc-attrs-normalized attrs base-vcf ref config)
+        ds (make-dataset "ds" (conj (vec attrs) {:c [:a :b]})
+                      (concat (get-train-inputs :a true-vcf attrs normalizer ref)
+                              (get-train-inputs :b false-vcf attrs normalizer ref))
+                      {:class :c})
+        c (classifier-train (make-classifier :support-vector-machine :smo) ds)]
+    ;(println "Evaluate" (classifier-evaluate c :dataset ds ds))
+    c))
 
 (defn build-vcf-classifier
   "Provide a variant classifier based on provided attributes and true/false examples."
-  [attrs base-vcf true-vcf false-vcf ref]
+  [attrs base-vcf true-vcf false-vcf ref config]
   (let [out-file (str (itx/file-root base-vcf) "-classifier.bin")]
     (if-not (itx/needs-run? out-file)
       (deserialize-from-file out-file)
-      (let [classifier (train-vcf-classifier attrs base-vcf true-vcf false-vcf ref)]
+      (let [classifier (train-vcf-classifier attrs base-vcf true-vcf false-vcf ref
+                                             config)]
         (serialize-to-file classifier out-file)
         classifier))))
 
@@ -151,7 +164,7 @@
                   (#(classifier-classify classifier %)))]
     (-> (VariantContextBuilder. (:vc vc))
         (.attributes (assoc (:attributes vc) "CSCORE" score))
-        (.filters (when (< score (:min-cscore config))
+        (.filters (when (< score (get config :min-cscore 0.5))
                     #{"CScoreFilter"}))
         .make)))
 
@@ -160,9 +173,10 @@
   [base-vcf true-vcf false-vcf ref config]
   (let [out-file (itx/add-file-part base-vcf "cfilter")
         c (build-vcf-classifier (:classifiers config) base-vcf
-                                true-vcf false-vcf ref)
-        normalizer (get-vc-attrs-normalized (:classifiers config) base-vcf ref)]
+                                true-vcf false-vcf ref config)
+        normalizer (get-vc-attrs-normalized (:classifiers config) base-vcf ref config)]
     (when (itx/needs-run? out-file)
+      (println "Filter VCF with" (str c))
       (with-open [vcf-s (get-vcf-source base-vcf ref)]
         (write-vcf-w-template base-vcf {:out out-file}
                               (map (partial filter-vc c normalizer config)

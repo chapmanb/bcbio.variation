@@ -37,7 +37,8 @@
   (with-open [vcf-s (get-vcf-source top-vcf ref)]
     (let [vcf-iter (parse-vcf vcf-s)
           attrs ["AD" "QUAL" "DP"]
-          normalizer (get-vc-attrs-normalized attrs top-vcf ref)]
+          config {:normalize "minmax"}
+          normalizer (get-vc-attrs-normalized attrs top-vcf ref config)]
       (first (#'bcbio.variation.filter.classify/get-train-inputs
               1 top-vcf attrs normalizer ref)) => (just [0.0 (roughly 0.621) 1.0 1])
       (-> (get-vc-attr-ranges attrs top-vcf ref) (get "DP")) => [193.5 250.0]
@@ -48,4 +49,4 @@
 
 (facts "Final filtration of variants using classifier"
   (filter-vcf-w-classifier top-vcf top-vcf c-neg-vcf ref
-                           {:classifiers ["AD" "QUAL" "DP"] :min-cscore 0.5}) => c-out)
+                           {:classifiers ["AD" "QUAL" "DP"]}) => c-out)

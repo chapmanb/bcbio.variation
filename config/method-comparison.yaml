@@ -34,7 +34,6 @@ experiments:
           #annotations:  [QD, HaplotypeScore, MQRankSum, ReadPosRankSum, FS, MQ, DP, AB]
           filters: [HRun > 5.0]
           classifiers: [AD, DP, QUAL]
-          min-cscore: 0.5
       - method: validate
         target: gatk
         params:

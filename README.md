@@ -139,7 +139,6 @@ tag. Available methods are:
               annotations:  [QD, HaplotypeScore, MQRankSum, ReadPosRankSum]
               lenient: false
               classifiers: [AD, DP, QUAL]
-              min-cscore: 0.5
     
 The three options for filtering are:
 
@@ -147,7 +146,7 @@ The three options for filtering are:
   - `annotations` -- Perform [GATK Variant Quality Score Recalibration][u5]
    using the supplied annotations. The `lenient` option allows VQSR on samples
    with a lower number of total variations and is useful in VQSR fails.
-  - `classifiers` and `min-cscore` -- Perform classification of true/false reads
+  - `classifiers` -- Perform classification of true/false reads
    based on the provided attributes.
 
   You can specify the background to use for training with `support`. There are
