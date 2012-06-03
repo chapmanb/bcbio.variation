@@ -91,7 +91,7 @@
 
 (defn- fix-vc
   "Build a new variant context with updated sample name and normalized alleles.
-  Based on :allele-count in the configuration updates haploid allele calls. This
+  Based on :prep-allele-count in the configuration updates haploid allele calls. This
   normalizes the representation in Mitochondrial and Y chromosomes which are
   haploid but are often represented as diploid with a single call."
   [sample config orig]
@@ -101,9 +101,9 @@
                 [(Genotype/modifyName g sample)])
               (.getGenotypes vc)))
           (normalize-allele-calls [g]
-            {:pre [(contains? #{1 (:allele-count config)} (count (.getAlleles g)))]}
-            (if (= (count (.getAlleles g)) (:allele-count config)) g
-                (Genotype/modifyAlleles g (repeat (:allele-count config)
+            {:pre [(contains? #{1 (:prep-allele-count config)} (count (.getAlleles g)))]}
+            (if (= (count (.getAlleles g)) (:prep-allele-count config)) g
+                (Genotype/modifyAlleles g (repeat (:prep-allele-count config)
                                                   (first (.getAlleles g))))))]
     (-> orig
         (assoc :vc
@@ -148,7 +148,7 @@
               0 [(Genotype. sample [alt-allele])]
               1 [(maybe-fix-vc (first gs) alt-allele)]
               (map :genotype gs)))]
-    (if (:sv-genotype config)
+    (if (:prep-sv-genotype config)
       (let [new-gs (ref-vc-genotype (:genotypes orig)
                                    (first (:alt-alleles orig)))]
         (-> orig
@@ -164,7 +164,7 @@
   [rdr vcf-decoder sample config]
   (->> rdr
        line-seq
-       (#(if (:sort-pos config) (sort-by-position %) %))
+       (#(if (:prep-sort-pos config) (sort-by-position %) %))
        (remove nochange-alt?)
        (map vcf-decoder)
        (map (partial normalize-sv-genotype config sample))
@@ -190,7 +190,7 @@
             (assoc xs 0 new))]
     (let [parts (string/split line #"\t")
           cur-chrom (first (vals
-                            (chr-name-remap (:org config) ref-info [(first parts)])))]
+                            (chr-name-remap (:prep-org config) ref-info [(first parts)])))]
       {:chrom cur-chrom
        :line (->> parts
                   (fix-chrom cur-chrom)
@@ -258,9 +258,11 @@
   Assumes by position sorting of variants in the input VCF. Chromosomes do
   not require a specific order, but positions internal to a chromosome do.
   Currently configured for human preparation."
-  [in-vcf-file ref-file sample & {:keys [out-dir out-fname sort-pos sv-genotype]
-                                  :or {sort-pos false}}]
-  (let [config {:org :GRCh37 :allele-count 2 :sort-pos sort-pos :sv-genotype sv-genotype}
+  [in-vcf-file ref-file sample & {:keys [out-dir out-fname config]
+                                  :or {config {}}}]
+  (let [config (merge-with #(or %1 %2) config
+                           {:prep-org :GRCh37 :prep-allele-count 2
+                            :prep-sort-pos false :prep-sv-genotype false})
         base-name (if (nil? out-fname) (itx/remove-zip-ext in-vcf-file) out-fname)
         out-file (itx/add-file-part base-name "prep" out-dir)]
     (when (itx/needs-run? out-file)

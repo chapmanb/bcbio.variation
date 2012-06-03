@@ -94,6 +94,8 @@ provide example starting points and details on available options are below:
                           not coordinate sorted within chromosomes. (boolean; default false).
            prep-sv-genotype: Normalize structural variant genotypes to a single
                              ref call (boolean; default false).
+           prep-allele-count: Number of alleles to convert calls to during
+                              prep work (default 2)
            preclean: Remove problematic characters from input VCFs
                      (boolean; default false). 
            remove-refcalls: Remove reference, non-variant calls.

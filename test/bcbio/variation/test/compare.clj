@@ -170,7 +170,7 @@
     (facts "Check for multiple samples in a VCF file"
       (multiple-samples? vcf) => false)
     (facts "Normalize variant representation of chromosomes, order, genotypes and samples."
-      (prep-vcf vcf ref "Test1" :sort-pos true) => out-vcf)
+      (prep-vcf vcf ref "Test1" :config {:prep-sort-pos true}) => out-vcf)
     (facts "Pre-cleaning of problematic VCF input files"
       (clean-problem-vcf prevcf) => out-prevcf)))
 

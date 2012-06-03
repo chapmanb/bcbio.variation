@@ -17,5 +17,5 @@
            ?form)))
 
 (facts "Add Complete Genomics metrics to VCF file."
-  (let [ready-vcf (prep-vcf cg-vcf ref "NA12939" :sort-pos true)]
+  (let [ready-vcf (prep-vcf cg-vcf ref "NA12939" :config {:prep-sort-pos true})]
     (add-cgmetrics ready-vcf cg-var ref) => out-cg-var))
