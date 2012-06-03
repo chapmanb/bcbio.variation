@@ -29,8 +29,9 @@
    AO is the count of the alternative allele."
   (letfn [(calc-expected [g ref-count allele-count]
             {:pre [(not (neg? ref-count))]}
-            (when-let [e-pct (get {"HOM_VAR" 1.0 "HET" 0.5 "HOM_REF" 0.0} (:type g))]
-              (Math/abs (- e-pct (/ allele-count (+ allele-count ref-count))))))
+            (when (or (pos? ref-count) (pos? allele-count))
+              (when-let [e-pct (get {"HOM_VAR" 1.0 "HET" 0.5 "HOM_REF" 0.0} (:type g))]
+                (Math/abs (- e-pct (/ allele-count (+ allele-count ref-count)))))))
           (from-ad [g]
             (let [ads (map #(Float/parseFloat %) (string/split (get-in g [:attributes attr]) #","))
                   alleles (cons (:ref-allele vc) (:alt-alleles vc))
@@ -43,8 +44,8 @@
               (calc-expected g (- total-count alt-count) alt-count)))]
     (let [g (-> vc :genotypes first)]
       (cond
-       (get-in g [:attributes attr]) (from-ad g)
        (get-in g [:attributes "AO"]) (from-ao g)
+       (get-in g [:attributes attr]) (from-ad g)
        :else (Exception. (str "AD not found in attributes" (:attributes g)))))))
 
 (defmethod get-vc-attr "QUAL"

@@ -97,7 +97,6 @@
                                 ref)))
       out-file)))
 
-
 (defn- pairwise-only?
   "Check if a comparison set is only pairwise and not multiple."
   [cmp-names]
@@ -130,7 +129,8 @@
 (defn pipeline-recalibration
   "Perform variant recalibration and filtration as part of processing pipeline."
   [cmps-by-name finalizer exp config]
-  (let [init-target (get cmps-by-name (:target finalizer))
+  (let [init-target (get cmps-by-name (:target finalizer)
+                         (get cmps-by-name (reverse (:target finalizer))))
         all-params (let [x (:params finalizer)] (if (map? x) [x] x))]
     (reduce (fn [target [params fkey]]
               (let [in-vcf (remove-cur-filters (-> target fkey :file) (:ref exp))
