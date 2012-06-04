@@ -17,6 +17,7 @@
         [bcbio.variation.combine :only [combine-variants create-merged
                                         gatk-normalize]]
         [bcbio.variation.config :only [load-config]]
+        [bcbio.variation.evaluate :only [calc-variant-eval-metrics]]
         [bcbio.variation.filter :only [variant-filter pipeline-recalibration]]
         [bcbio.variation.metrics :only [vcf-stats write-summary-table]]
         [bcbio.variation.multiple :only [prep-cmp-name-lookup pipeline-compare-multiple]]
@@ -38,28 +39,6 @@
             [bcbio.run.broad :as broad]))
 
 ;; ## Variance assessment
-
-(defn calc-variant-eval-metrics
-  "Compare two variant files with GenotypeConcordance in VariantEval"
-  [sample vcf1 vcf2 ref & {:keys [out-base intervals]}]
-  (let [file-info {:out-eval (str (itx/file-root (if (nil? out-base) vcf1 out-base)) ".eval")}
-        args (concat
-              ["-R" ref
-               "--out" :out-eval
-               "--eval" vcf1
-               "--comp" vcf2
-               "--sample" sample
-               "--doNotUseAllStandardModules"
-               "--evalModule" "CompOverlap"
-               "--evalModule" "CountVariants"
-               "--evalModule" "GenotypeConcordance"
-               "--evalModule" "TiTvVariantEvaluator"
-               "--evalModule" "ValidationReport"
-               "--stratificationModule" "Sample"
-               "--stratificationModule" "Filter"]
-              (broad/gatk-cl-intersect-intervals intervals))]
-    (broad/run-gatk "VariantEval" args file-info {:out [:out-eval]})
-    (:out-eval file-info)))
 
 (defn select-by-concordance
   "Variant comparison producing 3 files: concordant and both directions discordant"
