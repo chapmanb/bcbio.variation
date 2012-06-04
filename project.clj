@@ -32,6 +32,7 @@
   :main bcbio.variation.core
   :run-aliases {:compare bcbio.variation.compare
                 :web bcbio.variation.web.server
+                :evaluate bcbio.variation.evaluate
                 :popfreq bcbio.variation.utils.popfreq
                 :background bcbio.variation.utils.background
                 :reorder bcbio.align.reorder

@@ -32,6 +32,7 @@
                annotated-out (itx/add-file-part vcf2 "annotated")
                combo-out (itx/add-file-part vcf1 "combine")
                compare-out (str (itx/file-root vcf1) ".eval")
+               out-sum-compare (str (itx/file-root vcf1) "-summary.eval")
                filter-out (itx/add-file-part vcf1 "filter")
                nofilter-out (itx/add-file-part filter-out "nofilter")
                combine-out [(itx/add-file-part vcf1 "fullcombine-wrefs")
@@ -47,22 +48,24 @@
                                        "freebayes-gatk-discordance"]))
                out-callable (format "%s-callable.bed" (itx/file-root align-bam))
                out-intervals (itx/add-file-part out-callable "intervals")]
-           (doseq [x (concat [combo-out compare-out annotated-out filter-out nofilter-out]
-                             [out-callable out-intervals]
+           (doseq [x (concat [combo-out compare-out annotated-out filter-out nofilter-out
+                              out-sum-compare out-callable out-intervals]
                              combine-out combine-out-xtra (vals match-out) select-out)]
              (itx/remove-path x))
            ?form)))
 
-(facts "Variant comparison and assessment with GATK"
+(facts "Variant manipulation with GATK: selection, combination and annotation."
   (select-by-concordance sample {:name "gatk" :file vcf1}
                          {:name "freebayes" :file vcf2} ref
                          :interval-file intervals) => select-out
   (combine-variants [vcf1 vcf2] ref) => combo-out
-  (calc-variant-eval-metrics sample vcf1 vcf2 ref
-                             :intervals intervals) => compare-out
-  (-> (concordance-report-metrics sample compare-out)
-      :percent_non_reference_sensitivity) => "88.89"
-      (add-gatk-annotations vcf2 align-bam ref) => annotated-out)
+  (add-gatk-annotations vcf2 align-bam ref) => annotated-out)
+
+(facts "Variant assessment with GATK"
+  (calc-variant-eval-metrics sample vcf1 vcf2 ref :intervals intervals) => compare-out
+  (-> (summary-eval-metrics vcf1 ref :intervals intervals) first :nSamples) => 1
+  (get (concordance-report-metrics sample compare-out)
+       :percent_non_reference_sensitivity) => "88.89")
 
 (facts "Create merged VCF files for comparison"
   (create-merged [vcf1 vcf2] [align-bam align-bam] [true true] ref) => combine-out)

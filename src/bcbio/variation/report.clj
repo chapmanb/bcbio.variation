@@ -6,6 +6,7 @@
         [bcbio.variation.variantcontext :only [parse-vcf get-vcf-retriever
                                                get-vcf-source]]
         [bcbio.variation.callable :only [callable-checker]]
+        [bcbio.variation.evaluate :only [organize-gatk-report-table]]
         [bcbio.variation.metrics :only [ml-on-vcf-metrics passes-filter? nonref-passes-filter?]])
   (:require [doric.core :as doric]
             [clojure.string :as string]))
@@ -17,15 +18,9 @@
             (and (= (:Sample x) sample)
                  (= (:Novelty x) "all")
                  (= (:Filter x) "called")))]
-    (let [table (-> (GATKReport. in-file) (.getTable "GenotypeConcordance"))
-          cols (rest (.getColumns table))
-          headers (map #(-> % (.getColumnName) keyword) cols)]
-      (->> (for [i (range (count (.values (first cols))))]
-             (zipmap headers
-                     (map #(nth (vec (.values %)) i) cols)))
-           (filter sample-in-row?)
-           (map (fn [x] [(keyword (:variable x)) (:value x)]))
-           (into {})))))
+    (->> (organize-gatk-report-table in-file "GenotypeConcordance" sample-in-row?)
+         (map (fn [x] [(keyword (:variable x)) (:value x)]))
+         (into {}))))
 
 (defn- count-variants
   "Count variants that pass an optional checker function."

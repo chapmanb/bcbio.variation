@@ -1,6 +1,10 @@
 (ns bcbio.variation.evaluate
   "Provide high level summary evaluation of variant results, building off GATK VariantEval."
-  (:require [bcbio.run.itx :as itx]
+  (:import [org.broadinstitute.sting.gatk.report GATKReport])
+  (:use [clojure.java.io]
+        [ordered.map :only [ordered-map]])
+  (:require [doric.core :as doric]
+            [bcbio.run.itx :as itx]
             [bcbio.run.broad :as broad]))
 
 (defn calc-variant-eval-metrics
@@ -27,22 +31,59 @@
 
 (defn- calc-summary-eval-metrics
   "Run VariantEval providing summary information for a VCF file"
-  [vcf ref cmp-files]
-  (let [file-info {:out-eval (str (itx/file-root vcf) ".eval")}
+  [vcf ref interval-file]
+  (let [file-info {:out-eval (str (itx/file-root vcf) "-summary.eval")}
         args (concat
               ["-R" ref
                "--out" :out-eval
                "--eval" vcf
                "--evalModule" "ThetaVariantEvaluator"
-               "--stratificationModule" "AlleleFrequency"
-               "--stratificationModule" "Filter"
-               "--stratificationModule" "FunctionalClass"
-               "--stratificationModule" "IntervalStratification"]
-              (flatten (for [[k v] cmp-files]
-                         [(format "--comp:%s" (name k)) v])))]
+               "--stratificationModule" "Filter"]
+              (if (nil? interval-file)
+                []
+                ["--stratificationModule" "IntervalStratification"
+                 "--stratIntervals" interval-file]))]
     (broad/run-gatk "VariantEval" args file-info {:out [:out-eval]})
-    {:out-eval file-info}))
+    (:out-eval file-info)))
+
+(defn organize-gatk-report-table
+  "Parses a GATK output table and filters based on supplied input function."
+  [eval-file table-name filter-fn]
+  (let [cols (-> (GATKReport. (file eval-file))
+                 (.getTable table-name)
+                 .getColumns
+                 rest)
+        headers (map #(-> % (.getColumnName) keyword) cols)]
+    (->> (for [i (range (count (.values (first cols))))]
+           (zipmap headers
+                   (map #(nth (vec (.values %)) i) cols)))
+         (filter filter-fn))))
 
 (defn summary-eval-metrics
   "Provide high level summary metrics of a single variant file."
-  [vcf ref cmp-files])
+  [vcf ref & {:keys [intervals]}]
+  (let [group-metrics (concat [:Novelty] (if intervals [:IntervalStratification] []))
+        val-metrics [:nSamples :nProcessedLoci :nSNPs :TiTvRatio :TiTvRatioPerSample
+                     :nSNPsPerSample :SNPNoveltyRate :SNPDPPerSample]]
+    (letfn [(is-called? [x]
+              (= (:Filter x) "called"))
+            (select-keys-ordered [coll]
+              (ordered-map (map (fn [x] [x (get coll x)]) (concat group-metrics val-metrics))))]
+      (->> (organize-gatk-report-table (calc-summary-eval-metrics vcf ref intervals)
+                                       "VariantSummary" is-called?)
+           (map select-keys-ordered)))))
+
+(defn write-summary-eval-metrics
+  "Write high level summary metrics to CSV file."
+  [vcf ref & {:keys [intervals]}]
+  (let [out-file (str (itx/file-root vcf) "-summary.csv")]
+    (let [metrics (summary-eval-metrics vcf ref :intervals intervals)]
+      (with-open [wtr (writer out-file)]
+        (.write wtr (str (doric/table ^{:format doric/csv}
+                                      (-> metrics first keys) metrics)))))))
+
+(defn -main
+  ([vcf ref intervals]
+     (write-summary-eval-metrics vcf ref :intervals intervals))
+  ([vcf ref]
+     (write-summary-eval-metrics vcf ref)))
