@@ -13,7 +13,7 @@
                                                            org.clojure/clojure]]
                  [fs "1.1.2" :exclusions [org.clojure/clojure]]
                  [clj-yaml "0.3.1"]
-                 [doric "0.7.0-SNAPSHOT" :exclusions [org.clojure/clojure]]
+                 [doric "0.7.0" :exclusions [org.clojure/clojure]]
                  [ordered "1.0.0" :exclusions [org.clojure/clojure]]
                  [de.kotka/lazymap "3.0.0"]
                  [clj-aws-s3 "0.3.1"]

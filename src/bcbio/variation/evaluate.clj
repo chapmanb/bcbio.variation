@@ -3,7 +3,8 @@
   (:import [org.broadinstitute.sting.gatk.report GATKReport])
   (:use [clojure.java.io]
         [ordered.map :only [ordered-map]])
-  (:require [doric.core :as doric]
+  (:require [clojure.string :as string]
+            [doric.core :as doric]
             [bcbio.run.itx :as itx]
             [bcbio.run.broad :as broad]))
 
@@ -79,8 +80,9 @@
   (let [out-file (str (itx/file-root vcf) "-summary.csv")]
     (let [metrics (summary-eval-metrics vcf ref :intervals intervals)]
       (with-open [wtr (writer out-file)]
-        (.write wtr (str (doric/table ^{:format doric/csv}
-                                      (-> metrics first keys) metrics)))))))
+        (.write wtr (str (string/join "," (map name (-> metrics first keys))) "\n"))
+        (doseq [xs metrics]
+          (.write wtr (str (string/join "," (vals xs)) "\n")))))))
 
 (defn -main
   ([vcf ref intervals]
