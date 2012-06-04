@@ -32,7 +32,7 @@
 
 (defn- calc-summary-eval-metrics
   "Run VariantEval providing summary information for a VCF file"
-  [vcf ref interval-file]
+  [vcf ref intervals cmp-interval-file]
   (let [file-info {:out-eval (str (itx/file-root vcf) "-summary.eval")}
         args (concat
               ["-R" ref
@@ -40,10 +40,11 @@
                "--eval" vcf
                "--evalModule" "ThetaVariantEvaluator"
                "--stratificationModule" "Filter"]
-              (if (nil? interval-file)
+              (broad/gatk-cl-intersect-intervals intervals)
+              (if (nil? cmp-interval-file)
                 []
                 ["--stratificationModule" "IntervalStratification"
-                 "--stratIntervals" interval-file]))]
+                 "--stratIntervals" cmp-interval-file]))]
     (broad/run-gatk "VariantEval" args file-info {:out [:out-eval]})
     (:out-eval file-info)))
 
@@ -62,7 +63,7 @@
 
 (defn summary-eval-metrics
   "Provide high level summary metrics of a single variant file."
-  [vcf ref & {:keys [intervals]}]
+  [vcf ref & {:keys [intervals cmp-intervals]}]
   (let [group-metrics (concat [:Novelty] (if intervals [:IntervalStratification] []))
         val-metrics [:nSamples :nProcessedLoci :nSNPs :TiTvRatio :TiTvRatioPerSample
                      :nSNPsPerSample :SNPNoveltyRate :SNPDPPerSample]]
@@ -70,22 +71,24 @@
               (= (:Filter x) "called"))
             (select-keys-ordered [coll]
               (ordered-map (map (fn [x] [x (get coll x)]) (concat group-metrics val-metrics))))]
-      (->> (organize-gatk-report-table (calc-summary-eval-metrics vcf ref intervals)
+      (->> (organize-gatk-report-table (calc-summary-eval-metrics vcf ref intervals cmp-intervals)
                                        "VariantSummary" is-called?)
            (map select-keys-ordered)))))
 
 (defn write-summary-eval-metrics
   "Write high level summary metrics to CSV file."
-  [vcf ref & {:keys [intervals]}]
+  [vcf ref & {:keys [intervals cmp-intervals]}]
   (let [out-file (str (itx/file-root vcf) "-summary.csv")]
-    (let [metrics (summary-eval-metrics vcf ref :intervals intervals)]
+    (let [metrics (summary-eval-metrics vcf ref :intervals intervals :cmp-intervals cmp-intervals)]
       (with-open [wtr (writer out-file)]
         (.write wtr (str (string/join "," (map name (-> metrics first keys))) "\n"))
         (doseq [xs metrics]
           (.write wtr (str (string/join "," (vals xs)) "\n")))))))
 
 (defn -main
-  ([vcf ref intervals]
-     (write-summary-eval-metrics vcf ref :intervals intervals))
+  ([vcf ref intervals cmp-intervals]
+     (write-summary-eval-metrics vcf ref :intervals intervals :cmp-intervals cmp-intervals))
+  ([vcf ref cmp-intervals]
+     (write-summary-eval-metrics vcf ref :cmp-intervals cmp-intervals))
   ([vcf ref]
      (write-summary-eval-metrics vcf ref)))

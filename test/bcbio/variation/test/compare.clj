@@ -63,7 +63,7 @@
 
 (facts "Variant assessment with GATK"
   (calc-variant-eval-metrics sample vcf1 vcf2 ref :intervals intervals) => compare-out
-  (-> (summary-eval-metrics vcf1 ref :intervals intervals) first :nSamples) => 1
+  (-> (summary-eval-metrics vcf1 ref :cmp-intervals intervals) first :nSamples) => 1
   (get (concordance-report-metrics sample compare-out)
        :percent_non_reference_sensitivity) => "88.89")
 
