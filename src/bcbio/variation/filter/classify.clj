@@ -46,7 +46,10 @@
       (cond
        (get-in g [:attributes "AO"]) (from-ao g)
        (get-in g [:attributes attr]) (from-ad g)
-       :else (Exception. (str "AD not found in attributes" (:attributes g)))))))
+       :else nil
+       ;; (println (format "AD not found in attributes %s %s %s"
+       ;;                  (:attributes g) (:chr vc) (:start vc)))
+       ))))
 
 (defmethod get-vc-attr "QUAL"
   [vc attr]
