@@ -9,6 +9,5 @@ experiments:
     calls:
       - name: gatk
         file: test/data/freebayes-calls-indels.vcf
-        prep-sv-genotype: true
         prep: true
         normalize: true

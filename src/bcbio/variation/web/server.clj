@@ -5,24 +5,45 @@
         [noir.fetch.remotes :only [defremote]]
         [bcbio.variation.web.shared :only [web-config]]
         [ring.middleware file])
-  (:require [clj-yaml.core :as yaml]
+  (:require [clojure.string :as string]
+            [clj-yaml.core :as yaml]
             [noir.server :as server]
             [noir.session :as session]
+            [clj-genomespace.core :as gs]
             [bcbio.variation.web.process :as web-process]))
 
-(def ^:private test-usernames
-  {"tester" "tester"})
+(defn- cur-gs-client []
+  (when-let [gs-client (session/get :gs-client)]
+    (when (gs/logged-in? gs-client)
+      gs-client)))
 
 (defremote login [{:keys [username password]}]
-  (when (= (get test-usernames username) password)
+  (when-let [gs-client (gs/get-client username :password password)]
     (session/put! :username username)
+    (session/put! :gs-client gs-client)
     username))
 
 (defremote logout []
-  (session/remove! :username))
+  (session/remove! :username)
+  (session/remove! :gs-client))
 
 (defremote get-username []
-  (session/get :username))
+  (when (cur-gs-client)
+    (session/get :username)))
+
+(defn- prep-gs-path [x]
+  {:full x
+   :name (last (string/split x #"/"))})
+
+(defremote list-external-dirs []
+  (if-let [gs-client (cur-gs-client)]
+    (map prep-gs-path (gs/list-dirs gs-client "."))
+    []))
+
+(defremote list-external-files [dir ftype]
+  (if-let [gs-client (cur-gs-client)]
+    (map prep-gs-path (gs/list-files gs-client dir ftype))
+    []))
 
 (defpage [:post "/score"] {:as params}
   (web-process/prep-scoring params))

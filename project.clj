@@ -5,6 +5,7 @@
                  [org.clojure/data.csv "0.1.2" :exclusions [org.clojure/clojure]]
                  [org.clojars.chapmanb/gatk "1.6.5"]
                  [org.clojars.chapmanb/picard "1.64"]
+                 [clj-genomespace "0.1-SNAPSHOT"]
                  [incanter/incanter-core "1.3.0-SNAPSHOT" :exclusions [org.clojure/clojure]]
                  [incanter/incanter-charts "1.3.0-SNAPSHOT" :exclusions [org.clojure/clojure]]
                  [nz.ac.waikato.cms.weka/weka-stable "3.6.6"]
