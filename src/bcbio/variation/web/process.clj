@@ -78,13 +78,30 @@
                                     first
                                     html/content))))))
 
+(defn upload-results
+  "Upload output files to GenomeSpace."
+  [gs-client work-info comparison]
+  (let [out-files (map #(get-in comparison [:c-files %])
+                       [:concordant :discordant :discordant-missing :phasing-error])
+        summary-file (str (fs/file (:dir work-info)
+                                   (format "%s-scoring.txt"
+                                           (get-in comparison [:summary :sample]))))]
+    (with-open [wtr (writer summary-file)]
+      (.write wtr (str (doric/table [:metric :value] (prep-scoring-table (:metrics comparison)))
+                       "\n")))
+    (doseq [fname (cons summary-file out-files)]
+      (gs/upload gs-client (:upload-dir work-info) fname))))
+
 (defn run-scoring
   "Run scoring analysis from details provided in current session."
   []
-  (let [process-config (create-work-config (session/get :in-files)
-                                           (session/get :work-info)
-                                           @web-config)
+  (let [work-info (session/get :work-info)
+        gs-client (session/get :gs-client)
+        process-config (create-work-config (session/get :in-files)
+                                           work-info @web-config)
         comparisons (variant-comparison-from-config process-config)]
+    (when-not (or (nil? gs-client) (nil? (:upload-dir work-info)))
+      (upload-results gs-client work-info (first comparisons)))
     (apply str (html/emit*
                 (html-scoring-summary comparisons)))))
 
@@ -130,10 +147,15 @@
                   work-id (str (java.util.UUID/randomUUID))
                   cur-dir (fs/file tmp-dir work-id)]
               (fs/mkdirs cur-dir)
-              {:id work-id :dir (str cur-dir)}))]
+              {:id work-id :dir (str cur-dir)}))
+          (add-upload-dir [work-info params]
+            (let [remote-fname (:gs-variant-file params)]
+              (if-not (or (nil? remote-fname) (empty? remote-fname))
+                (assoc work-info :upload-dir (str (fs/parent remote-fname)))
+                work-info)))]
     (let [work-info (prep-tmp-dir)
           in-files (get-input-files work-info params)]
-      (session/put! :work-info work-info)
+      (session/put! :work-info (add-upload-dir work-info params))
       (session/put! :in-files in-files)
       (scoring-html))))
 
