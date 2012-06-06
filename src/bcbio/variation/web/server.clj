@@ -25,7 +25,8 @@
 
 (defremote logout []
   (session/remove! :username)
-  (session/remove! :gs-client))
+  (session/remove! :gs-client)
+  nil)
 
 (defremote get-username []
   (when (cur-gs-client)

@@ -34,6 +34,8 @@
     [:a {:class "btn btn-success" :href "http://www.genomespace.org/register" :target "_blank"}
      "Register"]]))
 
+(declare login-listeners)
+
 (defn- update-login
   "Check for logged in users, updating user management region accordingly."
   []
