@@ -32,7 +32,7 @@
 
 (defn- calc-summary-eval-metrics
   "Run VariantEval providing summary information for a VCF file"
-  [vcf ref intervals cmp-interval-file]
+  [vcf ref dbsnp intervals cmp-interval-file]
   (let [file-info {:out-eval (str (itx/file-root vcf) "-summary.eval")}
         args (concat
               ["-R" ref
@@ -47,6 +47,7 @@
                "--evalModule" "VariantSummary"
                "--stratificationModule" "Filter"]
               (broad/gatk-cl-intersect-intervals intervals)
+              (if (nil? dbsnp) [] ["--dbsnp" dbsnp])
               (if (nil? cmp-interval-file)
                 []
                 ["--stratificationModule" "IntervalStratification"
@@ -69,7 +70,7 @@
 
 (defn summary-eval-metrics
   "Provide high level summary metrics of a single variant file."
-  [vcf ref & {:keys [intervals cmp-intervals]}]
+  [vcf ref & {:keys [intervals cmp-intervals dbsnp]}]
   (let [group-metrics (concat [:Novelty] (if intervals [:IntervalStratification] []))
         val-metrics [:nSamples :nProcessedLoci :nSNPs :TiTvRatio :TiTvRatioPerSample
                      :nSNPsPerSample :SNPNoveltyRate :SNPDPPerSample]]
@@ -77,24 +78,28 @@
               (= (:Filter x) "called"))
             (select-keys-ordered [coll]
               (ordered-map (map (fn [x] [x (get coll x)]) (concat group-metrics val-metrics))))]
-      (->> (organize-gatk-report-table (calc-summary-eval-metrics vcf ref intervals cmp-intervals)
+      (->> (organize-gatk-report-table (calc-summary-eval-metrics vcf ref dbsnp
+                                                                  intervals cmp-intervals)
                                        "VariantSummary" is-called?)
            (map select-keys-ordered)))))
 
 (defn write-summary-eval-metrics
   "Write high level summary metrics to CSV file."
-  [vcf ref & {:keys [intervals cmp-intervals]}]
+  [vcf ref & {:keys [intervals cmp-intervals dbsnp]}]
   (let [out-file (str (itx/file-root vcf) "-summary.csv")]
-    (let [metrics (summary-eval-metrics vcf ref :intervals intervals :cmp-intervals cmp-intervals)]
+    (let [metrics (summary-eval-metrics vcf ref :intervals intervals :cmp-intervals cmp-intervals
+                                        :dbsnp dbsnp)]
       (with-open [wtr (writer out-file)]
         (.write wtr (str (string/join "," (map name (-> metrics first keys))) "\n"))
         (doseq [xs metrics]
           (.write wtr (str (string/join "," (vals xs)) "\n")))))))
 
 (defn -main
-  ([vcf ref intervals cmp-intervals]
-     (write-summary-eval-metrics vcf ref :intervals intervals :cmp-intervals cmp-intervals))
-  ([vcf ref cmp-intervals]
-     (write-summary-eval-metrics vcf ref :cmp-intervals cmp-intervals))
-  ([vcf ref]
-     (write-summary-eval-metrics vcf ref)))
+  ([vcf ref dbsnp intervals cmp-intervals]
+     (write-summary-eval-metrics vcf ref :intervals intervals :cmp-intervals cmp-intervals
+                                 :dbsnp dbsnp))
+  ([vcf ref dbsnp cmp-intervals]
+     (write-summary-eval-metrics vcf ref :cmp-intervals cmp-intervals
+                                 :dbsnp dbsnp))
+  ([vcf ref dbsnp]
+     (write-summary-eval-metrics vcf ref :dbsnp dbsnp)))
