@@ -1,12 +1,13 @@
 ;;Interactive functionality for scoring based web pages.
 
 (ns bcbio.variation.score
-  (:use [domina :only [log set-attr! remove-attr! swap-content!]]
+  (:use [domina :only [set-attr! remove-attr! swap-content!]]
         [domina.css :only [sel]])
-  (:require [domina :as domina]
+  (:require [chosen.core :as chosen]
+            [crate.core :as crate]
+            [domina :as domina]
             [domina.events :as events]
             [fetch.remotes :as remotes]
-            [crate.core :as crate]
             [goog.dom :as dom]
             [goog.net.XhrIo :as xhr])
   (:require-macros [fetch.macros :as fm]))
@@ -39,32 +40,14 @@
                         (crate/html [:input {:class "input-file" :id select-id
                                              :name select-id :type "file"}])))
 
-
-(defn- update-gs-path-select!
-  "Update selection box for files or directories from GenomeSpace."
-  [input-id xs]
-  (domina/swap-content! (domina/by-id input-id)
-                        (crate/html
-                         [:div]
-                         [:select {:id input-id}
-                          (for [x xs]
-                            [:option {:value (:full x)} (:name x)])])))
+(defn- gs-paths-to-chosen [xs]
+  (map (fn [x] {:value (:full x) :text (:name x)}) xs))
 
 (defn- update-gs-files!
   "Update file information based on parent"
-  [dir file-id ftype]
+  [file-chosen dir ftype]
   (fm/remote (list-external-files dir ftype) [files]
-             (update-gs-path-select! file-id files)))
-
-(defn- link-folders-to-files
-  "Update file information as selected folder changes."
-  [folder-id file-id ftype]
-  (domina/log (str "Adding hook " folder-id))
-  (events/listen! (domina/by-id folder-id)
-                  :select (fn [evt]
-                            (domina/log "Changed")
-                                        ;(domina/log (events/target evt))
-                            )))
+             (chosen/options file-chosen (gs-paths-to-chosen files))))
 
 (defn- add-gs-input!
   "Update an input item for GenomeSpace uptake."
@@ -73,19 +56,16 @@
         file-id (str "gsfile-" select-id)]
     (swap-content! (domina/by-id select-id)
                    (crate/html
-                    [:div {:class "control-group" :id select-id}
-                     [:label {:class "control-label" :for folder-id} "Folder"]
-                     [:div {:class "controls"}
-                      [:input {:id folder-id :type "text"
-                               :placeholder "Loading from GenomeSpace..."}]]
-                     [:label {:class "control-label" :for file-id} "File"]
-                     [:div {:class "controls"}
-                      [:input {:id file-id :type "text"
-                               :placeholder "Loading from GenomeSpace..."}]]]))
-    (fm/remote (list-external-dirs) [dirs]
-               (update-gs-path-select! folder-id dirs)
-               (link-folders-to-files folder-id file-id ftype)
-               (update-gs-files! (-> dirs first :full) file-id ftype))))
+                    [:div {:id select-id}
+                     [:select {:id folder-id :data-placeholder "GenomeSpace Folder"}]
+                     [:select {:id file-id :data-placeholder "GenomeSpace File"}]]))
+    (let [folder-chosen (chosen/ichooseu! (str "#" folder-id))
+          file-chosen (chosen/ichooseu! (str "#" file-id))]
+      (fm/remote (list-external-dirs) [dirs]
+                 (chosen/options folder-chosen (gs-paths-to-chosen dirs))
+                 (chosen/add-watch folder-chosen
+                                   (fn [dir]
+                                     (update-gs-files! file-chosen dir ftype)))))))
 
 (defn ^:export upload-generalize
   "Handle generalized upload through files or GenomeSpace."

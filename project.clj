@@ -22,7 +22,9 @@
                  [fetch "0.1.0-alpha2"]
                  [crate "0.2.0-alpha3"]
                  [enlive "1.0.0"]
-                 [domina "1.0.0-beta4" :exclusions [org.clojure/clojurescript]]]
+                 [domina "1.0.0-beta4" :exclusions [org.clojure/clojurescript]]
+                 [jayq "0.1.0-alpha4"]
+                 [com.keminglabs/chosen "0.1.5"]]
   :dev-dependencies [[midje "1.4.0" :exclusions [org.clojure/clojure]]
                      [lein-midje "1.0.10"]]
   :plugins [[lein-cljsbuild "0.2.1"]]
@@ -43,5 +45,6 @@
                 :source-path "src/cljs",
                 :compiler
                 {:output-to "public/js/score.js",
-                 :optimizations :advanced,
+                 :optimizations :advanced
+                 :externs ["closure-js" "externs/jquery.js"]
                  :pretty-print false}}]})
