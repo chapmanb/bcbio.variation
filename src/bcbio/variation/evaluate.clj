@@ -38,7 +38,13 @@
               ["-R" ref
                "--out" :out-eval
                "--eval" vcf
+               "--doNotUseAllStandardModules"
+               "--evalModule" "CompOverlap"
+               "--evalModule" "CountVariants"
                "--evalModule" "ThetaVariantEvaluator"
+               "--evalModule" "TiTvVariantEvaluator"
+               "--evalModule" "ValidationReport"
+               "--evalModule" "VariantSummary"
                "--stratificationModule" "Filter"]
               (broad/gatk-cl-intersect-intervals intervals)
               (if (nil? cmp-interval-file)
