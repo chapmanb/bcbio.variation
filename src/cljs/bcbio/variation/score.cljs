@@ -3,7 +3,8 @@
 (ns bcbio.variation.score
   (:use [domina :only [set-attr! remove-attr! swap-content!]]
         [domina.css :only [sel]])
-  (:require [chosen.core :as chosen]
+  (:require [clojure.string :as string]
+            [chosen.core :as chosen]
             [crate.core :as crate]
             [domina :as domina]
             [domina.events :as events]
@@ -45,9 +46,14 @@
 
 (defn- update-gs-files!
   "Update file information based on parent"
-  [file-chosen dir ftype]
-  (fm/remote (list-external-files dir ftype) [files]
-             (chosen/options file-chosen (gs-paths-to-chosen files))))
+  [file-chosen file-id dir ftype]
+  (let [final-form-id (string/join "-" (cons "gs" (rest (string/split file-id #"-"))))]
+    (fm/remote (list-external-files dir ftype) [files]
+               (chosen/options file-chosen (gs-paths-to-chosen files))
+               (domina/set-value! (domina/by-id final-form-id) (chosen/selected file-chosen))
+               (add-watch file-chosen :change
+                          (fn [fname]
+                            (domina/set-value! (domina/by-id final-form-id) fname))))))
 
 (defn- add-gs-input!
   "Update an input item for GenomeSpace uptake."
@@ -63,9 +69,11 @@
           file-chosen (chosen/ichooseu! (str "#" file-id))]
       (fm/remote (list-external-dirs) [dirs]
                  (chosen/options folder-chosen (gs-paths-to-chosen dirs))
-                 (chosen/add-watch folder-chosen
-                                   (fn [dir]
-                                     (update-gs-files! file-chosen dir ftype)))))))
+                 (when-let [cur-dir (chosen/selected folder-chosen)]
+                   (update-gs-files! file-chosen file-id cur-dir ftype))
+                 (add-watch folder-chosen :change
+                            (fn [dir]
+                              (update-gs-files! file-chosen file-id dir ftype)))))))
 
 (defn ^:export upload-generalize
   "Handle generalized upload through files or GenomeSpace."

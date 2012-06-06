@@ -24,7 +24,7 @@
                  [enlive "1.0.0"]
                  [domina "1.0.0-beta4" :exclusions [org.clojure/clojurescript]]
                  [jayq "0.1.0-alpha4"]
-                 [com.keminglabs/chosen "0.1.5"]]
+                 [com.keminglabs/chosen "0.1.6"]]
   :dev-dependencies [[midje "1.4.0" :exclusions [org.clojure/clojure]]
                      [lein-midje "1.0.10"]]
   :plugins [[lein-cljsbuild "0.2.1"]]
@@ -46,5 +46,5 @@
                 :compiler
                 {:output-to "public/js/score.js",
                  :optimizations :advanced
-                 :externs ["closure-js" "externs/jquery.js"]
+                 :externs ["externs/jquery.js"]
                  :pretty-print false}}]})

@@ -43,20 +43,12 @@
             </ul>
           </div><!--/.nav-collapse -->
           <div class="pull-right" id="user-manage">
-            <!--
-            <form class="navbar-form" action="/login" method="post">
-              <input type="text" name="username" class="input-medium" placeholder="username">
-              <input type="password" name="password" class="input-medium" placeholder="password">
-              <button type="submit" id="login-btn" class="btn-info btn">Login</button>
-            </form>
-            -->
           </div>
         </div>
       </div>
     </div>
 
     <div id="main-content" class="container">
-
       <form class="form-horizontal" method="post" enctype="multipart/form-data" action="/score">
         <fieldset>
         <legend>Submit variation file for scoring</legend>
@@ -97,6 +89,8 @@
           <p class="help-block">To see example output, click without uploading any files.</p>
         </div>
         </fieldset>
+        <input class="hidden" id="gs-region-file" name="gs-region-file"></input>
+        <input class="hidden" id="gs-variant-file" name="gs-variant-file"></input>
       </form>
     </div> <!-- /container -->
     <script>bcbio.variation.score.upload_generalize();</script>

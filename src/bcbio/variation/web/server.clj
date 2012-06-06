@@ -46,6 +46,7 @@
     []))
 
 (defpage [:post "/score"] {:as params}
+  (println "***" params)
   (web-process/prep-scoring params))
 
 (defpage "/summary" []
