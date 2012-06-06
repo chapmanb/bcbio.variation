@@ -10,7 +10,8 @@
             [noir.session :as session]
             [noir.response :as response]
             [net.cgrand.enlive-html :as html]
-            [doric.core :as doric]))
+            [doric.core :as doric]
+            [clj-genomespace.core :as gs]))
 
 ;; ## Run scoring based on inputs from web or API
 
@@ -35,10 +36,10 @@
                                   :preclean true
                                   :remove-refcalls true
                                   :file (if-let [x (:variant-file in-files)]
-                                          x
+                                          (str x)
                                           (-> config :ref :default-compare))
                                   :intervals (if-let [x (:region-file in-files)]
-                                               x
+                                               (str x)
                                                (-> config :ref :intervals))}]}]}
          yaml/generate-string
          (spit config-file))
@@ -87,6 +88,40 @@
     (apply str (html/emit*
                 (html-scoring-summary comparisons)))))
 
+(defmulti get-input-files
+  "Prepare working directory, downloading input files."
+  (fn [work-info params] (cond
+                          (:gs-variant-file params) :gs
+                          :else :upload)))
+
+(defmethod get-input-files :upload
+  [work-info params]
+  (letfn [(download-file [tmp-dir params kw]
+            (let [cur-param (get params kw)
+                  out-file (fs/file tmp-dir (:filename cur-param))]
+              [kw (when (> (:size cur-param) 0)
+                    (copy (:tempfile cur-param) out-file)
+                    (str out-file))]))]
+    (into {} (map (partial download-file (:dir work-info) params)
+                  [:variant-file :region-file]))))
+
+(defmethod get-input-files :gs
+  [work-info params]
+  (letfn [(gs-do-download [gs-file tmp-dir]
+            (let [local-file (fs/file tmp-dir (fs/base-name gs-file))]
+              (when-not (fs/exists? local-file)
+                (gs/download (session/get :gs-client)
+                             (str (fs/parent gs-file))
+                             (str (fs/base-name gs-file))
+                             tmp-dir))
+              local-file))
+          (gs-download [tmp-dir params kw]
+            (let [gs-file (get params (keyword (str "gs-" (name kw))))]
+              [kw (when-not (or (nil? gs-file) (empty? gs-file))
+                    (gs-do-download gs-file tmp-dir))]))]
+    (into {} (map (partial gs-download (:dir work-info) params)
+                  [:variant-file :region-file]))))
+
 (defn prep-scoring
   "Download form-supplied input files and prep directory for scoring analysis."
   [params]
@@ -95,17 +130,9 @@
                   work-id (str (java.util.UUID/randomUUID))
                   cur-dir (fs/file tmp-dir work-id)]
               (fs/mkdirs cur-dir)
-              {:id work-id :dir (str cur-dir)}))
-          (download-file [tmp-dir params name]
-            (let [cur-param (get params name)
-                  out-file (fs/file tmp-dir (:filename cur-param))]
-              [(keyword name) (if (> (:size cur-param) 0)
-                                (do
-                                  (copy (:tempfile cur-param) out-file)
-                                  (str out-file)))]))]
+              {:id work-id :dir (str cur-dir)}))]
     (let [work-info (prep-tmp-dir)
-          in-files (into {} (map (partial download-file (:dir work-info) params)
-                                 [:variant-file :region-file]))]
+          in-files (get-input-files work-info params)]
       (session/put! :work-info work-info)
       (session/put! :in-files in-files)
       (scoring-html))))
