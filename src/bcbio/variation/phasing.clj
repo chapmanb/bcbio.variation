@@ -102,7 +102,7 @@
           (get-all-alleles [x]
             (map #(get-cmp-allele % x) (range (count (get-alleles x)))))]
     (let [e-allele (when-not (nil? e-vc)
-                       (get-cmp-allele 0 e-vc))
+                     (get-cmp-allele 0 e-vc))
           call-hap (when-not (or (nil? i) (nil? vc) (neg? i))
                      (get-cmp-allele i vc))]
       (cond
@@ -214,7 +214,8 @@
                                      :ref-vc nil})
                            (remove (partial in-deleted-region? (set (:deleted info)))
                                    (get-itree-all @vc-itree)))))]
-      (let [cmp-allele-i (highest-count (map ref-match-allele vcs))]
+      (let [cmp-allele-i (highest-count (remove #(or (nil? %) (neg? %))
+                                                (map ref-match-allele vcs)))]
         (->> (reduce (partial compare-and-update cmp-allele-i)
                      {:deleted [] :out []}
                      (get-regional-expected-vcs @vc-itree))
