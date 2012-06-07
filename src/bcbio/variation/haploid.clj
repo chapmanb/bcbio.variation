@@ -59,3 +59,7 @@
                                       (map convert-to-haploid (parse-vcf vcf-source)))
                               ref)))
     (:out out-files)))
+
+(defn -main
+  [vcf ref]
+  (diploid-calls-to-haploid vcf ref))
