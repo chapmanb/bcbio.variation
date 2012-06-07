@@ -73,15 +73,30 @@
   [vcf ref & {:keys [intervals cmp-intervals dbsnp]}]
   (let [group-metrics (concat [:Novelty] (if intervals [:IntervalStratification] []))
         val-metrics [:nSamples :nProcessedLoci :nSNPs :TiTvRatio :TiTvRatioPerSample
-                     :nSNPsPerSample :SNPNoveltyRate :SNPDPPerSample]]
-    (letfn [(is-called? [x]
-              (= (:Filter x) "called"))
-            (select-keys-ordered [coll]
-              (ordered-map (map (fn [x] [x (get coll x)]) (concat group-metrics val-metrics))))]
-      (->> (organize-gatk-report-table (calc-summary-eval-metrics vcf ref dbsnp
-                                                                  intervals cmp-intervals)
-                                       "VariantSummary" is-called?)
-           (map select-keys-ordered)))))
+                     :nSNPsPerSample :SNPNoveltyRate]
+        count-metrics [:nSNPs :nInsertions :nDeletions :nHets :nHomVar :hetHomRatio]]
+    (letfn [(all-called? [x]
+              (and (= (:Filter x) "called")
+                   (contains? #{nil "all"} (:Sample x))))
+            (select-keys-ordered [metrics coll]
+              (ordered-map (map (fn [x] [x (get coll x)]) metrics)))
+            (get-table-info [eval-file table metrics]
+              (->> (organize-gatk-report-table eval-file table all-called?)
+                   (map (partial select-keys-ordered metrics))))
+            (merge-line [vals]
+              (reduce (fn [outer tbl-vals]
+                        (reduce (fn [inner [k v]]
+                                  (assoc inner k v))
+                                outer (remove #(contains? (set group-metrics) %1) tbl-vals)))
+                      (first vals) (rest vals)))
+            (merge-tables [& tbls]
+              (map merge-line
+                   (partition (count tbls) (apply interleave tbls))))]
+      (let [eval-file (calc-summary-eval-metrics vcf ref dbsnp
+                                                 intervals cmp-intervals)]
+        (merge-tables
+         (get-table-info eval-file "CountVariants" (concat group-metrics count-metrics))
+         (get-table-info eval-file "VariantSummary" (concat group-metrics val-metrics)))))))
 
 (defn write-summary-eval-metrics
   "Write high level summary metrics to CSV file."
