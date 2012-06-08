@@ -1,10 +1,10 @@
 (ns bcbio.variation.test.validate
   "Final variant filtration and preparation for validation."
   (:use [midje.sweet]
-        [bcbio.variation.haploid]
+        [bcbio.variation.haploid :exclude [-main]]
         [bcbio.variation.filter.classify]
         [bcbio.variation.validate]
-        [bcbio.variation.variantcontext])
+        [bcbio.variation.variantcontext :exclude [-main]])
   (:require [fs.core :as fs]
             [bcbio.run.itx :as itx]))
 
