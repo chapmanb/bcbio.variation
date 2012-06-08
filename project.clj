@@ -37,8 +37,9 @@
                 :web bcbio.variation.web.server
                 :evaluate bcbio.variation.evaluate
                 :haploid bcbio.variation.haploid
-                :popfreq bcbio.variation.utils.popfreq
                 :background bcbio.variation.utils.background
+                :popfreq bcbio.variation.utils.popfreq
+                :summarize bcbio.variation.utils.summarize
                 :reorder bcbio.align.reorder
                 :vctest bcbio.variation.variantcontext}
   :cljsbuild {:builds
