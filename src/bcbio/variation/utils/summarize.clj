@@ -4,8 +4,10 @@
         [ordered.map :only [ordered-map]]
         [bcbio.variation.callable :only [get-bed-source features-in-region]]
         [bcbio.variation.config :only [load-config]]
+        [bcbio.variation.metrics :only [passes-filter?]]
         [bcbio.variation.variantcontext :only [parse-vcf get-vcf-source]])
-  (:require [clojure.data.csv :as csv]
+  (:require [clojure.string :as string]
+            [clojure.data.csv :as csv]
             [incanter.stats :as istats]
             [bcbio.run.itx :as itx]))
 
@@ -32,10 +34,27 @@
           (add-variant-totals (:genotypes vc))
           (add-attr-avgs (:genotypes vc) attrs)))))
 
+(defmulti prep-attribute
+  "Prepare attributes for feeding into flattened table"
+  (fn [attr value default] attr))
+
+(defmethod prep-attribute "set"
+  [attr value default]
+  (cond
+   (= value "Intersection") default
+   (= value "FilteredInAll") 0
+   (nil? value) 0
+   :else (count (string/split value #"\-"))))
+
+(defmethod prep-attribute :default
+  [_ value _]
+  value)
+
 (defn- flatten-vc-attrs
   "Extract attributes of interest from INFO field of variant."
-  [out vc attrs]
-  (reduce (fn [coll k] (assoc coll k (get-in vc [:attributes k])))
+  [out vc attrs defaults]
+  (reduce (fn [coll k] (assoc coll k (prep-attribute k (get-in vc [:attributes k])
+                                                     (get defaults (keyword k)))))
           out attrs))
 
 (defn- flatten-vc-intervals
@@ -53,7 +72,7 @@
   (-> (reduce (fn [coll k] (assoc coll k (get vc k)))
               (ordered-map) [:chr :start :id :type :qual])
       (flatten-vc-intervals vc (get config :intervals []))
-      (flatten-vc-attrs vc (:attrs config))
+      (flatten-vc-attrs vc (:attrs config) (get config :attrs-defaults {}))
       (flatten-vc-samples vc (:sample-attrs config))))
 
 (defn- add-interval-retrievers
@@ -71,7 +90,7 @@
                   wtr (writer out-file)]
         (doseq [[i out] (map-indexed vector
                                      (map (partial flatten-vc (add-interval-retrievers config))
-                                          (parse-vcf vcf-source)))]
+                                          (filter passes-filter? (parse-vcf vcf-source))))]
           (when (= i 0)
             (csv/write-csv wtr [(map name (keys out))]))
           (csv/write-csv wtr [(vals out)])
