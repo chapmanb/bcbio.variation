@@ -1,0 +1,9 @@
+# Configuration to summarize multisample VCF files into R-ready CSV tables.
+---
+experiments:
+  - ref: test/data/GRCh37.fa
+    calls:
+      - file: test/data/gatk-calls.vcf
+        summary:
+          attrs: [DP, MQ]
+          sample-attrs: [DP]
