@@ -20,15 +20,16 @@
   [in-files work-info config]
   (if-not (fs/exists? (:dir work-info))
     (fs/mkdirs (:dir work-info)))
-  (let [config-file (str (fs/file (:dir work-info) "process.yaml"))]
+  (let [config-file (str (fs/file (:dir work-info) "process.yaml"))
+        ref (-> config :ref first)]
     (->> {:dir {:out (str (fs/file (:dir work-info) "grading"))
                 :prep (str (fs/file (:dir work-info) "grading" "prep"))}
-          :experiments [{:sample (-> config :ref :sample)
-                         :ref (-> config :ref :genome)
-                         :intervals (-> config :ref :intervals)
+          :experiments [{:sample (:sample ref)
+                         :ref (:genome ref)
+                         :intervals (:intervals ref)
                          :approach "grade"
                          :calls [{:name "reference"
-                                  :file (-> config :ref :variants)
+                                  :file (:variants ref)
                                   :remove-refcalls true
                                   :refcalls false}
                                  {:name "contestant"
@@ -37,10 +38,10 @@
                                   :remove-refcalls true
                                   :file (if-let [x (:variant-file in-files)]
                                           (str x)
-                                          (-> config :ref :default-compare))
+                                          (:default-compare ref))
                                   :intervals (if-let [x (:region-file in-files)]
                                                (str x)
-                                               (-> config :ref :intervals))}]}]}
+                                               (:intervals ref))}]}]}
          yaml/generate-string
          (spit config-file))
     config-file))
@@ -166,7 +167,7 @@
   [name]
   (letfn [(sample-file [ext]
             (let [base-name "contestant-reference"]
-              (format "%s-%s-%s" (get-in @web-config [:ref :sample]) base-name ext)))]
+              (format "%s-%s-%s" (-> @web-config :ref first :sample) base-name ext)))]
     (let [file-map {"concordant" (sample-file "concordant.vcf")
                     "discordant" (sample-file "discordant.vcf")
                     "discordant-missing" (sample-file "discordant-missing.vcf")
@@ -176,6 +177,7 @@
           name (get file-map name)
           fname (if-not (or (nil? work-dir)
                             (nil? name)) (str (fs/file work-dir name)))]
+      (println fname)
       (response/content-type "text/plain"
                              (if (and (not (nil? fname)) (fs/exists? fname))
                                (slurp fname)
