@@ -75,9 +75,17 @@
                             (fn [dir]
                               (update-gs-files! file-chosen file-id dir ftype)))))))
 
+(defn- prep-genome-selector
+  "Prepare genome selector to pick analysis genome."
+  []
+  (let [genome-chosen (chosen/ichooseu! "#comparison-genome")]
+    (fm/remote (get-genomes) [genomes]
+               (chosen/options genome-chosen genomes))))
+
 (defn ^:export upload-generalize
   "Handle generalized upload through files or GenomeSpace."
   []
+  (prep-genome-selector)
   (events/listen! (sel "#file-choice-upload")
            :click (fn [evt]
                     (set-active-choice! "#menu-choice-upload")

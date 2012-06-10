@@ -21,7 +21,8 @@
   (if-not (fs/exists? (:dir work-info))
     (fs/mkdirs (:dir work-info)))
   (let [config-file (str (fs/file (:dir work-info) "process.yaml"))
-        ref (-> config :ref first)]
+        ref (first (filter #(= (:sample %) (:sample work-info))
+                           (:ref config)))]
     (->> {:dir {:out (str (fs/file (:dir work-info) "grading"))
                 :prep (str (fs/file (:dir work-info) "grading" "prep"))}
           :experiments [{:sample (:sample ref)
@@ -156,7 +157,9 @@
                 work-info)))]
     (let [work-info (prep-tmp-dir)
           in-files (get-input-files work-info params)]
-      (session/put! :work-info (add-upload-dir work-info params))
+      (session/put! :work-info (-> work-info
+                                   (add-upload-dir params)
+                                   (assoc :sample (:comparison-genome params))))
       (session/put! :in-files in-files)
       (scoring-html))))
 
@@ -167,7 +170,7 @@
   [name]
   (letfn [(sample-file [ext]
             (let [base-name "contestant-reference"]
-              (format "%s-%s-%s" (-> @web-config :ref first :sample) base-name ext)))]
+              (format "%s-%s-%s" (:sample (session/get :work-info)) base-name ext)))]
     (let [file-map {"concordant" (sample-file "concordant.vcf")
                     "discordant" (sample-file "discordant.vcf")
                     "discordant-missing" (sample-file "discordant-missing.vcf")

@@ -32,6 +32,11 @@
   (when (cur-gs-client)
     (session/get :username)))
 
+(defremote get-genomes []
+  (map (fn [x] {:value (:sample x)
+                :text (format "%s (%s)" (:sample x) (:description x))})
+       (:ref @web-config)))
+
 (defn- prep-gs-path [x]
   {:full x
    :name (last (string/split x #"/"))})
