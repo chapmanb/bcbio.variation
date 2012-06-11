@@ -82,19 +82,28 @@
     (fm/remote (get-genomes) [genomes]
                (chosen/options genome-chosen genomes))))
 
+(defn- set-upload-active []
+  (set-active-choice! "#menu-choice-upload")
+  (add-file-input! "variant-file")
+  (add-file-input! "region-file"))
+
+(defn- set-gs-active []
+  (set-active-choice! "#menu-choice-gs")
+  (add-gs-input! "variant-file" "vcf")
+  (add-gs-input! "region-file" "bed"))
+
 (defn ^:export upload-generalize
   "Handle generalized upload through files or GenomeSpace."
   []
   (prep-genome-selector)
+  (fm/remote (get-username) [user]
+             (when-not (nil? user)
+               (set-gs-active)))
   (events/listen! (sel "#file-choice-upload")
-           :click (fn [evt]
-                    (set-active-choice! "#menu-choice-upload")
-                    (add-file-input! "variant-file")
-                    (add-file-input! "region-file")
-                    (events/prevent-default evt)))
+                  :click (fn [evt]
+                           (set-upload-active)
+                           (events/prevent-default evt)))
   (events/listen! (sel "#file-choice-gs")
-           :click (fn [evt]
-                    (set-active-choice! "#menu-choice-gs")
-                    (add-gs-input! "variant-file" "vcf")
-                    (add-gs-input! "region-file" "bed")
-                    (events/prevent-default evt))))
+                  :click (fn [evt]
+                           (set-gs-active)
+                           (events/prevent-default evt))))

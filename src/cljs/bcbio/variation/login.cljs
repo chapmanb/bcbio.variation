@@ -3,7 +3,8 @@
 (ns bcbio.variation.login
   (:use [domina.events :only [listen! prevent-default]]
         [domina.css :only [sel]]
-        [domina.xpath :only [xpath]])
+        [domina.xpath :only [xpath]]
+        [bcbio.variation.score :only [set-upload-active set-gs-active]])
   (:require [domina :as domina]
             [fetch.remotes :as remotes]
             [crate.core :as crate])
@@ -58,12 +59,15 @@
                       (fm/remote (login login-vals) [result]
                                  (if (nil? result)
                                    (js/alert "Invalid username/password")
-                                   (update-login))))
+                                   (do
+                                     (update-login)
+                                     (set-gs-active)))))
                     (prevent-default evt)))
   (listen! (domina/by-id "logout-btn")
            :click (fn [evt]
                     (fm/remote (logout) []
-                               (update-login))
+                               (update-login)
+                               (set-upload-active))
                     (prevent-default evt))))
 
 (defn ^:export handle-login
