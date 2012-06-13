@@ -188,6 +188,12 @@
         (multiple-overlap-analysis cmps config "cg") => (get-out-files "cg" "")
         (multiple-overlap-analysis cmps config "gatk") => (get-out-files "gatk" "-annotated")))))
 
+(facts "Manage finite state machine associated with analysis flow."
+  (let [fsm (prep-comparison-fsm)]
+    ((:transition fsm) #(assoc % :state-kw :clean :state-data (assoc (:state-data %) :time 1)))
+    (:history ((:state fsm))) => [{:state-data {} :state-kw :prepare}]
+    (:state-data ((:state fsm))) => {:time 1}))
+
 (facts "Load configuration files, normalizing input."
   (let [config-file (fs/file "." "config" "method-comparison.yaml")
         config (load-config config-file)]
