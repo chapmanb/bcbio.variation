@@ -30,7 +30,8 @@
                  [com.keminglabs/chosen "0.1.6"]]
   :dev-dependencies [[midje "1.4.0" :exclusions [org.clojure/clojure]]
                      [lein-midje "1.0.10"]]
-  :plugins [[lein-cljsbuild "0.2.1"]]
+  :plugins [[lein-cljsbuild "0.2.1"]
+            [lein-marginalia "0.7.1"]]
   :java-source-path "src/java"
   ;:jvm-opts ["-Xmx4g"]
   :omit-source true
