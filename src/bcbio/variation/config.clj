@@ -16,13 +16,18 @@
 (defn prep-comparison-fsm
   "Define a finite state machine of transitions during comparison processes."
   [config]
-  (let [out-file (file (get-in config [:dir :out]) "processing-status.log")]
+  (let [out-dir (get-in config [:dir :out]) 
+        out-file (file out-dir "processing-status.log")]
+    (when-not (or (nil? out-dir)
+                  (fs/exists? out-dir))
+      (fs/mkdirs out-dir))
     (letfn [(log-transition [_ new-state]
               (let [out (format "State %s :: %s" (:state-kw new-state)
                                 (:state-data new-state))]
                 (log/log :info out)
-                (spit out-file (str (format-local-time (local-now) :date-hour-minute-second)
-                                    " :: " out "\n") :append true)))]
+                (when out-dir
+                  (spit out-file (str (format-local-time (local-now) :date-hour-minute-second)
+                                      " :: " out "\n") :append true))))]
       (log-transition nil {:state-kw :begin :state-data {:desc "Starting variation analysis"}})
       (event-machine/event-machine
        (fsm/event-machine-config
