@@ -188,12 +188,6 @@
         (multiple-overlap-analysis cmps config "cg") => (get-out-files "cg" "")
         (multiple-overlap-analysis cmps config "gatk") => (get-out-files "gatk" "-annotated")))))
 
-(facts "Manage finite state machine associated with analysis flow."
-  (let [fsm (prep-comparison-fsm)]
-    ((:transition fsm) #(assoc % :state-kw :clean :state-data (assoc (:state-data %) :time 1)))
-    (:history ((:state fsm))) => [{:state-data {} :state-kw :prepare}]
-    (:state-data ((:state fsm))) => {:time 1}))
-
 (facts "Load configuration files, normalizing input."
   (let [config-file (fs/file "." "config" "method-comparison.yaml")
         config (load-config config-file)]
@@ -201,6 +195,13 @@
     (-> config :experiments first :sample) => "Test1"
     (-> config :experiments first :calls first :file) => (has-prefix "/")
     (-> config :experiments first :calls second :filters first) => "HRun > 5.0"))
+
+(facts "Manage finite state machine associated with analysis flow."
+  (let [config-file (fs/file "." "config" "method-comparison.yaml")
+        config (load-config config-file)
+        fsm (:fsm config)]
+    ((:transition fsm) #(assoc % :state-kw :clean))
+    (:state-kw ((:state fsm))) => :clean))
 
 (facts "Determine the highest count of items in a list"
   (highest-count []) => nil

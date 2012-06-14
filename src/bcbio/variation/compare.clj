@@ -35,8 +35,6 @@
   (:require [clojure.string :as string]
             [clojure.data.csv :as csv]
             [fs.core :as fs]
-            [pallet.algo.fsm.fsm-dsl :as fsm]
-            [pallet.algo.fsm.event-machine :as event-machine]
             [bcbio.run.itx :as itx]
             [bcbio.run.broad :as broad]))
 
@@ -120,6 +118,7 @@
 (defn- prepare-vcf-calls
   "Prepare merged and annotated VCF files for an experiment."
   [exp config]
+  ((:transition config) :merge "Preparing merged VCF files")
   (let [out-dir (get-in config [:dir :prep] (get-in config [:dir :out]))
         align-bams (prepare-input-bams exp out-dir)
         all-intervals (remove nil? (map :intervals (cons exp (:calls exp))))
@@ -223,24 +222,6 @@
          (map add-summary))))
 
 ;; ## Top-level
-
-(defn prep-comparison-fsm
-  "Define a finite state machine of transitions during comparison processes."
-  []
-  (event-machine/event-machine
-   (fsm/event-machine-config
-    (fsm/using-stateful-fsm-features :history)
-    (fsm/initial-state :prepare)
-    (fsm/initial-state-data {})
-    (fsm/state :prepare
-               (fsm/valid-transitions :merge :clean))
-    (fsm/state :clean
-               (fsm/valid-transitions :merge :prep))
-    (fsm/state :prep
-               (fsm/valid-transitions :normalize))
-    (fsm/state :normalize
-               (fsm/valid-transitions :merge))
-    (fsm/state :merge))))
 
 (defn variant-comparison-from-config
   "Perform comparison between variant calls using inputs from YAML config."

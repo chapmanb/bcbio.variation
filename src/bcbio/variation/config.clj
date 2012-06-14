@@ -1,8 +1,59 @@
 (ns bcbio.variation.config
   "Load and prepare inputs from YAML configuration files."
   (:use [clojure.java.io])
-  (:require [clj-yaml.core :as yaml]
-            [fs.core :as fs]))
+  (:require [clj-logging-config.log4j :as log4j]
+            [clojure.tools.logging :as log]
+            [clojure.tools.logging.impl :as log-impl]
+            [clj-yaml.core :as yaml]
+            [fs.core :as fs]
+            [pallet.algo.fsm.fsm :as fsm-base]
+            [pallet.algo.fsm.fsm-dsl :as fsm]
+            [pallet.algo.fsm.event-machine :as event-machine]))
+
+;; ## Logging
+
+(defn prep-comparison-fsm
+  "Define a finite state machine of transitions during comparison processes."
+  []
+  (letfn [(log-transition [_ new-state]
+            (let [out (format "State %s => %s" (:state-kw new-state) (:state-data new-state))]
+              (println out)
+              (log/log :info out)))]
+    (log-transition nil {:state-kw :begin :state-data {:desc "Starting variation analysis"}})
+    (event-machine/event-machine
+     (fsm/event-machine-config
+      (fsm/using-fsm-features (fsm-base/with-transition-observer log-transition))
+      (fsm/initial-state :begin)
+      (fsm/initial-state-data {})
+      (fsm/state :begin
+                 (fsm/valid-transitions :merge :clean))
+      (fsm/state :clean
+                 (fsm/valid-transitions :merge :prep))
+      (fsm/state :prep
+                 (fsm/valid-transitions :normalize))
+      (fsm/state :normalize
+                 (fsm/valid-transitions :merge))
+      (fsm/state :merge)))))
+
+(defn configure-logging
+  "Setup output file logging based on configuration"
+  [config]
+  (alter-var-root (var log/*logger-factory*) (constantly (log-impl/log4j-factory)))
+  (let [out-file (file (get-in config [:dir :out]) "processing-status.log")
+        pattern "%d [%-5p] %m%n"]
+    (log4j/set-loggers! :config {:level :info}
+                        :root {:level :info :pattern pattern :out :console}
+                        "bcbio.variation.config" {:out out-file :level :info :pattern pattern}
+                        "org.broadinstitute.sting.gatk.refdata.tracks.RMDTrackBuilder"
+                        {:level :warn}))
+  (let [fsm (prep-comparison-fsm)]
+    (-> config
+        (assoc :fsm fsm)
+        (assoc :transition (fn [state desc]
+                             ((:transition fsm) #(assoc % :state-kw state
+                                                        :state-data {:desc desc})))))))
+
+;; ## Configuration
 
 (defn- add-dir-files
   "Add files of interest in a directory with the given extension.
@@ -63,4 +114,5 @@
                     :else config))]
       (-> config
           (update-tree [])
-          (add-dir-files #{".vcf"})))))
+          (add-dir-files #{".vcf"})
+          configure-logging))))
