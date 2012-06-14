@@ -198,10 +198,9 @@
 
 (facts "Manage finite state machine associated with analysis flow."
   (let [config-file (fs/file "." "config" "method-comparison.yaml")
-        config (load-config config-file)
-        fsm (:fsm config)]
-    ((:transition fsm) #(assoc % :state-kw :clean))
-    (:state-kw ((:state fsm))) => :clean))
+        config (load-config config-file)]
+    (do-transition config :clean "Testing")
+    (:state-kw ((get-in config [:fsm :state]))) => :clean))
 
 (facts "Determine the highest count of items in a list"
   (highest-count []) => nil

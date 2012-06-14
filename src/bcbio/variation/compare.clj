@@ -16,7 +16,7 @@
         [bcbio.variation.callable :only [get-callable-bed]]
         [bcbio.variation.combine :only [combine-variants create-merged
                                         gatk-normalize]]
-        [bcbio.variation.config :only [load-config]]
+        [bcbio.variation.config :only [load-config do-transition]]
         [bcbio.variation.evaluate :only [calc-variant-eval-metrics]]
         [bcbio.variation.filter :only [variant-filter pipeline-recalibration]]
         [bcbio.variation.metrics :only [vcf-stats write-summary-table]]
@@ -118,7 +118,7 @@
 (defn- prepare-vcf-calls
   "Prepare merged and annotated VCF files for an experiment."
   [exp config]
-  ((:transition config) :merge "Preparing merged VCF files")
+  (do-transition config :merge "Preparing merged VCF files")
   (let [out-dir (get-in config [:dir :prep] (get-in config [:dir :out]))
         align-bams (prepare-input-bams exp out-dir)
         all-intervals (remove nil? (map :intervals (cons exp (:calls exp))))
