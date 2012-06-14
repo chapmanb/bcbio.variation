@@ -35,14 +35,26 @@
         (fsm/initial-state :begin)
         (fsm/initial-state-data {})
         (fsm/state :begin
-                   (fsm/valid-transitions :merge :clean))
+                   (fsm/valid-transitions :clean))
         (fsm/state :clean
-                   (fsm/valid-transitions :merge :prep))
+                   (fsm/valid-transitions :merge))
+        (fsm/state :merge
+                   (fsm/valid-transitions :prep))
         (fsm/state :prep
                    (fsm/valid-transitions :normalize))
         (fsm/state :normalize
-                   (fsm/valid-transitions :merge))
-        (fsm/state :merge))))))
+                   (fsm/valid-transitions :combine :clean))
+        (fsm/state :combine
+                   (fsm/valid-transitions :annotate))
+        (fsm/state :annotate
+                   (fsm/valid-transitions :filter))
+        (fsm/state :filter
+                   (fsm/valid-transitions :compare))
+        (fsm/state :compare
+                   (fsm/valid-transitions :compare :finalize :summary))
+        (fsm/state :finalize
+                   (fsm/valid-transitions :finalize :compare :summary))
+        (fsm/state :summary))))))
 
 (defn do-transition
   "Function to perform transitions on configured finite state machine"

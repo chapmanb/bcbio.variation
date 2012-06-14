@@ -199,7 +199,7 @@
    1. Combining multiple input files
    2. Fixing reference and sample information.
    3. Splitting combined MNPs into phased SNPs"
-  [call exp intervals out-dir]
+  [call exp intervals out-dir transition]
   (if-not (fs/exists? out-dir)
     (fs/mkdirs out-dir))
   (letfn [(merge-call-files [call in-files]
@@ -210,13 +210,19 @@
                                 :unsafe true)))]
     (let [out-fname (format "%s-%s.vcf" (:sample exp) (:name call))
           in-files (if (coll? (:file call)) (:file call) [(:file call)])
+          _ (transition :clean (str "Cleaning VCF to avoid problem inputs: " (:name call)))
           clean-files (map #(if-not (:preclean call) %
                                     (clean-problem-vcf % :out-dir out-dir))
                            in-files)
+          _ (transition :merge (str "Merging multiple input files: " (:name call)))
           merge-file (if (> (count clean-files) 1)
                        (merge-call-files call clean-files)
                        (first clean-files))
+          _ (transition :prep
+                        (str "Resorting to comparison reference and selecting samples: "
+                             (:name call)))
           prep-file (dirty-prep-work merge-file call exp intervals out-dir out-fname)]
+      (transition :normalize (str "Normalize MNP and indel variants: " (:name call)))
       (assoc call :file (if (true? (get call :normalize true))
                           (normalize-variants prep-file (:ref exp) out-dir
                                               :out-fname out-fname)

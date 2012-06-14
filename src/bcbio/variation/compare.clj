@@ -118,21 +118,24 @@
 (defn- prepare-vcf-calls
   "Prepare merged and annotated VCF files for an experiment."
   [exp config]
-  (do-transition config :merge "Preparing merged VCF files")
   (let [out-dir (get-in config [:dir :prep] (get-in config [:dir :out]))
+        transition (partial do-transition config)
         align-bams (prepare-input-bams exp out-dir)
         all-intervals (remove nil? (map :intervals (cons exp (:calls exp))))
-        start-vcfs (map #(gatk-normalize % exp all-intervals out-dir)
-                        (:calls exp))
+        start-vcfs (vec (map #(gatk-normalize % exp all-intervals out-dir transition)
+                             (:calls exp)))
+        _ (transition :combine "Creating merged VCF files for all comparisons")
         merged-vcfs (create-merged (map :file start-vcfs)
                                    align-bams
                                    (map #(get % :refcalls false) (:calls exp))
                                    (:ref exp) :out-dir out-dir
                                    :intervals all-intervals)
+        _ (transition :annotate "Annotate VCFs with metrics")
         ann-vcfs (map (fn [[v b c]]
                         (add-variant-annotations v b (:ref exp) c :out-dir out-dir
                                                  :intervals all-intervals))
                       (map vector merged-vcfs align-bams (:calls exp)))
+        _ (transition :filter "Post annotation filtering")
         filter-vcfs (map (fn [[v c]] (if-not (nil? (:filters c))
                                        (variant-filter v (:filters c) (:ref exp))
                                        v))
@@ -175,6 +178,7 @@
 (defn- compare-two-vcf
   "Compare two VCF files, handling standard and haploid specific comparisons."
   [c1 c2 exp config]
+  (do-transition config :compare (format "Comparing VCFs: %s vs %s" (:name c1) (:name c2)))
   (let [[c1 c2 sv-cmp] (if-not (:mod c1)
                          (compare-sv-pipeline c1 c2 exp config)
                          [c1 c2 {}])
@@ -212,6 +216,10 @@
                 (#(assoc % :summary (top-level-metrics %)))))
           (update-w-finalizer [cur-cmps finalizer]
             "Update the current comparisons with a defined finalizer."
+            (do-transition config :finalize
+                           (format "Finalize %s: %s" (:method finalizer)
+                                   (let [t (:target finalizer)]
+                                     (if (coll? t) (string/join ", " t) t))))
             (let [updated-cmp (run-finalizer cur-cmps finalizer exp config)]
               (assoc cur-cmps (map #(get-in updated-cmp [% :name]) [:c1 :c2])
                      (if-not (:re-compare updated-cmp) updated-cmp
@@ -232,6 +240,7 @@
                        (let [cmps (for [[c1 c2] (combinations (prepare-vcf-calls exp config) 2)]
                                     (compare-two-vcf c1 c2 exp config))]
                          (finalize-comparisons cmps exp config))))]
+    (do-transition config :summary "Summarize comparisons")
     (with-open [w (get-summary-writer config config-file "summary.txt")
                 w2 (get-summary-writer config config-file "files.csv")]
       (csv/write-csv w2 [["call1" "call2" "type" "fname"]])
