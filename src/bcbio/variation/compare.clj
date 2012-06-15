@@ -269,6 +269,7 @@
             (.write w (format "%s\n" (string/join "," (map name header)))))
           (.write w (format "%s\n" (string/join "," (for [v (map #(get cmp %) header)]
                                                       (if (map? v) (:total v) v))))))))
+    (do-transition config :finished "Finished")
     comparisons))
 
 (defn -main [config-file]

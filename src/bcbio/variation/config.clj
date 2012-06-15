@@ -2,7 +2,8 @@
   "Load and prepare inputs from YAML configuration files."
   (:use [clojure.java.io]
         [clj-time.local :only [format-local-time local-now]])
-  (:require [clj-logging-config.log4j :as log4j]
+  (:require [clojure.string :as string]
+            [clj-logging-config.log4j :as log4j]
             [clojure.tools.logging :as log]
             [clojure.tools.logging.impl :as log-impl]
             [clj-yaml.core :as yaml]
@@ -13,19 +14,31 @@
 
 ;; ## Logging
 
+(defn- get-log-file [config]
+  (let [out-dir (get-in config [:dir :out])]
+    (when-not (nil? out-dir)
+      (when-not (fs/exists? out-dir)
+        (fs/mkdirs out-dir))
+      (file out-dir "processing-status.log"))))
+
+(defn get-log-status
+  "Retrieve current processing status information from state machine log file."
+  [config]
+  (when-let [log-file (get-log-file config)]
+    (with-open [rdr (reader log-file)]
+      (let [[_ state-str info-str] (string/split (last (line-seq rdr)) #" :: ")]
+        (-> (read-string info-str)
+            (assoc :state (read-string (last (string/split state-str #" ")))))))))
+
 (defn prep-comparison-fsm
   "Define a finite state machine of transitions during comparison processes."
   [config]
-  (let [out-dir (get-in config [:dir :out]) 
-        out-file (file out-dir "processing-status.log")]
-    (when-not (or (nil? out-dir)
-                  (fs/exists? out-dir))
-      (fs/mkdirs out-dir))
+  (let [out-file (get-log-file config)]
     (letfn [(log-transition [_ new-state]
               (let [out (format "State %s :: %s" (:state-kw new-state)
                                 (:state-data new-state))]
                 (log/log :info out)
-                (when out-dir
+                (when out-file
                   (spit out-file (str (format-local-time (local-now) :date-hour-minute-second)
                                       " :: " out "\n") :append true))))]
       (log-transition nil {:state-kw :begin :state-data {:desc "Starting variation analysis"}})
@@ -54,10 +67,12 @@
                    (fsm/valid-transitions :compare :finalize :summary))
         (fsm/state :finalize
                    (fsm/valid-transitions :finalize :compare :summary))
-        (fsm/state :summary))))))
+        (fsm/state :summary
+                   (fsm/valid-transitions :finished))
+        (fsm/state :finished))))))
 
 (defn do-transition
-  "Function to perform transitions on configured finite state machine"
+  "Perform a transition on configured finite state machine moving to the provided state"
   [config state desc]
   ((get-in config [:fsm :transition]) #(assoc % :state-kw state
                                               :state-data {:desc desc})))

@@ -200,7 +200,8 @@
   (let [config-file (fs/file "." "config" "method-comparison.yaml")
         config (load-config config-file)]
     (do-transition config :clean "Testing")
-    (:state-kw ((get-in config [:fsm :state]))) => :clean))
+    (:state-kw ((get-in config [:fsm :state]))) => :clean
+    (get-log-status config) => {:state :clean :desc "Testing"}))
 
 (facts "Determine the highest count of items in a list"
   (highest-count []) => nil
