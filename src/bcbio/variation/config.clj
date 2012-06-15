@@ -25,10 +25,11 @@
   "Retrieve current processing status information from state machine log file."
   [config]
   (when-let [log-file (get-log-file config)]
-    (with-open [rdr (reader log-file)]
-      (let [[_ state-str info-str] (string/split (last (line-seq rdr)) #" :: ")]
-        (-> (read-string info-str)
-            (assoc :state (read-string (last (string/split state-str #" ")))))))))
+    (when (fs/exists? log-file)
+      (with-open [rdr (reader log-file)]
+        (let [[_ state-str info-str] (string/split (last (line-seq rdr)) #" :: ")]
+          (-> (read-string info-str)
+              (assoc :state (read-string (last (string/split state-str #" "))))))))))
 
 (defn prep-comparison-fsm
   "Define a finite state machine of transitions during comparison processes."

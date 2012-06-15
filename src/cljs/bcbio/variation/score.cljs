@@ -10,18 +10,29 @@
             [domina.events :as events]
             [fetch.remotes :as remotes]
             [goog.dom :as dom]
+            [goog.Timer :as timer]
             [goog.net.XhrIo :as xhr])
   (:require-macros [fetch.macros :as fm]))
 
 ;; ## Display scoring results
 
-(defn ^:export run
-  "Run scoring and fetch results"
-  []
-  (xhr/send "/summary"
-            (fn [x]
-              (set! (.-innerHTML (dom/getElement "scoring-summary"))
-                    (-> x .-target .getResponseText)))))
+(defn set-summary-page! [run-id new-html]
+  (domina/set-html! (domina/by-id "scoring-summary")
+                    new-html))
+
+(defn ^:export update-run-status
+  "Update summary page with details about running statuses."
+  [run-id]
+  (fm/remote (get-status run-id) [info]
+             (if (= :finished (:state info))
+               (fm/remote (get-summary run-id) [sum-html]
+                          (if (nil? sum-html)
+                            (timer/callOnce (fn [] (update-run-status run-id)) 2000)
+                            (set-summary-page! run-id sum-html)))
+               (do
+                 (when-not (nil? info)
+                   (set-summary-page! run-id (crate/html [:p (:desc info)])))
+                 (timer/callOnce (fn [] (update-run-status run-id)) 2000)))))
 
 ;; ## Allow multiple upload methods
 

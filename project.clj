@@ -25,6 +25,7 @@
                  [fetch "0.1.0-alpha2"]
                  [crate "0.2.0-alpha3"]
                  [enlive "1.0.0"]
+                 [hiccup "0.3.8"]
                  [domina "1.0.0-beta4" :exclusions [org.clojure/clojurescript]]
                  [jayq "0.1.0-alpha4"]
                  [com.keminglabs/chosen "0.1.6"]]

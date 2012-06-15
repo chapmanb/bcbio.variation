@@ -3,10 +3,12 @@
   (:use [clojure.java.io]
         [noir.core :only [defpage]]
         [noir.fetch.remotes :only [defremote]]
+        [bcbio.variation.config :only [get-log-status]]
         [bcbio.variation.web.shared :only [web-config]]
         [ring.middleware file])
   (:require [clojure.string :as string]
             [clj-yaml.core :as yaml]
+            [fs.core :as fs]
             [noir.server :as server]
             [noir.session :as session]
             [clj-genomespace.core :as gs]
@@ -51,14 +53,30 @@
     (map prep-gs-path (gs/list-files gs-client dir ftype))
     []))
 
+(defremote run-scoring [run-id]
+  (web-process/run-scoring run-id))
+
+(defremote get-status [run-id]
+  (get-log-status {:dir {:out (-> (session/get :work-info)
+                                  (get run-id)
+                                  :dir
+                                  (file "grading"))}}))
+
+(defremote get-summary [run-id]
+  (let [summary-file (file (-> (session/get :work-info)
+                               (get run-id)
+                               :dir)
+                           "scoring-summary.html")]
+    (when (fs/exists? summary-file)
+      (slurp summary-file))))
+
 (defpage [:post "/score"] {:as params}
-  (web-process/prep-scoring params))
+  (let [{:keys [run-id out-html]} (web-process/prep-scoring params)]
+    (future (web-process/run-scoring run-id))
+    out-html))
 
-(defpage "/summary" []
-  (web-process/run-scoring))
-
-(defpage "/scorefile/:name" {:keys [name]}
-  (web-process/get-variant-file name))
+(defpage "/scorefile/:runid/:name" {:keys [runid name]}
+  (web-process/get-variant-file runid name))
 
 (defn -main
   ([config-file]

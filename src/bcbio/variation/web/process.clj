@@ -2,15 +2,17 @@
   "Run scoring analysis, handling preparation of input files and run configuration."
   (:import [java.util.UUID])
   (:use [clojure.java.io]
+        [ordered.map :only [ordered-map]]
         [bcbio.variation.compare :only [variant-comparison-from-config]]
         [bcbio.variation.report :only [prep-scoring-table]]
         [bcbio.variation.web.shared :only [web-config]])
-  (:require [fs.core :as fs]
-            [clj-yaml.core :as yaml]
+  (:require [clj-yaml.core :as yaml]
+            [doric.core :as doric]
+            [fs.core :as fs]
+            [hiccup.core :as hiccup]
             [noir.session :as session]
             [noir.response :as response]
             [net.cgrand.enlive-html :as html]
-            [doric.core :as doric]
             [clj-genomespace.core :as gs]))
 
 ;; ## Run scoring based on inputs from web or API
@@ -52,33 +54,52 @@
   [comparisons]
   {:pre [(= 1 (count comparisons))]}
   (let [scoring-table (prep-scoring-table (-> comparisons first :metrics))]
-    (-> (str (doric/table ^{:format doric/html} [:metric :value] scoring-table))
-     java.io.StringReader.
-     html/html-resource
-     (html/transform [:table] (html/set-attr :class "table table-condensed")))))
+    (apply str
+           (-> (str (doric/table ^{:format doric/html} [:metric :value] scoring-table))
+               java.io.StringReader.
+               html/html-resource
+               (html/transform [:table] (html/set-attr :class "table table-condensed"))
+               html/emit*))))
+
+(defn- hiccup-to-enlive [x]
+  (-> x
+      java.io.StringReader.
+      html/html-resource
+      html/content))
 
 (defn html-scoring-summary
   "Generate summary of scoring results for display."
-  [comparisons]
+  [comparisons run-id]
   (let [template-dir (get-in @web-config [:dir :template])
         sum-table (html-summary-table comparisons)]
-    (html/transform (html/html-resource (fs/file template-dir "scoresum.html"))
-                    [:div#score-table]
-                    (html/content sum-table))))
+    (hiccup/html
+     [:h3 "Summary"]
+     [:div {:id "score-table"}
+      sum-table]
+     [:h3 "Variant files in VCF format"]
+     [:div {:id "variant-file"}]
+     [:ul
+      (for [[key txt] [["concordant" "Concordant variants"]
+                       ["discordant" "Discordant variants"]
+                       ["discordant-missing" "Missing variants"]
+                       ["phasing" "Variants with phasing errors"]]]
+        [:li [:a {:href (format "/scorefile/%s/%s" run-id key)} txt]])])))
 
 (defn scoring-html
   "Update main page HTML with content for scoring."
-  []
+  [run-id]
   (let [html-dir (get-in @web-config [:dir :html-root])
         template-dir (get-in @web-config [:dir :template])]
     (apply str (html/emit*
                 (html/transform (html/html-resource (fs/file html-dir "index.html"))
                                 [:div#main-content]
-                                (-> (fs/file template-dir "score.html")
-                                    html/html-resource
-                                    (html/select [:body])
-                                    first
-                                    html/content))))))
+                                (hiccup-to-enlive
+                                 (hiccup/html
+                                  [:div
+                                   [:div {:id "scoring-summary"} "Comparing variations"]
+                                   [:script {:src "js/score.js"}]
+                                   [:script (format "bcbio.variation.score.update_run_status('%s');"
+                                                    run-id)]])))))))
 
 (defn upload-results
   "Upload output files to GenomeSpace."
@@ -96,16 +117,16 @@
 
 (defn run-scoring
   "Run scoring analysis from details provided in current session."
-  []
-  (let [work-info (session/get :work-info)
+  [run-id]
+  (let [work-info (get (session/get :work-info) run-id)
         gs-client (session/get :gs-client)
         process-config (create-work-config (session/get :in-files)
                                            work-info @web-config)
         comparisons (variant-comparison-from-config process-config)]
     (when-not (or (nil? gs-client) (nil? (:upload-dir work-info)))
       (upload-results gs-client work-info (first comparisons)))
-    (apply str (html/emit*
-                (html-scoring-summary comparisons)))))
+    (spit (file (:dir work-info) "scoring-summary.html")
+          (html-scoring-summary comparisons run-id))))
 
 (defmulti get-input-files
   "Prepare working directory, downloading input files."
@@ -157,31 +178,35 @@
                 work-info)))]
     (let [work-info (prep-tmp-dir)
           in-files (get-input-files work-info params)]
-      (session/put! :work-info (-> work-info
-                                   (add-upload-dir params)
-                                   (assoc :sample (:comparison-genome params))))
-      (session/put! :in-files in-files)
-      (scoring-html))))
+      (session/put! :work-info (assoc (session/get :work-info (ordered-map))
+                                 (:id work-info)
+                                 (-> work-info
+                                     (add-upload-dir params)
+                                     (assoc :sample (:comparison-genome params))
+                                     (assoc :in-files in-files))))
+      {:run-id (:id work-info)
+       :out-html (scoring-html (:id work-info))})))
 
 ;; ## File retrieval from processing
 
 (defn get-variant-file
   "Retrieve processed output file for web display."
-  [name]
-  (letfn [(sample-file [ext]
-            (let [base-name "contestant-reference"]
-              (format "%s-%s-%s" (:sample (session/get :work-info)) base-name ext)))]
-    (let [file-map {"concordant" (sample-file "concordant.vcf")
-                    "discordant" (sample-file "discordant.vcf")
-                    "discordant-missing" (sample-file "discordant-missing.vcf")
-                    "phasing" (sample-file "phasing-error.vcf")}
-          base-dir (:dir (session/get :work-info))
-          work-dir (if-not (nil? base-dir) (fs/file base-dir "grading"))
-          name (get file-map name)
-          fname (if-not (or (nil? work-dir)
-                            (nil? name)) (str (fs/file work-dir name)))]
-      (println fname)
-      (response/content-type "text/plain"
-                             (if (and (not (nil? fname)) (fs/exists? fname))
-                               (slurp fname)
-                               "Variant file not found")))))
+  [run-id name]
+  (let [work-info (get (session/get :work-info) run-id)]
+    (letfn [(sample-file [ext]
+              (let [base-name "contestant-reference"]
+                (format "%s-%s-%s" (:sample work-info) base-name ext)))]
+      (let [file-map {"concordant" (sample-file "concordant.vcf")
+                      "discordant" (sample-file "discordant.vcf")
+                      "discordant-missing" (sample-file "discordant-missing.vcf")
+                      "phasing" (sample-file "phasing-error.vcf")}
+            base-dir (:dir work-info)
+            work-dir (if-not (nil? base-dir) (fs/file base-dir "grading"))
+            name (get file-map name)
+            fname (if-not (or (nil? work-dir)
+                              (nil? name)) (str (fs/file work-dir name)))]
+        (println fname)
+        (response/content-type "text/plain"
+                               (if (and (not (nil? fname)) (fs/exists? fname))
+                                 (slurp fname)
+                                 "Variant file not found"))))))
