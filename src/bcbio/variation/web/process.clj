@@ -201,11 +201,10 @@
                       "discordant-missing" (sample-file "discordant-missing.vcf")
                       "phasing" (sample-file "phasing-error.vcf")}
             base-dir (:dir work-info)
-            work-dir (if-not (nil? base-dir) (fs/file base-dir "grading"))
+            work-dir (when-not (nil? base-dir) (fs/file base-dir "grading"))
             name (get file-map name)
             fname (if-not (or (nil? work-dir)
                               (nil? name)) (str (fs/file work-dir name)))]
-        (println fname)
         (response/content-type "text/plain"
                                (if (and (not (nil? fname)) (fs/exists? fname))
                                  (slurp fname)

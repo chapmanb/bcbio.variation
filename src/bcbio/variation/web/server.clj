@@ -63,12 +63,12 @@
                                   (file "grading"))}}))
 
 (defremote get-summary [run-id]
-  (let [summary-file (file (-> (session/get :work-info)
-                               (get run-id)
-                               :dir)
-                           "scoring-summary.html")]
-    (when (fs/exists? summary-file)
-      (slurp summary-file))))
+  (when-let [out-dir (-> (session/get :work-info)
+                         (get run-id)
+                         :dir)]
+    (let [summary-file (file out-dir "scoring-summary.html")]
+      (when (fs/exists? summary-file)
+        (slurp summary-file)))))
 
 (defpage [:post "/score"] {:as params}
   (let [{:keys [run-id out-html]} (web-process/prep-scoring params)]
