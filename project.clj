@@ -41,6 +41,7 @@
   :run-aliases {:compare bcbio.variation.compare
                 :web bcbio.variation.web.server
                 :evaluate bcbio.variation.evaluate
+                :gms bcbio.variation.utils.gms
                 :haploid bcbio.variation.haploid
                 :background bcbio.variation.utils.background
                 :popfreq bcbio.variation.utils.popfreq

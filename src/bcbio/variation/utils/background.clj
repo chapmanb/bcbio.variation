@@ -8,7 +8,6 @@
         [bcbio.variation.annotation :only [add-gatk-annotations]])
   (:require [clojure.java.shell :as shell]
             [clojure.string :as string]
-            [clj-yaml.core :as yaml]
             [fs.core :as fs]
             [aws.sdk.s3 :as s3]
             [bcbio.run.itx :as itx]))
