@@ -6,7 +6,9 @@
            [org.broadinstitute.sting.utils.codecs.vcf StandardVCFWriter VCFHeader
             VCFInfoHeaderLine VCFHeaderLineCount VCFHeaderLineType])
   (:use [clojure.java.io]
+        [ordered.map :only [ordered-map]]
         [bcbio.align.ref :only [get-seq-dict]]
+        [bcbio.variation.combine :only [combine-variants]]
         [bcbio.variation.config :only [load-config]]
         [bcbio.variation.normalize :only [hg19-map]]
         [bcbio.variation.utils.background :only [make-work-dirs]])
@@ -30,7 +32,7 @@
                   (shell/sh "wget" "-O" dl-file dl-url)
                   (shell/sh "gunzip" dl-file)))
               final-file))]
-    (into {}
+    (into (ordered-map)
           (map (juxt identity (partial download-gms chrom))
                (:technologies ftp-config)))))
 
@@ -43,17 +45,19 @@
      :base base
      :score (Float/parseFloat score)}))
 
-(defn- low-gms-score? [gms-data]
-  (and (> (:score gms-data) 0.0)
-       (< (:score gms-data) 50.0)))
+(defn- low-gms-score? [config gms-data]
+  (let [thresh (get config :max-gms-score 50.0)]
+    (and (> (:score gms-data) 0.0)
+         (< (:score gms-data) thresh))))
 
 (defn- gms-scores-to-vc
   "Prepare variant context from set of GMS scores"
   [techs scores]
   (let [contig (get hg19-map (-> scores first :chrom))
-        pos (->> (map :pos scores)
-                 (filter pos?)
-                 first)
+        all-pos (filter pos? (map :pos scores))
+        pos (if (= 1 (count (set all-pos)))
+              (first all-pos)
+              (throw (Exception. (str "Multiple positions found: " all-pos))))
         base (->> (map :base scores)
                   (filter #(not= % "*"))
                   first)]
@@ -82,9 +86,10 @@
           (.writeHeader writer (get-vcf-header (keys gms-files)))
           (loop [line-iters (->> (map line-seq readers)
                                  (map (fn [x] (drop-while #(.startsWith % "#") x))))]
-            (when-not (empty? (first line-iters))
+            (when-not (or (empty? (first line-iters))
+                          (some nil? (map first line-iters)))
               (let [cur-gms (map (comp parse-gms-line first) line-iters)]
-                (when (some low-gms-score? cur-gms)
+                (when (some (partial low-gms-score? ftp-config) cur-gms)
                   (when-let [vc (gms-scores-to-vc (keys gms-files) cur-gms)]
                     (.add writer vc))))
               (recur (map rest line-iters))))
@@ -97,10 +102,12 @@
 (defn prepare-gms-vcfs
   "Prepare individual chromosome VCF files with low GMS data by sequencing technology."
   [config]
-  (let [gms-by-chrom (doall (pmap #(prepare-vcf-at-chrom % (:ftp config) (:ref config)
-                                                         (get-in config [:dir :out]))
+  (let [ref (:ref config)
+        out-dir (get-in config [:dir :out])
+        gms-by-chrom (doall (pmap #(prepare-vcf-at-chrom % (:ftp config) ref out-dir)
                                   (get-in config [:ftp :chromosomes])))]
-    (println gms-by-chrom))
+    (println gms-by-chrom)
+    (combine-variants gms-by-chrom ref :merge-type :full :out-dir out-dir))
   (shutdown-agents))
 
 (defn -main [config-file]

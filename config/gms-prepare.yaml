@@ -6,6 +6,7 @@ dir:
 ftp:
   gms-url: ftp://ftp@qb.cshl.edu/schatz/dark_matter/by_tech/%s_%s/chr%s.gms.gz
   chromosomes: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, X, Y, MT]
-  technologies: [solid, illumina, iontorrent]
+  technologies: [illumina, iontorrent, solid]
   genome-build: hg19
+  max-gms-score: 25.0
 ref: /tmp/biodata/genomes/Hsapiens/GRCh37/seq/GRCh37.fa
