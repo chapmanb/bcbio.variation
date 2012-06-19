@@ -13,7 +13,10 @@
 (defn identify-callable
   "Identify callable bases from the provided alignment file."
   [align-bam ref & {:keys [out-dir intervals]}]
-  (let [base-dir (if (nil? out-dir) (fs/parent align-bam) out-dir)
+  (let [base-dir (if (or (nil? out-dir)
+                         (fs/writeable? (fs/parent align-bam)))
+                   (fs/parent align-bam)
+                   out-dir)
         base-fname (str (file base-dir (-> align-bam fs/base-name itx/file-root)))
         file-info {:out-bed (format "%s-callable.bed" base-fname)
                    :out-summary (format "%s-callable-summary.txt" base-fname)}
@@ -61,32 +64,35 @@
         idx (IndexFactory/createIntervalIndex (file work-bed) (BEDCodec.) batch-size)]
     (BasicFeatureSource. work-bed idx (BEDCodec.))))
 
-(defn callable-checker
-  "Provide function to check if a region (chromsome start end) is callable.
-  Calculates based on reads in input BAM file."
-  [align-bam ref & {:keys [out-dir intervals]}]
-  (if (nil? align-bam) [(fn [& _] true) (java.io.StringReader. "")]
-      (let [source (get-bed-source (identify-callable align-bam ref :out-dir out-dir
-                                                      :intervals intervals))]
-        (letfn [(is-callable? [space start end]
-                  (> (count (filter #(= (:name %) "CALLABLE")
-                                    (features-in-region source space start end)))
-                     0))]
-          [is-callable? source]))))
-
 (defn get-callable-bed
   "Create BED file of callable regions from the BAM alignment file.
-  Pass the callable BED to GATK for subsetting based on callable intervals."
-  [align-bam ref & {:keys [out-dir]}]
-  (let [orig-bed-file (identify-callable align-bam ref :out-dir out-dir)
+  Pass the callable BED to GATK for subsetting based on callable intervals.
+  Since the callable output is 1-based inclusive, this converts to 0-based
+  intervals on output."
+  [align-bam ref & {:keys [out-dir intervals]}]
+  (let [orig-bed-file (identify-callable align-bam ref :out-dir out-dir
+                                         :intervals intervals)
         out-file (itx/add-file-part orig-bed-file "intervals")]
     (with-open [source (get-bed-source orig-bed-file)
                 wtr (writer out-file)]
       (doseq [f (.iterator source)]
         (when (= (.getName f) "CALLABLE")
           (.write wtr (format "%s\t%s\t%s\n" (.getChr f)
-                              (dec (.getStart f)) (inc (.getEnd f)))))))
+                              (- (.getStart f) 2) (.getEnd f))))))
     out-file))
+
+(defn callable-checker
+  "Provide function to check if a region (chromsome start end) is callable.
+  Calculates based on reads in input BAM file."
+  [align-bam ref & {:keys [out-dir intervals]}]
+  (if (nil? align-bam) [(fn [& _] true) (java.io.StringReader. "")]
+      (let [source (get-bed-source (get-callable-bed align-bam ref :out-dir out-dir
+                                                     :intervals intervals))]
+        (letfn [(is-callable? [space start end]
+                  (if (<= start end)
+                    (> (count (features-in-region source space start end)) 0)
+                    false))]
+          [is-callable? source]))))
 
 ;; ## Multiple callables
 

@@ -46,11 +46,13 @@
                                       ["gatk-freebayes-concordance"
                                        "gatk-freebayes-discordance"
                                        "freebayes-gatk-discordance"]))
-               out-callable (format "%s-callable.bed" (itx/file-root align-bam))
-               out-intervals (itx/add-file-part out-callable "intervals")]
+               out-callable (map #(format "%s-%s.bed" (itx/file-root align-bam) %)
+                                 ["callable" "callable-intervals" "callable-sorted"
+                                  "callable-intervals-sorted"])
+               out-intervals (itx/add-file-part (first out-callable) "intervals")]
            (doseq [x (concat [combo-out compare-out annotated-out filter-out nofilter-out
-                              out-sum-compare out-callable out-intervals]
-                             combine-out combine-out-xtra (vals match-out) select-out)]
+                              out-sum-compare out-intervals]
+                             out-callable combine-out combine-out-xtra (vals match-out) select-out)]
              (itx/remove-path x))
            ?form)))
 
@@ -83,7 +85,7 @@
                         #"Error during negative model training"))
 
 (facts "Check for callability based on sequencing reads."
-  (identify-callable align-bam ref) => out-callable
+  (identify-callable align-bam ref) => (first out-callable)
   (let [[is-callable? call-source] (callable-checker align-bam ref)]
     (with-open [_ call-source]
       (is-callable? "MT" 16 17) => true
