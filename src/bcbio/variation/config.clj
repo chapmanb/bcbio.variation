@@ -69,7 +69,7 @@
         (fsm/state :finalize
                    (fsm/valid-transitions :finalize :compare :summary :clean))
         (fsm/state :summary
-                   (fsm/valid-transitions :finished))
+                   (fsm/valid-transitions :finished :clean))
         (fsm/state :finished))))))
 
 (defn do-transition
