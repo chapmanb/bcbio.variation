@@ -97,17 +97,18 @@
             (.close x)))
         (doseq [x (vals gms-files)]
           (itx/remove-path x))))
-    out-file))
+    (str out-file)))
 
 (defn prepare-gms-vcfs
   "Prepare individual chromosome VCF files with low GMS data by sequencing technology."
   [config]
   (let [ref (:ref config)
         out-dir (get-in config [:dir :out])
-        gms-by-chrom (doall (pmap #(prepare-vcf-at-chrom % (:ftp config) ref out-dir)
+        gms-by-chrom (doall (map #(prepare-vcf-at-chrom % (:ftp config) ref out-dir)
                                   (get-in config [:ftp :chromosomes])))]
     (println gms-by-chrom)
-    (combine-variants gms-by-chrom ref :merge-type :full :out-dir out-dir))
+    (combine-variants gms-by-chrom ref :merge-type :full :out-dir out-dir
+                      :quiet-out? true))
   (shutdown-agents))
 
 (defn -main [config-file]

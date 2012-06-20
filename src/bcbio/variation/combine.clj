@@ -23,7 +23,7 @@
 (defn combine-variants
   "Combine multiple variant files with GATK CombineVariants.
    Only correctly handles all-by-all comparisons with the same ploidy level."
-  [vcfs ref & {:keys [merge-type out-dir intervals unsafe name-map base-ext check-ploidy?]
+  [vcfs ref & {:keys [merge-type out-dir intervals unsafe name-map base-ext check-ploidy? quiet-out?]
                :or {merge-type :unique
                     unsafe false
                     name-map {}
@@ -50,6 +50,7 @@
                         "-o" :out-vcf
                         "--rod_priority_list" (string/join "," (map unique-name vcfs))]
                        (if unsafe ["--unsafe" "ALLOW_SEQ_DICT_INCOMPATIBILITY"] [])
+                       (if quiet-out? ["--suppressCommandLineHeader" "--setKey" "null"] [])
                        (flatten (map #(list (str "--variant:" (unique-name %)) %) vcfs))
                        (broad/gatk-cl-intersect-intervals intervals)
                        (case merge-type

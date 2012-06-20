@@ -423,8 +423,9 @@
   [vcf-file ref-file]
   (let [sample-size 1000]
     (letfn [(is-vc-haploid? [vc]
-              (or (= 1 (apply max (map #(count (:alleles %)) (:genotypes vc))))
-                  (contains? #{"HOM_REF" "HOM_VAR"} (:type vc))))]
+              (when-not (= 0 (:num-samples vc))
+                (or (= 1 (apply max (map #(count (:alleles %)) (:genotypes vc))))
+                    (contains? #{"HOM_REF" "HOM_VAR"} (:type vc)))))]
       (with-open [vcf-source (get-vcf-source vcf-file ref-file)]
         (let [vcf-iter (parse-vcf vcf-source)]
           (when-not (empty? vcf-iter)

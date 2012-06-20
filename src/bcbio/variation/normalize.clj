@@ -45,7 +45,7 @@
 
 ;; Cached version of hg19 map to avoid having to make database connections
 (def hg19-map
-  {"chrM" "MT", "chrUn_gl000211" "GL000211", "chrUn_gl000222" "GL000222",
+  {"chrM" "MT" "chrMT" "MT" "chrUn_gl000211" "GL000211", "chrUn_gl000222" "GL000222",
    "chrUn_gl000233" "GL000233", "chrUn_gl000244" "GL000244", "chrUn_gl000212" "GL000212",
    "chrUn_gl000223" "GL000223", "chrUn_gl000234" "GL000234", "chrUn_gl000245" "GL000245",
    "chrUn_gl000213" "GL000213", "chrUn_gl000224" "GL000224", "chrUn_gl000235" "GL000235",
