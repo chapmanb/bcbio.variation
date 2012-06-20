@@ -293,7 +293,7 @@
             (apply + (map feature-size xs)))
           (genome-loc-list [x]
             (let [parser (GenomeLocParser. (get-seq-dict ref-file))]
-              (with-open [bed-source (get-bed-source x)]
+              (with-open [bed-source (get-bed-source x ref-file)]
                 (->> bed-source
                      .iterator
                      (map #(.createGenomeLoc parser %))
@@ -302,7 +302,7 @@
             (IntervalUtils/mergeListsBySetOperator (genome-loc-list x)
                                                    (genome-loc-list y)
                                                    IntervalSetRule/INTERSECTION))]
-    (with-open [bed-source (get-bed-source total-bed)]
+    (with-open [bed-source (get-bed-source total-bed ref-file)]
       (let [total (count-bases (.iterator bed-source))
             compared (if (nil? call-bed) total
                          (count-bases (merge-intervals total-bed call-bed)))]
@@ -362,7 +362,7 @@
     (with-open [ref-vcf-s (get-vcf-source (:file ref) (:ref exp))
                 call-vcf-s (get-vcf-source (:file call) (:ref exp))
                 bed-s (if-let [f (get call :intervals (:intervals exp))]
-                        (get-bed-source f) (java.io.StringReader. ""))]
+                        (get-bed-source f (:ref exp)) (java.io.StringReader. ""))]
       (let [compared-calls (score-phased-calls call-vcf-s ref-vcf-s :bed-source bed-s)]
         {:c-files (write-concordance-output (convert-cmps-to-grade compared-calls)
                                             [:concordant :discordant
@@ -407,7 +407,7 @@
     (with-open [vcf1-s (get-vcf-source (:file cmp1) (:ref exp))
                 vcf2-s (get-vcf-source (:file cmp2) (:ref exp))
                 bed-s (if-let [f (get cmp2 :intervals (:intervals exp))]
-                        (get-bed-source f) (java.io.StringReader. ""))]
+                        (get-bed-source f (:ref exp)) (java.io.StringReader. ""))]
       {:c-files (-> (convert-cmps-to-compare (:name cmp1) (:name cmp2)
                                              (score-phased-calls vcf2-s vcf1-s
                                                                  :bed-source bed-s))

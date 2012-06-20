@@ -14,7 +14,7 @@
                                                get-vcf-retriever
                                                get-vcf-line-parser
                                                from-genotype]]
-        [bcbio.align.ref :only [get-seq-dict]]
+        [bcbio.align.ref :only [get-seq-dict get-seq-name-map]]
         [bcbio.variation.structural :only [nochange-alt?]]
         [ordered.map :only (ordered-map)]
         [ordered.set :only (ordered-set)])
@@ -279,9 +279,9 @@
                    first
                    (#(string/split % #"\t"))
                    first)))
-          (has-contig? [contig ref]
+          (has-contig? [contig ref-file]
             (contains?
-             (set (map #(.getSequenceName %) (.getSequences (get-seq-dict ref))))
+             (set (keys (get-seq-name-map ref-file)))
              contig))]
     (let [test-contig (get-vcf-contig vcf)]
       (first (filter (partial has-contig? test-contig) refs)))))

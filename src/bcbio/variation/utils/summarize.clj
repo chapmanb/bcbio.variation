@@ -76,9 +76,9 @@
       (flatten-vc-samples vc (:sample-attrs config))))
 
 (defn- add-interval-retrievers
-  [config]
+  [config ref]
   (letfn [(add-int-retriever [coll]
-            (assoc coll :source (get-bed-source (:file coll))))]
+            (assoc coll :source (get-bed-source (:file coll) ref)))]
     (assoc config :intervals (map add-int-retriever (:intervals config)))))
 
 (defn vcf-to-table
@@ -89,7 +89,7 @@
       (with-open [vcf-source (get-vcf-source vcf ref)
                   wtr (writer out-file)]
         (doseq [[i out] (map-indexed vector
-                                     (map (partial flatten-vc (add-interval-retrievers config))
+                                     (map (partial flatten-vc (add-interval-retrievers config ref))
                                           (filter passes-filter? (parse-vcf vcf-source))))]
           (when (= i 0)
             (csv/write-csv wtr [(map name (keys out))]))

@@ -4,7 +4,8 @@
   (:import [org.broad.tribble.bed BEDCodec]
            [org.broad.tribble.index IndexFactory]
            [org.broad.tribble.source BasicFeatureSource])
-  (:use [clojure.java.io])
+  (:use [clojure.java.io]
+        [bcbio.align.ref :only [sort-bed-file]])
   (:require [clojure.string :as string]
             [fs.core :as fs]
             [bcbio.run.itx :as itx]
@@ -24,7 +25,7 @@
                       "-I" align-bam
                       "--out" :out-bed
                       "--summary" :out-summary]
-                     (broad/gatk-cl-intersect-intervals intervals))]
+                     (broad/gatk-cl-intersect-intervals intervals ref))]
     (if-not (fs/exists? base-dir)
       (fs/mkdirs base-dir))
     (broad/index-bam align-bam)
@@ -40,27 +41,11 @@
      :score (.getScore f)
      :strand (.getStrand f)}))
 
-(defn sort-bed-file
-  [bed-file]
-  (letfn [(process-line [line]
-            (let [parts (if (> (count (string/split line #"\t")) 1)
-                          (string/split line #"\t")
-                          (string/split line #" "))]
-              (let [[chr start end] (take 3 parts)]
-                [[chr (Integer/parseInt start) (Integer/parseInt end)] line])))]
-    (let [out-file (itx/add-file-part bed-file "sorted")]
-      (when (itx/needs-run? out-file)
-        (with-open [rdr (reader bed-file)
-                    wtr (writer out-file)]
-          (doseq [[_ line] (sort (map process-line (line-seq rdr)))]
-            (.write wtr (str line "\n")))))
-      out-file)))
-
 (defn get-bed-source
   "Provide tribble feature source for a BED formatted file."
-  [bed-file]
+  [bed-file ref-file]
   (let [batch-size 500
-        work-bed (sort-bed-file bed-file)
+        work-bed (sort-bed-file bed-file ref-file)
         idx (IndexFactory/createIntervalIndex (file work-bed) (BEDCodec.) batch-size)]
     (BasicFeatureSource. work-bed idx (BEDCodec.))))
 
@@ -73,7 +58,7 @@
   (let [orig-bed-file (identify-callable align-bam ref :out-dir out-dir
                                          :intervals intervals)
         out-file (itx/add-file-part orig-bed-file "intervals")]
-    (with-open [source (get-bed-source orig-bed-file)
+    (with-open [source (get-bed-source orig-bed-file ref)
                 wtr (writer out-file)]
       (doseq [f (.iterator source)]
         (when (= (.getName f) "CALLABLE")
@@ -87,7 +72,8 @@
   [align-bam ref & {:keys [out-dir intervals]}]
   (if (nil? align-bam) [(fn [& _] true) (java.io.StringReader. "")]
       (let [source (get-bed-source (get-callable-bed align-bam ref :out-dir out-dir
-                                                     :intervals intervals))]
+                                                     :intervals intervals)
+                                   ref)]
         (letfn [(is-callable? [space start end]
                   (if (<= start end)
                     (> (count (features-in-region source space start end)) 0)

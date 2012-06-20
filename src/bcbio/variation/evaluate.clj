@@ -26,7 +26,7 @@
                "--evalModule" "ValidationReport"
                "--stratificationModule" "Sample"
                "--stratificationModule" "Filter"]
-              (broad/gatk-cl-intersect-intervals intervals))]
+              (broad/gatk-cl-intersect-intervals intervals ref))]
     (broad/run-gatk "VariantEval" args file-info {:out [:out-eval]})
     (:out-eval file-info)))
 
@@ -46,7 +46,7 @@
                "--evalModule" "ValidationReport"
                "--evalModule" "VariantSummary"
                "--stratificationModule" "Filter"]
-              (broad/gatk-cl-intersect-intervals intervals)
+              (broad/gatk-cl-intersect-intervals intervals ref)
               (if (nil? dbsnp) [] ["--dbsnp" dbsnp])
               (if (nil? cmp-interval-file)
                 []

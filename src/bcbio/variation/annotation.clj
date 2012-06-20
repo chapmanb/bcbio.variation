@@ -22,7 +22,7 @@
                       "--variant" in-vcf
                       "-o" :out-vcf]
                      (reduce #(concat %1 ["-A" %2]) [] annotations)
-                     (broad/gatk-cl-intersect-intervals intervals :vcf in-vcf))]
+                     (broad/gatk-cl-intersect-intervals intervals ref :vcf in-vcf))]
     (broad/index-bam align-bam)
     (broad/run-gatk "VariantAnnotator" args file-info {:out [:out-vcf]})
     (:out-vcf file-info)))

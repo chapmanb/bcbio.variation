@@ -270,7 +270,7 @@
             (or (instance? StringReader bed-source)
                 (not (nil? (first (.query bed-source (:chr vc) (:start-ci vc) (:end-ci vc)))))))]
     (with-open [vcf-source (get-vcf-source vcf-file ref-file :codec (structural-vcfcodec))
-                bed-source (if-not (nil? interval-file) (get-bed-source interval-file)
+                bed-source (if-not (nil? interval-file) (get-bed-source interval-file ref-file)
                                    (StringReader. ""))]
       (let [vs-iter (filter (partial in-intervals? bed-source)
                             (keep updated-sv-vc (parse-vcf vcf-source)))]

@@ -59,7 +59,7 @@
                     "--variant" (:file c1)
                     (str "--" cmp-type) (:file c2)
                     "--out" :out-vcf]
-                   (broad/gatk-cl-intersect-intervals intervals))]
+                   (broad/gatk-cl-intersect-intervals intervals ref))]
          (broad/run-gatk "SelectVariants" args file-info {:out [:out-vcf]})
          (:out-vcf file-info))))))
 

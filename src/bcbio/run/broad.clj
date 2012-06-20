@@ -3,7 +3,8 @@
   (:import [org.broadinstitute.sting.gatk CommandLineGATK]
            [net.sf.samtools SAMFileReader SAMFileReader$ValidationStringency]
            [net.sf.picard.sam BuildBamIndex])
-  (:use [clojure.java.io])
+  (:use [clojure.java.io]
+        [bcbio.align.ref :only [sort-bed-file]])
   (:require [fs.core :as fs]
             [bcbio.run.itx :as itx]))
 
@@ -30,9 +31,10 @@
 
 (defn gatk-cl-intersect-intervals
   "Supply GATK commandline arguments for interval files, merging via intersection."
-  [intervals & {:keys [vcf]}]
+  [intervals ref-file & {:keys [vcf]}]
   (cond
    (nil? intervals) (if vcf ["-L" vcf] [])
-   (coll? intervals) (concat (flatten (map #(list "-L" %) intervals))
+   (coll? intervals) (concat (flatten (map #(list "-L" %)
+                                           (map #(sort-bed-file % ref-file) intervals)))
                              ["--interval_set_rule" "INTERSECTION"])
-   :else ["-L" intervals]))
+   :else ["-L" (sort-bed-file intervals ref-file)]))

@@ -52,7 +52,7 @@
                        (if unsafe ["--unsafe" "ALLOW_SEQ_DICT_INCOMPATIBILITY"] [])
                        (if quiet-out? ["--suppressCommandLineHeader" "--setKey" "null"] [])
                        (flatten (map #(list (str "--variant:" (unique-name %)) %) vcfs))
-                       (broad/gatk-cl-intersect-intervals intervals)
+                       (broad/gatk-cl-intersect-intervals intervals ref)
                        (case merge-type
                              :full ["--genotypemergeoption" "PRIORITIZE"]
                              :unique ["--genotypemergeoption" "UNIQUIFY"]
@@ -132,7 +132,7 @@
                       "--unsafe" "ALLOW_SEQ_DICT_INCOMPATIBILITY"
                       "--out" :out-vcf]
                      (if remove-refcalls ["--excludeNonVariants" "--excludeFiltered"] [])
-                     (broad/gatk-cl-intersect-intervals intervals))]
+                     (broad/gatk-cl-intersect-intervals intervals ref))]
     (if-not (fs/exists? base-dir)
       (fs/mkdirs base-dir))
     (broad/run-gatk "SelectVariants" args file-info {:out [:out-vcf]})
