@@ -82,13 +82,13 @@
      [:div {:id "score-table"}
       sum-table]
      [:h3 "Variant files in VCF format"]
-     [:div {:id "variant-file"}]
-     [:ul
-      (for [[key txt] [["concordant" "Concordant variants"]
-                       ["discordant" "Discordant variants"]
-                       ["discordant-missing" "Missing variants"]
-                       ["phasing" "Variants with phasing errors"]]]
-        [:li [:a {:href (format "/scorefile/%s/%s" run-id key)} txt]])])))
+     [:div {:id "variant-file-download"}
+      [:ul
+       (for [[key txt] [["concordant" "Concordant variants"]
+                        ["discordant" "Discordant variants"]
+                        ["discordant-missing" "Missing variants"]
+                        ["phasing" "Variants with phasing errors"]]]
+         [:li [:a {:href (format "/scorefile/%s/%s" run-id key)} txt]])]])))
 
 (defn scoring-html
   "Update main page HTML with content for scoring."
