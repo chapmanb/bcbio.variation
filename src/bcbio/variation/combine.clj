@@ -211,10 +211,10 @@
                                 :unsafe true)))]
     (let [out-fname (format "%s-%s.vcf" (:sample exp) (:name call))
           in-files (if (coll? (:file call)) (:file call) [(:file call)])
-          _ (transition :clean (str "Cleaning VCF to avoid problem inputs: " (:name call)))
-          clean-files (map #(if-not (:preclean call) %
-                                    (clean-problem-vcf % :out-dir out-dir))
-                           in-files)
+          _ (transition :clean (str "Cleaning input VCF: " (:name call)))
+          clean-files (vec (map #(if-not (:preclean call) %
+                                         (clean-problem-vcf % :out-dir out-dir))
+                                in-files))
           _ (transition :merge (str "Merging multiple input files: " (:name call)))
           merge-file (if (> (count clean-files) 1)
                        (merge-call-files call clean-files)

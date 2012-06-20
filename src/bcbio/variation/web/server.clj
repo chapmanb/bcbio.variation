@@ -3,7 +3,7 @@
   (:use [clojure.java.io]
         [noir.core :only [defpage]]
         [noir.fetch.remotes :only [defremote]]
-        [bcbio.variation.config :only [get-log-status]]
+        [bcbio.variation.config :only [get-log-status configure-log4j]]
         [bcbio.variation.web.shared :only [web-config]]
         [ring.middleware file])
   (:require [clojure.string :as string]
@@ -53,9 +53,6 @@
     (map prep-gs-path (gs/list-files gs-client dir ftype))
     []))
 
-(defremote run-scoring [run-id]
-  (web-process/run-scoring run-id))
-
 (defremote get-status [run-id]
   (get-log-status {:dir {:out (-> (session/get :work-info)
                                   (get run-id)
@@ -71,8 +68,8 @@
         (slurp summary-file)))))
 
 (defpage [:post "/score"] {:as params}
-  (let [{:keys [run-id out-html]} (web-process/prep-scoring params)]
-    (future (web-process/run-scoring run-id))
+  (let [{:keys [work-info out-html]} (web-process/prep-scoring)]
+    (future (web-process/run-scoring work-info params))
     out-html))
 
 (defpage "/scorefile/:runid/:name" {:keys [runid name]}
@@ -82,6 +79,7 @@
   ([config-file]
      (-main config-file "8080"))
   ([config-file port]
+     (configure-log4j)
      (reset! web-config (-> config-file slurp yaml/parse-string))
      (server/add-middleware wrap-file (get-in @web-config [:dir :html-root]))
      (server/start (Integer/parseInt port))))

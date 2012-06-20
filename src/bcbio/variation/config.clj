@@ -78,9 +78,7 @@
   ((get-in config [:fsm :transition]) #(assoc % :state-kw state
                                               :state-data {:desc desc})))
 
-(defn configure-logging
-  "Setup output file logging based on configuration"
-  [config]
+(defn configure-log4j []
   (alter-var-root (var log/*logger-factory*) (constantly (log-impl/log4j-factory)))
   (let [pattern "%d [%-5p] %m%n"]
     (log4j/set-loggers! :config {:level :info}
@@ -88,8 +86,7 @@
                         "bcbio.variation.config" {:level :info :pattern pattern
                                                   :out :console :additivity false}
                         "org.broadinstitute.sting.gatk.refdata.tracks.RMDTrackBuilder"
-                        {:level :warn}))
-  (assoc config :fsm (prep-comparison-fsm config)))
+                        {:level :warn})))
 
 ;; ## Configuration
 
@@ -150,7 +147,8 @@
                             (vec config))
                     (contains? to-process path) (maybe-process config path)
                     :else config))]
+      (configure-log4j)
       (-> config
           (update-tree [])
           (add-dir-files #{".vcf"})
-          configure-logging))))
+          (#(assoc % :fsm (prep-comparison-fsm %)))))))

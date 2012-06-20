@@ -19,7 +19,7 @@
 
 (defn create-work-config
   "Create configuration for processing inputs using references supplied in config."
-  [in-files work-info config]
+  [work-info config]
   (if-not (fs/exists? (:dir work-info))
     (fs/mkdirs (:dir work-info)))
   (let [config-file (str (fs/file (:dir work-info) "process.yaml"))
@@ -34,15 +34,16 @@
                          :calls [{:name "reference"
                                   :file (:variants ref)
                                   :remove-refcalls true
+                                  :normalize true
                                   :refcalls false}
                                  {:name "contestant"
                                   :prep true
                                   :preclean true
                                   :remove-refcalls true
-                                  :file (if-let [x (:variant-file in-files)]
+                                  :file (if-let [x (get-in work-info [:in-files :variant-file])]
                                           (str x)
                                           (:default-compare ref))
-                                  :intervals (if-let [x (:region-file in-files)]
+                                  :intervals (if-let [x (get-in work-info [:in-files :region-file])]
                                                (str x)
                                                (:intervals ref))}]}]}
          yaml/generate-string
@@ -96,7 +97,7 @@
                                 (hiccup-to-enlive
                                  (hiccup/html
                                   [:div
-                                   [:div {:id "scoring-summary"} "Comparing variations"]
+                                   [:div {:id "scoring-summary"} "Downloading input files"]
                                    [:script {:src "js/score.js"}]
                                    [:script (format "bcbio.variation.score.update_run_status('%s');"
                                                     run-id)]])))))))
@@ -115,24 +116,22 @@
     (doseq [fname (cons summary-file out-files)]
       (gs/upload gs-client (:upload-dir work-info) fname))))
 
-(defn run-scoring
+(defn run-scoring-analysis
   "Run scoring analysis from details provided in current session."
-  [run-id]
-  (let [work-info (get (session/get :work-info) run-id)
-        gs-client (session/get :gs-client)
-        process-config (create-work-config (session/get :in-files)
-                                           work-info @web-config)
+  [work-info]
+  (let [gs-client (session/get :gs-client)
+        process-config (create-work-config work-info @web-config)
         comparisons (variant-comparison-from-config process-config)]
     (when-not (or (nil? gs-client) (nil? (:upload-dir work-info)))
       (upload-results gs-client work-info (first comparisons)))
     (spit (file (:dir work-info) "scoring-summary.html")
-          (html-scoring-summary comparisons run-id))))
+          (html-scoring-summary comparisons (:id work-info)))))
 
 (defmulti get-input-files
   "Prepare working directory, downloading input files."
-  (fn [work-info params] (cond
-                          (:gs-variant-file params) :gs
-                          :else :upload)))
+  (fn [work-info params]
+    (let [gs-info (:gs-variant-file params)]
+      (if (or (nil? gs-info) (empty? gs-info)) :upload :gs))))
 
 (defmethod get-input-files :upload
   [work-info params]
@@ -162,29 +161,33 @@
     (into {} (map (partial gs-download (:dir work-info) params)
                   [:variant-file :region-file]))))
 
+(defn run-scoring
+  "Download form-supplied input files and start scoring analysis."
+  [orig-work-info params]
+  (letfn [(add-upload-dir [work-info params]
+            (let [remote-fname (:gs-variant-file params)]
+              (if-not (or (nil? remote-fname) (empty? remote-fname))
+                (assoc work-info :upload-dir (str (fs/parent remote-fname)))
+                work-info)))]
+    (let [work-info (-> orig-work-info
+                        (add-upload-dir params)
+                        (assoc :sample (:comparison-genome params))
+                        (assoc :in-files (get-input-files orig-work-info params)))]
+      (run-scoring-analysis work-info))))
+
 (defn prep-scoring
-  "Download form-supplied input files and prep directory for scoring analysis."
-  [params]
+  "Prep directory for scoring analysis."
+  []
   (letfn [(prep-tmp-dir []
             (let [tmp-dir (get-in @web-config [:dir :work])
                   work-id (str (java.util.UUID/randomUUID))
                   cur-dir (fs/file tmp-dir work-id)]
               (fs/mkdirs cur-dir)
-              {:id work-id :dir (str cur-dir)}))
-          (add-upload-dir [work-info params]
-            (let [remote-fname (:gs-variant-file params)]
-              (if-not (or (nil? remote-fname) (empty? remote-fname))
-                (assoc work-info :upload-dir (str (fs/parent remote-fname)))
-                work-info)))]
-    (let [work-info (prep-tmp-dir)
-          in-files (get-input-files work-info params)]
+              {:id work-id :dir (str cur-dir)}))]
+    (let [work-info (prep-tmp-dir)]
       (session/put! :work-info (assoc (session/get :work-info (ordered-map))
-                                 (:id work-info)
-                                 (-> work-info
-                                     (add-upload-dir params)
-                                     (assoc :sample (:comparison-genome params))
-                                     (assoc :in-files in-files))))
-      {:run-id (:id work-info)
+                                 (:id work-info) work-info))
+      {:work-info work-info
        :out-html (scoring-html (:id work-info))})))
 
 ;; ## File retrieval from processing
