@@ -6,6 +6,7 @@ ref:
   - sample: NA00001
     description: Test Genome
     genome: test/data/GRCh37.fa
+    genome-alts: []
     variants: test/data/phasing-reference.vcf
     intervals: test/data/phasing-reference-regions.bed
     default-compare: test/data/phasing-contestant.vcf

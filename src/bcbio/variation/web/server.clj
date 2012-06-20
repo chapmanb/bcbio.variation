@@ -68,7 +68,7 @@
         (slurp summary-file)))))
 
 (defpage [:post "/score"] {:as params}
-  (let [{:keys [work-info out-html]} (web-process/prep-scoring)]
+  (let [{:keys [work-info out-html]} (web-process/prep-scoring params)]
     (future (web-process/run-scoring work-info params))
     out-html))
 

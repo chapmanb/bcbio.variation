@@ -269,6 +269,23 @@
       (write-prepped-vcf in-vcf-file {:out out-file} ref-file sample config))
     out-file))
 
+(defn pick-best-ref
+  "Choose a reference genome for a variant file from set of choices."
+  [vcf refs]
+  (letfn [(get-vcf-contig [fname]
+            (with-open [rdr (reader fname)]
+              (->> (line-seq rdr)
+                   (drop-while #(.startsWith % "#"))
+                   first
+                   (#(string/split % #"\t"))
+                   first)))
+          (has-contig? [contig ref]
+            (contains?
+             (set (map #(.getSequenceName %) (.getSequences (get-seq-dict ref))))
+             contig))]
+    (let [test-contig (get-vcf-contig vcf)]
+      (first (filter (partial has-contig? test-contig) refs)))))
+
 ;; ## Remove problem characters
 ;; Handle cleanup for VCF files before feeding to any verifying parser.
 

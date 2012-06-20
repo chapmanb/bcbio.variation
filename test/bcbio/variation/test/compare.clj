@@ -172,6 +172,9 @@
     (facts "Pre-cleaning of problematic VCF input files"
       (clean-problem-vcf prevcf) => out-prevcf)))
 
+(facts "Choose a reference genome based on VCF contig"
+  (pick-best-ref vcf1 [ref]) => ref)
+
 (let [config-file (str (fs/file "." "config" "method-comparison.yaml"))
       config (load-config config-file)
       out-dir (str (fs/file (get-in config [:dir :prep]) "multiple"))

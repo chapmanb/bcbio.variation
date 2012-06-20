@@ -4,6 +4,7 @@
   (:use [clojure.java.io]
         [ordered.map :only [ordered-map]]
         [bcbio.variation.compare :only [variant-comparison-from-config]]
+        [bcbio.variation.normalize :only [pick-best-ref]]
         [bcbio.variation.report :only [prep-scoring-table]]
         [bcbio.variation.web.shared :only [web-config]])
   (:require [clj-yaml.core :as yaml]
@@ -24,7 +25,10 @@
     (fs/mkdirs (:dir work-info)))
   (let [config-file (str (fs/file (:dir work-info) "process.yaml"))
         ref (first (filter #(= (:sample %) (:sample work-info))
-                           (:ref config)))]
+                           (:ref config)))
+        contestant-vcf (if-let [x (get-in work-info [:in-files :variant-file])]
+                         (str x)
+                         (:default-compare ref))]
     (->> {:dir {:out (str (fs/file (:dir work-info) "grading"))
                 :prep (str (fs/file (:dir work-info) "grading" "prep"))}
           :experiments [{:sample (:sample ref)
@@ -40,9 +44,9 @@
                                   :prep true
                                   :preclean true
                                   :remove-refcalls true
-                                  :file (if-let [x (get-in work-info [:in-files :variant-file])]
-                                          (str x)
-                                          (:default-compare ref))
+                                  :ref (pick-best-ref contestant-vcf (cons (:genome ref)
+                                                                           (:genome-alts ref)))
+                                  :file contestant-vcf
                                   :intervals (if-let [x (get-in work-info [:in-files :region-file])]
                                                (str x)
                                                (:intervals ref))}]}]}
@@ -177,13 +181,14 @@
 
 (defn prep-scoring
   "Prep directory for scoring analysis."
-  []
+  [params]
   (letfn [(prep-tmp-dir []
             (let [tmp-dir (get-in @web-config [:dir :work])
                   work-id (str (java.util.UUID/randomUUID))
                   cur-dir (fs/file tmp-dir work-id)]
               (fs/mkdirs cur-dir)
-              {:id work-id :dir (str cur-dir)}))]
+              {:id work-id :dir (str cur-dir)
+               :sample (:comparison-genome params)}))]
     (let [work-info (prep-tmp-dir)]
       (session/put! :work-info (assoc (session/get :work-info (ordered-map))
                                  (:id work-info) work-info))
