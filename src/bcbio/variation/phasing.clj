@@ -287,8 +287,8 @@
   [total-bed call-bed ref-file]
   (letfn [(feature-size [x]
             (cond
-             (instance? GenomeLoc x) (- (.getStop x) (.getStart x))
-             :else (- (.getEnd x) (.getStart x))))
+             (instance? GenomeLoc x) (- (.getStop x) (dec (.getStart x)))
+             :else (- (.getEnd x) (dec (.getStart x)))))
           (count-bases [xs]
             (apply + (map feature-size xs)))
           (genome-loc-list [x]

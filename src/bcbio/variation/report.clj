@@ -160,11 +160,14 @@
                               :haplotype-blocks "Phased haplotype blocks"
                               :nonmatch-het-alt "Non-matching heterozygous alternative alleles")
         s-metrics (assoc metrics :accuracy (calc-accuracy metrics))
-        need-percent #{:accuracy [:total-bases :percent]}]
+        need-percents {:accuracy 3
+                       [:total-bases :percent] 2}]
     (letfn [(prep-row [[k x]]
               (let [val (if (coll? k) (get-in s-metrics k) (get s-metrics k))]
                 {:metric x
-                 :value (if (contains? need-percent k) (format "%.2f" val) val)}))]
+                 :value (if (contains? need-percents k)
+                          (format (str "%." (get need-percents k) "f") val)
+                          val)}))]
       (map prep-row to-write))))
 
 (defn write-scoring-table
