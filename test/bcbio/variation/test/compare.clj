@@ -149,8 +149,8 @@
 (facts "Merging and count info for reference and contestant analysis regions."
   (let [cbed (str (fs/file data-dir "phasing-contestant-regions.bed"))
         rbed (str (fs/file data-dir "phasing-reference-regions.bed"))]
-    (count-comparison-bases rbed cbed ref) => (contains {:compared 17 :total 18})
-    (count-comparison-bases rbed nil ref) => (contains {:compared 18 :total 18})))
+    (count-comparison-bases rbed cbed ref) => (contains {:compared 18 :total 19})
+    (count-comparison-bases rbed nil ref) => (contains {:compared 19 :total 19})))
 
 (facts "Calculate final accuracy score for contestant/reference comparison."
   (calc-accuracy {:total-bases {:compared 10}
