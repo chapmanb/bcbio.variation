@@ -135,12 +135,12 @@
   (#correctly aligned bases / (#correctly aligned bases +
                                1*(simple substitutions and indels) +
                                2*(larger errors)))."
-  [metrics]
+  [metrics error-items]
   (letfn [(get-penalty [[error-type call-type]]
             (case call-type
               :snp 1
               :indel 2))]
-    (let [error-items (cartesian-product [:discordant :phasing-error] [:snp :indel])
+    (let [error-items (cartesian-product error-items [:snp :indel])
           error-score (apply + (map #(* (get-in metrics % 0) (get-penalty %)) error-items))
           total-bases (get-in metrics [:total-bases :compared] 1)]
       (float
@@ -149,18 +149,23 @@
 (defn prep-scoring-table
   "Summary table of high level variables and scoring metrics for comparison."
   [metrics]
-  (let [to-write (ordered-map :accuracy "Overall accuracy score"
-                              [:total-bases :percent] "Percentage of bases compared"
-                              [:total-bases :compared] "Total bases compared"
+  (let [to-write (ordered-map :accuracy "Accuracy score"
+                              :accuracy-phasing "Accuracy score, including phasing"
+                              [:total-bases :percent] "Percentage of reference bases scored"
+                              [:total-bases :compared] "Total bases scored"
                               [:total-bases :total] "Possible evaluation bases"
                               [:discordant :snp] "Discordant SNPs"
                               [:discordant :indel] "Discordant indels"
                               [:phasing-error :snp] "Phasing Error SNPs"
                               [:phasing-error :indel] "Phasing Error indels"
                               :haplotype-blocks "Phased haplotype blocks"
-                              :nonmatch-het-alt "Non-matching heterozygous alternative alleles")
-        s-metrics (assoc metrics :accuracy (calc-accuracy metrics))
+                              ;:nonmatch-het-alt "Non-matching heterozygous alternative alleles"
+                              )
+        s-metrics (-> metrics
+                      (assoc :accuracy (calc-accuracy metrics [:discordant]))
+                      (assoc :accuracy-phasing (calc-accuracy metrics [:discordant :phasing-error])))
         need-percents {:accuracy 3
+                       :accuracy-phasing 3
                        [:total-bases :percent] 2}]
     (letfn [(prep-row [[k x]]
               (let [val (if (coll? k) (get-in s-metrics k) (get s-metrics k))]
