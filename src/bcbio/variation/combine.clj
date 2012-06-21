@@ -220,7 +220,7 @@
                        (merge-call-files call clean-files)
                        (first clean-files))
           _ (transition :prep
-                        (str "Resorting to comparison reference and selecting samples: "
+                        (str "Prepare VCF, resorting to genome build: "
                              (:name call)))
           prep-file (dirty-prep-work merge-file call exp intervals out-dir out-fname)]
       (transition :normalize (str "Normalize MNP and indel variants: " (:name call)))
