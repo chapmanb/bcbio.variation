@@ -304,7 +304,7 @@
                                                    IntervalSetRule/INTERSECTION))]
     (with-open [bed-source (get-bed-source total-bed ref-file)]
       (let [total (count-bases (.iterator bed-source))
-            compared (if (nil? call-bed) total
+            compared (if (or (nil? call-bed) (= total-bed call-bed)) total
                          (count-bases (merge-intervals total-bed call-bed)))]
         {:percent (* 100.0 (/ compared total))
          :compared compared
