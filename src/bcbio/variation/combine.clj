@@ -219,9 +219,7 @@
           merge-file (if (> (count clean-files) 1)
                        (merge-call-files call clean-files)
                        (first clean-files))
-          _ (transition :prep
-                        (str "Prepare VCF, resorting to genome build: "
-                             (:name call)))
+          _ (transition :prep (str "Prepare VCF, resorting to genome build: " (:name call)))
           prep-file (dirty-prep-work merge-file call exp intervals out-dir out-fname)]
       (transition :normalize (str "Normalize MNP and indel variants: " (:name call)))
       (assoc call :file (if (true? (get call :normalize true))

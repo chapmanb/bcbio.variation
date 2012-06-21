@@ -155,7 +155,8 @@
 (facts "Calculate final accuracy score for contestant/reference comparison."
   (calc-accuracy {:total-bases {:compared 10}
                   :discordant {:indel 1 :snp 1}
-                  :phasing-error {:indel 1 :snp 1}}) => (roughly 62.50))
+                  :phasing-error {:indel 1 :snp 1}}
+                 [:discordant :phasing-error]) => (roughly 62.50))
 
 (let [data-dir (str (fs/file "." "test" "data"))
       ref (str (fs/file data-dir "GRCh37.fa"))
