@@ -4,7 +4,7 @@
   (:use [clojure.set :only [union]]
         [ordered.map :only [ordered-map]]
         [bcbio.variation.annotation :only [add-variant-annotations]]
-        [bcbio.variation.callable :only [check-any-callable is-callable? has-callers?]]
+        [bcbio.variation.callable :only [get-callable-checker is-callable? has-callers?]]
         [bcbio.variation.combine :only [combine-variants]]
         [bcbio.variation.metrics :only [nonref-passes-filter?]]
         [bcbio.variation.variantcontext :only [parse-vcf get-vcf-retriever
@@ -90,14 +90,20 @@
           disc-vcf (-> (combine-variants disc-vcfs ref :merge-type :full :out-dir out-dir
                                          :base-ext (format "dis%s" target-name))
                        (select-variant-by-set ref "Intersection"))
-          out-file (itx/add-file-part disc-vcf "shared")]
+          out-file (itx/add-file-part disc-vcf "shared")
+          align-bams (->> (vals target-cmps)
+                          (map (juxt :c1 :c2))
+                          flatten
+                          (map :align)
+                          (remove nil?))]
       (with-open [disc-source (get-vcf-source disc-vcf ref)
                   other-source (get-vcf-source other-conc-vcf ref)
-                  any-callable (check-any-callable target-cmps ref (str (fs/parent out-dir)))]
+                  call-source (get-callable-checker align-bams ref
+                                                    :out-dir (str (fs/parent out-dir)))]
         (let [vrn-fetch (get-vcf-retriever other-source)]
           (write-vcf-w-template disc-vcf {:out out-file}
                                 (get-shared-discordant (parse-vcf disc-source)
-                                                       vrn-fetch any-callable)
+                                                       vrn-fetch call-source)
                                 ref)))
       out-file)))
 

@@ -66,47 +66,37 @@
                               (- (.getStart f) 2) (.getEnd f))))))
     out-file))
 
-(defn callable-checker
-  "Provide function to check if a region (chromsome start end) is callable.
-  Calculates based on reads in input BAM file."
-  [align-bam ref & {:keys [out-dir intervals]}]
-  (if (nil? align-bam) [(fn [& _] true) (java.io.StringReader. "")]
-      (let [source (get-bed-source (get-callable-bed align-bam ref :out-dir out-dir
-                                                     :intervals intervals)
-                                   ref)]
-        (letfn [(is-callable? [space start end]
-                  (if (<= start end)
-                    (> (count (features-in-region source space start end)) 0)
-                    false))]
-          [is-callable? source]))))
-
 ;; ## Multiple callables
 
-(defprotocol CloseableCallable
+(defprotocol CallableChecker
   "Provide callable checker for potentially multiple inputs"
   (has-callers? [this])
-  (is-callable? [this space start end])
-  (close [this]))
+  (is-callable? [this space start end]))
 
-(defrecord BamCallable [callables sources check-fn]
-  CloseableCallable
+(defrecord BamCallable [sources check-fn]
+  CallableChecker
   (has-callers? [_]
-    (not (empty? callables)))
+    (not (empty? sources)))
   (is-callable? [_ space start end]
-    (check-fn #(% space start end) callables))
+    (letfn [(source-is-callable? [source space start end]
+              (if (<= start end)
+                (> (count (features-in-region source space start end)) 0)
+                false))]
+      (if (empty? sources)
+        true
+        (check-fn #(source-is-callable? % space start end) sources))))
+  java.io.Closeable
   (close [_]
     (doseq [x sources]
       (.close x))))
 
-(defn check-any-callable
-  "High level checker if any reads in a set of targets have callable bases."
-  [target-cmps ref out-dir]
-  (let [other-bams (reduce (fn [coll x] (conj coll x))
-                           #{} (->> (vals target-cmps)
-                                    (map (juxt :c1 :c2))
-                                    flatten
-                                    (map :align)
-                                    (remove nil?)))
-        checkers (map #(callable-checker % ref :out-dir out-dir)
-                      other-bams)]
-    (BamCallable. (map first checkers) (map second checkers) some)))
+(defn get-callable-checker
+  "Retrieve generalized callabilitu checkers that handles multiple file inputs.
+  Checks if a chromosome start end region is callable based on reads in input BAM files."
+  [bam-files ref & {:keys [out-dir intervals check-fn]
+                 :or {check-fn some}}]
+  (let [work-bam-files (remove nil? (if (coll? bam-files) bam-files [bam-files]))
+        sources (map #(-> (get-callable-bed % ref :out-dir out-dir :intervals intervals)
+                          (get-bed-source ref))
+                     work-bam-files)]
+    (BamCallable. sources check-fn)))

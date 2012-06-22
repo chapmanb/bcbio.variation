@@ -5,7 +5,7 @@
         [clojure.math.combinatorics :only [cartesian-product]]
         [bcbio.variation.variantcontext :only [parse-vcf get-vcf-retriever
                                                get-vcf-source]]
-        [bcbio.variation.callable :only [callable-checker]]
+        [bcbio.variation.callable :only [get-callable-checker is-callable?]]
         [bcbio.variation.evaluate :only [organize-gatk-report-table]]
         [bcbio.variation.metrics :only [ml-on-vcf-metrics passes-filter? nonref-passes-filter?]])
   (:require [doric.core :as doric]
@@ -46,17 +46,14 @@
 (defn nocoverage-count
   "Calculate count of variant in input file without coverage in the comparison."
   [in-vcf ref-file compare-kw compared]
-  (let [align-file (get-in compared [compare-kw :align]
+  (let [out-dir (get-in compared [:dir :prep] (get-in compared [:dir :out]))
+        align-file (get-in compared [compare-kw :align]
                            (get-in compared [:exp :align]))]
-    (if (nil? align-file)
-      ""
-      (let [out-dir (get-in compared [:dir :prep] (get-in compared [:dir :out]))
-            [callable? call-source] (callable-checker align-file (-> compared :exp :ref)
-                                                      :out-dir out-dir)
-            vc-callable? (fn [vc]
-                           (callable? (:chr vc) (:start vc) (:end vc)))]
-        (with-open [_ call-source]
-          (count-variants in-vcf ref-file vc-callable?))))))
+    (when-not (nil? align-file)
+      (with-open [call-source (get-callable-checker align-file (-> compared :exp :ref)
+                                                    :out-dir out-dir)]
+        (count-variants in-vcf ref-file
+                        #(is-callable? call-source (:chr %) (:start %) (:end %)))))))
 
 (defn get-summary-level
   "Retrieve expected summary level from configuration"

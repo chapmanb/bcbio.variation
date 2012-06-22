@@ -86,12 +86,11 @@
 
 (facts "Check for callability based on sequencing reads."
   (identify-callable align-bam ref) => (first out-callable)
-  (let [[is-callable? call-source] (callable-checker align-bam ref)]
-    (with-open [_ call-source]
-      (is-callable? "MT" 16 17) => true
-      (is-callable? "MT" 252 252) => false
-      (is-callable? "MT" 5100 5200) => false
-      (is-callable? "MT" 16 15) => false))
+  (with-open [call-source (get-callable-checker align-bam ref)]
+    (is-callable? call-source "MT" 16 17) => true
+    (is-callable? call-source "MT" 252 252) => nil
+    (is-callable? call-source "MT" 5100 5200) => nil
+    (is-callable? call-source "MT" 16 15) => nil)
   (get-callable-bed align-bam ref) => out-intervals)
 
 (facts "Accumulate statistics associated with variations."

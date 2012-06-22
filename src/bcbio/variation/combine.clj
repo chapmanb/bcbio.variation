@@ -10,7 +10,7 @@
             Genotype VariantContextBuilder GenotypesContext])
   (:use [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template get-vcf-source
                                                get-vcf-header]]
-        [bcbio.variation.callable :only [callable-checker]]
+        [bcbio.variation.callable :only [get-callable-checker is-callable?]]
         [bcbio.variation.complex :only [normalize-variants]]
         [bcbio.variation.haploid :only [diploid-calls-to-haploid]]
         [bcbio.variation.normalize :only [prep-vcf clean-problem-vcf]]
@@ -65,36 +65,36 @@
 (defn convert-no-calls
   "Convert no-calls into callable reference and real no-calls."
   [in-vcf align-bam ref & {:keys [out-dir intervals num-alleles]}]
-  (let [out-file (itx/add-file-part in-vcf "wrefs")
-        [is-callable? call-source] (callable-checker align-bam ref :out-dir out-dir
-                                                     :intervals intervals)]
-    (letfn [(ref-genotype [g vc]
-              (doto (-> vc :vc .getGenotypes GenotypesContext/copy)
-                (.replace
-                 (Genotype/modifyAlleles (:genotype g)
-                                         (repeat (if (nil? num-alleles)
-                                                   (count (:alleles g))
-                                                   num-alleles)
-                                                 (:ref-allele vc))))))
-            (maybe-callable-vc [vc]
-              {:pre (= 1 (:num-samples vc))}
-              (let [g (-> vc :genotypes first)]
-                (if (.isNoCall (-> g :alleles first))
-                  (if (is-callable? (:chr vc) (:start vc) (:end vc))
-                    (-> (VariantContextBuilder. (:vc vc))
-                        (.genotypes (ref-genotype g vc))
-                        (.make))
-                    (-> (VariantContextBuilder. (:vc vc))
-                        (.filters #{"NotCallable"})
-                        (.make)))
-                  (:vc vc))))
-            (convert-vcs [vcf-source]
-              (for [vc (parse-vcf vcf-source)]
-                [:out (maybe-callable-vc vc)]))]
+  (letfn [(ref-genotype [g vc]
+            (doto (-> vc :vc .getGenotypes GenotypesContext/copy)
+              (.replace
+               (Genotype/modifyAlleles (:genotype g)
+                                       (repeat (if (nil? num-alleles)
+                                                 (count (:alleles g))
+                                                 num-alleles)
+                                               (:ref-allele vc))))))
+          (maybe-callable-vc [vc call-source]
+            {:pre (= 1 (:num-samples vc))}
+            (let [g (-> vc :genotypes first)]
+              (if (.isNoCall (-> g :alleles first))
+                (if (is-callable? call-source (:chr vc) (:start vc) (:end vc))
+                  (-> (VariantContextBuilder. (:vc vc))
+                      (.genotypes (ref-genotype g vc))
+                      (.make))
+                  (-> (VariantContextBuilder. (:vc vc))
+                      (.filters #{"NotCallable"})
+                      (.make)))
+                (:vc vc))))
+          (convert-vcs [vcf-source call-source]
+            (for [vc (parse-vcf vcf-source)]
+              [:out (maybe-callable-vc vc call-source)]))]
+    (let [out-file (itx/add-file-part in-vcf "wrefs")]
       (when (itx/needs-run? out-file)
         (with-open [in-vcf-s (get-vcf-source in-vcf ref)
-                    _ call-source]
-          (write-vcf-w-template in-vcf {:out out-file} (convert-vcs in-vcf-s) ref)))
+                    call-source (get-callable-checker align-bam ref :out-dir out-dir
+                                                      :intervals intervals)]
+          (write-vcf-w-template in-vcf {:out out-file}
+                                (convert-vcs in-vcf-s call-source) ref)))
       out-file)))
 
 (defn multiple-samples?
