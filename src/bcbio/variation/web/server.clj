@@ -5,7 +5,7 @@
         [noir.fetch.remotes :only [defremote]]
         [bcbio.variation.config :only [get-log-status configure-log4j]]
         [bcbio.variation.web.shared :only [web-config]]
-        [ring.middleware file])
+        [ring.middleware file anti-forgery file-info])
   (:require [clojure.string :as string]
             [clj-yaml.core :as yaml]
             [fs.core :as fs]
@@ -82,4 +82,6 @@
      (configure-log4j)
      (reset! web-config (-> config-file slurp yaml/parse-string))
      (server/add-middleware wrap-file (get-in @web-config [:dir :html-root]))
+     ;;(server/add-middleware wrap-file-info)
+     ;;(server/add-middleware wrap-anti-forgery)
      (server/start (Integer/parseInt port))))

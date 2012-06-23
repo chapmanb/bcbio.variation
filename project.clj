@@ -22,6 +22,7 @@
                  [clj-time "0.4.3"]
                  [clj-aws-s3 "0.3.1"]
                  [noir "1.2.2" :exclusions [org.clojure/clojure]]
+                 [ring-anti-forgery "0.1.3"]
                  [fetch "0.1.0-alpha2"]
                  [crate "0.2.0-alpha3"]
                  [enlive "1.0.0"]
