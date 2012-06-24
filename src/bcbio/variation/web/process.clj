@@ -75,33 +75,33 @@
 (defn html-scoring-summary
   "Generate summary of scoring results for display."
   [comparisons run-id]
-  (let [template-dir (get-in @web-config [:dir :template])
-        sum-table (html-summary-table comparisons)]
-    (hiccup/html
-     [:h3 "Summary"]
-     [:div {:id "score-table"}
-      sum-table]
-     [:h3 "Variant files in VCF format"]
-     [:div {:id "variant-file-download"}
-      [:ul
-       (for [[key txt] [["concordant" "Concordant variants"]
-                        ["discordant" "Discordant variants"]
-                        ["discordant-missing" "Missing variants"]
-                        ["phasing" "Variants with phasing errors"]]]
-         [:li [:a {:href (format "/scorefile/%s/%s" run-id key)} txt]])]])))
+  (hiccup/html
+   [:h3 "Summary"]
+   [:div {:id "score-table"}
+    (html-summary-table comparisons)]
+   [:h3 "Variant files in VCF format"]
+   [:div {:id "variant-file-download"}
+    [:ul
+     (for [[key txt] [["concordant" "Concordant variants"]
+                      ["discordant" "Discordant variants"]
+                      ["discordant-missing" "Missing variants"]
+                      ["phasing" "Variants with phasing errors"]]]
+       [:li [:a {:href (format "/scorefile/%s/%s" run-id key)} txt]])]]))
 
 (defn scoring-html
   "Update main page HTML with content for scoring."
   [run-id]
   (let [html-dir (get-in @web-config [:dir :html-root])
-        template-dir (get-in @web-config [:dir :template])]
+        template-dir (str (fs/file html-dir "template"))]
     (apply str (html/emit*
                 (html/transform (html/html-resource (fs/file html-dir "index.html"))
                                 [:div#main-content]
                                 (hiccup-to-enlive
                                  (hiccup/html
-                                  [:div
-                                   [:div {:id "scoring-summary"} "Downloading input files"]
+                                  [:div {:id "scoring-in-process"}
+                                   [:h3 "Status"]
+                                   [:div {:id "scoring-status"} "Downloading input files"]
+                                   (slurp (fs/file template-dir "scoring.html"))
                                    [:script {:src "js/score.js"}]
                                    [:script (format "bcbio.variation.score.update_run_status('%s');"
                                                     run-id)]])))))))

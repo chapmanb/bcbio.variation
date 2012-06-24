@@ -20,6 +20,7 @@
       }
     </style>
     <link href="css/bootstrap-responsive.css" rel="stylesheet">
+    <link href="css/variation-web.css" rel="stylesheet">
     <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
     <script src="js/bootstrap.js"></script>
     <script src="js/chosen.jquery.min.js"></script>
@@ -48,10 +49,12 @@
       </div>
     </div>
 
-    <div id="main-content" class="container">
-      <form class="form-horizontal" method="post" enctype="multipart/form-data" action="/score">
+    <div class="container">
+      <div id="main-content">
+      <form class="form-horizontal" method="post"
+            enctype="multipart/form-data" action="/score">
         <fieldset>
-        <legend>Submit variation file for scoring</legend>
+        <h3>Submit variation file for scoring</h3>
         <div class="control-group">
           <label class="control-label" for="upload-method">Upload method</label>
           <div class="controls">
@@ -92,13 +95,65 @@
           </div>
         </div>
         <div class="form-actions">
-          <button type="submit" class="btn">Score</button>
+          <button type="submit" class="btn btn-primary">Score</button>
           <p class="help-block">To see example output, click without uploading any files.</p>
         </div>
         </fieldset>
         <input class="hidden" id="gs-region-file" name="gs-region-file"></input>
         <input class="hidden" id="gs-variant-file" name="gs-variant-file"></input>
       </form>
+        <div class="row">
+          <div class="span6">
+            <h3>Instructions</h3>
+            <p>
+              Welcome to the genome scoring page for the
+              <a href="http://genomics.xprize.org/">
+                Archon Genomics XPrize presented by Express Scripts</a>.
+              Follow this
+              <a href="http://www.youtube.com/watch?v=hQquq5Yos0Y">
+                how-to video</a>
+              and submit your sequences for scoring in 3 simple steps:
+            </p>
+              <ol>
+                <li>Upload your variant file, and optionally a BED
+                  file of regions to score, to
+                  <a href="http://www.genomespace.org/">GenomeSpace</a>.
+                <li>Login with your GenomeSpace username and password
+                  and select the uploaded files.
+                <li>Click Score and wait for your evaluation score.
+              </ol>
+          </div>
+          <div class="span6">
+            <h3>Documentation</h3>
+            <p>
+              The scoring process uploads detailed results files
+              and results to your GenomeSpace folder, giving you full
+              access to correctly and incorrectly scored variants.
+              Using GenomeSpace, you can easily import your files into
+              external tools like
+              <a href="http://galaxy.psu.edu/">Galaxy</a> for further analysis.
+            </p>
+            <p>
+              For more information on the validation protocol implemented
+              to generate the software and data found on this website,
+              please visit the
+              <a href="https://edgebio.atlassian.net/wiki/display/AGXPPUB/Home">
+                Validation Protocol Information Center</a>.
+            </p>
+          </div>
+        </div>
+      </div>
+      <footer class="footer">
+      <p>
+      <a href="http://genomics.xprize.org/">Archon Genomics XPrize presented by Express Scripts</a>
+      |
+      <a href="http://www.edgebio.com/">EdgeBio</a>
+      |
+      <a href="http://compbio.sph.harvard.edu/chb/">Harvard School of Public Health</a>
+      |
+      <a href="http://www.ncsa.illinois.edu/">NCSA</a>
+      </p>
+      </footer>
     </div> <!-- /container -->
     <script>bcbio.variation.score.upload_generalize();</script>
     <script>bcbio.variation.login.handle_login();</script>
