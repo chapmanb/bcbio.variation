@@ -65,7 +65,7 @@
         (fsm/state :filter
                    (fsm/valid-transitions :compare))
         (fsm/state :compare
-                   (fsm/valid-transitions :compare :finalize :summary :clean))
+                   (fsm/valid-transitions :compare :finalize :summary :clean :finished))
         (fsm/state :finalize
                    (fsm/valid-transitions :finalize :compare :summary :clean))
         (fsm/state :summary
