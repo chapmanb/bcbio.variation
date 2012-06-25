@@ -43,7 +43,6 @@
   Handles reference no-variant padding bases on the 5' end of
   the sequence, writing only variants at the adjusted positions."
   [vc alleles]
-  ;(println (:start vc) alleles)
   (letfn [(mnp-ref-padding [ref-allele vc]
             {:post [(>= % 0)]}
             (- (inc (- (:end vc) (:start vc)))
@@ -101,7 +100,6 @@
    `allele-info` specifies the location size and alleles for the new variant:
    `{:offset :size :ref-allele :alleles}`"
   [vc i allele-info]
-  ;(println i allele-info)
   (let [pos (+ (:offset allele-info) (.getStart vc))]
     (-> (VariantContextBuilder. vc)
         (.start pos)

@@ -293,7 +293,8 @@
   "Clean VCF file which GATK parsers cannot handle due to illegal characters.
   Fixes:
     - Gap characters (-) found in REF or ALT indels.
-    - Filter out call with extra N padding on 5' side of indels."
+    - Filter out call with extra N padding on 5' side of indels.
+    - Removes spaces in INFO fields."
   [in-vcf-file & {:keys [out-dir]}]
   (letfn [(fix-bad-alt-header [x]
             (str "##ALT=<ID" (string/replace-first x "##ALT=Type" "") ">"))
@@ -310,12 +311,16 @@
               (and (= ref "N") (.startsWith alt "N") (> (count alt) 1))))
           (remove-5pad-n [xs]
             (if (is-5pad-n? xs) [] xs))
+          (fix-info-spaces [xs]
+            (assoc xs 7
+                   (string/replace (nth xs 7) " " "_")))
           (clean-line [line]
             (if (.startsWith line "#")
               (clean-header line)
               (->> (string/split line #"\t")
                    (remove-gap 3)
                    (remove-gap 4)
+                   (fix-info-spaces)
                    (remove-5pad-n)
                    (string/join "\t"))))]
     (let [out-file (itx/add-file-part in-vcf-file "preclean" out-dir)]
