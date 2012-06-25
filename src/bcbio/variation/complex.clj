@@ -3,11 +3,15 @@
    polymorphisms and indels."
   (:import [org.broadinstitute.sting.utils.variantcontext Allele
             VariantContextBuilder GenotypesContext Genotype
-            VariantContextUtils])
+            VariantContextUtils]
+           [org.biojava3.core.sequence DNASequence]
+           [org.biojava3.alignment Alignments])
   (:use [clojure.set :only [union]]
+        [ordered.set :only [ordered-set]]
         [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template
                                                get-vcf-source]])
-  (:require [bcbio.run.itx :as itx]))
+  (:require [clojure.string :as string]
+            [bcbio.run.itx :as itx]))
 
 ;; ## Multi-nucleotide polymorphisms (MNPs)
 ;; Split into single variant primitives.
@@ -18,36 +22,64 @@
   (> (count (set (map #(nth % i nil) alleles)))
      1))
 
+(defn- get-vc-alleles [vc]
+  (map #(.getBaseString %) (cons (:ref-allele vc) (:alt-alleles vc))))
+
 (defn is-multi-indel?
   "Identify complex indels that can be split into multiple calls."
   [vc]
-  (and (= "INDEL" (:type vc))
-       (and (> (.length (:ref-allele vc)) 1)
-            (> (apply max (map #(.length %) (:alt-alleles vc))) 1))))
+  (letfn [(monomorphic-alleles? [vc]
+            (= 1 (->> (get-vc-alleles vc)
+                      (map set)
+                      (apply union)
+                      count)))]
+    (and (= "INDEL" (:type vc))
+         (and (> (.length (:ref-allele vc)) 1)
+              (> (apply max (map #(.length %) (:alt-alleles vc))) 1)
+              (not (monomorphic-alleles? vc))))))
 
 (defn- split-alleles
   "Detect single call SNP variants within a MNP genotype.
   Handles reference no-variant padding bases on the 5' end of
   the sequence, writing only variants at the adjusted positions."
-  [vc genotype]
+  [vc alleles]
+  ;(println (:start vc) alleles)
   (letfn [(mnp-ref-padding [ref-allele vc]
             {:post [(>= % 0)]}
             (- (inc (- (:end vc) (:start vc)))
-               (count ref-allele)))
-          (extract-variants [alleles i ref-pad]
-            (let [ref-allele (nth (first alleles) i)
-                  cur-alleles (map #(Allele/create (str (nth % i))
-                                                   (= ref-allele (nth % i)))
-                                   alleles)]
-              {:offset (+ i ref-pad)
+               (count (string/replace ref-allele "-" ""))))
+          (contains-indel? [alleles i]
+            (contains? (set (map #(str (nth % i)) alleles)) "-"))
+          (is-start-indel? [alleles start pos]
+            (and (= 0 start)
+                 (some empty? (map #(string/replace (subs % start pos) "-" "") alleles))))
+          (extend-indels [alleles i]
+            (if-not (contains-indel? alleles i) 
+              {:start i :end (inc i)}
+              {:start (max (dec i) 0)
+               :end (inc (last (take-while #(or (contains-indel? alleles %) (is-start-indel? alleles i %))
+                                           (range i (count (first alleles))))))}))
+          (extract-variants [alleles pos ref-pad]
+            (let [{:keys [start end]} (extend-indels alleles pos)
+                  str-alleles (map #(-> (str (subs % start end))
+                                        (string/replace "-" ""))
+                                   alleles)
+                  cur-alleles (map-indexed (fn [i x] (Allele/create x (= 0 i)))
+                                           (into (ordered-set) str-alleles))]
+              {:offset (+ start ref-pad)
+               :end end
+               :size (dec (.length (first cur-alleles)))
                :ref-allele (first cur-alleles)
                :alleles (rest cur-alleles)}))]
-    (let [orig-alleles (map #(.getBaseString %) (cons (:ref-allele vc) (:alleles genotype)))
-          ref-pad (mnp-ref-padding (first orig-alleles) vc)]
+    (let [ref-pad (mnp-ref-padding (first alleles) vc)]
       (remove nil?
-              (for [i (-> orig-alleles first count range)]
-                (if (has-variant-base? orig-alleles i)
-                  (extract-variants orig-alleles i ref-pad)))))))
+              (loop [i 0 final []]
+                (cond
+                 (> i (-> alleles first count)) final
+                 (has-variant-base? alleles i)
+                 (let [next-var (extract-variants alleles i ref-pad)]
+                   (recur (:end next-var) (conj final next-var)))
+                 :else (recur (inc i) final)))))))
 
 (defn genotype-w-alleles
   "Retrieve a new genotype with the given alleles.
@@ -69,6 +101,7 @@
    `allele-info` specifies the location size and alleles for the new variant:
    `{:offset :size :ref-allele :alleles}`"
   [vc i allele-info]
+  ;(println i allele-info)
   (let [pos (+ (:offset allele-info) (.getStart vc))]
     (-> (VariantContextBuilder. vc)
         (.start pos)
@@ -81,11 +114,26 @@
   "Split a MNP into individual alleles"
   [vc]
   {:pre [(= 1 (:num-samples vc))]}
-  (let [alleles (split-alleles vc (-> vc :genotypes first))]
+  (let [alleles (split-alleles vc (get-vc-alleles vc))]
     (map (fn [[i x]] (new-split-vc (:vc vc) i x)) (map-indexed vector alleles))))
 
 ;; ## Indels
 ;; Create a normalized representation for comparison.
+
+(defn- multiple-alignment
+  "Perform alignment of input sequences using BioJava."
+  [seqs]
+  (map #(.getSequenceAsString %)
+       (-> (map #(DNASequence. %) seqs)
+           (Alignments/getMultipleSequenceAlignment (to-array []))
+           .getAlignedSequences)))
+
+(defn- split-complex-indel
+  "Split complex indels into individual variant components."
+  [vc]
+  {:pre [(= 1 (:num-samples vc))]}
+  (let [alleles (split-alleles vc (multiple-alignment (get-vc-alleles vc)))]
+    (map (fn [[i x]] (new-split-vc (:vc vc) i x)) (map-indexed vector alleles))))
 
 (defn- maybe-strip-indel
   "Remove extra variant bases, if necessary, from 5' end of indels.
@@ -130,18 +178,21 @@
             (contains? (get blockers (:chr vc) #{}) (:start vc)))
           (add-mnp-info [coll vc]
             (let [prev-check 10000] ;; bp to check upstream for overlaps
-              (if (= "MNP" (:type vc))
+              (if (or (= "MNP" (:type vc)) (is-multi-indel? vc))
                 (assoc coll (:chr vc)
                        (union (set (remove #(< % (- (:start vc) prev-check))
                                            (get coll (:chr vc) #{})))
-                              (set (range (:start vc) (:end vc)))))
+                              (set (range (:start vc)
+                                          (+ (:start vc) (apply max (map count (get-vc-alleles vc))))))))
                 coll)))
           (process-vc [vc blockers]
             (if (overlaps-previous-mnp? vc blockers)
               []
               (condp = (:type vc)
                 "MNP" (split-mnp vc)
-                "INDEL" [(maybe-strip-indel vc)]
+                "INDEL" (if (is-multi-indel? vc)
+                          (split-complex-indel vc)
+                          [(maybe-strip-indel vc)])
                 [(:vc vc)])))
           (add-normalized-vcs [vcs blockers]
             (when (seq vcs)

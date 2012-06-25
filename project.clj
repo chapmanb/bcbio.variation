@@ -5,6 +5,8 @@
                  [org.clojure/data.csv "0.1.2" :exclusions [org.clojure/clojure]]
                  [org.clojars.chapmanb/gatk "1.6.5"]
                  [org.clojars.chapmanb/picard "1.64"]
+                 [org.biojava/biojava3-core "3.0.4"]
+                 [org.biojava/biojava3-alignment "3.0.4"]
                  [clj-genomespace "0.1-SNAPSHOT"]
                  [incanter/incanter-core "1.3.0-SNAPSHOT" :exclusions [org.clojure/clojure]]
                  [incanter/incanter-charts "1.3.0-SNAPSHOT" :exclusions [org.clojure/clojure]]
@@ -32,6 +34,7 @@
                  [com.keminglabs/chosen "0.1.6"]]
   :dev-dependencies [[midje "1.4.0" :exclusions [org.clojure/clojure]]
                      [lein-midje "1.0.10"]]
+  :repositories {"biojava" "http://www.biojava.org/download/maven/"}
   :plugins [[lein-cljsbuild "0.2.1"]
             [lein-marginalia "0.7.1"]]
   :java-source-path "src/java"

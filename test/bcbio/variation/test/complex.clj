@@ -26,17 +26,22 @@
                 :sv-sv1-discordant (str (fs/file data-dir "Test-sv1-sv2-svdiscordance.vcf"))
                 :sv-sv2-discordant (str (fs/file data-dir "Test-sv2-sv1-svdiscordance.vcf"))}
                mnp-vcf (str (fs/file data-dir "freebayes-calls-indels.vcf"))
+               cindel-vcf (str (fs/file data-dir "freebayes-calls-complexindels.vcf"))
+               cindel-out (itx/add-file-part cindel-vcf "nomnp")
                indel-vcf1 (str (fs/file data-dir "sv-indels-fb.vcf"))
                indel-vcf2 (str (fs/file data-dir "sv-indels-gatk.vcf"))
                indel-out (str (fs/file data-dir "Test-svindfb-svindgatk-svconcordance.vcf"))
                nomnp-out (itx/add-file-part mnp-vcf "nomnp")
                params {:min-indel 100}]
-           (doseq [x (concat [nomnp-out indel-out] (vals sv-out) (vals sv-out2))]
+           (doseq [x (concat [nomnp-out indel-out cindel-out] (vals sv-out) (vals sv-out2))]
              (itx/remove-path x))
            ?form)))
 
 (facts "Deal with multi-nucleotide polymorphisms"
   (normalize-variants mnp-vcf ref) => nomnp-out)
+
+(facts "Split complex indels into individual components"
+  (normalize-variants cindel-vcf ref) => cindel-out)
 
 (facts "Parse structural variations"
   (let [vcf-list (parse-vcf-sv sv-vcf2 ref)
