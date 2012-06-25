@@ -45,7 +45,7 @@
    :end (.getEnd vc)
    :id (when (.hasID vc) (.getID vc))
    :ref-allele (.getReference vc)
-   :alt-alleles (.getAlternateAlleles vc)
+   :alt-alleles (vec (.getAlternateAlleles vc))
    :type (-> vc .getType .name)
    :filters (set (.getFilters vc))
    :attributes (into {} (.getAttributes vc))
@@ -129,6 +129,14 @@
           (.add (get writer-map fkey) item))
         (doseq [x (vals writer-map)]
           (.close x))))))
+
+(defn write-vcf-from-filter
+  "Write VCF file from input using a filter function."
+  [vcf ref out-part passes?]
+  (with-open [source (get-vcf-source vcf ref)]
+    (write-vcf-w-template vcf {:out (itx/add-file-part vcf out-part)}
+                          (map :vc (filter passes? (parse-vcf source)))
+                          ref)))
 
 (defn -main [vcf ref approach]
   (with-open [vcf-s (get-vcf-source vcf ref)]

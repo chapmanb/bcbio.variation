@@ -18,6 +18,13 @@
   (> (count (set (map #(nth % i nil) alleles)))
      1))
 
+(defn is-multi-indel?
+  "Identify complex indels that can be split into multiple calls."
+  [vc]
+  (and (= "INDEL" (:type vc))
+       (and (> (.length (:ref-allele vc)) 1)
+            (> (apply max (map #(.length %) (:alt-alleles vc))) 1))))
+
 (defn- split-alleles
   "Detect single call SNP variants within a MNP genotype.
   Handles reference no-variant padding bases on the 5' end of
