@@ -126,11 +126,31 @@
            (Alignments/getMultipleSequenceAlignment (to-array []))
            .getAlignedSequences)))
 
+(defn- fix-ref-alignment-gaps
+  "Ensure reference alignment gaps have consistent GAP schemes."
+  [alleles]
+  (letfn [(has-5-gaps? [x] (.startsWith x "-"))
+          (has-3-gaps? [x] (.endsWith x "-"))
+          (has-internal-gaps? [x] (and (> (count x) 2)
+                                       (.contains (subs x 1 (dec (count x))) "-")))
+          (make-3-gap-only [x]
+            (let [nogap-x (string/replace x "-" "")]
+              (string/join "" (cons nogap-x
+                                    (repeat (- (count x) (count nogap-x)) "-")))))]
+    (let [ref-allele (first alleles)]
+      (cons (if (or (has-internal-gaps? ref-allele)
+                    (and (has-5-gaps? ref-allele) (has-3-gaps? (second alleles))))
+              (make-3-gap-only ref-allele)
+              ref-allele)
+            (map #(if (has-internal-gaps? %) (make-3-gap-only %) %) (rest alleles))))))
+
 (defn- split-complex-indel
   "Split complex indels into individual variant components."
   [vc]
   {:pre [(= 1 (:num-samples vc))]}
-  (let [alleles (split-alleles vc (multiple-alignment (get-vc-alleles vc)))]
+  (let [alleles (split-alleles vc (-> (get-vc-alleles vc)
+                                      multiple-alignment
+                                      fix-ref-alignment-gaps))]
     (map (fn [[i x]] (new-split-vc (:vc vc) i x)) (map-indexed vector alleles))))
 
 (defn- maybe-strip-indel
