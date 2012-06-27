@@ -50,6 +50,7 @@
                 :background bcbio.variation.utils.background
                 :popfreq bcbio.variation.utils.popfreq
                 :summarize bcbio.variation.utils.summarize
+                :recall bcbio.variation.recall
                 :reorder bcbio.align.reorder
                 :vctest bcbio.variation.variantcontext}
   :cljsbuild {:builds

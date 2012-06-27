@@ -13,7 +13,7 @@
         [bcbio.variation.metrics]
         [bcbio.variation.multiple]
         [bcbio.variation.report]
-        [bcbio.variation.recall]
+        [bcbio.variation.recall :exclude [-main]]
         [bcbio.variation.variantcontext :exclude [-main]])
   (:require [fs.core :as fs]
             [bcbio.run.itx :as itx]))

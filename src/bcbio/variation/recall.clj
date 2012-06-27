@@ -11,6 +11,7 @@
   (:use [bcbio.variation.annotation :only [std-annotations]]
         [bcbio.variation.callable :only [get-callable-checker is-callable?]]
         [bcbio.variation.combine :only [combine-variants]]
+        [bcbio.variation.config :only [load-config]]
         [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template get-vcf-source]])
   (:require [fs.core :as fs]
             [bcbio.run.itx :as itx]
@@ -121,3 +122,10 @@
           (write-vcf-w-template in-vcf {:out out-file}
                                 (convert-vcs in-vcf-s call-source) ref)))
       out-file)))
+
+(defn -main [config-file]
+  (let [config (load-config config-file)]
+    (doseq [exp (config :experiments)]
+      (doseq [call (exp :calls)]
+        (recall-nocalls (:file call) (:sample call) (:align call)
+                        (:ref exp) :out-dir (get-in config [:dir :out]))))))
