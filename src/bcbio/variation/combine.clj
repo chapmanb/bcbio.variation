@@ -6,15 +6,12 @@
       a. Generate callability at each position
       b. Combine original calls with merged positions
       c. Walk through each no-call and set as reference if callable"
-  (:import [org.broadinstitute.sting.utils.variantcontext
-            Genotype VariantContextBuilder GenotypesContext])
-  (:use [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template get-vcf-source
-                                               get-vcf-header]]
-        [bcbio.variation.callable :only [get-callable-checker is-callable?]]
-        [bcbio.variation.complex :only [normalize-variants]]
+  (:use [bcbio.variation.complex :only [normalize-variants]]
         [bcbio.variation.haploid :only [diploid-calls-to-haploid]]
         [bcbio.variation.normalize :only [prep-vcf clean-problem-vcf]]
-        [bcbio.variation.phasing :only [is-haploid?]])
+        [bcbio.variation.phasing :only [is-haploid?]]
+        [bcbio.variation.recall :only [convert-no-calls]]
+        [bcbio.variation.variantcontext :only [get-vcf-header]])
   (:require [fs.core :as fs]
             [clojure.string :as string]
             [bcbio.run.itx :as itx]
@@ -62,41 +59,6 @@
       (broad/run-gatk "CombineVariants" args file-info {:out [:out-vcf]})
       (:out-vcf file-info))))
 
-(defn convert-no-calls
-  "Convert no-calls into callable reference and real no-calls."
-  [in-vcf align-bam ref & {:keys [out-dir intervals num-alleles]}]
-  (letfn [(ref-genotype [g vc]
-            (doto (-> vc :vc .getGenotypes GenotypesContext/copy)
-              (.replace
-               (Genotype/modifyAlleles (:genotype g)
-                                       (repeat (if (nil? num-alleles)
-                                                 (count (:alleles g))
-                                                 num-alleles)
-                                               (:ref-allele vc))))))
-          (maybe-callable-vc [vc call-source]
-            {:pre (= 1 (:num-samples vc))}
-            (let [g (-> vc :genotypes first)]
-              (if (.isNoCall (-> g :alleles first))
-                (if (is-callable? call-source (:chr vc) (:start vc) (:end vc))
-                  (-> (VariantContextBuilder. (:vc vc))
-                      (.genotypes (ref-genotype g vc))
-                      (.make))
-                  (-> (VariantContextBuilder. (:vc vc))
-                      (.filters #{"NotCallable"})
-                      (.make)))
-                (:vc vc))))
-          (convert-vcs [vcf-source call-source]
-            (for [vc (parse-vcf vcf-source)]
-              [:out (maybe-callable-vc vc call-source)]))]
-    (let [out-file (itx/add-file-part in-vcf "wrefs")]
-      (when (itx/needs-run? out-file)
-        (with-open [in-vcf-s (get-vcf-source in-vcf ref)
-                    call-source (get-callable-checker align-bam ref :out-dir out-dir
-                                                      :intervals intervals)]
-          (write-vcf-w-template in-vcf {:out out-file}
-                                (convert-vcs in-vcf-s call-source) ref)))
-      out-file)))
-
 (defn multiple-samples?
   "Check if the input VCF file has multiple genotyped samples."
   [in-file & {:keys [sample]}]
@@ -112,9 +74,7 @@
             (let [do-match (filter #(when (.contains % x) %) choices)]
               (when (= 1 (count do-match))
                 (first do-match))))]
-    (let [vcf-samples (with-open [vcf-source (get-vcf-source in-vcf ref-file
-                                                             :ensure-safe false)]
-                        (-> vcf-source .getHeader .getGenotypeSamples set))]
+    (let [vcf-samples (-> in-vcf get-vcf-header .getGenotypeSamples set)]
       (if (contains? vcf-samples sample)
         sample
         (sample-match sample vcf-samples)))))
