@@ -78,8 +78,6 @@
   (get (concordance-report-metrics sample compare-out)
        :percent_non_reference_sensitivity) => "88.89")
 
-;.;. Happiness comes when you believe that you have done something truly
-;.;. meaningful. -- Yan
 (facts "Create merged VCF files for comparison"
   (let [config {:refcalls true :name "Test1"}]
     (create-merged [vcf1 vcf2] [align-bam align-bam] [config config] ref)) => combine-out)

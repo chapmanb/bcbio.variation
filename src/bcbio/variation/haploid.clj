@@ -43,22 +43,23 @@
   "Convert diploid allele to haploid variant."
   [vc]
   {:pre (= 1 (:num-samples vc))}
-  (when-let [genotype (get-haploid-genotype vc)]
-    (-> (VariantContextBuilder. (:vc vc))
-        (.genotypes genotype)
-        (.make))))
+  (if-let [genotype (get-haploid-genotype vc)]
+    [:haploid (-> (VariantContextBuilder. (:vc vc))
+                  (.genotypes genotype)
+                  (.make))]
+    [:unchanged (:vc vc)]))
 
 (defn diploid-calls-to-haploid
   "Convert set of diploid GATK calls on a haploid genome based on likelihoods."
   [vcf ref & {:keys [out-dir]}]
-  (let [out-files {:out (itx/add-file-part vcf "haploid" out-dir)}]
+  (let [out-files {:haploid (itx/add-file-part vcf "haploid" out-dir)
+                   :unchanged (itx/add-file-part vcf "nonhaploid" out-dir)}]
     (when (itx/needs-run? (vals out-files))
       (with-open [vcf-source (get-vcf-source vcf ref)]
         (write-vcf-w-template vcf out-files
-                              (remove nil?
-                                      (map convert-to-haploid (parse-vcf vcf-source)))
+                              (map convert-to-haploid (parse-vcf vcf-source))
                               ref)))
-    (:out out-files)))
+    (:haploid out-files)))
 
 (defn -main
   [vcf ref]
