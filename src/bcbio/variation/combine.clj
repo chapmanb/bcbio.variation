@@ -10,7 +10,6 @@
         [bcbio.variation.haploid :only [diploid-calls-to-haploid]]
         [bcbio.variation.normalize :only [prep-vcf clean-problem-vcf]]
         [bcbio.variation.phasing :only [is-haploid?]]
-        [bcbio.variation.recall :only [convert-no-calls]]
         [bcbio.variation.variantcontext :only [get-vcf-header]])
   (:require [fs.core :as fs]
             [clojure.string :as string]
@@ -97,21 +96,6 @@
       (fs/mkdirs base-dir))
     (broad/run-gatk "SelectVariants" args file-info {:out [:out-vcf]})
     (:out-vcf file-info)))
-
-(defn create-merged
-  "Create merged VCF files with no-call/ref-calls for each of the inputs."
-  [vcfs align-bams do-merges ref & {:keys [out-dir intervals]}]
-  (letfn [(merge-vcf [vcf all-vcf align-bam ref]
-            (let [ready-vcf (combine-variants [vcf all-vcf] ref
-                                              :merge-type :full :intervals intervals
-                                              :out-dir out-dir :check-ploidy? false)
-                  num-alleles (when (is-haploid? vcf ref) 1)]
-              (convert-no-calls ready-vcf align-bam ref :out-dir out-dir
-                                :intervals intervals :num-alleles num-alleles)))]
-    (let [merged (combine-variants vcfs ref :merge-type :minimal :intervals intervals
-                                   :out-dir out-dir :check-ploidy? false)]
-      (map (fn [[v b merge?]] (if merge? (merge-vcf v merged b ref) v))
-           (map vector vcfs align-bams do-merges)))))
 
 (defn- genome-safe-intervals
   "Check if interval BED files overlap with current analysis genome build.

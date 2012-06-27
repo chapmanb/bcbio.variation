@@ -14,8 +14,7 @@
         [bcbio.align.reorder :only [reorder-bam]]
         [bcbio.variation.annotation :only [add-variant-annotations]]
         [bcbio.variation.callable :only [get-callable-bed]]
-        [bcbio.variation.combine :only [combine-variants create-merged
-                                        gatk-normalize]]
+        [bcbio.variation.combine :only [combine-variants gatk-normalize]]
         [bcbio.variation.config :only [load-config do-transition]]
         [bcbio.variation.evaluate :only [calc-variant-eval-metrics]]
         [bcbio.variation.filter :only [variant-filter pipeline-recalibration]]
@@ -28,6 +27,7 @@
                                        top-level-metrics
                                        write-classification-metrics
                                        write-sv-metrics]]
+        [bcbio.variation.recall :only [create-merged]]
         [bcbio.variation.structural :only [compare-sv-pipeline]]
         [bcbio.variation.validate :only [pipeline-validate]]
         [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template
@@ -125,9 +125,7 @@
         start-vcfs (vec (map #(gatk-normalize % exp all-intervals out-dir transition)
                              (:calls exp)))
         _ (transition :combine "Creating merged VCF files for all comparisons")
-        merged-vcfs (create-merged (map :file start-vcfs)
-                                   align-bams
-                                   (map #(get % :refcalls false) (:calls exp))
+        merged-vcfs (create-merged (map :file start-vcfs) align-bams (:calls exp)
                                    (:ref exp) :out-dir out-dir
                                    :intervals all-intervals)
         _ (transition :annotate "Annotate VCFs with metrics")

@@ -13,6 +13,7 @@
         [bcbio.variation.metrics]
         [bcbio.variation.multiple]
         [bcbio.variation.report]
+        [bcbio.variation.recall]
         [bcbio.variation.variantcontext :exclude [-main]])
   (:require [fs.core :as fs]
             [bcbio.run.itx :as itx]))
@@ -35,11 +36,17 @@
                out-sum-compare (str (itx/file-root vcf1) "-summary.eval")
                filter-out (itx/add-file-part vcf1 "filter")
                nofilter-out (itx/add-file-part filter-out "nofilter")
-               combine-out [(itx/add-file-part vcf1 "fullcombine-wrefs")
-                            (itx/add-file-part vcf2 "fullcombine-wrefs")]
+               combine-out [(itx/add-file-part vcf1 "fullcombine-Test1-wrefs")
+                            (itx/add-file-part vcf2 "fullcombine-Test1-wrefs")]
                combine-out-xtra [(itx/add-file-part vcf1 "mincombine")
                                  (itx/add-file-part vcf1 "fullcombine")
-                                 (itx/add-file-part vcf2 "fullcombine")]
+                                 (itx/add-file-part vcf1 "fullcombine-Test1-called")
+                                 (itx/add-file-part vcf1 "fullcombine-Test1-nocall")
+                                 (itx/add-file-part vcf1 "fullcombine-Test1-nocall-wrefs")
+                                 (itx/add-file-part vcf2 "fullcombine")
+                                 (itx/add-file-part vcf2 "fullcombine-Test1-called")
+                                 (itx/add-file-part vcf2 "fullcombine-Test1-nocall")
+                                 (itx/add-file-part vcf2 "fullcombine-Test1-nocall-wrefs")]
                match-out {:concordant (itx/add-file-part combo-out "concordant")
                           :discordant (itx/add-file-part combo-out "discordant")}
                select-out (doall (map #(str (fs/file data-dir (format "%s-%s.vcf" sample %)))
@@ -53,7 +60,9 @@
            (doseq [x (concat [combo-out compare-out annotated-out filter-out nofilter-out
                               out-sum-compare out-intervals]
                              out-callable combine-out combine-out-xtra (vals match-out) select-out)]
-             (itx/remove-path x))
+             (itx/remove-path x)
+             (when (.endsWith x ".vcf")
+               (itx/remove-path (str x ".idx"))))
            ?form)))
 
 (facts "Variant manipulation with GATK: selection, combination and annotation."
@@ -69,8 +78,11 @@
   (get (concordance-report-metrics sample compare-out)
        :percent_non_reference_sensitivity) => "88.89")
 
+;.;. Happiness comes when you believe that you have done something truly
+;.;. meaningful. -- Yan
 (facts "Create merged VCF files for comparison"
-  (create-merged [vcf1 vcf2] [align-bam align-bam] [true true] ref) => combine-out)
+  (let [config {:refcalls true :name "Test1"}]
+    (create-merged [vcf1 vcf2] [align-bam align-bam] [config config] ref)) => combine-out)
 
 (facts "Filter variant calls avoiding false positives."
   (variant-filter vcf1 ["QD < 2.0" "MQ < 40.0"] ref) => filter-out
