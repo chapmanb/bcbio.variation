@@ -7,8 +7,10 @@
     - Merge previously called and re-called into final set.
   http://www.broadinstitute.org/gsa/wiki/index.php/Merging_batched_call_sets"
   (:import [org.broadinstitute.sting.utils.variantcontext
-            Genotype VariantContextBuilder GenotypesContext])
-  (:use [bcbio.variation.annotation :only [std-annotations]]
+            Genotype VariantContextBuilder GenotypesContext]
+           [org.broadinstitute.sting.utils.codecs.vcf VCFHeader])
+  (:use [ordered.set :only [ordered-set]]
+        [bcbio.variation.annotation :only [std-annotations]]
         [bcbio.variation.callable :only [get-callable-checker is-callable?]]
         [bcbio.variation.combine :only [combine-variants]]
         [bcbio.variation.config :only [load-config]]
@@ -29,14 +31,17 @@
             (when (empty? (:filters vc))
               (let [cur-vc (sample-only-vc (:vc vc))]
                 [(if (.isNoCall (-> cur-vc .getGenotypes (.get sample))) :nocall :called)
-                 cur-vc])))]
+                 cur-vc])))
+          (set-header-to-sample [sample header]
+            (VCFHeader. (.getMetaData header) (ordered-set sample)))]
     (let [out {:called (itx/add-file-part in-vcf (str sample "-called") out-dir)
                :nocall (itx/add-file-part in-vcf (str sample "-nocall") out-dir)}]
       (when (itx/needs-run? (vals out))
         (with-open [in-vcf-s (get-vcf-source in-vcf ref)]
           (write-vcf-w-template in-vcf out
                                 (remove nil? (map split-nocall-vc (parse-vcf in-vcf-s)))
-                                ref)))
+                                ref
+                                :header-update-fn (partial set-header-to-sample sample))))
       out)))
 
 (defn call-at-known-alleles
@@ -47,6 +52,7 @@
                       "-o" :out-vcf
                       "-I" align-bam
                       "--alleles" site-vcf
+                      "-L" site-vcf
                       "--genotyping_mode" "GENOTYPE_GIVEN_ALLELES"
                       "--output_mode" "EMIT_ALL_SITES"
                       "-stand_call_conf" "0.0"
@@ -127,5 +133,5 @@
   (let [config (load-config config-file)]
     (doseq [exp (config :experiments)]
       (doseq [call (exp :calls)]
-        (recall-nocalls (:file call) (:sample call) (:align call)
+        (recall-nocalls (:file call) (:name call) (:align call)
                         (:ref exp) :out-dir (get-in config [:dir :out]))))))
