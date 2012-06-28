@@ -69,7 +69,7 @@
       (let [{:keys [called nocall]} (split-nocalls in-vcf sample ref out-dir)
             ready-nocall (call-at-known-alleles nocall align-bam ref)]
         (fs/rename
-         (combine-variants [called ready-nocall] ref :merge-type :full)
+         (combine-variants [called ready-nocall] ref :merge-type :full :quiet-out? true)
          out-file)))
     out-file))
 
@@ -130,8 +130,12 @@
       out-file)))
 
 (defn -main [config-file]
-  (let [config (load-config config-file)]
-    (doseq [exp (config :experiments)]
-      (doseq [call (exp :calls)]
-        (recall-nocalls (:file call) (:name call) (:align call)
-                        (:ref exp) :out-dir (get-in config [:dir :out]))))))
+  (let [config (load-config config-file)
+        recall-vcfs (pmap (fn [[exp call]]
+                            (recall-nocalls (:file call) (:name call) (:align call)
+                                            (:ref exp) :out-dir (get-in config [:dir :out])))
+                          (apply concat
+                                 (for [exp (:experiments config)]
+                                   (for [call (:calls exp)]
+                                     [exp call]))))]
+    (println recall-vcfs)))

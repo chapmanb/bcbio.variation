@@ -3,7 +3,7 @@
   :dependencies [[org.clojure/clojure "1.4.0"]
                  [org.clojure/math.combinatorics "0.0.2" :exclusions [org.clojure/clojure]]
                  [org.clojure/data.csv "0.1.2" :exclusions [org.clojure/clojure]]
-                 [org.clojars.chapmanb/gatk "1.6.5"]
+                 [org.clojars.chapmanb/gatk "1.6.13"]
                  [org.clojars.chapmanb/picard "1.64"]
                  [org.biojava/biojava3-core "3.0.4"]
                  [org.biojava/biojava3-alignment "3.0.4"]
