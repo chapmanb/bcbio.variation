@@ -228,7 +228,7 @@
   [sample config]
   (letfn [(clean-metadata [header]
             (apply ordered-set (remove #(= "contig" (.getKey %)) (.getMetaData header))))]
-    (fn [header]
+    (fn [_ header]
       (case (count (.getGenotypeSamples header))
         1 (VCFHeader. (clean-metadata header) (ordered-set sample))
         0 (if (:sv-genotype config)

@@ -148,7 +148,7 @@
 (defn- add-cfilter-header
   "Add details on the filtering to the VCF file header."
   [attrs]
-  (fn [header]
+  (fn [_ header]
     (let [desc (str "Classification score based on true/false positives for: "
                     (string/join ", " attrs))
           new #{(VCFInfoHeaderLine. "CSCORE" 1 VCFHeaderLineType/Float desc)

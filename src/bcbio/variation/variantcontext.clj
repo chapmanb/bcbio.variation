@@ -121,9 +121,9 @@
       (let [tmpl-header (get-vcf-header tmpl-file)
             writer-map (zipmap (keys tx-out-files)
                                (map #(make-vcf-writer % ref) (vals tx-out-files)))]
-        (doseq [out-vcf (vals writer-map)]
+        (doseq [[key out-vcf] writer-map]
           (.writeHeader out-vcf (if-not (nil? header-update-fn)
-                                  (header-update-fn tmpl-header)
+                                  (header-update-fn key tmpl-header)
                                   tmpl-header)))
         (doseq [[fkey item] (map convert-to-output vc-iter)]
           (.add (get writer-map fkey) item))

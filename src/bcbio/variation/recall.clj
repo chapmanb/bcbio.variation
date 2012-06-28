@@ -12,9 +12,10 @@
   (:use [ordered.set :only [ordered-set]]
         [bcbio.variation.annotation :only [std-annotations]]
         [bcbio.variation.callable :only [get-callable-checker is-callable?]]
-        [bcbio.variation.combine :only [combine-variants]]
+        [bcbio.variation.combine :only [combine-variants multiple-samples?]]
         [bcbio.variation.config :only [load-config]]
-        [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template get-vcf-source]])
+        [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template get-vcf-source
+                                               get-vcf-header]])
   (:require [fs.core :as fs]
             [bcbio.run.itx :as itx]
             [bcbio.run.broad :as broad]))
@@ -32,7 +33,7 @@
               (let [cur-vc (sample-only-vc (:vc vc))]
                 [(if (.isNoCall (-> cur-vc .getGenotypes (.get sample))) :nocall :called)
                  cur-vc])))
-          (set-header-to-sample [sample header]
+          (set-header-to-sample [sample _ header]
             (VCFHeader. (.getMetaData header) (ordered-set sample)))]
     (let [out {:called (itx/add-file-part in-vcf (str sample "-called") out-dir)
                :nocall (itx/add-file-part in-vcf (str sample "-nocall") out-dir)}]
@@ -92,6 +93,41 @@
                v))
            (map vector vcfs align-bams vcf-configs)))))
 
+(defn split-vcf-to-samples
+  "Create individual sample variant files from input VCF."
+  [vcf-file ref-file & {:keys [out-dir]}]
+  (letfn [(get-one-sample-vcs [vc]
+            (map #(-> (VariantContextBuilder. (:vc vc))
+                      (.genotypes (GenotypesContext/create (into-array [%])))
+                      .make)
+                 (:genotypes vc)))
+          (set-header-to-sample [sample header]
+            (VCFHeader. (.getMetaData header) (ordered-set sample)))]
+    (let [out-files (reduce (fn [coll x]
+                              (assoc x (itx/add-file-part vcf-file x out-dir)))
+                            {}  (-> vcf-file get-vcf-header .getGenotypeSamples))]
+      (when (itx/needs-run? (vals out-files))
+        (with-open [vcf-source (get-vcf-source vcf-file ref-file)]
+          (write-vcf-w-template vcf-file out-files
+                                (flatten (map get-one-sample-vcs (parse-vcf vcf-source)))
+                                ref
+                                :header-update-fn set-header-to-sample)))
+      out-files)))
+
+(defn- split-config-multi
+  "Split multiple sample inputs into individual samples before processing.
+  This helps reduce the load on selecting from huge multi-sample files.
+  Returns a list of configured calls with multi-samples set to individually
+  separated input files."
+  [calls ref out-dir]
+  (vals
+   (reduce (fn [coll vcf]
+             (reduce (fn [inner-coll [sample split-vcf]]
+                       (assoc-in inner-coll [sample :file] split-vcf))
+                     coll (split-vcf-to-samples vcf ref :out-dir out-dir)))
+           (into ordered-set (map (fn [x] [(:name x) x]) calls))
+           (filter multiple-samples? (set (map :file calls))))))
+
 (defn convert-no-calls-w-callability
   "Convert no-calls into callable reference and real no-calls.
   Older functionality to re-call as reference when region is callable.
@@ -131,11 +167,12 @@
 
 (defn -main [config-file]
   (let [config (load-config config-file)
+        out-dir (get-in config [:dir :out])
         recall-vcfs (pmap (fn [[exp call]]
                             (recall-nocalls (:file call) (:name call) (:align call)
-                                            (:ref exp) :out-dir (get-in config [:dir :out])))
+                                            (:ref exp) :out-dir out-dir))
                           (apply concat
                                  (for [exp (:experiments config)]
-                                   (for [call (:calls exp)]
+                                   (for [call (split-config-multi (:calls exp) (:ref exp) out-dir)]
                                      [exp call]))))]
     (println recall-vcfs)))

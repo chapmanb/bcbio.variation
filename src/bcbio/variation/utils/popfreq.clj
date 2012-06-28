@@ -57,7 +57,7 @@
             (contains? (set (map #(when (= "INFO" (.getKey %))
                                     (.getID %)) (.getMetaData header)))
                        test-id))]
-    (fn [header]
+    (fn [_ header]
       (let [new (->> new-ids
                      (remove #(header-has-id? header (:new-id %)))
                      (map #(VCFInfoHeaderLine. (:new-id %) 1

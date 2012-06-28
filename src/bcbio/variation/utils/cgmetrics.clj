@@ -57,7 +57,7 @@
 
 (defn- add-cgmetrics-header
   "Add CG metrics definitions to the VCF input header."
-  [header]
+  [_ header]
   (let [new #{(VCFInfoHeaderLine. "DPCALL" 1
                                   VCFHeaderLineType/Integer "Total depth used for calls")
               (VCFInfoHeaderLine. "QUALEAF" 1
