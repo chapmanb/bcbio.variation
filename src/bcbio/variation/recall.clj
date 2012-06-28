@@ -9,7 +9,8 @@
   (:import [org.broadinstitute.sting.utils.variantcontext
             Genotype VariantContextBuilder GenotypesContext]
            [org.broadinstitute.sting.utils.codecs.vcf VCFHeader])
-  (:use [ordered.set :only [ordered-set]]
+  (:use [ordered.map :only [ordered-map]]
+        [ordered.set :only [ordered-set]]
         [bcbio.variation.annotation :only [std-annotations]]
         [bcbio.variation.callable :only [get-callable-checker is-callable?]]
         [bcbio.variation.combine :only [combine-variants multiple-samples?]]
@@ -35,8 +36,9 @@
                  cur-vc])))
           (set-header-to-sample [sample _ header]
             (VCFHeader. (.getMetaData header) (ordered-set sample)))]
-    (let [out {:called (itx/add-file-part in-vcf (str sample "-called") out-dir)
-               :nocall (itx/add-file-part in-vcf (str sample "-nocall") out-dir)}]
+    (let [sample-str (if (.contains in-vcf sample) "" (str sample "-"))
+          out {:called (itx/add-file-part in-vcf (str sample-str "called") out-dir)
+               :nocall (itx/add-file-part in-vcf (str sample-str "nocall") out-dir)}]
       (when (itx/needs-run? (vals out))
         (with-open [in-vcf-s (get-vcf-source in-vcf ref)]
           (write-vcf-w-template in-vcf out
@@ -65,7 +67,8 @@
 (defn recall-nocalls
   "Recall variations at no-calls in a sample using UnifiedGenotyper."
   [in-vcf sample align-bam ref & {:keys [out-dir]}]
-  (let [out-file (itx/add-file-part in-vcf (str sample "-wrefs") out-dir)]
+  (let [sample-str (if (.contains in-vcf sample) "" (str sample "-"))
+        out-file (itx/add-file-part in-vcf (str sample-str "wrefs") out-dir)]
     (when (itx/needs-run? out-file)
       (let [{:keys [called nocall]} (split-nocalls in-vcf sample ref out-dir)
             ready-nocall (call-at-known-alleles nocall align-bam ref)]
@@ -93,26 +96,37 @@
                v))
            (map vector vcfs align-bams vcf-configs)))))
 
-(defn split-vcf-to-samples
-  "Create individual sample variant files from input VCF."
-  [vcf-file ref-file & {:keys [out-dir]}]
+(defn- split-vcf-to-samples-batch
+  "Create batch of individual sample variant files from input VCF"
+  [vcf-file samples ref-file out-dir]
   (letfn [(get-one-sample-vcs [vc]
-            (map #(-> (VariantContextBuilder. (:vc vc))
-                      (.genotypes (GenotypesContext/create (into-array [%])))
-                      .make)
-                 (:genotypes vc)))
+            (map (fn [g] [(:sample-name g)
+                          (-> (VariantContextBuilder. (:vc vc))
+                              (.genotypes (GenotypesContext/create (into-array [(:genotype g)])))
+                              .make)])
+                 (filter #(contains? samples (:sample-name %)) (:genotypes vc))))
           (set-header-to-sample [sample header]
             (VCFHeader. (.getMetaData header) (ordered-set sample)))]
     (let [out-files (reduce (fn [coll x]
-                              (assoc x (itx/add-file-part vcf-file x out-dir)))
-                            {}  (-> vcf-file get-vcf-header .getGenotypeSamples))]
+                              (assoc coll x (itx/add-file-part vcf-file x out-dir)))
+                            {} samples)]
       (when (itx/needs-run? (vals out-files))
         (with-open [vcf-source (get-vcf-source vcf-file ref-file)]
           (write-vcf-w-template vcf-file out-files
-                                (flatten (map get-one-sample-vcs (parse-vcf vcf-source)))
-                                ref
+                                (partition 2 (flatten (map get-one-sample-vcs (parse-vcf vcf-source))))
+                                ref-file
                                 :header-update-fn set-header-to-sample)))
       out-files)))
+
+(defn split-vcf-to-samples
+  "Create individual sample variant files from input VCF.
+  Handles batching inputs into groups to avoid too-many-file-open errors"
+  [vcf-file ref-file & {:keys [out-dir max-files]
+                        :or {max-files 100}}]
+  (reduce (fn [out samples]
+            (merge out (split-vcf-to-samples-batch vcf-file (set samples) ref-file out-dir)))
+          {}
+          (partition-all max-files (-> vcf-file get-vcf-header .getGenotypeSamples))))
 
 (defn- split-config-multi
   "Split multiple sample inputs into individual samples before processing.
@@ -120,13 +134,14 @@
   Returns a list of configured calls with multi-samples set to individually
   separated input files."
   [calls ref out-dir]
-  (vals
-   (reduce (fn [coll vcf]
-             (reduce (fn [inner-coll [sample split-vcf]]
-                       (assoc-in inner-coll [sample :file] split-vcf))
-                     coll (split-vcf-to-samples vcf ref :out-dir out-dir)))
-           (into ordered-set (map (fn [x] [(:name x) x]) calls))
-           (filter multiple-samples? (set (map :file calls))))))
+  (let [multi-files (filter multiple-samples? (set (map :file calls)))]
+    (vals
+     (reduce (fn [coll vcf]
+               (reduce (fn [inner-coll [sample split-vcf]]
+                         (assoc-in inner-coll [sample :file] split-vcf))
+                       coll (split-vcf-to-samples vcf ref :out-dir out-dir)))
+             (into (ordered-map) (map (fn [x] [(:name x) x]) calls))
+             multi-files))))
 
 (defn convert-no-calls-w-callability
   "Convert no-calls into callable reference and real no-calls.
