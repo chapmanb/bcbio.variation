@@ -57,7 +57,7 @@
      :bin-width (- (second (:x data)) (first (:x data)))
      :x-scale {:type :linear
                :domain [(apply min (:x data)) (apply max (:x data))]}
-     :y-scale (:type :linear)}))
+     :y-scale {:type :linear}}))
 
 (defn plot-ready-metrics
   "Provide metrics for a VCF file ready for plotting and visualization."
