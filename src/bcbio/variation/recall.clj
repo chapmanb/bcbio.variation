@@ -112,24 +112,32 @@
 
 (defn- split-vcf-to-samples-header
   "Split a multi-sample file to individual samples: writing the header."
-  [vcf-iter out-writers]
+  [vcf-iter out-files]
   (letfn [(not-chrom? [l] (not (.startsWith l "#CHROM")))]
-    (doseq [l (take-while not-chrom? vcf-iter)]
-      (doseq [w out-writers]
-        (.write w (str l "\n"))))
-    (doseq [[i xs] (map-indexed vector (-> (drop-while not-chrom? vcf-iter)
-                                           first
-                                           (split-vcf-sample-line false)))]
-      (.write (get out-writers i)
-              (str (string/join "\t" xs) "\n")))))
+    (let [std-header (string/join "\n" (take-while not-chrom? vcf-iter))]
+      (doseq [[i xs] (map-indexed vector (-> (drop-while not-chrom? vcf-iter)
+                                             first
+                                             (split-vcf-sample-line false)))]
+        (spit (get out-files i)
+              (str std-header "\n" (string/join "\t" xs) "\n"))))))
 
 (defn split-vcf-to-samples-variants
-  "Split multi-sample file to individual samples: variant lines"
-  [vcf-iter out-writers]
-  (doseq [l (drop-while #(.startsWith % "#") vcf-iter)]
-    (doseq [[i xs] (map-indexed vector (split-vcf-sample-line l))]
-      (.write (get out-writers i)
-              (str (string/join "\t" xs) "\n")))))
+  "Split multi-sample file to individual samples: variant lines
+  Avoids opening all output handles, instead writing to individual files.
+  Blocks writes into groups to reduce opening file penalties."
+  [vcf-iter out-files]
+  (let [block-size 1000]
+    (doseq [lines (partition-all block-size (drop-while #(.startsWith % "#") vcf-iter))]
+      (let [sample-lines (reduce (fn [coll l]
+                                   (reduce (fn [inner-coll [i xs]]
+                                             (assoc inner-coll i (conj (get inner-coll i [])
+                                                                       (string/join "\t" xs))))
+                                           coll (map-indexed vector (split-vcf-sample-line l))))
+                                 {} lines)]
+        (doseq [[i xs] sample-lines]
+          (spit (get out-files i)
+                (str (string/join "\n" xs) "\n")
+                :append true))))))
 
 (defn split-vcf-to-samples
   "Create individual sample variant files from input VCF."
@@ -140,12 +148,9 @@
     (when (itx/needs-run? (vals out-files))
       (with-open [rdr (reader vcf-file)]
         (itx/with-tx-files [tx-out-files out-files (keys out-files) []]
-          (let [out-writers (vec (map #(writer %) (vals tx-out-files)))
-                line-iter (line-seq rdr)]
-            (split-vcf-to-samples-header line-iter out-writers)
-            (split-vcf-to-samples-variants line-iter out-writers)
-            (doseq [w out-writers]
-              (.close w))))))
+          (let [line-iter (line-seq rdr)]
+            (split-vcf-to-samples-header line-iter (vec (vals tx-out-files)))
+            (split-vcf-to-samples-variants line-iter (vec (vals tx-out-files)))))))
     out-files))
 
 (defn- split-config-multi
