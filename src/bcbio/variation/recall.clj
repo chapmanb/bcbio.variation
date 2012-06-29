@@ -9,14 +9,16 @@
   (:import [org.broadinstitute.sting.utils.variantcontext
             Genotype VariantContextBuilder GenotypesContext]
            [org.broadinstitute.sting.utils.codecs.vcf VCFHeader])
-  (:use [ordered.map :only [ordered-map]]
+  (:use [clojure.java.io]
+        [ordered.map :only [ordered-map]]
         [ordered.set :only [ordered-set]]
         [bcbio.variation.callable :only [get-callable-checker is-callable?]]
         [bcbio.variation.combine :only [combine-variants multiple-samples?]]
         [bcbio.variation.config :only [load-config]]
         [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template get-vcf-source
                                                get-vcf-header]])
-  (:require [fs.core :as fs]
+  (:require [clojure.string :as string]
+            [fs.core :as fs]
             [bcbio.run.itx :as itx]
             [bcbio.run.broad :as broad]))
 
@@ -97,38 +99,54 @@
                v))
            (map vector vcfs align-bams vcf-configs)))))
 
-(defn- split-vcf-to-samples-batch
-  "Create batch of individual sample variant files from input VCF"
-  [vcf-file samples ref-file out-dir]
-  (letfn [(get-one-sample-vcs [vc]
-            (map (fn [g] [(:sample-name g)
-                          (-> (VariantContextBuilder. (:vc vc))
-                              (.genotypes (GenotypesContext/create (into-array [(:genotype g)])))
-                              (.attributes {})
-                              .make)])
-                 (filter #(contains? samples (:sample-name %)) (:genotypes vc))))
-          (set-header-to-sample [sample header]
-            (VCFHeader. (.getMetaData header) (ordered-set sample)))]
-    (let [out-files (reduce (fn [coll x]
-                              (assoc coll x (itx/add-file-part vcf-file x out-dir)))
-                            {} samples)]
-      (when (itx/needs-run? (vals out-files))
-        (with-open [vcf-source (get-vcf-source vcf-file ref-file)]
-          (write-vcf-w-template vcf-file out-files
-                                (partition 2 (flatten (map get-one-sample-vcs (parse-vcf vcf-source))))
-                                ref-file
-                                :header-update-fn set-header-to-sample)))
-      out-files)))
+(defn- split-vcf-sample-line
+  "Split VCF line into shared attributes and sample specific genotypes.
+  By default removes shared attributes which are no longer valid for split file."
+  ([line remove-info-attrs?]
+     (let [parts (string/split line #"\t")
+           orig-shared (vec (take 9 parts))
+           shared (if remove-info-attrs? (assoc orig-shared 7 ".") orig-shared)]
+       (for [s (drop 9 parts)] (conj shared s))))
+  ([line]
+     (split-vcf-sample-line line true)))
+
+(defn- split-vcf-to-samples-header
+  "Split a multi-sample file to individual samples: writing the header."
+  [vcf-iter out-writers]
+  (letfn [(not-chrom? [l] (not (.startsWith l "#CHROM")))]
+    (doseq [l (take-while not-chrom? vcf-iter)]
+      (doseq [w out-writers]
+        (.write w (str l "\n"))))
+    (doseq [[i xs] (map-indexed vector (-> (drop-while not-chrom? vcf-iter)
+                                           first
+                                           (split-vcf-sample-line false)))]
+      (.write (get out-writers i)
+              (str (string/join "\t" xs) "\n")))))
+
+(defn split-vcf-to-samples-variants
+  "Split multi-sample file to individual samples: variant lines"
+  [vcf-iter out-writers]
+  (doseq [l (drop-while #(.startsWith % "#") vcf-iter)]
+    (doseq [[i xs] (map-indexed vector (split-vcf-sample-line l))]
+      (.write (get out-writers i)
+              (str (string/join "\t" xs) "\n")))))
 
 (defn split-vcf-to-samples
-  "Create individual sample variant files from input VCF.
-  Handles batching inputs into groups to avoid too-many-file-open errors"
-  [vcf-file ref-file & {:keys [out-dir max-files]
-                        :or {max-files 100}}]
-  (reduce (fn [out samples]
-            (merge out (split-vcf-to-samples-batch vcf-file (set samples) ref-file out-dir)))
-          {}
-          (partition-all max-files (-> vcf-file get-vcf-header .getGenotypeSamples))))
+  "Create individual sample variant files from input VCF."
+  [vcf-file & {:keys [out-dir]}]
+  (let [samples (-> vcf-file get-vcf-header .getGenotypeSamples)
+        out-files (into (ordered-map) (map (fn [x] [x (itx/add-file-part vcf-file x out-dir)])
+                                           samples))]
+    (when (itx/needs-run? (vals out-files))
+      (with-open [rdr (reader vcf-file)]
+        (itx/with-tx-files [tx-out-files out-files (keys out-files) []]
+          (let [out-writers (vec (map #(writer %) (vals tx-out-files)))
+                line-iter (line-seq rdr)]
+            (split-vcf-to-samples-header line-iter out-writers)
+            (split-vcf-to-samples-variants line-iter out-writers)
+            (doseq [w out-writers]
+              (.close w))))))
+    out-files))
 
 (defn- split-config-multi
   "Split multiple sample inputs into individual samples before processing.
@@ -141,7 +159,7 @@
      (reduce (fn [coll vcf]
                (reduce (fn [inner-coll [sample split-vcf]]
                          (assoc-in inner-coll [sample :file] split-vcf))
-                       coll (split-vcf-to-samples vcf ref :out-dir out-dir)))
+                       coll (split-vcf-to-samples vcf :out-dir out-dir)))
              (into (ordered-map) (map (fn [x] [(:name x) x]) calls))
              multi-files))))
 
