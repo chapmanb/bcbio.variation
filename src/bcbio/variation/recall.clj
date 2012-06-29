@@ -11,7 +11,6 @@
            [org.broadinstitute.sting.utils.codecs.vcf VCFHeader])
   (:use [ordered.map :only [ordered-map]]
         [ordered.set :only [ordered-set]]
-        [bcbio.variation.annotation :only [std-annotations]]
         [bcbio.variation.callable :only [get-callable-checker is-callable?]]
         [bcbio.variation.combine :only [combine-variants multiple-samples?]]
         [bcbio.variation.config :only [load-config]]
@@ -28,6 +27,7 @@
             (-> (VariantContextBuilder. vc)
                 (.genotypes (GenotypesContext/create
                              (into-array [(-> vc .getGenotypes (.get sample))])))
+                (.attributes {})
                 (.make)))
           (split-nocall-vc [vc]
             (when (empty? (:filters vc))
@@ -51,6 +51,7 @@
   "Do UnifiedGenotyper calling at known variation alleles."
   [site-vcf align-bam ref]
   (let [file-info {:out-vcf (itx/add-file-part site-vcf "wrefs")}
+        annotations ["DepthPerAlleleBySample"]
         args (concat ["-R" ref
                       "-o" :out-vcf
                       "-I" align-bam
@@ -60,7 +61,7 @@
                       "--output_mode" "EMIT_ALL_SITES"
                       "-stand_call_conf" "0.0"
                       "--genotype_likelihoods_model" "BOTH"]
-                     (reduce #(concat %1 ["-A" %2]) [] std-annotations))]
+                     (reduce #(concat %1 ["-A" %2]) [] annotations))]
     (broad/run-gatk "UnifiedGenotyper" args file-info {:out [:out-vcf]})
     (:out-vcf file-info)))
 
@@ -103,6 +104,7 @@
             (map (fn [g] [(:sample-name g)
                           (-> (VariantContextBuilder. (:vc vc))
                               (.genotypes (GenotypesContext/create (into-array [(:genotype g)])))
+                              (.attributes {})
                               .make)])
                  (filter #(contains? samples (:sample-name %)) (:genotypes vc))))
           (set-header-to-sample [sample header]
