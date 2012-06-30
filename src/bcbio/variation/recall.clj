@@ -214,7 +214,7 @@
         recall-vcfs (map (fn [[exp call]]
                             (recall-nocalls (:file call) (:name call) (:align call)
                                             (:ref exp) :out-dir out-dir
-                                            :cores (get-in config :resources :cores)))
+                                            :cores (get-in config [:resources :cores])))
                           (apply concat
                                  (for [exp (:experiments config)]
                                    (for [call (split-config-multi (:calls exp) (:ref exp) out-dir)]
