@@ -7,8 +7,12 @@
   Understanding_the_Unified_Genotyper%27s_VCF_files#How_genotypes_are_represented_in_a_VCF"
   (:import [org.broadinstitute.sting.utils.variantcontext 
             VariantContextBuilder GenotypesContext Genotype])
-  (:use [bcbio.variation.variantcontext :only [parse-vcf get-vcf-source write-vcf-w-template]])
-  (:require [bcbio.run.itx :as itx]))
+  (:use [clojure.java.io]
+        [bcbio.variation.variantcontext :only [parse-vcf get-vcf-source write-vcf-w-template]])
+  (:require [clojure.string :as string]
+            [bcbio.run.itx :as itx]))
+
+;; ## Convert diploid -> haploid
 
 (def ^{:doc "Threshold to include a heterozygous allele as a haploid homozygote variant."}
   haploid-thresh 1e-5)
@@ -61,6 +65,31 @@
                               ref)))
     (:haploid out-files)))
 
+;; ## Examine diploid metrics
+
+(defn write-het-variant-pls
+  "Write phred likelihoods for het calls to be haploid variants."
+  [vcf-file ref-file & attrs]
+  (letfn [(get-pl [vc]
+            (let [g (-> vc :genotypes first :genotype)]
+              (when (.hasLikelihoods g)
+                (let [in-map (-> (.getLikelihoods g) (.getAsMap true))]
+                  (get (zipmap (map #(.name %) (keys in-map)) (vals in-map))
+                       "HOM_VAR")))))]
+  (let [out-file (str (itx/file-root vcf-file) "-het-pls.csv")]
+    (with-open [vcf-source (get-vcf-source vcf-file ref-file)
+                wtr (writer out-file)]
+      (doseq [val (->> (parse-vcf vcf-source)
+                       (filter #(= "HET" (-> % :genotypes first :type)))
+                       (map get-pl)
+                       (remove nil?))]
+        (.write wtr (str (string/join "," (cons val attrs)) "\n"))))
+    out-file)))
+
 (defn -main
+  [& xs]
+  (apply write-het-variant-pls xs))
+
+(defn not-main
   [vcf ref]
   (diploid-calls-to-haploid vcf ref))
