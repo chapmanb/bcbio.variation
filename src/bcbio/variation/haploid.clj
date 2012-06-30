@@ -87,9 +87,5 @@
     out-file)))
 
 (defn -main
-  [& xs]
-  (apply write-het-variant-pls xs))
-
-(defn not-main
   [vcf ref]
   (diploid-calls-to-haploid vcf ref))
