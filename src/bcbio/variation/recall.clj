@@ -51,7 +51,7 @@
 
 (defn call-at-known-alleles
   "Do UnifiedGenotyper calling at known variation alleles."
-  [site-vcf align-bam ref]
+  [site-vcf align-bam ref & {:keys [cores]}]
   (let [file-info {:out-vcf (itx/add-file-part site-vcf "wrefs")}
         annotations ["DepthPerAlleleBySample"]
         args (concat ["-R" ref
@@ -63,18 +63,20 @@
                       "--output_mode" "EMIT_ALL_SITES"
                       "-stand_call_conf" "0.0"
                       "--genotype_likelihoods_model" "BOTH"]
+                     (if cores ["-nt" (str cores)] [])
                      (reduce #(concat %1 ["-A" %2]) [] annotations))]
+    (broad/index-bam align-bam)
     (broad/run-gatk "UnifiedGenotyper" args file-info {:out [:out-vcf]})
     (:out-vcf file-info)))
 
 (defn recall-nocalls
   "Recall variations at no-calls in a sample using UnifiedGenotyper."
-  [in-vcf sample align-bam ref & {:keys [out-dir]}]
+  [in-vcf sample align-bam ref & {:keys [out-dir cores]}]
   (let [sample-str (if (.contains in-vcf sample) "" (str sample "-"))
         out-file (itx/add-file-part in-vcf (str sample-str "wrefs") out-dir)]
     (when (itx/needs-run? out-file)
       (let [{:keys [called nocall]} (split-nocalls in-vcf sample ref out-dir)
-            ready-nocall (call-at-known-alleles nocall align-bam ref)]
+            ready-nocall (call-at-known-alleles nocall align-bam ref :cores cores)]
         (fs/rename
          (combine-variants [called ready-nocall] ref :merge-type :full :quiet-out? true)
          out-file)))
@@ -84,12 +86,13 @@
   "Create merged VCF files with no-call/ref-calls for each of the inputs.
   Works at a higher level than `recall-nocalls` and does the work of
   preparing a set of all merged variants, then re-calling at non-missing positions."
-  [vcfs align-bams vcf-configs ref & {:keys [out-dir intervals]}]
+  [vcfs align-bams vcf-configs ref & {:keys [out-dir intervals cores]}]
   (letfn [(merge-vcf [vcf sample all-vcf align-bam ref]
             (let [ready-vcf (combine-variants [vcf all-vcf] ref
                                               :merge-type :full :intervals intervals
                                               :out-dir out-dir :check-ploidy? false)]
-              (recall-nocalls ready-vcf sample align-bam ref :out-dir out-dir)))]
+              (recall-nocalls ready-vcf sample align-bam ref :out-dir out-dir
+                              :cores cores)))]
     (let [merged (combine-variants vcfs ref :merge-type :minimal :intervals intervals
                                    :out-dir out-dir :check-ploidy? false)]
       (map (fn [[v b vcf-config]]
@@ -208,9 +211,10 @@
 (defn -main [config-file]
   (let [config (load-config config-file)
         out-dir (get-in config [:dir :out])
-        recall-vcfs (pmap (fn [[exp call]]
+        recall-vcfs (map (fn [[exp call]]
                             (recall-nocalls (:file call) (:name call) (:align call)
-                                            (:ref exp) :out-dir out-dir))
+                                            (:ref exp) :out-dir out-dir
+                                            :cores (get-in config :resources :cores)))
                           (apply concat
                                  (for [exp (:experiments config)]
                                    (for [call (split-config-multi (:calls exp) (:ref exp) out-dir)]
