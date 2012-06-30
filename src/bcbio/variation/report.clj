@@ -136,8 +136,9 @@
   (letfn [(get-penalty [[error-type call-type]]
             (case call-type
               :snp 1
-              :indel 2))]
-    (let [error-items (cartesian-product error-items [:snp :indel])
+              :indel 2
+              :sv 2))]
+    (let [error-items (cartesian-product error-items [:snp :indel :sv])
           error-score (apply + (map #(* (get-in metrics % 0) (get-penalty %)) error-items))
           total-bases (get-in metrics [:total-bases :compared] 1)]
       (float
@@ -145,7 +146,7 @@
 
 (defn prep-scoring-table
   "Summary table of high level variables and scoring metrics for comparison."
-  [metrics]
+  [metrics sv-stats]
   (let [to-write (ordered-map :accuracy "Accuracy score"
                               :accuracy-phasing "Accuracy score, including phasing"
                               [:total-bases :percent] "Percentage of reference bases scored"
@@ -153,12 +154,15 @@
                               [:total-bases :total] "Possible evaluation bases"
                               [:discordant :snp] "Discordant SNPs"
                               [:discordant :indel] "Discordant indels"
+                              [:discordant :sv] "Discordant structural variants"
                               [:phasing-error :snp] "Phasing Error SNPs"
                               [:phasing-error :indel] "Phasing Error indels"
                               :haplotype-blocks "Phased haplotype blocks"
                               ;:nonmatch-het-alt "Non-matching heterozygous alternative alleles"
                               )
-        s-metrics (-> metrics
+        sv-metrics (assoc-in metrics [:discordant :sv]
+                             (apply + (map #(get % :total 0) (rest (vals sv-stats)))))
+        s-metrics (-> sv-metrics
                       (assoc :accuracy (calc-accuracy metrics [:discordant]))
                       (assoc :accuracy-phasing (calc-accuracy metrics [:discordant :phasing-error])))
         need-percents {:accuracy 3
@@ -174,10 +178,10 @@
 
 (defn write-scoring-table
   "Write high level metrics table in readable format."
-  [metrics wrtr]
+  [metrics sv-stats wrtr]
   (when-not (or (nil? metrics)
                 (nil? (get-in metrics [:total-bases :total])))
-    (.write wrtr (str (doric/table [:metric :value] (prep-scoring-table metrics))
+    (.write wrtr (str (doric/table [:metric :value] (prep-scoring-table metrics sv-stats))
                       "\n"))))
 
 (defn write-concordance-metrics

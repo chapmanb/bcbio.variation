@@ -245,7 +245,7 @@
       (doseq [x comparisons]
         (.write w (format "* %s : %s vs %s\n" (-> x :exp :sample)
                           (-> x :c1 :name) (-> x :c2 :name)))
-        (write-scoring-table (:metrics x) w)
+        (write-scoring-table (:metrics x) (get-in x [:summary :sv]) w)
         (write-concordance-metrics (:summary x) w)
         (when-let [sv-info (get-in x [:summary :sv])]
           (write-sv-metrics sv-info w))

@@ -58,7 +58,8 @@
   "Generate a summary table of scoring results."
   [comparisons]
   {:pre [(= 1 (count comparisons))]}
-  (let [scoring-table (prep-scoring-table (-> comparisons first :metrics))]
+  (let [scoring-table (prep-scoring-table (-> comparisons first :metrics)
+                                          (-> comparisons first :summary :sv))]
     (apply str
            (-> (str (doric/table ^{:format doric/html} [:metric :value] scoring-table))
                java.io.StringReader.
@@ -115,7 +116,9 @@
                                    (format "%s-scoring.txt"
                                            (get-in comparison [:summary :sample]))))]
     (with-open [wtr (writer summary-file)]
-      (.write wtr (str (doric/table [:metric :value] (prep-scoring-table (:metrics comparison)))
+      (.write wtr (str (doric/table [:metric :value]
+                                    (prep-scoring-table (:metrics comparison)
+                                                        (get-in comparison [:summary :sv])))
                        "\n")))
     (doseq [fname (cons summary-file out-files)]
       (gs/upload gs-client (:upload-dir work-info) fname))))
