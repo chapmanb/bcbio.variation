@@ -60,6 +60,17 @@
             (zipmap need-tx
                     (map #(str (fs/file tx-dir (fs/base-name %))) tx-files)))))
 
+(defn rename-tx-files
+  "Rename generated transaction files into expected file location."
+  [tx-file-info file-info need-tx exts]
+  (doseq [tx-key need-tx]
+    (let [tx-safe (get tx-file-info tx-key) 
+          tx-final (get file-info tx-key)]
+      (fs/rename tx-safe tx-final)
+      (doseq [ext exts]
+        (when (fs/exists? (str tx-safe ext))
+          (fs/rename (str tx-safe ext) (str tx-final ext)))))))
+
 (defmacro with-tx-files
   "Perform action with files, keeping need-tx files in a transaction."
   [[tx-file-info file-info need-tx exts] & body]
@@ -68,13 +79,7 @@
     `(let [~tx-file-info (safe-tx-files ~file-info ~need-tx)]
        (try
          ~@body
-         (doseq [tx-key# ~need-tx]
-           (let [tx-safe# (get ~tx-file-info tx-key#) 
-                 tx-final# (get ~file-info tx-key#)]
-             (fs/rename tx-safe# tx-final#)
-             (doseq [ext# ~exts]
-               (when (fs/exists? (str tx-safe# ext#))
-                 (fs/rename (str tx-safe# ext#) (str tx-final# ext#))))))
+         (rename-tx-files ~tx-file-info ~file-info ~need-tx ~exts)
          (finally
           (fs/delete-dir (fs/parent (get ~tx-file-info (first ~need-tx)))))))))
 
