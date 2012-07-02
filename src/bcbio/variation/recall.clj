@@ -174,6 +174,43 @@
              (into (ordered-map) (map (fn [x] [(:name x) x]) calls))
              multi-files))))
 
+(defn- remove-sample-info
+  "Provide a cleaned VCF file without sample genotype information."
+  [in-vcf out-dir]
+  (letfn [(split-variant-line [line]
+            (->> (string/split line #"\t")
+                 (take 8)
+                 (string/join "\t")))
+          (process-line [line]
+            (cond
+             (.startsWith line "##fileformat") line
+             (.startsWith line "##INFO") line
+             (.startsWith line "#CHROM") line
+             (.startsWith line "#") nil
+             :else (split-variant-line line)))]
+    (let [out-file (itx/add-file-part in-vcf "nosamples" out-dir)]
+      (when (itx/needs-run? out-file)
+        (with-open [rdr (reader in-vcf)
+                    wtr (writer out-file)]
+          (doseq [line (map process-line (line-seq rdr))]
+            (when line
+              (.write wtr (str line "\n"))))))
+      out-file)))
+
+(defn- do-recall-exp
+  "Perform recalling on all specific inputs in an experiment"
+  [exp out-dir config]
+  (let [recall-vcfs (map (fn [call]
+                           (recall-nocalls (:file call) (:name call) (:align call)
+                                           (:ref exp) :out-dir out-dir
+                                           :cores (get-in config [:resources :cores])))
+                         (split-config-multi (:calls exp) (:ref exp) out-dir))
+        clean-multi (map #(remove-sample-info % out-dir)
+                         (filter multiple-samples? (set (map :file (:calls exp)))))]
+    (println (count recall-vcfs))
+    (combine-variants (concat clean-multi recall-vcfs) (:ref exp) :merge-type :full
+                      :quiet-out? true)))
+
 (defn convert-no-calls-w-callability
   "Convert no-calls into callable reference and real no-calls.
   Older functionality to re-call as reference when region is callable.
@@ -213,13 +250,6 @@
 
 (defn -main [config-file]
   (let [config (load-config config-file)
-        out-dir (get-in config [:dir :out])
-        recall-vcfs (map (fn [[exp call]]
-                            (recall-nocalls (:file call) (:name call) (:align call)
-                                            (:ref exp) :out-dir out-dir
-                                            :cores (get-in config [:resources :cores])))
-                          (apply concat
-                                 (for [exp (:experiments config)]
-                                   (for [call (split-config-multi (:calls exp) (:ref exp) out-dir)]
-                                     [exp call]))))]
-    (println config-file (count recall-vcfs))))
+        out-dir (get-in config [:dir :out])]
+    (doseq [exp (:experiments config)]
+      (do-recall-exp exp out-dir config))))
