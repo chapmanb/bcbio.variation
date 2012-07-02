@@ -149,7 +149,7 @@
   [metrics sv-stats]
   (let [to-write (ordered-map :accuracy "Accuracy score"
                               :accuracy-phasing "Accuracy score, including phasing"
-                              [:total-bases :percent] "Percentage of reference bases scored"
+                              [:total-bases :percent] "Completeness"
                               [:total-bases :compared] "Total bases scored"
                               [:total-bases :total] "Possible evaluation bases"
                               [:discordant :snp] "Discordant SNPs"
