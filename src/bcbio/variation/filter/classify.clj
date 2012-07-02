@@ -23,6 +23,8 @@
 
 (defmethod get-vc-attr "AD"
   [vc attr]
+  {:pre [(= 1 (:num-samples vc))
+         (contains? #{1 2} (-> vc :genotypes first :alleles count))]}
   "AD: Allelic depth for ref and alt alleles. Converted to percent
    deviation from expected for haploid/diploid calls.
    Also calculates allele depth from AO and DP used by FreeBayes.
@@ -58,14 +60,13 @@
 (defmethod get-vc-attr :default
   [vc attr]
   (let [x (get-in vc [:attributes attr])]
-    (try (Float/parseFloat x)
-         (catch java.lang.NumberFormatException _ x))))
+    (when-not (nil? x)
+      (try (Float/parseFloat x)
+           (catch java.lang.NumberFormatException _ x)))))
 
 (defn get-vc-attrs
   "Retrieve attributes from variants independent of location."
   [vc attrs]
-  {:pre [(= 1 (:num-samples vc))
-         (contains? #{1 2} (-> vc :genotypes first :alleles count))]}
   (zipmap attrs (map (partial get-vc-attr vc) attrs)))
 
 (defn get-vc-attr-ranges

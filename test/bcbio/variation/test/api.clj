@@ -17,5 +17,5 @@
   (let [out (plot-ready-metrics vcf1 ref)]
     (:filename out) => vcf1
     (-> out :metrics first :id) => "QUAL"
-    (-> out :metrics first :x-scale :domain) => (just [(roughly 307.987) 8830.513])
+    (-> out :metrics first :x-scale :domain) => (just [0.0 100000.0])
     (apply + (-> out :metrics first :vals)) => 1.0))
