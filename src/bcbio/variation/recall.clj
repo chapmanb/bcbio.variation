@@ -162,11 +162,14 @@
   Returns a list of configured calls with multi-samples set to individually
   separated input files."
   [calls ref out-dir]
-  (let [multi-files (filter multiple-samples? (set (map :file calls)))]
+  (let [multi-files (filter multiple-samples? (set (map :file calls)))
+        cur-samples (set (map :name calls))]
     (vals
      (reduce (fn [coll vcf]
                (reduce (fn [inner-coll [sample split-vcf]]
-                         (assoc-in inner-coll [sample :file] split-vcf))
+                         (if (contains? cur-samples sample)
+                           (assoc-in inner-coll [sample :file] split-vcf)
+                           inner-coll))
                        coll (split-vcf-to-samples vcf :out-dir out-dir)))
              (into (ordered-map) (map (fn [x] [(:name x) x]) calls))
              multi-files))))
@@ -219,4 +222,4 @@
                                  (for [exp (:experiments config)]
                                    (for [call (split-config-multi (:calls exp) (:ref exp) out-dir)]
                                      [exp call]))))]
-    (println recall-vcfs)))
+    (println config-file (count recall-vcfs))))
