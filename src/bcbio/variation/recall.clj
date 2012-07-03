@@ -76,10 +76,11 @@
         out-file (itx/add-file-part in-vcf (str sample-str "wrefs") out-dir)]
     (when (itx/needs-run? out-file)
       (let [{:keys [called nocall]} (split-nocalls in-vcf sample ref out-dir)
-            ready-nocall (call-at-known-alleles nocall align-bam ref :cores cores)]
-        (fs/rename
-         (combine-variants [called ready-nocall] ref :merge-type :full :quiet-out? true)
-         out-file)))
+            ready-nocall (call-at-known-alleles nocall align-bam ref :cores cores)
+            combine-out (combine-variants [called ready-nocall] ref :merge-type :full
+                                          :quiet-out? true)]
+        (fs/rename combine-out out-file)
+        (fs/rename (str combine-out ".idx") (str out-file ".idx"))))
     out-file))
 
 (defn create-merged
@@ -185,7 +186,7 @@
             (cond
              (.startsWith line "##fileformat") line
              (.startsWith line "##INFO") line
-             (.startsWith line "#CHROM") line
+             (.startsWith line "#CHROM") (split-variant-line line)
              (.startsWith line "#") nil
              :else (split-variant-line line)))]
     (let [out-file (itx/add-file-part in-vcf "nosamples" out-dir)]
