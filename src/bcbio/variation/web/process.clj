@@ -3,6 +3,7 @@
   (:import [java.util.UUID])
   (:use [clojure.java.io]
         [ordered.map :only [ordered-map]]
+        [bcbio.variation.combine :only [combine-variants]]
         [bcbio.variation.compare :only [variant-comparison-from-config]]
         [bcbio.variation.normalize :only [pick-best-ref]]
         [bcbio.variation.report :only [prep-scoring-table]]
@@ -57,9 +58,8 @@
 (defn html-summary-table
   "Generate a summary table of scoring results."
   [comparisons]
-  {:pre [(= 1 (count comparisons))]}
-  (let [scoring-table (prep-scoring-table (-> comparisons first :metrics)
-                                          (-> comparisons first :summary :sv))]
+  (let [scoring-table (prep-scoring-table (:metrics comparisons)
+                                          (get-in comparisons [:summary :sv]))]
     (apply str
            (-> (str (doric/table ^{:format doric/html} [:metric :value] scoring-table))
                java.io.StringReader.
@@ -123,14 +123,30 @@
     (doseq [fname (cons summary-file out-files)]
       (gs/upload gs-client (:upload-dir work-info) fname))))
 
+(defn- prepare-final-files
+  "Merge standard and structural variant outputs into final set of upload files."
+  [comparisons]
+  (letfn [(merge-files-into [comparisons orig-kw addin-kw]
+            (let [ref (get-in comparisons [:c1 :ref])
+                  orig (get-in comparisons [:c-files orig-kw])
+                  addin (get-in comparisons [:c-files addin-kw])
+                  combine-vcf (combine-variants [orig addin] ref :merge-type :full
+                                                :quiet-out? true)]
+              (fs/rename combine-vcf orig)
+              (fs/rename (str combine-vcf ".idx") (str orig ".idx"))))]
+      (merge-files-into comparisons :concordant :sv-concordant)
+      (merge-files-into comparisons :discordant :sv-contestant-discordant)
+      (merge-files-into comparisons :discordant-missing :sv-reference-discordant)))
+
 (defn run-scoring-analysis
   "Run scoring analysis from details provided in current session."
   [work-info]
   (let [gs-client (session/get :gs-client)
         process-config (create-work-config work-info @web-config)
-        comparisons (variant-comparison-from-config process-config)]
+        comparisons (first (variant-comparison-from-config process-config))]
+    (prepare-final-files comparisons)
     (when-not (or (nil? gs-client) (nil? (:upload-dir work-info)))
-      (upload-results gs-client work-info (first comparisons)))
+      (upload-results gs-client work-info comparisons))
     (spit (file (:dir work-info) "scoring-summary.html")
           (html-scoring-summary comparisons (:id work-info)))))
 
