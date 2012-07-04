@@ -28,9 +28,11 @@
              (> (count (set (remove nil? (map #(is-haploid? % ref) vcfs)))) 1))
     (throw (Exception. (format "Haploid and non-haploid combinations not supported: %s %s"
                                (vec vcfs) (vec (map #(is-haploid? % ref) vcfs))))))
-  (letfn [(unique-name [f]
-            (get name-map f
-                 (-> f fs/base-name itx/file-root)))]
+  (letfn [(unique-name [i f]
+            (if quiet-out?
+              (str "v" i)
+              (get name-map f
+                   (-> f fs/base-name itx/file-root))))]
     (let [base-dir (if (nil? out-dir) (fs/parent (first vcfs)) out-dir)
           full-base-name (-> vcfs first fs/base-name itx/remove-zip-ext)
           base-name (if (nil? base-ext) full-base-name
@@ -44,10 +46,10 @@
                                                                      "combine"))))}
           args (concat ["-R" ref
                         "-o" :out-vcf
-                        "--rod_priority_list" (string/join "," (map unique-name vcfs))]
+                        "--rod_priority_list" (string/join "," (map-indexed unique-name vcfs))]
                        (if unsafe ["--unsafe" "ALLOW_SEQ_DICT_INCOMPATIBILITY"] [])
                        (if quiet-out? ["--suppressCommandLineHeader" "--setKey" "null"] [])
-                       (flatten (map #(list (str "--variant:" (unique-name %)) %) vcfs))
+                       (flatten (map-indexed #(list (str "--variant:" (unique-name %1 %2)) %2) vcfs))
                        (broad/gatk-cl-intersect-intervals intervals ref)
                        (case merge-type
                              :full ["--genotypemergeoption" "PRIORITIZE"]

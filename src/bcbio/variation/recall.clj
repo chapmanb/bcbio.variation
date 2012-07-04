@@ -76,10 +76,11 @@
         out-file (itx/add-file-part in-vcf (str sample-str "wrefs") out-dir)]
     (when (itx/needs-run? out-file)
       (let [{:keys [called nocall]} (split-nocalls in-vcf sample ref out-dir)
-            ready-nocall (call-at-known-alleles nocall align-bam ref :cores cores)]
-        (fs/rename
-         (combine-variants [called ready-nocall] ref :merge-type :full :quiet-out? true)
-         out-file)))
+            ready-nocall (call-at-known-alleles nocall align-bam ref :cores cores)
+            combine-out (combine-variants [called ready-nocall] ref :merge-type :full
+                                          :quiet-out? true)]
+        (fs/rename combine-out out-file)
+        (fs/rename (str combine-out ".idx") (str out-file ".idx"))))
     out-file))
 
 (defn create-merged
@@ -185,7 +186,7 @@
             (cond
              (.startsWith line "##fileformat") line
              (.startsWith line "##INFO") line
-             (.startsWith line "#CHROM") line
+             (.startsWith line "#CHROM") (split-variant-line line)
              (.startsWith line "#") nil
              :else (split-variant-line line)))]
     (let [out-file (itx/add-file-part in-vcf "nosamples" out-dir)]
@@ -196,6 +197,23 @@
             (when line
               (.write wtr (str line "\n"))))))
       out-file)))
+
+(defn batch-combine-variants
+  "Combine large numbers of variants via batches to avoid memory issues."
+  [vcfs ref & {:keys [merge-type out-dir intervals unsafe name-map
+                      base-ext check-ploidy? quiet-out? batch-size]
+               :or {merge-type :unique
+                    unsafe false
+                    name-map {}
+                    check-ploidy? true
+                    batch-size 100}}]
+  (letfn [(combine-w-args [xs]
+            (combine-variants xs ref :merge-type merge-type :out-dir out-dir
+                              :intervals intervals :unsafe unsafe :name-map name-map
+                              :base-ext base-ext :check-ploidy? check-ploidy?
+                              :quiet-out? quiet-out?))]
+    (let [batch-vcfs (map combine-w-args (partition-all batch-size vcfs))]
+      (combine-w-args batch-vcfs))))
 
 (defn- do-recall-exp
   "Perform recalling on all specific inputs in an experiment"
@@ -208,8 +226,8 @@
         clean-multi (map #(remove-sample-info % out-dir)
                          (filter multiple-samples? (set (map :file (:calls exp)))))]
     (println (count recall-vcfs))
-    (combine-variants (concat clean-multi recall-vcfs) (:ref exp) :merge-type :full
-                      :quiet-out? true)))
+    (batch-combine-variants (concat clean-multi recall-vcfs) (:ref exp) :merge-type :full
+                            :quiet-out? true :check-ploidy? false)))
 
 (defn convert-no-calls-w-callability
   "Convert no-calls into callable reference and real no-calls.
