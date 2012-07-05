@@ -102,6 +102,9 @@
                                   [:div {:id "scoring-in-process"}
                                    [:h3 "Status"]
                                    [:div {:id "scoring-status"} "Downloading input files"]
+                                   [:div {:class "progress"}
+                                    [:div {:id "scoring-progress"
+                                           :class "bar" :style "width: 0%"}]]
                                    (slurp (fs/file template-dir "scoring.html"))
                                    [:script {:src "js/score.js"}]
                                    [:script (format "bcbio.variation.score.update_run_status('%s');"

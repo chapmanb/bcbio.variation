@@ -10,11 +10,24 @@
             [domina.events :as events]
             [fetch.remotes :as remotes]
             [goog.dom :as dom]
+            [goog.string :as gstring]
             [goog.Timer :as timer]
             [goog.net.XhrIo :as xhr])
   (:require-macros [fetch.macros :as fm]))
 
 ;; ## Display scoring results
+
+(defn- progress-percent
+  "Rough progress points to indicate status of processing."
+  [desc]
+  (cond
+   (gstring/startsWith desc "Starting variation") 10
+   (gstring/startsWith desc "Prepare VCF, resorting to genome build: contestant") 15
+   (gstring/startsWith desc "Normalize MNP and indel variants: contestant") 60
+   (gstring/startsWith desc "Comparing VCFs: reference vs contestant") 75
+   (gstring/startsWith desc "Summarize comparisons") 90
+   (gstring/startsWith desc "Finished") 100
+   :else nil))
 
 (defn ^:export update-run-status
   "Update summary page with details about running statuses."
@@ -29,7 +42,10 @@
                (do
                  (when-not (nil? info)
                    (domina/set-html! (domina/by-id "scoring-status")
-                                     (crate/html [:p (:desc info)])))
+                                     (crate/html [:p (:desc info)]))
+                   (when-let [pct (progress-percent (:desc info))]
+                     (domina/set-attr! (domina/by-id "scoring-progress")
+                                       :style (str "width: " pct "%"))))
                  (timer/callOnce (fn [] (update-run-status run-id)) 2000)))))
 
 ;; ## Allow multiple upload methods
