@@ -20,7 +20,6 @@
                  [ordered "1.0.0" :exclusions [org.clojure/clojure]]
                  [de.kotka/lazymap "3.0.0"]
                  [pallet-fsm "0.1.0"]
-                 [clj-logging-config "1.9.7"]
                  [clj-time "0.4.3"]
                  [clj-aws-s3 "0.3.1"]
                  [noir "1.2.2" :exclusions [org.clojure/clojure]]
