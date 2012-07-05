@@ -22,6 +22,8 @@
                  [pallet-fsm "0.1.0"]
                  [clj-time "0.4.3"]
                  [clj-aws-s3 "0.3.1"]
+                 [org.clojure/java.jdbc "0.2.2"]
+                 [org.xerial/sqlite-jdbc "3.7.2"]
                  [noir "1.2.2" :exclusions [org.clojure/clojure]]
                  [ring-anti-forgery "0.1.3"]
                  [fetch "0.1.0-alpha2"]

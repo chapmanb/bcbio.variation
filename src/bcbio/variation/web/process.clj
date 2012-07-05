@@ -15,7 +15,8 @@
             [noir.session :as session]
             [noir.response :as response]
             [net.cgrand.enlive-html :as html]
-            [clj-genomespace.core :as gs]))
+            [clj-genomespace.core :as gs]
+            [bcbio.variation.web.db :as db]))
 
 ;; ## Run scoring based on inputs from web or API
 
@@ -151,7 +152,8 @@
     (when-not (or (nil? gs-client) (nil? (:upload-dir work-info)))
       (upload-results gs-client work-info comparisons))
     (spit (file (:dir work-info) "scoring-summary.html")
-          (html-scoring-summary comparisons (:id work-info)))))
+          (html-scoring-summary comparisons (:id work-info)))
+    (db/add-analysis work-info comparisons (:db @web-config))))
 
 (defmulti get-input-files
   "Prepare working directory, downloading input files."

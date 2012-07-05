@@ -4,6 +4,7 @@
         [noir.core :only [defpage]]
         [noir.fetch.remotes :only [defremote]]
         [bcbio.variation.config :only [get-log-status]]
+        [bcbio.variation.web.db :only [prepare-web-db]]
         [bcbio.variation.web.shared :only [web-config]]
         [ring.middleware file anti-forgery file-info])
   (:require [clojure.string :as string]
@@ -79,8 +80,10 @@
   ([config-file]
      (-main config-file "8080"))
   ([config-file port]
-     (reset! web-config (-> config-file slurp yaml/parse-string))
-     (server/add-middleware wrap-file (get-in @web-config [:dir :html-root]))
-     ;;(server/add-middleware wrap-file-info)
-     ;;(server/add-middleware wrap-anti-forgery)
-     (server/start (Integer/parseInt port))))
+     (let [config (-> config-file slurp yaml/parse-string)]
+       (reset! web-config (assoc config :db
+                                 (prepare-web-db (str (fs/file (get-in config [:dir :work]) "analyses.db")))))
+       (server/add-middleware wrap-file (get-in @web-config [:dir :html-root]))
+       ;;(server/add-middleware wrap-file-info)
+       ;;(server/add-middleware wrap-anti-forgery)
+       (server/start (Integer/parseInt port)))))
