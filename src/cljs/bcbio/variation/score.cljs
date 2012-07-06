@@ -53,11 +53,11 @@
 (defn- set-active-choice!
   "Set the active type for our type of file upload."
   [active-id]
-  (-> (sel ".nav")
+  (-> (domina/by-id "upload-choices")
       (sel ".active")
-      (remove-attr! "class"))
+      (remove-attr! :class))
   (-> (sel active-id)
-      (set-attr! "class" "active")))
+      (set-attr! :class "active")))
 
 (defn- add-file-input!
   "Update an input item for file upload input."
@@ -118,7 +118,7 @@
   (add-gs-input! "region-file" "bed"))
 
 (defn ^:export set-navigation
-  "Correctly set the top level navigation toolbar."
+  "Correctly set the active top level navigation toolbar."
   []
   (let [loc (-> (.toString window.location ())
                 (string/split #"/")

@@ -55,7 +55,7 @@
             enctype="multipart/form-data" action="/score">
         <fieldset>
         <h3>Submit variation file for scoring</h3>
-        <div class="control-group">
+        <div class="control-group" id="upload-choices">
           <label class="control-label" for="upload-method">Upload method</label>
           <div class="controls">
           <ul class="nav nav-pills">
@@ -156,7 +156,7 @@
       </footer>
     </div> <!-- /container -->
     <script>bcbio.variation.score.upload_generalize();</script>
-    <!--<script>bcbio.variation.login.handle_login();</script> -->
+    <script>bcbio.variation.login.handle_login();</script>
     <script>bcbio.variation.score.set_navigation();</script>
   </body>
 </html>
