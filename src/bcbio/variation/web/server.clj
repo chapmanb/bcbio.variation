@@ -4,7 +4,7 @@
         [noir.core :only [defpage]]
         [noir.fetch.remotes :only [defremote]]
         [bcbio.variation.config :only [get-log-status]]
-        [bcbio.variation.web.db :only [prepare-web-db]]
+        [bcbio.variation.web.db :only [prepare-web-db get-analyses]]
         [bcbio.variation.web.shared :only [web-config]]
         [ring.middleware file anti-forgery file-info])
   (:require [clojure.string :as string]
@@ -61,12 +61,16 @@
                                   (file "grading"))}}))
 
 (defremote get-summary [run-id]
-  (when-let [out-dir (-> (session/get :work-info)
-                         (get run-id)
-                         :dir)]
+  (when-let [out-dir (->> (get-analyses (get-username) :scoring (:db @web-config))
+                          (filter #(= run-id (:analysis_id %)))
+                          first
+                          :location)]
     (let [summary-file (file out-dir "scoring-summary.html")]
       (when (fs/exists? summary-file)
         (slurp summary-file)))))
+
+(defpage "/analyses" {}
+  (web-process/analyses-html (get-username)))
 
 (defpage [:post "/score"] {:as params}
   (let [{:keys [work-info out-html]} (web-process/prep-scoring params)]
@@ -74,7 +78,7 @@
     out-html))
 
 (defpage "/scorefile/:runid/:name" {:keys [runid name]}
-  (web-process/get-variant-file runid name))
+  (web-process/get-variant-file runid name (get-username)))
 
 (defn -main
   ([config-file]

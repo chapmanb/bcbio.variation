@@ -117,6 +117,20 @@
   (add-gs-input! "variant-file" "vcf")
   (add-gs-input! "region-file" "bed"))
 
+(defn ^:export set-navigation
+  "Correctly set the top level navigation toolbar."
+  []
+  (let [loc (-> (.toString window.location ())
+                (string/split #"/")
+                last)]
+    (doseq [list-item (domina/children (domina/by-id "top-navbar"))]
+      (if (= (str "/" loc)
+             (-> (domina/children list-item)
+                 first
+                 (domina/attr :href)))
+        (domina/set-attr! list-item :class "active")
+        (domina/remove-attr! list-item :class)))))
+
 (defn ^:export upload-generalize
   "Handle generalized upload through files or GenomeSpace."
   []

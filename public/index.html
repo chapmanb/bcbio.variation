@@ -37,10 +37,10 @@
             <span class="icon-bar"></span>
           </a>
           <a class="brand" href="/">X PRIZE scoring</a>
-          <div class="nav-collapse">
-            <ul class="nav">
-              <li class="active"><a href="/">Home</a></li>
-              <!--<li><a href="#about">About</a></li>-->
+          <div class="collapse nav-collapse">
+            <ul id="top-navbar" class="nav">
+              <li><a href="/">Home</a></li>
+              <li><a href="/analyses">Analyses</a></li>
             </ul>
           </div><!--/.nav-collapse -->
           <div class="pull-right" id="user-manage">
@@ -156,6 +156,7 @@
       </footer>
     </div> <!-- /container -->
     <script>bcbio.variation.score.upload_generalize();</script>
-    <script>bcbio.variation.login.handle_login();</script>
+    <!--<script>bcbio.variation.login.handle_login();</script> -->
+    <script>bcbio.variation.score.set_navigation();</script>
   </body>
 </html>
