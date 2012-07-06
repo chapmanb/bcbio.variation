@@ -153,7 +153,13 @@
       (upload-results gs-client work-info comparisons))
     (spit (file (:dir work-info) "scoring-summary.html")
           (html-scoring-summary comparisons (:id work-info)))
-    (db/add-analysis work-info comparisons (:db @web-config))))
+    (when-let [username (session/get :username)]
+      (db/add-analysis {:username username :files (:c-files comparisons)
+                        :analysis_id (:id work-info)
+                        :description (format "%s: %s" (:sample comparisons)
+                                             (fs/base-name (-> comparisons :exp :calls second :file)))
+                        :location (:dir work-info) :type :scoring}
+                       (:db @web-config)))))
 
 (defmulti get-input-files
   "Prepare working directory, downloading input files."

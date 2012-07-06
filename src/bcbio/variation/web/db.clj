@@ -1,6 +1,7 @@
 (ns bcbio.variation.web.db
   "Provide basic persistence of user files and processes in local DB."
-  (:require [clojure.java.jdbc :as sql]
+  (:require [clojure.string :as string]
+            [clojure.java.jdbc :as sql]
             [fs.core :as fs]))
 
 (defn- get-db [fname & {:as opts}]
@@ -17,6 +18,7 @@
                     [:username :text]
                     [:type :text]
                     [:description :text]
+                    [:location :text]
                     [:created :timestamp "NOT NULL" "DEFAULT CURRENT_TIMESTAMP"])
   (sql/create-table :files
                     [:analysis_id :text]
@@ -28,15 +30,35 @@
   [db-file]
   (when-not (fs/exists? db-file)
     (sql/with-connection (get-db db-file :create true)
-      (create-user-tables)))
+      (sql/transaction
+       (create-user-tables))))
   db-file)
 
 (defn get-analyses
-  "Retrieve list of analyses run for a specific user."
-  [username db-file])
+  "Retrieve list of analyses run for a specific user and analysis type"
+  [username atype db-file]
+  (sql/with-connection (get-db db-file)
+    (sql/with-query-results rows
+      ["SELECT * FROM analysis WHERE username = ? AND type = ? ORDER BY created DESC"
+       username atype]
+      (vec (map #(assoc % :created (java.sql.Timestamp. (:created %))) rows)))))
 
-(defn add-analysis
+(defmulti add-analysis
   "Add an analysis and associated files to the database."
-  [username analysis db-file]
-  (println username)
-  (println analysis))
+  (fn [info _] (:type info)))
+
+(defmethod add-analysis :scoring
+  [info db-file]
+  (letfn [(get-analysis-files [info]
+            (map (fn [[k f]]
+                   {:analysis_id (:analysis_id info)
+                    :name (name k)
+                    :location (string/replace f (str (:location info) "/") "")})
+                 (:files info)))]
+    (sql/with-connection (get-db db-file)
+      (sql/transaction
+       (sql/insert-record :analysis (-> info
+                                        (dissoc :files)
+                                        (assoc :created (java.sql.Timestamp. (.getTime (java.util.Date.))))))
+       (doseq [x (get-analysis-files info)]
+         (sql/insert-record :files x))))))
