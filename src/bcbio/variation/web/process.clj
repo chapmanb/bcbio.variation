@@ -251,27 +251,36 @@
 
 ;; ## File retrieval from processing
 
+(defn- get-run-info
+  "Retrieve run information from stored database or current session."
+  [run-id username]
+  (println "***" username)
+  (if (nil? username)
+    (let [work-info (get (session/get :work-info) run-id)]
+      [(:sample work-info) (:dir work-info)])
+    (let [work-info (->> (db/get-analyses username :scoring (:db @web-config))
+                         (filter #(= run-id (:analysis_id %)))
+                         first)
+          sample-name (when-not (nil? work-info)
+                        (first (string/split (:description work-info) #":")))]
+      [sample-name (:location work-info)])))
+
 (defn get-variant-file
   "Retrieve processed output file for web display."
   [run-id name username]
-  (let [work-info (->> (db/get-analyses username :scoring (:db @web-config))
-                       (filter #(= run-id (:analysis_id %)))
-                       first)
-        sample-name (when-not (nil? work-info)
-                      (first (string/split (:description work-info) #":")))]
-    (letfn [(sample-file [ext]
-              (let [base-name "contestant-reference"]
-                (format "%s-%s-%s" sample-name base-name ext)))]
-      (let [file-map {"concordant" (sample-file "concordant.vcf")
-                      "discordant" (sample-file "discordant.vcf")
-                      "discordant-missing" (sample-file "discordant-missing.vcf")
-                      "phasing" (sample-file "phasing-error.vcf")}
-            base-dir (:location work-info)
-            work-dir (when-not (nil? base-dir) (fs/file base-dir "grading"))
-            name (get file-map name)
-            fname (if-not (or (nil? work-dir)
-                              (nil? name)) (str (fs/file work-dir name)))]
-        (response/content-type "text/plain"
-                               (if (and (not (nil? fname)) (fs/exists? fname))
-                                 (slurp fname)
-                                 "Variant file not found"))))))
+  (letfn [(sample-file [sample-name ext]
+            (let [base-name "contestant-reference"]
+              (format "%s-%s-%s" sample-name base-name ext)))]
+    (let [[sample-name base-dir] (get-run-info run-id username)
+          file-map {"concordant" (sample-file sample-name "concordant.vcf")
+                    "discordant" (sample-file sample-name "discordant.vcf")
+                    "discordant-missing" (sample-file sample-name "discordant-missing.vcf")
+                    "phasing" (sample-file sample-name "phasing-error.vcf")}
+          work-dir (when-not (nil? base-dir) (fs/file base-dir "grading"))
+          name (get file-map name)
+          fname (if-not (or (nil? work-dir)
+                            (nil? name)) (str (fs/file work-dir name)))]
+      (response/content-type "text/plain"
+                             (if (and (not (nil? fname)) (fs/exists? fname))
+                               (slurp fname)
+                               "Variant file not found")))))

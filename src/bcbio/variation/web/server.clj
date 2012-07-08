@@ -61,10 +61,14 @@
                                   (file "grading"))}}))
 
 (defremote get-summary [run-id]
-  (when-let [out-dir (->> (get-analyses (get-username) :scoring (:db @web-config))
-                          (filter #(= run-id (:analysis_id %)))
-                          first
-                          :location)]
+  (when-let [out-dir (if-let [username (get-username)]
+                       (->> (get-analyses username :scoring (:db @web-config))
+                            (filter #(= run-id (:analysis_id %)))
+                            first
+                            :location)
+                       (-> (session/get :work-info)
+                           (get run-id)
+                           :dir))]
     (let [summary-file (file out-dir "scoring-summary.html")]
       (when (fs/exists? summary-file)
         (slurp summary-file)))))
