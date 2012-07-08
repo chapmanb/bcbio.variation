@@ -32,12 +32,14 @@
                  [domina "1.0.0-beta4" :exclusions [org.clojure/clojurescript]]
                  [jayq "0.1.0-alpha4"]
                  [com.keminglabs/chosen "0.1.6"]]
-  :dev-dependencies [[midje "1.4.0" :exclusions [org.clojure/clojure]]
-                     [lein-midje "1.0.10"]]
-  :repositories {"biojava" "http://www.biojava.org/download/maven/"}
+  :profiles {:dev
+             {:dependencies
+              [[midje "1.4.0" :exclusions [org.clojure/clojure]]]}}
   :plugins [[lein-cljsbuild "0.2.1"]
-            [lein-marginalia "0.7.1"]]
-  :java-source-path "src/java"
+            [lein-marginalia "0.7.1"]
+            [lein-midje "2.0.0-SNAPSHOT"]]
+  :repositories {"biojava" "http://www.biojava.org/download/maven/"}
+  :java-source-paths ["src/java"]
   ;:jvm-opts ["-Xmx4g"]
   :omit-source true
   :aot [bcbio.variation.vcfwalker bcbio.variation.core bcbio.variation.annotate.nbq]
@@ -58,6 +60,6 @@
                 :source-path "src/cljs",
                 :compiler
                 {:output-to "public/js/score.js",
-                 :optimizations :advanced
-                 :externs ["externs/jquery.js"]
+                 :optimizations :advanced,
+                 :externs ["externs/jquery.js"],
                  :pretty-print false}}]})

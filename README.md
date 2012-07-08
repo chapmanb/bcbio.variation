@@ -22,7 +22,13 @@ for variant file comparison.
 
 ### Setup
 
-Requires Java 1.6 and [Leiningen][u1].
+Requires Java 1.6 or better and [Leiningen][u1]. We use the 2.x version of
+Leiningen, so be sure to get the preview release:
+
+    $ wget https://raw.github.com/technomancy/leiningen/preview/bin/lein
+    $ chmod 755 lein && sudo mv lein /usr/local/bin
+
+Then use Leiningen to install all dependencies:
 
     $ lein deps
 
@@ -36,7 +42,6 @@ An example of scoring a phased diploid genome against a haploid reference
 genome:
     
     $ lein run :compare config/reference-grading.yaml
-
 
 An example of assessing variant calls produced by different calling algorithms:
 
