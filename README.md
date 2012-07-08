@@ -41,18 +41,18 @@ variant files that demonstrate the features of the library.
 An example of scoring a phased diploid genome against a haploid reference
 genome:
     
-    $ lein run :compare config/reference-grading.yaml
+    $ lein variant-compare config/reference-grading.yaml
 
 An example of assessing variant calls produced by different calling algorithms:
 
-    $ lein run :compare config/method-comparison.yaml
+    $ lein variant-compare config/method-comparison.yaml
 
 ### Web interface
 
 A web interface automates the process of preparing configuration files and
 running a variant comparison:
     
-    $ lein run :web config/web-processing.yaml
+    $ lein variant-web config/web-processing.yaml
 
 ### Run GATK walker for variant statistics
 

@@ -41,26 +41,26 @@
             [lein-midje "2.0.0-SNAPSHOT"]]
   :repositories {"biojava" "http://www.biojava.org/download/maven/"}
   :java-source-paths ["src/java"]
-  ;:jvm-opts ["-Xmx4g"]
+ ;:jvm-opts ["-Xmx4g"]
   :omit-source true
   :aot [bcbio.variation.vcfwalker bcbio.variation.core bcbio.variation.annotate.nbq]
   :main bcbio.variation.core
-  :run-aliases {:compare bcbio.variation.compare
-                :web bcbio.variation.web.server
-                :evaluate bcbio.variation.evaluate
-                :gms bcbio.variation.utils.gms
-                :haploid bcbio.variation.haploid
-                :background bcbio.variation.utils.background
-                :popfreq bcbio.variation.utils.popfreq
-                :summarize bcbio.variation.utils.summarize
-                :recall bcbio.variation.recall
-                :reorder bcbio.align.reorder
-                :vctest bcbio.variation.variantcontext}
+  :aliases {"variant-compare" ["run" "-m" "bcbio.variation.compare"]
+            "variant-web" ["run" "-m" "bcbio.variation.web.server"]
+            "variant-evaluate" ["run" "-m" "bcbio.variation.evaluate"]
+            "variant-gms" ["run" "-m" "bcbio.variation.utils.gms"]
+            "variant-haploid" ["run" "-m" "bcbio.variation.haploid"]
+            "variant-background" ["run" "-m" "bcbio.variation.utils.background"]
+            "variant-popfreq" ["run" "-m" "bcbio.variation.utils.popfreq"]
+            "variant-summarize" ["run" "-m" "bcbio.variation.utils.summarize"]
+            "variant-recall" ["run" "-m" "bcbio.variation.recall"]
+            "variant-reorder" ["run" "-m" "bcbio.align.reorder"]
+            "variant-vctest" ["run" "-m" "bcbio.variation.variantcontext"]}
   :cljsbuild {:builds
-              [{:builds nil,
-                :source-path "src/cljs",
+              [{:builds nil
+                :source-path "src/cljs"
                 :compiler
-                {:output-to "public/js/score.js",
-                 :optimizations :advanced,
-                 :externs ["externs/jquery.js"],
+                {:output-to "public/js/score.js"
+                 :optimizations :advanced
+                 :externs ["externs/jquery.js"]
                  :pretty-print false}}]})
