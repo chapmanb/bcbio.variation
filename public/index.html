@@ -21,7 +21,7 @@
     </style>
     <link href="css/bootstrap-responsive.css" rel="stylesheet">
     <link href="css/variation-web.css" rel="stylesheet">
-    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
     <script src="js/bootstrap.js"></script>
     <script src="js/chosen.jquery.min.js"></script>
     <script src="js/score.js"></script>
@@ -37,10 +37,10 @@
             <span class="icon-bar"></span>
           </a>
           <a class="brand" href="/">X PRIZE scoring</a>
-          <div class="nav-collapse">
-            <ul class="nav">
-              <li class="active"><a href="/">Home</a></li>
-              <!--<li><a href="#about">About</a></li>-->
+          <div class="collapse nav-collapse">
+            <ul id="top-navbar" class="nav">
+              <li><a href="/">Home</a></li>
+              <li><a href="/analyses">Analyses</a></li>
             </ul>
           </div><!--/.nav-collapse -->
           <div class="pull-right" id="user-manage">
@@ -55,7 +55,7 @@
             enctype="multipart/form-data" action="/score">
         <fieldset>
         <h3>Submit variation file for scoring</h3>
-        <div class="control-group">
+        <div class="control-group" id="upload-choices">
           <label class="control-label" for="upload-method">Upload method</label>
           <div class="controls">
           <ul class="nav nav-pills">
@@ -157,5 +157,6 @@
     </div> <!-- /container -->
     <script>bcbio.variation.score.upload_generalize();</script>
     <script>bcbio.variation.login.handle_login();</script>
+    <script>bcbio.variation.score.set_navigation();</script>
   </body>
 </html>

@@ -8,14 +8,16 @@
         [bcbio.variation.normalize :only [pick-best-ref]]
         [bcbio.variation.report :only [prep-scoring-table]]
         [bcbio.variation.web.shared :only [web-config]])
-  (:require [clj-yaml.core :as yaml]
+  (:require [clojure.string :as string]
+            [clj-yaml.core :as yaml]
             [doric.core :as doric]
             [fs.core :as fs]
             [hiccup.core :as hiccup]
             [noir.session :as session]
             [noir.response :as response]
             [net.cgrand.enlive-html :as html]
-            [clj-genomespace.core :as gs]))
+            [clj-genomespace.core :as gs]
+            [bcbio.variation.web.db :as db]))
 
 ;; ## Run scoring based on inputs from web or API
 
@@ -67,11 +69,17 @@
                (html/transform [:table] (html/set-attr :class "table table-condensed"))
                html/emit*))))
 
-(defn- hiccup-to-enlive [x]
-  (-> x
-      java.io.StringReader.
-      html/html-resource
-      html/content))
+(defn- base-page-w-content
+  "Update main page HTML with specified content"
+  [new-hiccup-html]
+  (let [html-dir (get-in @web-config [:dir :html-root])]
+    (apply str (html/emit*
+                (html/transform (html/html-resource (fs/file html-dir "index.html"))
+                                [:div#main-content]
+                                (-> new-hiccup-html
+                                    java.io.StringReader.
+                                    html/html-resource
+                                    html/content))))))
 
 (defn html-scoring-summary
   "Generate summary of scoring results for display."
@@ -94,21 +102,38 @@
   [run-id]
   (let [html-dir (get-in @web-config [:dir :html-root])
         template-dir (str (fs/file html-dir "template"))]
-    (apply str (html/emit*
-                (html/transform (html/html-resource (fs/file html-dir "index.html"))
-                                [:div#main-content]
-                                (hiccup-to-enlive
-                                 (hiccup/html
-                                  [:div {:id "scoring-in-process"}
-                                   [:h3 "Status"]
-                                   [:div {:id "scoring-status"} "Downloading input files"]
-                                   [:div {:class "progress"}
-                                    [:div {:id "scoring-progress"
-                                           :class "bar" :style "width: 0%"}]]
-                                   (slurp (fs/file template-dir "scoring.html"))
-                                   [:script {:src "js/score.js"}]
-                                   [:script (format "bcbio.variation.score.update_run_status('%s');"
-                                                    run-id)]])))))))
+    (base-page-w-content 
+     (hiccup/html
+      [:div {:id "scoring-in-process"}
+       [:h3 "Status"]
+       [:div {:id "scoring-status"} "Downloading input files"]
+       [:div {:class "progress"}
+        [:div {:id "scoring-progress"
+               :class "bar" :style "width: 0%"}]]
+       (slurp (fs/file template-dir "scoring.html"))
+       [:script {:src "js/score.js"}]
+       [:script (format "bcbio.variation.score.update_run_status('%s');"
+                        run-id)]]))))
+
+(defn analyses-html
+  "Update main page with list of performed analyses."
+  [username]
+  (base-page-w-content
+   (hiccup/html
+    (if (nil? username)
+      [:p "Please login to display previously run analyses."]
+      [:div {:id "user-analyses" :class "container"}
+       [:h3 "Previous analyses"]
+       [:ul {:class "nav nav-tabs nav-stacked"}
+        (map (fn [x]
+               [:li
+                [:a {:href "#" :id (:analysis_id x)}
+                 (format "%s -- %s" (:description x)
+                         (-> (java.text.SimpleDateFormat. "dd MMM yyyy HH:mm" )
+                             (.format (:created x))))]])
+             (db/get-analyses username :scoring (:db @web-config)))]
+       [:script {:src "js/score.js"}]
+       [:script "bcbio.variation.analyses.display_analyses()"]]))))
 
 (defn upload-results
   "Upload output files to GenomeSpace."
@@ -151,7 +176,14 @@
     (when-not (or (nil? gs-client) (nil? (:upload-dir work-info)))
       (upload-results gs-client work-info comparisons))
     (spit (file (:dir work-info) "scoring-summary.html")
-          (html-scoring-summary comparisons (:id work-info)))))
+          (html-scoring-summary comparisons (:id work-info)))
+    (when-let [username (session/get :username)]
+      (db/add-analysis {:username username :files (:c-files comparisons)
+                        :analysis_id (:id work-info)
+                        :description (format "%s: %s" (:sample comparisons)
+                                             (fs/base-name (-> comparisons :exp :calls second :file)))
+                        :location (:dir work-info) :type :scoring}
+                       (:db @web-config)))))
 
 (defmulti get-input-files
   "Prepare working directory, downloading input files."
@@ -221,16 +253,20 @@
 
 (defn get-variant-file
   "Retrieve processed output file for web display."
-  [run-id name]
-  (let [work-info (get (session/get :work-info) run-id)]
+  [run-id name username]
+  (let [work-info (->> (db/get-analyses username :scoring (:db @web-config))
+                       (filter #(= run-id (:analysis_id %)))
+                       first)
+        sample-name (when-not (nil? work-info)
+                      (first (string/split (:description work-info) #":")))]
     (letfn [(sample-file [ext]
               (let [base-name "contestant-reference"]
-                (format "%s-%s-%s" (:sample work-info) base-name ext)))]
+                (format "%s-%s-%s" sample-name base-name ext)))]
       (let [file-map {"concordant" (sample-file "concordant.vcf")
                       "discordant" (sample-file "discordant.vcf")
                       "discordant-missing" (sample-file "discordant-missing.vcf")
                       "phasing" (sample-file "phasing-error.vcf")}
-            base-dir (:dir work-info)
+            base-dir (:location work-info)
             work-dir (when-not (nil? base-dir) (fs/file base-dir "grading"))
             name (get file-map name)
             fname (if-not (or (nil? work-dir)

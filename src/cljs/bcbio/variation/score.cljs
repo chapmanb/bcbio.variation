@@ -53,11 +53,11 @@
 (defn- set-active-choice!
   "Set the active type for our type of file upload."
   [active-id]
-  (-> (sel ".nav")
+  (-> (domina/by-id "upload-choices")
       (sel ".active")
-      (remove-attr! "class"))
+      (remove-attr! :class))
   (-> (sel active-id)
-      (set-attr! "class" "active")))
+      (set-attr! :class "active")))
 
 (defn- add-file-input!
   "Update an input item for file upload input."
@@ -116,6 +116,20 @@
   (set-active-choice! "#menu-choice-gs")
   (add-gs-input! "variant-file" "vcf")
   (add-gs-input! "region-file" "bed"))
+
+(defn ^:export set-navigation
+  "Correctly set the active top level navigation toolbar."
+  []
+  (let [loc (-> (.toString window.location ())
+                (string/split #"/")
+                last)]
+    (doseq [list-item (domina/children (domina/by-id "top-navbar"))]
+      (if (= (str "/" loc)
+             (-> (domina/children list-item)
+                 first
+                 (domina/attr :href)))
+        (domina/set-attr! list-item :class "active")
+        (domina/remove-attr! list-item :class)))))
 
 (defn ^:export upload-generalize
   "Handle generalized upload through files or GenomeSpace."

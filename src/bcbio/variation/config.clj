@@ -3,9 +3,7 @@
   (:use [clojure.java.io]
         [clj-time.local :only [format-local-time local-now]])
   (:require [clojure.string :as string]
-            [clj-logging-config.log4j :as log4j]
             [clojure.tools.logging :as log]
-            [clojure.tools.logging.impl :as log-impl]
             [clj-yaml.core :as yaml]
             [fs.core :as fs]
             [pallet.algo.fsm.fsm :as fsm-base]
@@ -78,16 +76,6 @@
   ((get-in config [:fsm :transition]) #(assoc % :state-kw state
                                               :state-data {:desc desc})))
 
-(defn configure-log4j []
-  (alter-var-root (var log/*logger-factory*) (constantly (log-impl/log4j-factory)))
-  (let [pattern "%d [%-5p] %m%n"]
-    (log4j/set-loggers! :config {:level :info}
-                        :root {:level :info :pattern pattern :out :console}
-                        "bcbio.variation.config" {:level :info :pattern pattern
-                                                  :out :console :additivity false}
-                        "org.broadinstitute.sting.gatk.refdata.tracks.RMDTrackBuilder"
-                        {:level :warn})))
-
 ;; ## Configuration
 
 (defn- add-dir-files
@@ -147,7 +135,6 @@
                             (vec config))
                     (contains? to-process path) (maybe-process config path)
                     :else config))]
-      (configure-log4j)
       (-> config
           (update-tree [])
           (add-dir-files #{".vcf"})
