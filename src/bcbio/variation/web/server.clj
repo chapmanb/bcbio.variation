@@ -3,6 +3,7 @@
   (:use [clojure.java.io]
         [noir.core :only [defpage]]
         [noir.fetch.remotes :only [defremote]]
+        [bcbio.variation.api.file :only [get-files]]
         [bcbio.variation.config :only [get-log-status]]
         [bcbio.variation.web.db :only [prepare-web-db get-analyses]]
         [bcbio.variation.web.shared :only [web-config]]
@@ -51,7 +52,9 @@
 
 (defremote list-external-files [dir ftype]
   (if-let [gs-client (cur-gs-client)]
-    (map prep-gs-path (gs/list-files gs-client dir ftype))
+    (map (fn [x] {:full (str (:folder x) "/" (:filename x))
+                  :name (:filename x)})
+         (get-files ftype {:client gs-client} [dir]))
     []))
 
 (defremote get-status [run-id]
