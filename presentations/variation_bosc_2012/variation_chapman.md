@@ -63,11 +63,9 @@ Scale
 - Structural variations
 
 # Sequencing for patients
-\begin{center}
-\includegraphics[width=0.25\textwidth]{images/Topol-The_Creative}
-\end{center}
-\vspace{0.2em}
-\url{http://www.amazon.com/Creative-Destruction-Medicine-Digital-Revolution/dp/0465025501/}
+\includegraphics[width=1.0\textwidth]{images/bertrand_intro}
+\vspace{0.1em}
+\url{http://matt.might.net/articles/my-sons-killer/}
 
 # Technology overview
 
