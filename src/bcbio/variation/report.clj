@@ -165,8 +165,8 @@
         s-metrics (-> sv-metrics
                       (assoc :accuracy (calc-accuracy metrics [:discordant]))
                       (assoc :accuracy-phasing (calc-accuracy metrics [:discordant :phasing-error])))
-        need-percents {:accuracy 3
-                       :accuracy-phasing 3
+        need-percents {:accuracy 6
+                       :accuracy-phasing 6
                        [:total-bases :percent] 2}]
     (letfn [(prep-row [[k x]]
               (let [val (if (coll? k) (get-in s-metrics k) (get s-metrics k))]
