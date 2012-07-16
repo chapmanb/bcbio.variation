@@ -14,32 +14,37 @@
 
 ;; ## Convert diploid -> haploid
 
-(def ^{:doc "Threshold to include a heterozygous allele as a haploid homozygote variant."}
-  haploid-thresh 1e-5)
+(defn- get-haploid-thresh
+  "Threshold to include a heterozygous allele as a haploid homozygote variant.
+  Based on type of variant: SNPs have lower threshold of inclusion."
+  [vc]
+  (case (:type vc)
+    "SNP" 1e-5
+    1e-50))
 
 (defn- get-haploid-genotype
   "Retrieve updated genotype with haploid allele."
   [vc]
   (let [g (-> vc :genotypes first)]
-    (letfn [(maybe-variant-haploid [g]
+    (letfn [(maybe-variant-haploid [g vc]
               (when (.hasLikelihoods g)
                 (let [in-map (-> (.getLikelihoods g) (.getAsMap true))
                       variant-prob (get (zipmap (map #(.name %) (keys in-map)) (vals in-map))
                                         "HOM_VAR")]
-                  (when (> variant-prob haploid-thresh)
+                  (when (> variant-prob (get-haploid-thresh vc))
                     (first (filter #(and (.isNonReference %) (.isCalled %))
                                    (.getAlleles g)))))))
             (extract-mixed-allele [alleles]
               (let [ready (remove #(.isNoCall %) alleles)]
                 (when (= 1 (count ready))
                   (first ready))))
-            (get-haploid-allele [g]
+            (get-haploid-allele [g vc]
               (case (:type g)
                 "HOM_VAR" (first (:alleles g))
                 "MIXED" (extract-mixed-allele (:alleles g))
-                "HET" (maybe-variant-haploid (:genotype g))
+                "HET" (maybe-variant-haploid (:genotype g) vc)
                 nil))]
-      (when-let [allele (get-haploid-allele g)]
+      (when-let [allele (get-haploid-allele g vc)]
         (doto (-> vc :vc .getGenotypes GenotypesContext/copy)
           (.replace (Genotype/modifyAlleles (:genotype g) [allele])))))))
 
