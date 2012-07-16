@@ -5,7 +5,8 @@
            [org.broad.tribble.index IndexFactory]
            [org.broad.tribble.source BasicFeatureSource])
   (:use [clojure.java.io]
-        [bcbio.align.ref :only [sort-bed-file]])
+        [bcbio.align.ref :only [sort-bed-file]]
+        [bcbio.variation.variantcontext :only [get-vcf-source]])
   (:require [clojure.string :as string]
             [fs.core :as fs]
             [bcbio.run.itx :as itx]
@@ -64,6 +65,20 @@
         (when (= (.getName f) "CALLABLE")
           (.write wtr (format "%s\t%s\t%s\n" (.getChr f)
                               (- (.getStart f) 2) (.getEnd f))))))
+    out-file))
+
+(defn limit-bed-intervals
+  "Limit input BED intervals to only chromosomes found in a VCF file."
+  [intervals call exp config]
+  (let [out-file (itx/add-file-part intervals (:name call) (get-in config [:dir :prep]))]
+    (when (itx/needs-run? out-file)
+      (with-open [rdr (reader intervals)
+                  wtr (writer out-file)
+                  call-vcf-s (get-vcf-source (:file call) (:ref exp))]
+        (let [seq-names (set (.getSequenceNames call-vcf-s))]
+          (doseq [x (filter #(contains? seq-names (first (string/split % #"\t")))
+                            (line-seq rdr))]
+            (.write wtr (str x "\n"))))))
     out-file))
 
 ;; ## Multiple callables

@@ -13,7 +13,8 @@
        - If mismatch and neither allele matches, then calling error"
   (:import [org.broadinstitute.sting.utils.interval IntervalUtils IntervalSetRule]
            [org.broadinstitute.sting.utils GenomeLocParser GenomeLoc])
-  (:use [bcbio.variation.callable :only [get-bed-source features-in-region]]
+  (:use [bcbio.variation.callable :only [get-bed-source features-in-region
+                                         limit-bed-intervals]]
         [bcbio.variation.structural :only [prep-itree get-itree-overlap
                                            remove-itree-vc get-itree-all]]
         [bcbio.variation.variantcontext :only [parse-vcf get-vcf-retriever get-vcf-source
@@ -227,7 +228,7 @@
   Partitions phased regions into blocks of two concurrent regions. For each block:
    - Evaluate second region with standard scoring: expected to called
    - Collect expected variants in the intervening region between phased blocks,
-     these are missing in the called and reported as errors."
+     report those missing in the comparison input as errors."
   [call-vcf-s expect-vcf-s & {:keys [bed-source]}]
   (let [expect-retriever (get-vcf-retriever expect-vcf-s)
         prev (atom nil)]
@@ -255,11 +256,13 @@
                      (sort-by :start))))
             (score-phased-and-intervene [region]
               (let [out (concat (get-intervene-expect @prev region)
-                                (score-phased-region expect-retriever region))]
+                                (when (not= (:chr (first region)) "finished_sentinel")
+                                  (score-phased-region expect-retriever region)))]
                 (reset! prev region)
                 out))]
-      (map score-phased-and-intervene (parse-phased-haplotypes call-vcf-s
-                                                               :bed-source bed-source)))))
+      (map score-phased-and-intervene (concat (parse-phased-haplotypes call-vcf-s
+                                                                       :bed-source bed-source)
+                                              [[{:chr "finished_sentinel" :start 1}]])))))
 
 ;; ## Summarize phased comparisons
 
@@ -358,11 +361,14 @@
   {:pre [(= 1 (count (get phased-calls true)))
          (= 1 (count (get phased-calls false)))]}
   (let [ref (first (get phased-calls true))
-        call (first (get phased-calls false))]
+        call (first (get phased-calls false))
+        call-intervals (when-let [f (get call :intervals (:intervals exp))]
+                         (limit-bed-intervals f call exp config))]
     (with-open [ref-vcf-s (get-vcf-source (:file ref) (:ref exp))
                 call-vcf-s (get-vcf-source (:file call) (:ref exp))
-                bed-s (if-let [f (get call :intervals (:intervals exp))]
-                        (get-bed-source f (:ref exp)) (java.io.StringReader. ""))]
+                bed-s (if call-intervals
+                        (get-bed-source call-intervals (:ref exp))
+                        (java.io.StringReader. ""))]
       (let [compared-calls (score-phased-calls call-vcf-s ref-vcf-s :bed-source bed-s)]
         {:c-files (write-concordance-output (convert-cmps-to-grade compared-calls)
                                             [:concordant :discordant
@@ -370,8 +376,9 @@
                                             (:sample exp) call ref
                                             (get-in config [:dir :out]) (:ref exp))
          :metrics (get-phasing-metrics compared-calls (:intervals exp)
-                                       (:intervals call) (:ref exp))
-         :c1 call :c2 ref :sample (:sample exp) :exp exp :dir (:dir config)}))))
+                                       call-intervals (:ref exp))
+         :c1 (assoc call :intervals call-intervals)
+         :c2 ref :sample (:sample exp) :exp exp :dir (:dir config)}))))
 
 (defn- convert-cmps-to-compare
   "Convert stream of variant context haploid comparison to standard,

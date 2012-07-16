@@ -146,7 +146,7 @@
   (with-open [ref-vcf-s (get-vcf-source ref-vcf ref)
               ref2-vcf-s (get-vcf-source ref2-vcf ref)]
     (let [cmps (score-phased-calls ref2-vcf-s ref-vcf-s)]
-      (count cmps) => 1
+      (count cmps) => 2
       (count (first cmps)) => 10
       (drop 6 (map :comparison (first cmps))) => [:ref-concordant :concordant
                                                   :ref-concordant :discordant])))
