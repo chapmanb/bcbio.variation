@@ -26,10 +26,12 @@
    - creds is a dictionary of login credentials for GenomeSpace and can be:
      :username/:password for login or :client for a connected client.
    - dirnames specify specific directories to list, defaults to all directories."
-  [ftype creds dirnames]
-  (when-let [gs-client (get-gs-client creds)]
-    (let [dirnames (if (or (nil? dirnames) (empty? dirnames))
-                     (gs/list-dirs gs-client ".")
-                     dirnames)]
-      (apply concat
-             (map (partial get-gs-dirname-files ftype gs-client) dirnames)))))
+  ([ftype creds]
+     (get-files ftype creds nil))
+  ([ftype creds dirnames]
+     (when-let [gs-client (get-gs-client creds)]
+       (let [dirnames (if (or (nil? dirnames) (empty? dirnames))
+                        (cons "." (gs/list-dirs gs-client "."))
+                        dirnames)]
+         (apply concat
+                (map (partial get-gs-dirname-files ftype gs-client) dirnames))))))

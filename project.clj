@@ -7,7 +7,7 @@
                  [org.clojars.chapmanb/picard "1.64"]
                  [org.biojava/biojava3-core "3.0.4"]
                  [org.biojava/biojava3-alignment "3.0.4"]
-                 [clj-genomespace "0.1.1-SNAPSHOT"]
+                 [clj-genomespace "0.1.2-SNAPSHOT"]
                  [incanter/incanter-core "1.3.0-SNAPSHOT" :exclusions [org.clojure/clojure]]
                  [incanter/incanter-charts "1.3.0-SNAPSHOT" :exclusions [org.clojure/clojure]]
                  [nz.ac.waikato.cms.weka/weka-stable "3.6.6"]
