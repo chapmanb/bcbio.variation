@@ -198,7 +198,7 @@ X Prize: haploid gold standard genome
     - Cancer: tumor/normal pairs
     - Mendelian inherited diseases: father/mother/child
     
-- Annotate with known data
+- Prioritize based on known data
     - Gemini: \url{https://github.com/arq5x/gemini}
     - 1000 genomes frequencies
     - Mappability
