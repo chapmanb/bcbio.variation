@@ -5,6 +5,7 @@ variant data in [VCF files][2]. It supports scoring for the
 [Archon Genomic X PRIZE competition][5] but is also a general framework
 for variant file comparison.
 
+* [presentation from Bioinformatics Open Source Conference 2012][p1]
 * [presentation overview of the project][4]
 * [howto description of interfacing with GATK][6]
 * [code documentation][3]
@@ -17,6 +18,7 @@ for variant file comparison.
 [4]: http://chapmanb.github.com/bcbio.variation/presentations/gatk_clojure.pdf
 [5]: http://genomics.xprize.org/
 [6]: http://bcbio.wordpress.com/2012/03/04/extending-the-gatk-for-custom-variant-comparisons-using-clojure/
+[p1]: http://chapmanb.github.com/bcbio.variation/presentations/variation_bosc_2012/variation_chapman.pdf
 
 ## Usage
 
