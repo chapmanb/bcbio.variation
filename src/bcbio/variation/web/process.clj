@@ -155,7 +155,7 @@
   "Merge standard and structural variant outputs into final set of upload files."
   [comparisons]
   (letfn [(merge-files-into [comparisons orig-kw addin-kw]
-            (let [ref (get-in comparisons [:c1 :ref])
+            (let [ref (get-in comparisons [:exp :ref])
                   orig (get-in comparisons [:c-files orig-kw])
                   addin (get-in comparisons [:c-files addin-kw])
                   combine-vcf (combine-variants [orig addin] ref :merge-type :full
@@ -254,7 +254,6 @@
 (defn- get-run-info
   "Retrieve run information from stored database or current session."
   [run-id username]
-  (println "***" username)
   (if (nil? username)
     (let [work-info (get (session/get :work-info) run-id)]
       [(:sample work-info) (:dir work-info)])

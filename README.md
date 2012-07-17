@@ -57,13 +57,13 @@ running a variant comparison:
 ### Run GATK walker for variant statistics
 
     $ lein uberjar
-    $ java -jar bcbio.variation-0.0.1-SNAPSHOT-standalone.jar -T VcfSimpleStats
+    $ java -jar target/bcbio.variation-0.0.1-SNAPSHOT-standalone.jar -T VcfSimpleStats
       -R test/data/GRCh37.fa --variant test/data/gatk-calls.vcf --out test.png
 
 ### Run custom GATK annotator
 
     $ lein uberjar
-    $ java -jar bcbio.variation-0.0.1-SNAPSHOT-standalone.jar -T VariantAnnotator
+    $ java -jar target/bcbio.variation-0.0.1-SNAPSHOT-standalone.jar -T VariantAnnotator
        -A MeanNeighboringBaseQuality -R test/data/GRCh37.fa -I test/data/aligned-reads.bam
        --variant test/data/gatk-calls.vcf -o annotated-file.vcf
 
