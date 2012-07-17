@@ -170,7 +170,15 @@ The three options for filtering are:
 [u2]: http://en.wikipedia.org/wiki/YAML
 [u3]: https://github.com/chapmanb/bcbio.variation/blob/master/config/method-comparison.yaml
 [u4]: https://github.com/chapmanb/bcbio.variation/blob/master/config/reference-grading.yaml
-[u5]: http://www.broadinstitute.org/gsa/wiki/index.php/Variant_quality_score_recalibration
+[u5]:
+http://www.broadinstitute.org/gsa/wiki/index.php/Variant_quality_score_recalibration
+
+## Contributors
+
+Brad Chapman
+Chris Fields
+Kevin Lynagh
+Justin Zook
 
 ## License
 
