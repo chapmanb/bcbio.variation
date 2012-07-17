@@ -4,7 +4,7 @@
             VariantContextBuilder])
   (:use [clojure.string :only [split]]
         [bcbio.variation.filter.classify :only [pipeline-classify-filter]]
-        [bcbio.variation.multiple :only [multiple-overlap-analysis remove-mod-name]]
+        [bcbio.variation.filter.trusted :only [get-support-vcfs get-trusted-variants]]
         [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template
                                                get-vcf-source]])
   (:require [bcbio.run.broad :as broad]
@@ -97,30 +97,19 @@
                                 ref)))
       out-file)))
 
-(defn- pairwise-only?
-  "Check if a comparison set is only pairwise and not multiple."
-  [cmp-names]
-  (= 1 (count (set (map (fn [xs] (vec (map remove-mod-name xs))) cmp-names)))))
-
 (defn- get-train-info
   "Retrieve training information for GATK recalibration:
    - No support specified: use the target comparison
    - Support specified and a specific comparison pair
    - Support specified as a single target: use target versus all comparison"
   [cmps-by-name support config]
-  (let [support (if (and (not (coll? support)) (pairwise-only? (keys cmps-by-name)))
-                  (first (keys cmps-by-name))
-                  support)
-        support-vcfs (if (coll? support)
-                       (take 2 (-> cmps-by-name (get support) :c-files vals))
-                       (let [x (multiple-overlap-analysis cmps-by-name config support)]
-                         [(:true-positives x) (:false-positives x)]))]
-      [{:file (first support-vcfs)
+  (let [support-vcfs (get-support-vcfs cmps-by-name support config)]
+      [{:file (:true-positives support-vcfs)
         :name "concordant"
         :truth "true"
         :bad "false"
         :prior 10.0}
-       {:file (second support-vcfs)
+       {:file (:false-positives support-vcfs)
         :name "discordant"
         :truth "false"
         :bad "true"

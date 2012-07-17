@@ -31,8 +31,9 @@
   (letfn [(unique-name [i f]
             (if quiet-out?
               (str "v" i)
-              (get name-map f
-                   (-> f fs/base-name itx/file-root))))]
+              (string/replace (get name-map f
+                                   (-> f fs/base-name itx/file-root))
+                              "-" "_")))]
     (let [base-dir (if (nil? out-dir) (fs/parent (first vcfs)) out-dir)
           full-base-name (-> vcfs first fs/base-name itx/remove-zip-ext)
           base-name (if (nil? base-ext) full-base-name
@@ -41,9 +42,9 @@
           file-info {:out-vcf (str (fs/file base-dir
                                             (itx/add-file-part base-name
                                                                (case merge-type
-                                                                     :minimal "mincombine"
-                                                                     :full "fullcombine"
-                                                                     "combine"))))}
+                                                                 :minimal "mincombine"
+                                                                 :full "fullcombine"
+                                                                 "combine"))))}
           args (concat ["-R" ref
                         "-o" :out-vcf
                         "--rod_priority_list" (string/join "," (map-indexed unique-name vcfs))]
@@ -52,9 +53,9 @@
                        (flatten (map-indexed #(list (str "--variant:" (unique-name %1 %2)) %2) vcfs))
                        (broad/gatk-cl-intersect-intervals intervals ref)
                        (case merge-type
-                             :full ["--genotypemergeoption" "PRIORITIZE"]
-                             :unique ["--genotypemergeoption" "UNIQUIFY"]
-                             :minimal ["--sites_only" "--minimalVCF"]))]
+                         :full ["--genotypemergeoption" "PRIORITIZE"]
+                         :unique ["--genotypemergeoption" "UNIQUIFY"]
+                         :minimal ["--sites_only" "--minimalVCF"]))]
       (if-not (fs/exists? base-dir)
         (fs/mkdirs base-dir))
       (broad/run-gatk "CombineVariants" args file-info {:out [:out-vcf]})
