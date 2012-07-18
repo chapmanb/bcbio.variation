@@ -2,7 +2,10 @@
   "Provide top level API for retrieving available files for a user.
   Encapsulates distributed storage in GenomeSpace as well as locally
   produced files."
-  (require [clj-genomespace.core :as gs]))
+  (:use [clojure.java.io])
+  (:require [clojure.string :as string]
+            [clj-genomespace.core :as gs]
+            [fs.core :as fs]))
 
 (defn- get-gs-client
   [creds]
@@ -16,7 +19,7 @@
   "Retrieve files of the specified type from GenomeSpace."
   [ftype gs-client dirname]
   (map (fn [finfo]
-         {:id (str (:dirname finfo) "/" (:name finfo))
+         {:id (str "gs:" (:dirname finfo) "/" (:name finfo))
           :folder (:dirname finfo) :filename (:name finfo)
           :created-on (:date finfo)})
        (gs/list-files gs-client dirname (name ftype))))
@@ -35,3 +38,28 @@
                         dirnames)]
          (apply concat
                 (map (partial get-gs-dirname-files ftype gs-client) dirnames))))))
+
+(defmulti retrieve-file
+  "Retrieve files by name, transparently handling remote files."
+  (fn [fname _ _]
+    (let [parts (string/split fname #":" 2)]
+      (when (= 2 (count parts))
+        (keyword (first parts))))))
+
+(defmethod retrieve-file :gs
+  [fname creds cache-dir]
+  (let [remote-name (second (string/split fname #":" 2))
+        local-file (str (file cache-dir (if (.startsWith remote-name "/")
+                                          (subs remote-name 1)
+                                          remote-name)))
+        local-dir (str (fs/parent local-file))]
+    (when-not (fs/exists? local-file)
+      (when-not (fs/exists? local-dir)
+        (fs/mkdirs local-dir))
+      (let [gs-client (get-gs-client creds)]
+        (gs/download gs-client (str (fs/parent remote-name))
+                     (fs/base-name remote-name) local-dir)))
+    local-file))
+
+(defmethod retrieve-file :default [fname _ _]
+  fname)

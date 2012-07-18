@@ -2,6 +2,7 @@
   "Provide high level API for accessing variant associated metrics."
   (:import [org.jfree.data.statistics HistogramDataset HistogramType])
   (:use [ordered.map :only [ordered-map]]
+        [bcbio.variation.api.file :only [retrieve-file]]
         [bcbio.variation.filter.classify :only [get-vc-attrs]]
         [bcbio.variation.variantcontext :only [get-vcf-header get-vcf-source parse-vcf]]))
 
@@ -78,8 +79,9 @@
 
 (defn plot-ready-metrics
   "Provide metrics for a VCF file ready for plotting and visualization."
-  [vcf-file ref-file & {:keys [metrics]}]
-  (let [plot-metrics (if (nil? metrics) (available-metrics vcf-file) metrics)
+  [in-vcf-file ref-file & {:keys [metrics creds cache-dir]}]
+  (let [vcf-file (retrieve-file in-vcf-file creds cache-dir)
+        plot-metrics (if (nil? metrics) (available-metrics vcf-file) metrics)
         raw-metrics (clean-raw-metrics
                      (get-raw-metrics (map :id plot-metrics) vcf-file ref-file))]
     {:filename vcf-file
