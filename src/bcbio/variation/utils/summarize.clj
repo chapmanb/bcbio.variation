@@ -38,17 +38,21 @@
   "Prepare attributes for feeding into flattened table"
   (fn [attr value default] attr))
 
+;; Handle set attributes, where we want to report the total sets identified.
 (defmethod prep-attribute "set"
-  [attr value default]
+  [_ value default]
   (cond
    (= value "Intersection") default
    (= value "FilteredInAll") 0
    (nil? value) 0
    :else (count (string/split value #"\-"))))
 
+;; Handle remaining attributes. For multi-allele VCFs return the first value.
 (defmethod prep-attribute :default
   [_ value _]
-  value)
+  (if (coll? value)
+    (first value)
+    value))
 
 (defn- flatten-vc-attrs
   "Extract attributes of interest from INFO field of variant."
@@ -86,15 +90,16 @@
   [vcf ref config]
   (let [out-file (str (itx/file-root vcf) "-variantsum.csv")]
     (when (itx/needs-run? out-file)
-      (with-open [vcf-source (get-vcf-source vcf ref)
-                  wtr (writer out-file)]
-        (doseq [[i out] (map-indexed vector
-                                     (map (partial flatten-vc (add-interval-retrievers config ref))
-                                          (filter passes-filter? (parse-vcf vcf-source))))]
-          (when (= i 0)
-            (csv/write-csv wtr [(map name (keys out))]))
-          (csv/write-csv wtr [(vals out)])
-          (.flush wtr))))
+      (itx/with-tx-files [tx-out-files {:out out-file} [:out] []]
+        (with-open [vcf-source (get-vcf-source vcf ref)
+                    wtr (writer (:out tx-out-files))]
+          (doseq [[i out] (map-indexed vector
+                                       (map (partial flatten-vc (add-interval-retrievers config ref))
+                                            (filter passes-filter? (parse-vcf vcf-source))))]
+            (when (= i 0)
+              (csv/write-csv wtr [(map name (keys out))]))
+            (csv/write-csv wtr [(vals out)])
+            (.flush wtr)))))
     out-file))
 
 (defn vcf-to-table-config
