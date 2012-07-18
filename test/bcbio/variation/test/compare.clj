@@ -8,6 +8,7 @@
         [bcbio.variation.config]
         [bcbio.variation.evaluate :exclude [-main]]
         [bcbio.variation.filter]
+        [bcbio.variation.filter.trusted]
         [bcbio.variation.normalize]
         [bcbio.variation.phasing]
         [bcbio.variation.metrics]
@@ -201,7 +202,9 @@
     (against-background [(before :facts (vec (map itx/remove-path [out-dir])))]
       (facts "Handle multiple variant approach comparisons."
         (multiple-overlap-analysis cmps config "cg") => (get-out-files "cg" "")
-        (multiple-overlap-analysis cmps config "gatk") => (get-out-files "gatk" "-annotated")))))
+        (multiple-overlap-analysis cmps config "gatk") => (get-out-files "gatk" "-annotated"))
+      (facts "Prepare trusted variant file"
+        (get-trusted-variants cmps "gatk" {} config) => nil))))
 
 (facts "Load configuration files, normalizing input."
   (let [config-file (fs/file "." "config" "method-comparison.yaml")
