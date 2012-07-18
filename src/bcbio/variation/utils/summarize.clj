@@ -50,7 +50,7 @@
 ;; Handle remaining attributes. For multi-allele VCFs return the first value.
 (defmethod prep-attribute :default
   [_ value _]
-  (if (coll? value)
+  (if (instance? java.util.ArrayList value)
     (first value)
     value))
 
