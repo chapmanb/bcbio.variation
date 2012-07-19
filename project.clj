@@ -40,7 +40,8 @@
   :plugins [[lein-cljsbuild "0.2.1"]
             [lein-marginalia "0.7.1"]
             [lein-midje "2.0.0-SNAPSHOT"]]
-  :repositories {"biojava" "http://www.biojava.org/download/maven/"}
+  :repositories {"biojava" {:url "http://www.biojava.org/download/maven/"
+                            :snapshots false}}
   :java-source-paths ["src/java"]
  ;:jvm-opts ["-Xmx4g"]
   :omit-source true
