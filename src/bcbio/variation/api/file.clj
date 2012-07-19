@@ -20,6 +20,8 @@
   [ftype gs-client dirname]
   (map (fn [finfo]
          {:id (str "gs:" (:dirname finfo) "/" (:name finfo))
+          :tags (remove nil?
+                        [(first (drop 3 (string/split (:dirname finfo) #"/" 4)))])
           :folder (:dirname finfo) :filename (:name finfo)
           :created-on (:date finfo)})
        (gs/list-files gs-client dirname (name ftype))))
