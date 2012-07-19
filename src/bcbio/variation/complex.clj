@@ -6,7 +6,8 @@
             VariantContextUtils]
            [org.biojava3.core.sequence DNASequence]
            [org.biojava3.alignment Alignments])
-  (:use [clojure.set :only [union]]
+  (:use [clojure.java.io]
+        [clojure.set :only [union]]
         [ordered.set :only [ordered-set]]
         [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template
                                                get-vcf-source]])
@@ -220,25 +221,29 @@
     (lazy-seq (add-normalized-vcs vc-iter mnp-blockers))))
 
 (defn left-align-variants
-  "Left align variants in an input VCF file for a standard representation."
+  "Left align variants in an input VCF file for a standard representation.
+  Checks final line count of prepared file, returning left-aligned file
+  when converting every variant in the input."
   [in-file ref & {:keys [out-dir]}]
-  (let [file-info {:out-vcf (itx/add-file-part in-file "leftalign" out-dir)}
-        args ["-R" ref "-o" :out-vcf "--variant" in-file]]
-    (broad/run-gatk "LeftAlignVariants" args file-info {:out [:out-vcf]})
-    (:out-vcf file-info)))
+  (letfn [(line-count [f]
+            (with-open [rdr (reader f)]
+              (count (line-seq rdr))))]
+    (let [file-info {:out-vcf (itx/add-file-part in-file "leftalign" out-dir)}
+          args ["-R" ref "-o" :out-vcf "--variant" in-file]]
+      (broad/run-gatk "LeftAlignVariants" args file-info {:out [:out-vcf]})
+      (if (= (line-count in-file) (line-count (:out-vcf file-info)))
+        (:out-vcf file-info)
+        in-file))))
 
 (defn normalize-variants
   "Convert MNPs and indels into normalized representation."
   ([in-file ref]
      (normalize-variants in-file ref nil))
-  ([in-file ref out-dir & {:keys [out-fname left-align?]
-                           :or {left-align? true}}]
+  ([in-file ref out-dir & {:keys [out-fname]}]
      (let [base-name (if (nil? out-fname) (itx/remove-zip-ext in-file) out-fname)
            out-file (itx/add-file-part base-name "nomnp" out-dir)]
        (when (itx/needs-run? out-file)
-         (let [la-file (if left-align?
-                         (left-align-variants in-file ref :out-dir out-dir)
-                         in-file)]
+         (let [la-file (left-align-variants in-file ref :out-dir out-dir)]
            (with-open [vcf-source (get-vcf-source la-file ref)]
              (write-vcf-w-template in-file {:out out-file}
                                    (get-normalized-vcs (parse-vcf vcf-source) {})
