@@ -63,7 +63,7 @@
                                   :or {base-ext "multiall"}}]
   (let [concordant-map (reduce (fn [m [k v]]
                                  (if (or (nil? do-include?) (do-include? k))
-                                   (assoc m (get-in v [:c-files :concordant]) (string/join "-" k))
+                                   (assoc m (get-in v [:c-files :concordant]) (string/join "AND" k))
                                    m))
                                (ordered-map) cmps-by-name)
         union-vcf (combine-variants (keys concordant-map) ref :merge-type :full :out-dir out-dir

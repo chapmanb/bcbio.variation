@@ -206,6 +206,17 @@
       (facts "Prepare trusted variant file"
         (get-trusted-variants cmps "gatk" {} config) => nil))))
 
+(let [config-file (str (fs/file "." "config" "method-comparison.yaml"))
+      config (load-config config-file)
+      union-file (str (fs/file (get-in config [:dir :prep]) "multiple"
+                               "Test1-multiall-fullcombine-gatk-annotated.vcf"))]
+  (facts "Prepare trusted variant file"
+    (with-open [vcf-source (get-vcf-source union-file (-> config :experiments first :ref))]
+      (let [data (variant-set-metadata (first (parse-vcf vcf-source))
+                                         (-> config :experiments first :calls))]
+        (-> data :total count) => 3
+        (-> data :technology) => #{"illumina" "cg"}))))
+
 (facts "Load configuration files, normalizing input."
   (let [config-file (fs/file "." "config" "method-comparison.yaml")
         config (load-config config-file)]

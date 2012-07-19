@@ -8,12 +8,20 @@ experiments:
     #intervals: test/data/target-regions.bed
     calls:
       - name: gatk
+        metadata:
+          aligner: novoalign
+          caller: gatk
+          technology: illumina
         file: test/data/gatk-calls.vcf
         align: test/data/aligned-reads.bam
         refcalls: false
         normalize: false
         annotate: true
       - name: freebayes
+        metadata:
+          aligner: novoalign
+          caller: freebayes
+          technology: illumina
         file: test/data/freebayes-calls.vcf
         align: test/data/aligned-reads.bam
         annotate: true
@@ -23,6 +31,10 @@ experiments:
           - FS > 60.0
           - MQRankSum < -12.5
       - name: cg
+        metadata:
+          aligner: cg
+          caller: cg
+          technology: cg
         prep: true
         file: test/data/cg-calls.vcf
     finalize:
