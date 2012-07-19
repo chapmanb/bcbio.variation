@@ -11,6 +11,7 @@
         [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template
                                                get-vcf-source]])
   (:require [clojure.string :as string]
+            [bcbio.run.broad :as broad]
             [bcbio.run.itx :as itx]))
 
 ;; ## Multi-nucleotide polymorphisms (MNPs)
@@ -218,16 +219,28 @@
                       (get-normalized-vcs (rest vcs) (add-mnp-info blockers (first vcs))))))]
     (lazy-seq (add-normalized-vcs vc-iter mnp-blockers))))
 
+(defn left-align-variants
+  "Left align variants in an input VCF file for a standard representation."
+  [in-file ref & {:keys [out-dir]}]
+  (let [file-info {:out-vcf (itx/add-file-part in-file "leftalign" out-dir)}
+        args ["-R" ref "-o" :out-vcf "--variant" in-file]]
+    (broad/run-gatk "LeftAlignVariants" args file-info {:out [:out-vcf]})
+    (:out-vcf file-info)))
+
 (defn normalize-variants
   "Convert MNPs and indels into normalized representation."
   ([in-file ref]
      (normalize-variants in-file ref nil))
-  ([in-file ref out-dir & {:keys [out-fname]}]
+  ([in-file ref out-dir & {:keys [out-fname left-align?]
+                           :or {left-align? true}}]
      (let [base-name (if (nil? out-fname) (itx/remove-zip-ext in-file) out-fname)
            out-file (itx/add-file-part base-name "nomnp" out-dir)]
        (when (itx/needs-run? out-file)
-         (with-open [vcf-source (get-vcf-source in-file ref)]
-           (write-vcf-w-template in-file {:out out-file}
-                                 (get-normalized-vcs (parse-vcf vcf-source) {})
-                                 ref)))
+         (let [la-file (if left-align?
+                         (left-align-variants in-file ref :out-dir out-dir)
+                         in-file)]
+           (with-open [vcf-source (get-vcf-source la-file ref)]
+             (write-vcf-w-template in-file {:out out-file}
+                                   (get-normalized-vcs (parse-vcf vcf-source) {})
+                                   ref))))
        out-file)))

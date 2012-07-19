@@ -38,10 +38,10 @@
            ?form)))
 
 (facts "Deal with multi-nucleotide polymorphisms"
-  (normalize-variants mnp-vcf ref) => nomnp-out)
+  (normalize-variants mnp-vcf ref nil :left-align? false) => nomnp-out)
 
 (facts "Split complex indels into individual components"
-  (normalize-variants cindel-vcf ref) => cindel-out)
+  (normalize-variants cindel-vcf ref nil :left-align? false) => cindel-out)
 
 (facts "Parse structural variations"
   (let [vcf-list (parse-vcf-sv sv-vcf2 ref)
