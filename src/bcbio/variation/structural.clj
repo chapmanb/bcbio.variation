@@ -16,6 +16,11 @@
             [fs.core :as fs]
             [bcbio.run.itx :as itx]))
 
+(def ^{:private true
+       :doc "Minimum indel size for exact comparisons.
+             Based on assessment by Gavin Oliver: http://f1000r.es/MsY1QZ"}
+  min-indel 30)
+
 ;; ## Interval tree lookup
 
 (defn prep-itree
@@ -94,7 +99,7 @@
                    (.contains allele "]")) :BND)))]
     (cond
      (and (= "INDEL" (:type vc))
-          (> (max-allele-size vc) (get params :min-indel 10))) (indel-type vc)
+          (> (max-allele-size vc) (get params :min-indel min-indel))) (indel-type vc)
      (= "SYMBOLIC" (:type vc)) (alt-sv-type vc)
      :else nil)))
 
@@ -345,7 +350,7 @@
   [c1 c2 exp config]
   (let [out-dir (get-in config [:dir :prep] (get-in config [:dir :out]))
         intervals (get c1 :intervals (get c2 :intervals (:intervals exp)))
-        params (get exp :params {:min-indel 10 :default-cis [[100 10] [1000 200] [1e6 500]]})
+        params (get exp :params {:min-indel min-indel :default-cis [[100 10] [1000 200] [1e6 500]]})
         out-files (compare-sv (:sample exp) c1 c2 (:ref exp) :out-dir out-dir
                               :interval-file intervals :params params)]
     [(assoc c1 :file (:nosv1 out-files))
