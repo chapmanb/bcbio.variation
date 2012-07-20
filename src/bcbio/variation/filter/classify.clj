@@ -190,10 +190,10 @@
 
 (defn pipeline-classify-filter
   "Fit VCF classification-based filtering into analysis pipeline."
-  [in-vcf train-info ref config]
+  [in-vcf train-info exp config]
   (letfn [(get-train-vcf [type]
             (-> (filter #(= type (:name %)) train-info)
                        first
                        :file))]
     (filter-vcf-w-classifier in-vcf (get-train-vcf "concordant")
-                             (get-train-vcf "discordant") ref config)))
+                             (get-train-vcf "discordant") (:ref exp) config)))

@@ -4,8 +4,11 @@
   as: found in more than two sequencing technologies, or called in 3 aligners,
   or called in 7 out of 8 inputs."
   (:use [bcbio.variation.multiple :only [multiple-overlap-analysis remove-mod-name
-                                         prep-cmp-name-lookup]])
-  (:require [clojure.string :as string]))
+                                         prep-cmp-name-lookup]]
+        [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template
+                                               get-vcf-source]])
+  (:require [clojure.string :as string]
+            [bcbio.run.itx :as itx]))
 
 (defn- pairwise-only?
   "Check if a comparison set is only pairwise and not multiple."
@@ -46,8 +49,26 @@
                             coll (assoc (get x :metadata {}) :total cur-name)))))
               {} calls))))
 
+(defn is-trusted-variant?
+  "Determine if we trust a variant based on specified trust parameters.
+  The params specify required counts for inclusion. For instance:
+  {:total 4 :technology 3 :caller 2} includes variants located in 4 total calls
+  or in three different technologies or in 2 different callers."
+  [vc params calls]
+  (letfn [(param-passes? [metadata [k v]]
+            (>= (count (get metadata k [])) v))]
+    (let [metadata (variant-set-metadata vc calls)]
+      (some (partial param-passes? metadata) params))))
+
 (defn get-trusted-variants
   "Retrieve VCF file of trusted variants based on specific parameters."
-  [cmps support params config]
+  [cmps support params exp config]
   (when-let [base-vcf (:target-overlaps (get-support-vcfs cmps support config))]
-    (println base-vcf)))
+    (let [out-file (itx/add-file-part base-vcf "trusted")]
+      (with-open [base-vcf-s (get-vcf-source base-vcf (:ref exp))]
+        (write-vcf-w-template base-vcf {:out out-file}
+                              (->> (parse-vcf base-vcf-s)
+                                   (filter #(is-trusted-variant? % params (:calls exp)))
+                                   (map :vc))
+                              (:ref exp)))
+      out-file)))

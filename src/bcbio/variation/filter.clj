@@ -138,8 +138,7 @@
                                       (variant-filter % hard-filters (:ref exp))
                                       %))
                                   (#(if-not (:classifiers params) %
-                                            (pipeline-classify-filter % train-info
-                                                                      (:ref exp) params)))))
+                                            (pipeline-classify-filter % train-info exp params)))))
                     (#(assoc-in % [fkey :name] (format "%s-%s" (get-in % [fkey :name]) "recal")))
                     (assoc-in [fkey :mod] "recal")
                     (assoc :re-compare true))))

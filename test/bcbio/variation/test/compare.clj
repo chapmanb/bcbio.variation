@@ -189,6 +189,9 @@
 (let [config-file (str (fs/file "." "config" "method-comparison.yaml"))
       config (load-config config-file)
       out-dir (str (fs/file (get-in config [:dir :prep]) "multiple"))
+      union-file (str (fs/file (get-in config [:dir :prep]) "multiple"
+                               "Test1-multiall-fullcombine-gatk-annotated.vcf"))
+      trusted-out (itx/add-file-part union-file "trusted")
       cmps (variant-comparison-from-config config-file)]
   (letfn [(get-out-files [x ext]
             {:true-positives
@@ -199,12 +202,14 @@
              (str (fs/file out-dir (format "Test1-dis%s-fullcombine-Intersection-shared.vcf" x)))
              :target-overlaps
              (str (fs/file out-dir (format "Test1-multiall-fullcombine-%s%s.vcf" x ext)))})]
-    (against-background [(before :facts (vec (map itx/remove-path [out-dir])))]
+    (against-background [(before :facts (vec (map itx/remove-path [out-dir trusted-out])))]
       (facts "Handle multiple variant approach comparisons."
         (multiple-overlap-analysis cmps config "cg") => (get-out-files "cg" "")
         (multiple-overlap-analysis cmps config "gatk") => (get-out-files "gatk" "-annotated"))
       (facts "Prepare trusted variant file"
-        (get-trusted-variants cmps "gatk" {} config) => nil))))
+        (get-trusted-variants cmps "gatk"
+                              {:total 3 :technology 2}
+                              (-> config :experiments first) config) => trusted-out))))
 
 (let [config-file (str (fs/file "." "config" "method-comparison.yaml"))
       config (load-config config-file)
@@ -212,10 +217,17 @@
                                "Test1-multiall-fullcombine-gatk-annotated.vcf"))]
   (facts "Prepare trusted variant file"
     (with-open [vcf-source (get-vcf-source union-file (-> config :experiments first :ref))]
-      (let [data (variant-set-metadata (first (parse-vcf vcf-source))
-                                         (-> config :experiments first :calls))]
+      (let [vc (first (parse-vcf vcf-source))
+            calls (-> config :experiments first :calls)
+            data (variant-set-metadata vc calls)]
         (-> data :total count) => 3
-        (-> data :technology) => #{"illumina" "cg"}))))
+        (-> data :technology) => #{"illumina" "cg"}
+        (is-trusted-variant? vc {:total 4} calls) => nil
+        (is-trusted-variant? vc {:total 3} calls) => true
+        (is-trusted-variant? vc {:technology 3} calls) => nil
+        (is-trusted-variant? vc {:technology 2} calls) => true
+        (is-trusted-variant? vc {:total 4 :technology 3} calls) => nil 
+        (is-trusted-variant? vc {:total 4 :technology 2} calls) => true))))
 
 (facts "Load configuration files, normalizing input."
   (let [config-file (fs/file "." "config" "method-comparison.yaml")
