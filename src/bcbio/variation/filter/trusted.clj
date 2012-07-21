@@ -17,8 +17,8 @@
 
 (defn get-support-vcfs
   "Retrieve supporting VCFs for a set of comparisons and specified support."
-  [cmps support config]
-  (let [cmps-by-name (if (map? cmps) cmps (prep-cmp-name-lookup cmps))
+  [cmps support config & {:keys [remove-mods?]}]
+  (let [cmps-by-name (if (map? cmps) cmps (prep-cmp-name-lookup cmps :remove-mods? remove-mods?))
         support (if (and (not (coll? support)) (pairwise-only? (keys cmps-by-name)))
                   (first (keys cmps-by-name))
                   support)]
@@ -53,17 +53,23 @@
   "Determine if we trust a variant based on specified trust parameters.
   The params specify required counts for inclusion. For instance:
   {:total 4 :technology 3 :caller 2} includes variants located in 4 total calls
-  or in three different technologies or in 2 different callers."
+  or in three different technologies or in 2 different callers.
+  It can also handle percentages for required inputs:
+  {:total 1.0 :technology 0.75}"
   [vc params calls]
   (letfn [(param-passes? [metadata [k v]]
-            (>= (count (get metadata k [])) v))]
+            (let [n (count (get metadata k []))]
+              (if (> v 1)
+                (>= n v)
+                (>= (/ n (count calls)) v))))]
     (let [metadata (variant-set-metadata vc calls)]
       (some (partial param-passes? metadata) params))))
 
 (defn get-trusted-variants
   "Retrieve VCF file of trusted variants based on specific parameters."
   [cmps support params exp config]
-  (when-let [base-vcf (:target-overlaps (get-support-vcfs cmps support config))]
+  (when-let [base-vcf (:target-overlaps (get-support-vcfs cmps support config
+                                                          :remove-mods? true))]
     (let [out-file (itx/add-file-part base-vcf "trusted")]
       (with-open [base-vcf-s (get-vcf-source base-vcf (:ref exp))]
         (write-vcf-w-template base-vcf {:out out-file}
