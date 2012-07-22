@@ -46,6 +46,9 @@ experiments:
           #annotations:  [QD, HaplotypeScore, MQRankSum, ReadPosRankSum, FS, MQ, DP, AB]
           filters: [HRun > 5.0]
           classifiers: [AD, DP, QUAL]
+          trusted:
+            total: 0.75
+            technology: 0.65
       - method: validate
         target: gatk
         params:

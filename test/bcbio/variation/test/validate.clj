@@ -48,5 +48,5 @@
       (-> (first vcf-iter) normalizer (get "QUAL")) => (roughly 0.621))))
 
 (facts "Final filtration of variants using classifier"
-  (filter-vcf-w-classifier top-vcf top-vcf c-neg-vcf ref
+  (filter-vcf-w-classifier top-vcf top-vcf c-neg-vcf nil ref
                            {:classifiers ["AD" "QUAL" "DP"]}) => c-out)

@@ -9,7 +9,8 @@
         [clj-ml.classifiers :only [make-classifier classifier-train
                                    classifier-evaluate classifier-classify]]
         [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template
-                                               get-vcf-source]])
+                                               get-vcf-source has-variants?
+                                               get-vcf-retriever]])
   (:require [clojure.string :as string]
             [incanter.stats :as stats]
             [fs.core :as fs]
@@ -159,7 +160,7 @@
 
 (defn- filter-vc
   "Update a variant context with filter information from classifier."
-  [classifier normalizer config vc]
+  [classifier normalizer trusted-get config vc]
   (let [attrs (vec (:classifiers config))
         score (-> (make-dataset "ds" (conj attrs :c)
                                  [(get-vc-inputs attrs normalizer -1 vc)]
@@ -168,22 +169,26 @@
                   (#(classifier-classify classifier %)))]
     (-> (VariantContextBuilder. (:vc vc))
         (.attributes (assoc (:attributes vc) "CSCORE" score))
-        (.filters (when (< score (get config :min-cscore 0.5))
+        (.filters (when (and (not (has-variants? trusted-get
+                                                 (:chr vc) (:start vc) (:end vc)
+                                                 (:ref-allele vc) (:alt-alleles vc)))
+                             (< score (get config :min-cscore 0.5)))
                     #{"CScoreFilter"}))
         .make)))
 
 (defn filter-vcf-w-classifier
-  "Filter an input VCF file using a trained classifer on true/false variants."
-  [base-vcf true-vcf false-vcf ref config]
+  "Filter an input VCF file using a trained classifier on true/false variants."
+  [base-vcf true-vcf false-vcf trusted-vcf ref config]
   (let [out-file (itx/add-file-part base-vcf "cfilter")
         c (build-vcf-classifier (:classifiers config) base-vcf
                                 true-vcf false-vcf ref config)
         normalizer (get-vc-attrs-normalized (:classifiers config) base-vcf ref config)]
     (when (itx/needs-run? out-file)
       (println "Filter VCF with" (str c))
-      (with-open [vcf-s (get-vcf-source base-vcf ref)]
+      (with-open [vcf-s (get-vcf-source base-vcf ref)
+                  trusted-get (get-vcf-retriever ref trusted-vcf)]
         (write-vcf-w-template base-vcf {:out out-file}
-                              (map (partial filter-vc c normalizer config)
+                              (map (partial filter-vc c normalizer trusted-get config)
                                    (parse-vcf vcf-s))
                               ref :header-update-fn (add-cfilter-header (:classifiers config)))))
     out-file))
@@ -196,4 +201,6 @@
                        first
                        :file))]
     (filter-vcf-w-classifier in-vcf (get-train-vcf "concordant")
-                             (get-train-vcf "discordant") (:ref exp) config)))
+                             (get-train-vcf "discordant")
+                             (get-train-vcf "trusted")
+                             (:ref exp) config)))

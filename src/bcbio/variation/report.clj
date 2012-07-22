@@ -4,6 +4,7 @@
   (:use [ordered.map :only [ordered-map]]
         [clojure.math.combinatorics :only [cartesian-product]]
         [bcbio.variation.variantcontext :only [parse-vcf get-vcf-retriever
+                                               variants-in-region
                                                get-vcf-source]]
         [bcbio.variation.callable :only [get-callable-checker is-callable?]]
         [bcbio.variation.evaluate :only [organize-gatk-report-table]]
@@ -33,15 +34,15 @@
   These identify variants which differ due to being missing in one variant
   call versus calls present in both with different genotypes."
   [file1 file2 ref-file]
-  (with-open [file2-source (get-vcf-source file2 ref-file)
-              file1-source (get-vcf-source file1 ref-file)]
-    (let [vrn-fetch (get-vcf-retriever file2-source)]
-      (reduce (fn [coll vc]
-                (let [other-vcs (vrn-fetch (:chr vc) (:start vc) (:end vc))
-                      vc-type (if-not (empty? other-vcs) :total :unique)]
-                  (assoc coll vc-type (inc (get coll vc-type)))))
-              {:total 0 :unique 0}
-              (parse-vcf file1-source)))))
+  (with-open [file1-source (get-vcf-source file1 ref-file)
+              vcf-retriever (get-vcf-retriever ref-file file2)]
+    (reduce (fn [coll vc]
+              (let [other-vcs (variants-in-region vcf-retriever
+                                                  (:chr vc) (:start vc) (:end vc))
+                    vc-type (if-not (empty? other-vcs) :total :unique)]
+                (assoc coll vc-type (inc (get coll vc-type)))))
+            {:total 0 :unique 0}
+            (parse-vcf file1-source))))
 
 (defn nocoverage-count
   "Calculate count of variant in input file without coverage in the comparison."

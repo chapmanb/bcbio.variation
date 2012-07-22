@@ -18,6 +18,7 @@
         [bcbio.variation.structural :only [prep-itree get-itree-overlap
                                            remove-itree-vc get-itree-all]]
         [bcbio.variation.variantcontext :only [parse-vcf get-vcf-retriever get-vcf-source
+                                               variants-in-region
                                                write-vcf-w-template]]
         [bcbio.align.ref :only [get-seq-dict]]
         [ordered.map :only [ordered-map]])
@@ -182,18 +183,18 @@
        - Keep coordinates of expected deletion regions.
     - Add discordant variants for extra calls not in expected variants, avoiding
       variants in deleted regions."
-  [expect-fetch vcs]
+  [expect-get vcs]
   (let [vc-itree (atom (prep-itree vcs :start :end))]
     (letfn [(get-ref-vcs [x]
-              (expect-fetch (:chr x) (:start x) (:end x)))
+              (variants-in-region expect-get (:chr x) (:start x) (:end x)))
             (ref-match-allele [x]
-              (matching-allele x (expect-fetch (:chr x) (:start x) (:end x))))
+              (matching-allele x (variants-in-region expect-get (:chr x) (:start x) (:end x))))
             (get-regional-expected-vcs
               [itree]
               {:pre [(= 1 (count (keys itree)))]}
               (let [[chr tree] (first itree)]
                 (let [start (-> tree .min .getStart)]
-                  (->> (expect-fetch chr start (dec (-> tree .max .getEnd)))
+                  (->> (variants-in-region expect-get chr start (dec (-> tree .max .getEnd)))
                        (remove #(< (:start %) start))
                        (sort-by :start)))))
             (compare-and-update [cmp-i info e-vc]
@@ -229,22 +230,21 @@
    - Evaluate second region with standard scoring: expected to called
    - Collect expected variants in the intervening region between phased blocks,
      report those missing in the comparison input as errors."
-  [call-vcf-s expect-vcf-s & {:keys [bed-source]}]
-  (let [expect-retriever (get-vcf-retriever expect-vcf-s)
-        prev (atom nil)]
+  [call-vcf-s expect-get & {:keys [bed-source]}]
+  (let [prev (atom nil)]
     (letfn [(get-intervene-expect [region1 region2]
               (let [vc1 (last region1)
                     vc2 (first region2)
                     filter-end (if (nil? vc1) (dec (:start vc2)) (:end vc1))
                     vcs (cond
                          (nil? vc1)
-                         (expect-retriever (:chr vc2) 0 (dec (:start vc2)))
+                         (variants-in-region expect-get (:chr vc2) 0 (dec (:start vc2)))
                          (not= (:chr vc1) (:chr vc2))
-                         (concat (expect-retriever (:chr vc1) (inc (:end vc1)) 1e10)
-                                 (expect-retriever (:chr vc2) 0 (dec (:start vc2))))
+                         (concat (variants-in-region expect-get (:chr vc1) (inc (:end vc1)) 1e10)
+                                 (variants-in-region expect-get (:chr vc2) 0 (dec (:start vc2))))
                          :else
-                         (expect-retriever (:chr vc1) (inc (:end vc1))
-                                           (dec (:start vc2))))]
+                         (variants-in-region expect-get (:chr vc1) (inc (:end vc1))
+                                             (dec (:start vc2))))]
                 (->> vcs
                      (remove #(< (:start %) filter-end))
                      (map (fn [x] {:comparison :discordant
@@ -257,7 +257,7 @@
             (score-phased-and-intervene [region]
               (let [out (concat (get-intervene-expect @prev region)
                                 (when (not= (:chr (first region)) "finished_sentinel")
-                                  (score-phased-region expect-retriever region)))]
+                                  (score-phased-region expect-get region)))]
                 (reset! prev region)
                 out))]
       (map score-phased-and-intervene (concat (parse-phased-haplotypes call-vcf-s
@@ -364,12 +364,12 @@
         call (first (get phased-calls false))
         call-intervals (when-let [f (get call :intervals (:intervals exp))]
                          (limit-bed-intervals f call exp config))]
-    (with-open [ref-vcf-s (get-vcf-source (:file ref) (:ref exp))
+    (with-open [ref-retriever (get-vcf-retriever (:ref exp) (:file ref))
                 call-vcf-s (get-vcf-source (:file call) (:ref exp))
                 bed-s (if call-intervals
                         (get-bed-source call-intervals (:ref exp))
                         (java.io.StringReader. ""))]
-      (let [compared-calls (score-phased-calls call-vcf-s ref-vcf-s :bed-source bed-s)]
+      (let [compared-calls (score-phased-calls call-vcf-s ref-retriever :bed-source bed-s)]
         {:c-files (write-concordance-output (convert-cmps-to-grade compared-calls)
                                             [:concordant :discordant
                                              :discordant-missing :phasing-error]
@@ -411,12 +411,12 @@
         to-capture (concat [:concordant]
                            (map #(keyword (format "%s-discordant" (:name %)))
                                 [cmp1 cmp2]))]
-    (with-open [vcf1-s (get-vcf-source (:file cmp1) (:ref exp))
+    (with-open [vcf1-retriever (get-vcf-retriever (:ref exp) (:file cmp1))
                 vcf2-s (get-vcf-source (:file cmp2) (:ref exp))
                 bed-s (if-let [f (get cmp2 :intervals (:intervals exp))]
                         (get-bed-source f (:ref exp)) (java.io.StringReader. ""))]
       {:c-files (-> (convert-cmps-to-compare (:name cmp1) (:name cmp2)
-                                             (score-phased-calls vcf2-s vcf1-s
+                                             (score-phased-calls vcf2-s vcf1-retriever
                                                                  :bed-source bed-s))
                     (write-concordance-output to-capture (:sample exp) cmp1 cmp2
                                               (get-in config [:dir :out]) (:ref exp)))

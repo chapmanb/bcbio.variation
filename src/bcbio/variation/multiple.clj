@@ -8,6 +8,7 @@
         [bcbio.variation.combine :only [combine-variants]]
         [bcbio.variation.metrics :only [nonref-passes-filter?]]
         [bcbio.variation.variantcontext :only [parse-vcf get-vcf-retriever
+                                               variants-in-region
                                                get-vcf-source write-vcf-w-template]])
   (:require [clojure.string :as string]
             [fs.core :as fs]
@@ -79,7 +80,8 @@
               (and (nonref-passes-filter? x)
                    (if (has-callers? any-callable)
                      (is-callable? any-callable (:chr x) (:start x) (:end x))
-                     (not (empty? (fetch (:chr x) (:start x) (:end x))))))))
+                     (not (empty? (variants-in-region fetch (:chr x)
+                                                      (:start x) (:end x))))))))
           (get-shared-discordant [xs fetch any-callable]
             (let [pass-and-shared? (check-shared fetch any-callable)]
               (map :vc (filter pass-and-shared? xs))))]
@@ -97,14 +99,13 @@
                           (map :align)
                           (remove nil?))]
       (with-open [disc-source (get-vcf-source disc-vcf ref)
-                  other-source (get-vcf-source other-conc-vcf ref)
+                  other-retriever (get-vcf-retriever ref other-conc-vcf)
                   call-source (get-callable-checker align-bams ref
                                                     :out-dir (str (fs/parent out-dir)))]
-        (let [vrn-fetch (get-vcf-retriever other-source)]
-          (write-vcf-w-template disc-vcf {:out out-file}
-                                (get-shared-discordant (parse-vcf disc-source)
-                                                       vrn-fetch call-source)
-                                ref)))
+        (write-vcf-w-template disc-vcf {:out out-file}
+                              (get-shared-discordant (parse-vcf disc-source)
+                                                     other-retriever call-source)
+                              ref))
       out-file)))
 
 (defn- gen-target-problems

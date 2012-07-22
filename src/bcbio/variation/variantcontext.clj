@@ -71,12 +71,33 @@
                             (file in-file) cur-codec)]
         (BasicFeatureSource. (.getAbsolutePath (file in-file)) idx cur-codec)))))
 
+(defprotocol VcfRetrievable
+  "Provide a retriever of variants from zero to many inputs."
+  (has-variants? [this space start end ref alt])
+  (variants-in-region [this space start end]))
+
+(defrecord VcfRetriever [sources]
+  VcfRetrievable
+  (has-variants? [this space start end ref alt]
+    (some #(and (= start (:start %))
+                (= end (:end %))
+                (= ref (:ref-allele %))
+                (= alt (:alt-alleles %)))
+          (variants-in-region this space start end)))
+  (variants-in-region [_ space start end]
+    (mapcat #(map from-vc (iterator-seq (.query % space start end)))
+            sources))
+  java.io.Closeable
+  (close [_]
+    (doseq [x sources]
+      (.close x))))
+
 (defn get-vcf-retriever
-  "Indexed VCF file retrieval.
-   Returns function that fetches all variants in a region (chromosome:start-end)"
-  [vcf-source]
-  (fn [chr start end]
-    (map from-vc (iterator-seq (.query vcf-source chr start end)))))
+  "Indexed VCF file retrieval for zero to multiple files with clean handle closing."
+  [ref & vcf-files]
+  (VcfRetriever. (->> vcf-files
+                      (remove nil?)
+                      (map #(get-vcf-source % ref)))))
 
 (defn parse-vcf
   "Lazy iterator of VariantContext information from VCF file."

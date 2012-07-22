@@ -68,13 +68,15 @@
 (defn get-trusted-variants
   "Retrieve VCF file of trusted variants based on specific parameters."
   [cmps support params exp config]
-  (when-let [base-vcf (:target-overlaps (get-support-vcfs cmps support config
-                                                          :remove-mods? true))]
+  (when-let [base-vcf (:target-overlaps
+                       (get-support-vcfs cmps (if (coll? support) (first support) support)
+                                         config :remove-mods? true))]
     (let [out-file (itx/add-file-part base-vcf "trusted")]
-      (with-open [base-vcf-s (get-vcf-source base-vcf (:ref exp))]
-        (write-vcf-w-template base-vcf {:out out-file}
-                              (->> (parse-vcf base-vcf-s)
-                                   (filter #(is-trusted-variant? % params (:calls exp)))
-                                   (map :vc))
-                              (:ref exp)))
+      (when (itx/needs-run? out-file)
+        (with-open [base-vcf-s (get-vcf-source base-vcf (:ref exp))]
+          (write-vcf-w-template base-vcf {:out out-file}
+                                (->> (parse-vcf base-vcf-s)
+                                     (filter #(is-trusted-variant? % params (:calls exp)))
+                                     (map :vc))
+                                (:ref exp))))
       out-file)))

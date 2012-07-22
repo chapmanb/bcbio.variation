@@ -123,9 +123,12 @@
         all-params (let [x (:params finalizer)] (if (map? x) [x] x))]
     (reduce (fn [target [params fkey]]
               (let [in-vcf (remove-cur-filters (-> target fkey :file) (:ref exp))
-                    train-info (get-train-info cmps-by-name
-                                               (get params :support (:target finalizer))
-                                               config)]
+                    support (get params :support (:target finalizer))
+                    train-info (get-train-info cmps-by-name support config)
+                    trusted-info {:name "trusted"
+                                  :file (when-let [trusted (:trusted params)]
+                                          (get-trusted-variants cmps-by-name support trusted
+                                                                exp config))}]
                 (-> target
                     (assoc-in [fkey :file]
                               (-> in-vcf
@@ -137,8 +140,10 @@
                                   (#(if-let [hard-filters (:filters params)]
                                       (variant-filter % hard-filters (:ref exp))
                                       %))
-                                  (#(if-not (:classifiers params) %
-                                            (pipeline-classify-filter % train-info exp params)))))
+                                  (#(if-not (:classifiers params)
+                                      %
+                                      (pipeline-classify-filter % (cons trusted-info train-info)
+                                                                exp params)))))
                     (#(assoc-in % [fkey :name] (format "%s-%s" (get-in % [fkey :name]) "recal")))
                     (assoc-in [fkey :mod] "recal")
                     (assoc :re-compare true))))

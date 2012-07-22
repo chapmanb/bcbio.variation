@@ -133,9 +133,9 @@
       (-> haps (nth 2) first :start) => 16)))
 
 (facts "Compare phased calls to haploid reference genotypes."
-  (with-open [ref-vcf-s (get-vcf-source ref-vcf ref)
+  (with-open [ref-vcf-get (get-vcf-retriever ref ref-vcf)
               pvcf-s (get-vcf-source pvcf ref)]
-    (let [cmps (score-phased-calls pvcf-s ref-vcf-s)]
+    (let [cmps (score-phased-calls pvcf-s ref-vcf-get)]
       (map :variant-type (first cmps)) => [:snp :snp :indel :snp :snp]
       (:comparison (ffirst cmps)) => :discordant
       (map :comparison (nth cmps 3)) => [:ref-concordant :phasing-error
@@ -144,9 +144,9 @@
       (map :nomatch-het-alt (first cmps)) => [false true false false true])))
 
 (facts "Compare two sets of haploid reference calls"
-  (with-open [ref-vcf-s (get-vcf-source ref-vcf ref)
+  (with-open [ref-vcf-get (get-vcf-retriever ref ref-vcf)
               ref2-vcf-s (get-vcf-source ref2-vcf ref)]
-    (let [cmps (score-phased-calls ref2-vcf-s ref-vcf-s)]
+    (let [cmps (score-phased-calls ref2-vcf-s ref-vcf-get)]
       (count cmps) => 2
       (count (first cmps)) => 10
       (drop 6 (map :comparison (first cmps))) => [:ref-concordant :concordant
@@ -185,6 +185,7 @@
 
 (facts "Choose a reference genome based on VCF contig"
   (pick-best-ref vcf1 [ref]) => ref)
+
 
 (let [config-file (str (fs/file "." "config" "method-comparison.yaml"))
       config (load-config config-file)

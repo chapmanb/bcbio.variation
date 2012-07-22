@@ -11,7 +11,6 @@
   (:use [clojure.java.io]
         [bcbio.variation.variantcontext :only [write-vcf-w-template
                                                get-vcf-source
-                                               get-vcf-retriever
                                                get-vcf-line-parser
                                                from-genotype]]
         [bcbio.align.ref :only [get-seq-dict get-seq-name-map]]
