@@ -129,7 +129,7 @@
            .getAlignedSequences)))
 
 (defn- fix-ref-alignment-gaps
-  "Ensure reference alignment gaps have consistent GAP schemes."
+  "Ensure reference alignment gaps have consistent gap schemes."
   [alleles]
   (letfn [(has-5-gaps? [x] (.startsWith x "-"))
           (has-3-gaps? [x] (.endsWith x "-"))
@@ -150,9 +150,10 @@
   "Split complex indels into individual variant components."
   [vc]
   {:pre [(= 1 (:num-samples vc))]}
-  (let [alleles (split-alleles vc (-> (get-vc-alleles vc)
-                                      multiple-alignment
-                                      fix-ref-alignment-gaps))]
+  (let [alleles (split-alleles vc (->> (get-vc-alleles vc)
+                                       (remove empty?)
+                                       multiple-alignment
+                                       fix-ref-alignment-gaps))]
     (map (fn [[i x]] (new-split-vc (:vc vc) i x)) (map-indexed vector alleles))))
 
 (defn- maybe-strip-indel
