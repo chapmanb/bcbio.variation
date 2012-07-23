@@ -102,10 +102,11 @@
                   other-retriever (get-vcf-retriever ref other-conc-vcf)
                   call-source (get-callable-checker align-bams ref
                                                     :out-dir (str (fs/parent out-dir)))]
-        (write-vcf-w-template disc-vcf {:out out-file}
-                              (get-shared-discordant (parse-vcf disc-source)
-                                                     other-retriever call-source)
-                              ref))
+        (when (itx/needs-run? out-file)
+          (write-vcf-w-template disc-vcf {:out out-file}
+                                (get-shared-discordant (parse-vcf disc-source)
+                                                       other-retriever call-source)
+                                ref)))
       out-file)))
 
 (defn- gen-target-problems
