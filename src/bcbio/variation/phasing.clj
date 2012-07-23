@@ -87,11 +87,12 @@
   [vc ref-vcs]
   {:pre [(every? #(= 1 (:num-samples %)) ref-vcs)
          (= 1 (:num-samples vc))]}
-  (if (empty? ref-vcs)
-    (.indexOf (get-alleles vc) (:ref-allele vc))
-    (highest-count
-     (remove neg?
-             (map #(.indexOf (get-alleles vc) (-> % get-alleles first)) ref-vcs)))))
+  (cond
+   (= 1 (count (get-alleles vc))) 0
+   (empty? ref-vcs) (.indexOf (get-alleles vc) (:ref-allele vc))
+   :else (highest-count
+          (remove neg?
+                  (map #(.indexOf (get-alleles vc) (-> % get-alleles first)) ref-vcs)))))
 
 (defn cmp-allele-to-expected
   "Compare the haploid allele of a variant against the expected call."
