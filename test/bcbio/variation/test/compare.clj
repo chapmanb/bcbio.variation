@@ -227,8 +227,7 @@
         (is-trusted-variant? vc {:total 3} calls) => true
         (is-trusted-variant? vc {:technology 3} calls) => nil
         (is-trusted-variant? vc {:technology 2} calls) => true
-        (is-trusted-variant? vc {:technology 0.66} calls) => true
-        (is-trusted-variant? vc {:technology 0.7} calls) => nil
+        (is-trusted-variant? vc {:technology 0.99} calls) => true
         (is-trusted-variant? vc {:total 4 :technology 3} calls) => nil 
         (is-trusted-variant? vc {:total 4 :technology 2} calls) => true))))
 

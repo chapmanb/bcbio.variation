@@ -57,13 +57,23 @@
   It can also handle percentages for required inputs:
   {:total 1.0 :technology 0.75}"
   [vc params calls]
-  (letfn [(param-passes? [metadata [k v]]
+  (letfn [(collapse-md-by-type [calls]
+            (reduce (fn [coll [k v]]
+                      (assoc coll k (conj (get coll k #{}) v)))
+                    {:total (set (map :name calls))}
+                    (mapcat :metadata calls)))
+          (calc-md-counts [calls]
+            (reduce (fn [coll [k v]]
+                      (assoc coll k (count v)))
+                    {}
+                    (collapse-md-by-type calls)))
+          (param-passes? [metadata md-counts [k v]]
             (let [n (count (get metadata k []))]
               (if (> v 1)
                 (>= n v)
-                (>= (/ n (count calls)) v))))]
-    (let [metadata (variant-set-metadata vc calls)]
-      (some (partial param-passes? metadata) params))))
+                (>= (/ n (get md-counts k)) v))))]
+    (some (partial param-passes? (variant-set-metadata vc calls) (calc-md-counts calls))
+          params)))
 
 (defn get-trusted-variants
   "Retrieve VCF file of trusted variants based on specific parameters."
