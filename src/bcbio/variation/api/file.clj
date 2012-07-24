@@ -65,3 +65,7 @@
 
 (defmethod retrieve-file :default [fname _ _]
   fname)
+
+(defn put-files
+  "Put files back on remote GenomeSpace server relative to the base file."
+  [fnames base-file subdir])

@@ -17,6 +17,13 @@
              "--filterExpression" x])]
     (flatten (map jexl-args jexl-filters))))
 
+(defn jexl-filters-from-map
+  "Convert a map of metrics names and ranges into JEXL filter expressions"
+  [filter-map]
+  (letfn [(to-jexl [[metric [min max]]]
+            (format "%s < %s && %s > %s" metric min metric max))]
+    (map to-jexl filter-map)))
+
 (defn variant-filter
   "Perform hard variant filtering with supplied JEXL expression criteria."
   [in-vcf jexl-filters ref]
