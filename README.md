@@ -1,4 +1,4 @@
-# bcbio.variation
+j# bcbio.variation
 
 A Clojure interface to the [Genome Analysis Toolkit (GATK)][1] to analyze
 variant data in [VCF files][2]. It supports scoring for the
@@ -93,6 +93,9 @@ provide example starting points and details on available options are below:
            align: Alignment for specific call in BAM format (optional).
            ref: Reference genome if different than experiment ref (optional)
            intervals: Genome intervals to process in BED format (optional).
+           metadata: Dictionary of annotations associated with the call set.
+                     Finalizers use these to provide annotation specific
+                     filtering of calls.
            refcalls: Add reference calls if has alignment info (boolean; default false).
            annotate: Annotate calls with GATK annotations (boolean; default false).
            normalize: Normalize MNPs and indels (boolean: default true).
@@ -148,8 +151,11 @@ tag. Available methods are:
               annotations:  [QD, HaplotypeScore, MQRankSum, ReadPosRankSum]
               lenient: false
               classifiers: [AD, DP, QUAL]
+              trusted:
+                total: 0.75
+                technology: 0.65
     
-The three options for filtering are:
+The options for filtering are:
 
   - `filters` -- Perform hard filtering of the file with specified expressions.
   - `annotations` -- Perform [GATK Variant Quality Score Recalibration][u5]
@@ -157,6 +163,9 @@ The three options for filtering are:
    with a lower number of total variations and is useful in VQSR fails.
   - `classifiers` -- Perform classification of true/false reads
    based on the provided attributes.
+  - `trusted` -- Metadata annotation values that specify trusted variants not
+   subjected to filtering. The example retains variants present in more than 75%
+   of calls or 65% of different technologies.
 
   You can specify the background to use for training with `support`. There are
   two options:
