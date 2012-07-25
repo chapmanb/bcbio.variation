@@ -7,7 +7,7 @@
         [bcbio.variation.compare :only [variant-comparison-from-config]]
         [bcbio.variation.normalize :only [pick-best-ref]]
         [bcbio.variation.report :only [prep-scoring-table]]
-        [bcbio.variation.web.shared :only [web-config]])
+        [bcbio.variation.api.shared :only [web-config]])
   (:require [clojure.string :as string]
             [clj-yaml.core :as yaml]
             [doric.core :as doric]
@@ -17,17 +17,19 @@
             [noir.response :as response]
             [net.cgrand.enlive-html :as html]
             [clj-genomespace.core :as gs]
-            [bcbio.variation.web.db :as db]))
+            [bcbio.variation.web.db :as db]
+            [bcbio.variation.api.file :as file-api]))
 
 ;; ## Run scoring based on inputs from web or API
 
 (defn create-work-config
   "Create configuration for processing inputs using references supplied in config."
   [work-info config]
+  (println work-info)
   (if-not (fs/exists? (:dir work-info))
     (fs/mkdirs (:dir work-info)))
   (let [config-file (str (fs/file (:dir work-info) "process.yaml"))
-        ref (first (filter #(= (:sample %) (:sample work-info))
+        ref (first (filter #(= (:sample %) (:comparison-genome work-info))
                            (:ref config)))
         contestant-vcf (if-let [x (get-in work-info [:in-files :variant-file])]
                          (str x)
@@ -148,8 +150,8 @@
                                     (prep-scoring-table (:metrics comparison)
                                                         (get-in comparison [:summary :sv])))
                        "\n")))
-    (doseq [fname (cons summary-file out-files)]
-      (gs/upload gs-client (:upload-dir work-info) fname))))
+    (file-api/put-files (cons summary-file out-files) (:gs-variant-file work-info)
+                        "xprize" {:client gs-client})))
 
 (defn- prepare-final-files
   "Merge standard and structural variant outputs into final set of upload files."
@@ -168,22 +170,15 @@
 
 (defn run-scoring-analysis
   "Run scoring analysis from details provided in current session."
-  [work-info]
-  (let [gs-client (session/get :gs-client)
-        process-config (create-work-config work-info @web-config)
+  [work-info gs-client]
+  (let [process-config (create-work-config work-info @web-config)
         comparisons (first (variant-comparison-from-config process-config))]
     (prepare-final-files comparisons)
-    (when-not (or (nil? gs-client) (nil? (:upload-dir work-info)))
+    (when-not (or (nil? gs-client) (nil? (:gs-variant-file work-info)))
       (upload-results gs-client work-info comparisons))
     (spit (file (:dir work-info) "scoring-summary.html")
           (html-scoring-summary comparisons (:id work-info)))
-    (when-let [username (session/get :username)]
-      (db/add-analysis {:username username :files (:c-files comparisons)
-                        :analysis_id (:id work-info)
-                        :description (format "%s: %s" (:sample comparisons)
-                                             (fs/base-name (-> comparisons :exp :calls second :file)))
-                        :location (:dir work-info) :type :scoring}
-                       (:db @web-config)))))
+    comparisons))
 
 (defmulti get-input-files
   "Prepare working directory, downloading input files."
@@ -222,16 +217,22 @@
 (defn run-scoring
   "Download form-supplied input files and start scoring analysis."
   [orig-work-info params]
-  (letfn [(add-upload-dir [work-info params]
+  (letfn [(add-gs-info [work-info params]
             (let [remote-fname (:gs-variant-file params)]
               (if-not (or (nil? remote-fname) (empty? remote-fname))
-                (assoc work-info :upload-dir (str (fs/parent remote-fname)))
+                (assoc work-info :gs-variant-file remote-fname)
                 work-info)))]
     (let [work-info (-> orig-work-info
-                        (add-upload-dir params)
-                        (assoc :sample (:comparison-genome params))
-                        (assoc :in-files (get-input-files orig-work-info params)))]
-      (run-scoring-analysis work-info))))
+                        (add-gs-info params)
+                        (assoc :in-files (get-input-files orig-work-info params)))
+          comparisons (run-scoring-analysis work-info (session/get :gs-client))]
+      (when-let [username (session/get :username)]
+        (db/add-analysis {:username username :files (:c-files comparisons)
+                          :analysis_id (:id work-info)
+                          :description (format "%s: %s" (:comparison-genome work-info)
+                                               (fs/base-name (-> comparisons :exp :calls second :file)))
+                          :location (:dir work-info) :type :scoring}
+                         (:db @web-config))))))
 
 (defn prep-scoring
   "Prep directory for scoring analysis."
@@ -242,7 +243,7 @@
                   cur-dir (fs/file tmp-dir work-id)]
               (fs/mkdirs cur-dir)
               {:id work-id :dir (str cur-dir)
-               :sample (:comparison-genome params)}))]
+               :comparison-genome (:comparison-genome params)}))]
     (let [work-info (prep-tmp-dir)]
       (session/put! :work-info (assoc (session/get :work-info (ordered-map))
                                  (:id work-info) work-info))
@@ -256,7 +257,7 @@
   [run-id username]
   (if (nil? username)
     (let [work-info (get (session/get :work-info) run-id)]
-      [(:sample work-info) (:dir work-info)])
+      [(:comparison-genome work-info) (:dir work-info)])
     (let [work-info (->> (db/get-analyses username :scoring (:db @web-config))
                          (filter #(= run-id (:analysis_id %)))
                          first)

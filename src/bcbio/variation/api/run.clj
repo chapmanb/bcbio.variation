@@ -21,8 +21,10 @@
                                         (get-in @web-config [:dir :cache]))
         filter-file (variant-filter in-file
                                     (jexl-filters-from-map (:metrics params))
-                                    (:genome ref))]
-    (file-api/put-files [filter-file] (:filename params) (name atype))))
+                                    (:genome genome))
+        remote-dir (file-api/put-files [filter-file] (:filename params) (name atype)
+                                       creds)]
+    (file-api/get-files :vcf creds [remote-dir])))
 
 (defmethod do-analysis :score
   ^{:doc "Run comparison and scoring analysis on provided input files.

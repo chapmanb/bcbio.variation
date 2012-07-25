@@ -11,7 +11,7 @@
       config (-> conf-file slurp yaml/parse-string)
       test-dir (str (fs/file "test" "data"))
       work-info {:id "web-test" :dir (str (fs/file test-dir "web-test"))
-                 :sample "NA00001"
+                 :comparison-genome "NA00001"
                  :in-files {:variant-file (str (fs/file test-dir "phasing-contestant.vcf"))
                             :region-file (str (fs/file test-dir "phasing-contestant-regions.bed"))}}]
   (against-background [(before :facts (vec (map itx/remove-path [(:dir work-info)])))]

@@ -68,4 +68,9 @@
 
 (defn put-files
   "Put files back on remote GenomeSpace server relative to the base file."
-  [fnames base-file subdir])
+  [fnames base-file subdir creds]
+  (let [gs-dir (str (fs/file (fs/parent (last (string/split base-file #":" 2))) subdir))]
+    (let [gs-client (get-gs-client creds)]
+      (doseq [fname fnames]
+        (gs/upload gs-client gs-dir fname)))
+    gs-dir))

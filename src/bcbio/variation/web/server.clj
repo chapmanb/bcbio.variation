@@ -6,7 +6,7 @@
         [bcbio.variation.api.file :only [get-files]]
         [bcbio.variation.config :only [get-log-status]]
         [bcbio.variation.web.db :only [prepare-web-db get-analyses]]
-        [bcbio.variation.web.shared :only [web-config]]
+        [bcbio.variation.api.shared :only [web-config set-config-from-file!]]
         [ring.middleware file anti-forgery file-info])
   (:require [clojure.string :as string]
             [clj-yaml.core :as yaml]
@@ -91,10 +91,8 @@
   ([config-file]
      (-main config-file "8080"))
   ([config-file port]
-     (let [config (-> config-file slurp yaml/parse-string)]
-       (reset! web-config (assoc config :db
-                                 (prepare-web-db (str (fs/file (get-in config [:dir :work]) "analyses.db")))))
-       (server/add-middleware wrap-file (get-in @web-config [:dir :html-root]))
-       ;;(server/add-middleware wrap-file-info)
-       ;;(server/add-middleware wrap-anti-forgery)
-       (server/start (Integer/parseInt port)))))
+     (set-config-from-file! config-file)
+     (server/add-middleware wrap-file (get-in @web-config [:dir :html-root]))
+     ;;(server/add-middleware wrap-file-info)
+     ;;(server/add-middleware wrap-anti-forgery)
+     (server/start (Integer/parseInt port))))
