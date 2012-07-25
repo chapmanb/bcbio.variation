@@ -1,13 +1,14 @@
 (ns bcbio.variation.vcfwalker
   "Simple walker to parse a VCF file and display distribution of call
   quality scores"
-  (:import [bcbio.variation BaseVariantWalker])
+  ;;(:import [bcbio.variation BaseVariantWalker])
   (:use [bcbio.variation.variantcontext :only [from-vc]])
   (:require ;[incanter.charts :as icharts]
             [incanter.core :as icore])
-  (:gen-class
-   :name bcbio.variation.vcfwalker.VcfSimpleStatsWalker
-   :extends bcbio.variation.BaseVariantWalker))
+  ;; (:gen-class
+  ;;  :name bcbio.variation.vcfwalker.VcfSimpleStatsWalker
+  ;;  :extends bcbio.variation.BaseVariantWalker)
+  )
 
 (defn -map
   "Retrieve VariantContexts and extract the variant quality score."

@@ -3,7 +3,7 @@
   Help differentiate positions where we can not assess variation"
   (:import [org.broad.tribble.bed BEDCodec]
            [org.broad.tribble.index IndexFactory]
-           [org.broad.tribble.source BasicFeatureSource])
+           [org.broad.tribble AbstractFeatureReader])
   (:use [clojure.java.io]
         [bcbio.align.ref :only [sort-bed-file]]
         [bcbio.variation.variantcontext :only [get-vcf-source]])
@@ -48,7 +48,7 @@
   (let [batch-size 500
         work-bed (sort-bed-file bed-file ref-file)
         idx (IndexFactory/createIntervalIndex (file work-bed) (BEDCodec.) batch-size)]
-    (BasicFeatureSource. work-bed idx (BEDCodec.))))
+    (AbstractFeatureReader/getFeatureReader work-bed (BEDCodec.) idx)))
 
 (defn get-callable-bed
   "Create BED file of callable regions from the BAM alignment file.

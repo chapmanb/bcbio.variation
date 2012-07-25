@@ -2,11 +2,14 @@
   "Helper functions to retrieve information from GATK VariantContext
    objects, which represent variant data stored in VCF files."
   (:import [org.broad.tribble.index IndexFactory]
-           [org.broad.tribble.source BasicFeatureSource]
+           [org.broad.tribble AbstractFeatureReader]
            [org.broad.tribble.readers AsciiLineReader]
-           [org.broadinstitute.sting.utils.codecs.vcf VCFCodec StandardVCFWriter]
+           [org.broadinstitute.sting.utils.codecs.vcf VCFCodec]
+           [org.broadinstitute.sting.utils.variantcontext.writer VariantContextWriterFactory
+            Options]
            [org.broadinstitute.sting.gatk.refdata.tracks RMDTrackBuilder]
-           [org.broadinstitute.sting.gatk.arguments ValidationExclusion$TYPE])
+           [org.broadinstitute.sting.gatk.arguments ValidationExclusion$TYPE]
+           [java.util EnumSet])
   (:use [clojure.java.io]
         [lazymap.core :only [lazy-hash-map]]
         [bcbio.align.ref :only [get-seq-dict]])
@@ -64,12 +67,12 @@
   [in-file ref-file & {:keys [ensure-safe codec]}]
   (let [cur-codec (if (nil? codec) (VCFCodec.) codec)]
     (if (.endsWith in-file ".gz")
-      (BasicFeatureSource/getFeatureSource in-file cur-codec false)
+      (AbstractFeatureReader/getFeatureReader in-file cur-codec false)
       (let [validate (when (false? ensure-safe)
                        ValidationExclusion$TYPE/ALLOW_SEQ_DICT_INCOMPATIBILITY)
             idx (.loadIndex (RMDTrackBuilder. (get-seq-dict ref-file) nil validate)
                             (file in-file) cur-codec)]
-        (BasicFeatureSource. (.getAbsolutePath (file in-file)) idx cur-codec)))))
+        (AbstractFeatureReader/getFeatureReader (.getAbsolutePath (file in-file)) cur-codec idx)))))
 
 (defprotocol VcfRetrievable
   "Provide a retriever of variants from zero to many inputs."
@@ -134,7 +137,9 @@
    `out-file-map` is a map of writer-keywords to output filenames."
   [tmpl-file out-file-map vc-iter ref & {:keys [header-update-fn]}]
   (letfn [(make-vcf-writer [f ref]
-            (StandardVCFWriter. (file f) (get-seq-dict ref) true))
+            (VariantContextWriterFactory/create (file f) (get-seq-dict ref)
+                                                (EnumSet/of Options/INDEX_ON_THE_FLY
+                                                            Options/ALLOW_MISSING_FIELDS_IN_HEADER)))
           (convert-to-output [info]
             [(if (and (coll? info) (= 2 (count info))) (first info) :out)
              (if (coll? info) (last info) info)])]

@@ -2,7 +2,7 @@
   "Handle complex variations representations: multi-nucleotide
    polymorphisms and indels."
   (:import [org.broadinstitute.sting.utils.variantcontext Allele
-            VariantContextBuilder GenotypesContext Genotype
+            VariantContextBuilder GenotypesContext GenotypeBuilder
             VariantContextUtils]
            [org.biojava3.core.sequence DNASequence]
            [org.biojava3.alignment Alignments])
@@ -90,12 +90,10 @@
   (let [genotype (first (.getGenotypes vc))]
     (doto (-> vc .getGenotypes GenotypesContext/copy)
       (.replace
-       (Genotype. (.getSampleName genotype)
-                  alleles
-                  (.getLog10PError genotype)
-                  (if (.filtersWereApplied genotype) (.getFilters genotype) nil)
-                  (.getAttributes genotype)
-                  is-phased)))))
+       (-> (GenotypeBuilder. genotype)
+           (.alleles alleles)
+           (.phased is-phased)
+           .make)))))
 
 (defn- new-split-vc
   "Create a new VariantContext as a subset of an existing variant.

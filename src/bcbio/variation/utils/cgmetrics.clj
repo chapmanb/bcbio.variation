@@ -68,7 +68,7 @@
                                   "Variant quality under maximum likelihood variable allele fraction model (VAF)")
               (VCFInfoHeaderLine. "AB" 1
                                   VCFHeaderLineType/Float "Allele Balance")}]
-    (VCFHeader. (apply ordered-set (concat (.getMetaData header) new))
+    (VCFHeader. (apply ordered-set (concat (.getMetaDataInInputOrder header) new))
                 (.getGenotypeSamples header))))
 
 (defn add-cgmetrics

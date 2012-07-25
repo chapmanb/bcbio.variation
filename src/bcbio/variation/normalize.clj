@@ -5,7 +5,7 @@
   match, enabling VCF comparisons.
   Currently implemented for human only, with hooks to generalize for other
   organisms."
-  (:import [org.broadinstitute.sting.utils.variantcontext VariantContextBuilder Genotype]
+  (:import [org.broadinstitute.sting.utils.variantcontext VariantContextBuilder GenotypeBuilder]
            [org.broadinstitute.sting.utils.codecs.vcf VCFHeader]
            [org.broad.tribble.readers AsciiLineReader])
   (:use [clojure.java.io]
@@ -97,13 +97,17 @@
   (letfn [(update-genotype-sample [vc]
             (if (= 1 (count (.getGenotypes vc)))
               (let [g (first (.getGenotypes vc))]
-                [(Genotype/modifyName g sample)])
+                [(-> (GenotypeBuilder. g)
+                     (.name sample)
+                     .make)])
               (.getGenotypes vc)))
           (normalize-allele-calls [g]
             {:pre [(contains? #{1 (:prep-allele-count config)} (count (.getAlleles g)))]}
             (if (= (count (.getAlleles g)) (:prep-allele-count config)) g
-                (Genotype/modifyAlleles g (repeat (:prep-allele-count config)
-                                                  (first (.getAlleles g))))))]
+                (-> (GenotypeBuilder. g)
+                    (.alleles (repeat (:prep-allele-count config)
+                                      (first (.getAlleles g))))
+                    .make)))]
     (-> orig
         (assoc :vc
           (-> (VariantContextBuilder. (:vc orig))
@@ -139,12 +143,16 @@
   [config sample orig]
   (letfn [(maybe-fix-vc [g alt-allele]
             (if (= "MIXED" (:type g))
-              (Genotype/modifyAlleles (:genotype g)
-                                      (remove #(.isNoCall %) (:alleles g)))
+              (-> (GenotypeBuilder. (:genotype g))
+                  (.alleles) (remove #(.isNoCall %) (:alleles g))
+                  .make)
               (:genotype g)))
           (ref-vc-genotype [gs alt-allele]
             (case (count gs)
-              0 [(Genotype. sample [alt-allele])]
+              0 [(-> (GenotypeBuilder.)
+                     (.name sample)
+                     (.alleles [alt-allele])
+                     .make)]
               1 [(maybe-fix-vc (first gs) alt-allele)]
               (map :genotype gs)))]
     (if (:prep-sv-genotype config)
@@ -226,7 +234,7 @@
   "Update header information, removing contig and adding sample names."
   [sample config]
   (letfn [(clean-metadata [header]
-            (apply ordered-set (remove #(= "contig" (.getKey %)) (.getMetaData header))))]
+            (apply ordered-set (remove #(= "contig" (.getKey %)) (.getMetaDataInInputOrder header))))]
     (fn [_ header]
       (case (count (.getGenotypeSamples header))
         1 (VCFHeader. (clean-metadata header) (ordered-set sample))

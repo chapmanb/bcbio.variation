@@ -3,9 +3,9 @@
   :dependencies [[org.clojure/clojure "1.4.0"]
                  [org.clojure/math.combinatorics "0.0.2" :exclusions [org.clojure/clojure]]
                  [org.clojure/data.csv "0.1.2" :exclusions [org.clojure/clojure]]
-                 [org.clojars.chapmanb/gatk "1.6.13"]
                  [org.clojars.chapmanb/cofoja "1.0-20110609"]
-                 [org.clojars.chapmanb/picard "1.64"]
+                 [org.clojars.chapmanb/gatk-lite "2.0.0"]
+                 [org.clojars.chapmanb/picard "1.73"]
                  [org.biojava/biojava3-core "3.0.4"]
                  [org.biojava/biojava3-alignment "3.0.4"]
                  [clj-genomespace "0.1.2-SNAPSHOT"]
@@ -41,8 +41,8 @@
             [lein-marginalia "0.7.1"]
             [lein-midje "2.0.0-SNAPSHOT"]]
   :repositories {"biojava" {:url "http://www.biojava.org/download/maven/"
-                            :snapshots false}}
-  :java-source-paths ["src/java"]
+                             :snapshots false}}
+  :java-source-paths ["src/nojava"]
  ;:jvm-opts ["-Xmx4g"]
   :omit-source true
   :aot [bcbio.variation.vcfwalker bcbio.variation.core bcbio.variation.annotate.nbq]

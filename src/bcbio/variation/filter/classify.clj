@@ -155,7 +155,7 @@
                     (string/join ", " attrs))
           new #{(VCFInfoHeaderLine. "CSCORE" 1 VCFHeaderLineType/Float desc)
                 (VCFFilterHeaderLine. "CScoreFilter" "Based on classifcation CSCORE")}]
-      (VCFHeader. (apply ordered-set (concat (.getMetaData header) new))
+      (VCFHeader. (apply ordered-set (concat (.getMetaDataInInputOrder header) new))
                   (.getGenotypeSamples header)))))
 
 (defn- filter-vc

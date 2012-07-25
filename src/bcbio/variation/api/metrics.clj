@@ -28,7 +28,7 @@
     (let [metrics-order (reduce (fn [coll [i x]] (assoc coll x i))
                                 {} (map-indexed vector (keys expose-metrics)))]
       (->> (get-vcf-header vcf-file)
-           .getMetaData
+           .getMetaDataInInputOrder
            (filter #(= "INFO" (.getKey %)))
            (filter #(contains? expose-metrics (.getID %)))
            (map convert-header)

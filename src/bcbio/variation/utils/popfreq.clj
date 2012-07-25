@@ -55,7 +55,7 @@
   [new-ids]
   (letfn [(header-has-id? [header test-id]
             (contains? (set (map #(when (= "INFO" (.getKey %))
-                                    (.getID %)) (.getMetaData header)))
+                                    (.getID %)) (.getMetaDataInInputOrder header)))
                        test-id))]
     (fn [_ header]
       (let [new (->> new-ids
@@ -63,7 +63,7 @@
                      (map #(VCFInfoHeaderLine. (:new-id %) 1
                                                VCFHeaderLineType/Float (:desc %)))
                      set)]
-        (VCFHeader. (apply ordered-set (concat (.getMetaData header) new))
+        (VCFHeader. (apply ordered-set (concat (.getMetaDataInInputOrder header) new))
                     (.getGenotypeSamples header))))))
 
 (defn- add-annotations

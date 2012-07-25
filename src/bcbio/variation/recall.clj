@@ -7,7 +7,7 @@
     - Merge previously called and re-called into final set.
   http://www.broadinstitute.org/gsa/wiki/index.php/Merging_batched_call_sets"
   (:import [org.broadinstitute.sting.utils.variantcontext
-            Genotype VariantContextBuilder GenotypesContext]
+            GenotypeBuilder VariantContextBuilder GenotypesContext]
            [org.broadinstitute.sting.utils.codecs.vcf VCFHeader])
   (:use [clojure.java.io]
         [ordered.map :only [ordered-map]]
@@ -37,7 +37,7 @@
                 [(if (.isNoCall (-> cur-vc .getGenotypes (.get sample))) :nocall :called)
                  cur-vc])))
           (set-header-to-sample [sample _ header]
-            (VCFHeader. (.getMetaData header) (ordered-set sample)))]
+            (VCFHeader. (.getMetaDataInInputOrder header) (ordered-set sample)))]
     (let [sample-str (if (.contains in-vcf sample) "" (str sample "-"))
           out {:called (itx/add-file-part in-vcf (str sample-str "called") out-dir)
                :nocall (itx/add-file-part in-vcf (str sample-str "nocall") out-dir)}]
@@ -237,11 +237,12 @@
   (letfn [(ref-genotype [g vc]
             (doto (-> vc :vc .getGenotypes GenotypesContext/copy)
               (.replace
-               (Genotype/modifyAlleles (:genotype g)
-                                       (repeat (if (nil? num-alleles)
-                                                 (count (:alleles g))
-                                                 num-alleles)
-                                               (:ref-allele vc))))))
+               (-> (GenotypeBuilder. (:genotype g))
+                   (.alleles (repeat (if (nil? num-alleles)
+                                       (count (:alleles g))
+                                       num-alleles)
+                                     (:ref-allele vc)))
+                   .make))))
           (maybe-callable-vc [vc call-source]
             {:pre (= 1 (:num-samples vc))}
             (let [g (-> vc :genotypes first)]

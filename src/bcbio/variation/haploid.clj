@@ -6,7 +6,7 @@
   http://www.broadinstitute.org/gsa/wiki/index.php/
   Understanding_the_Unified_Genotyper%27s_VCF_files#How_genotypes_are_represented_in_a_VCF"
   (:import [org.broadinstitute.sting.utils.variantcontext 
-            VariantContextBuilder GenotypesContext Genotype])
+            VariantContextBuilder GenotypesContext GenotypeBuilder])
   (:use [clojure.java.io]
         [bcbio.variation.variantcontext :only [parse-vcf get-vcf-source write-vcf-w-template]])
   (:require [clojure.string :as string]
@@ -46,7 +46,9 @@
                 nil))]
       (when-let [allele (get-haploid-allele g vc)]
         (doto (-> vc :vc .getGenotypes GenotypesContext/copy)
-          (.replace (Genotype/modifyAlleles (:genotype g) [allele])))))))
+          (.replace (-> (GenotypeBuilder. (:genotype g))
+                        (.alleles [allele])
+                        .make)))))))
 
 (defn- convert-to-haploid
   "Convert diploid allele to haploid variant."
