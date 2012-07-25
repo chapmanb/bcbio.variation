@@ -44,19 +44,46 @@
 
 ;; ## Prepare multi-overlap sets
 
-(defn- select-variant-by-set
+(defn get-vc-set-calls
+  "Retrieve all called items from a variant context 'set' attribute."
+  [vc calls]
+  (when-let [set-val (get-in vc [:attributes "set"])]
+    (if (= set-val "Intersection")
+      (set (map :name calls))
+      (->> (string/split set-val #"-")
+           (remove #(.startsWith % "filter"))
+           (map #(string/split % #"AND"))
+           (apply concat)
+           set))))
+
+(defmulti select-variant-by-set
   "Select samples based on name of a 'set' from CombineVariants."
-  [vcf-in ref set-name & {:keys [out-dir allow-partial?]}]
-  (let [file-info {:out-vcf (itx/add-file-part vcf-in set-name out-dir)}
+  (fn [_ _ set-name] (keyword set-name)))
+
+(defmethod select-variant-by-set :Intersection
+  [vcf-in ref set-name]
+  (let [file-info {:out-vcf (itx/add-file-part vcf-in set-name nil)}
         args ["-R" ref
               "-o" :out-vcf
               "--variant" vcf-in
-              "-select" (if allow-partial?
-                          (format "vc.getAttributeAsString('set','').contains('%s')"
-                                  set-name)
-                          (format "set == '%s'" set-name))]]
+              "-select" (format "set == '%s'" set-name)]]
     (broad/run-gatk "SelectVariants" args file-info {:out [:out-vcf]})
     (:out-vcf file-info)))
+
+(defmethod select-variant-by-set :default
+  ^{:doc "Select non-intersection names, handling GATK special cases like intersection
+          and filtered."}
+  [vcf-in ref set-name]
+  (letfn [(in-set? [vc]
+            (contains? (get-vc-set-calls vc [{:name set-name}])
+                       set-name))]
+    (let [out-file (itx/add-file-part vcf-in set-name nil)]
+      (when (itx/needs-run? out-file)
+        (with-open [in-source (get-vcf-source vcf-in ref)]
+          (write-vcf-w-template vcf-in {:out out-file}
+                                (map :vc (filter in-set? (parse-vcf in-source)))
+                                ref)))
+      out-file)))
 
 (defn- gen-all-concordant
   "Create VCF of the intersection of all concordant calls."
@@ -165,7 +192,7 @@
                    :false-positives (:false-positives target-problems)
                    :target-overlaps (-> all-overlap
                                         :union
-                                        (select-variant-by-set ref target-name :allow-partial? true)
+                                        (select-variant-by-set ref target-name)
                                         (add-variant-annotations (:align target-call) ref
                                                                  target-call :out-dir out-dir))))))
 

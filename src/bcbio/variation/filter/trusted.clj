@@ -4,7 +4,7 @@
   as: found in more than two sequencing technologies, or called in 3 aligners,
   or called in 7 out of 8 inputs."
   (:use [bcbio.variation.multiple :only [multiple-overlap-analysis remove-mod-name
-                                         prep-cmp-name-lookup]]
+                                         prep-cmp-name-lookup get-vc-set-calls]]
         [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template
                                                get-vcf-source]])
   (:require [clojure.string :as string]
@@ -32,22 +32,15 @@
 (defn variant-set-metadata
   "Retrieve metadata associated with overlapping variants from combined set attribute."
   [vc calls]
-  (when-let [set-val (get-in vc [:attributes "set"])]
-    (let [set-calls (if (= set-val "Intersection")
-                      (set (map :name calls))
-                      (->> (string/split set-val #"-")
-                           (remove #(.startsWith % "filter"))
-                           (map #(string/split % #"AND"))
-                           (apply concat)
-                           set))]
-      (reduce (fn [coll x]
-                (let [cur-name (string/replace (:name x) "-" "_")]
-                  (if-not (contains? set-calls cur-name)
-                    coll
-                    (reduce (fn [inner [k v]]
-                              (assoc inner k (conj (get inner k #{}) v)))
-                            coll (assoc (get x :metadata {}) :total cur-name)))))
-              {} calls))))
+  (when-let [set-calls (get-vc-set-calls vc calls)]
+    (reduce (fn [coll x]
+              (let [cur-name (string/replace (:name x) "-" "_")]
+                (if-not (contains? set-calls cur-name)
+                  coll
+                  (reduce (fn [inner [k v]]
+                            (assoc inner k (conj (get inner k #{}) v)))
+                          coll (assoc (get x :metadata {}) :total cur-name)))))
+            {} calls)))
 
 (defn is-trusted-variant?
   "Determine if we trust a variant based on specified trust parameters.
