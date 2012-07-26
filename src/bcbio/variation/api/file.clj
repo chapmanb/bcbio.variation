@@ -7,7 +7,8 @@
             [clj-genomespace.core :as gs]
             [fs.core :as fs]))
 
-(defn- get-gs-client
+(defn get-gs-client
+  "Top level retrieval of a client from username/password to pre-connected client."
   [creds]
   (let [{:keys [username password client]} creds]
     (cond
