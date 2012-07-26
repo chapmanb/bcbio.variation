@@ -91,7 +91,7 @@
         args (concat ["-R" ref
                       "--sample_name" (vcf-sample-name sample in-file ref)
                       "--variant" in-file
-                      "--unsafe" "ALLOW_SEQ_DICT_INCOMPATIBILITY"
+                      "--unsafe" "ALL" ; "ALLOW_SEQ_DICT_INCOMPATIBILITY"
                       "--out" :out-vcf]
                      (if remove-refcalls ["--excludeNonVariants" "--excludeFiltered"] [])
                      (broad/gatk-cl-intersect-intervals intervals ref))]

@@ -12,8 +12,9 @@
   "Run a GATK commandline in an idempotent file-safe transaction."
   [program args file-info map-info]
   (if (itx/needs-run? (map #(% file-info) (get map-info :out [])))
-    (let [std-args ["-T" program
-                    "-U" "LENIENT_VCF_PROCESSING"]]
+    (let [std-args (concat ["-T" program]
+                           (when-not (contains? (set args) "--unsafe")
+                             ["--unsafe" "LENIENT_VCF_PROCESSING"]))]
       (itx/with-tx-files [tx-file-info file-info (get map-info :out []) [".idx"]]
         (CommandLineGATK/start (CommandLineGATK.)
                                (into-array (map str (itx/subs-kw-files
