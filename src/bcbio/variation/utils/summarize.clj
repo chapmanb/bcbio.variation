@@ -11,6 +11,11 @@
             [incanter.stats :as istats]
             [bcbio.run.itx :as itx]))
 
+(defn- to-float [x]
+  (try
+    (Float/parseFloat x)
+    (catch Exception e (float x))))
+
 (defn- flatten-vc-samples
   "Provide sample information from variant genotypes."
   [out vc attrs]
@@ -25,7 +30,7 @@
                                 (filter #(contains? (set variant-types) (:type %)))
                                 (map #(get-in % [:attributes k]))
                                 (remove nil?)
-                                (map #(Float/parseFloat %)))))
+                                (map #(to-float %)))))
             (add-attr-avgs [out gs attrs]
               (reduce (fn [coll k] (assoc coll (str k "_sample_mean")
                                           (get-attr-avg k gs)))

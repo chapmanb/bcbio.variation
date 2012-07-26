@@ -36,14 +36,14 @@
               (when-let [e-pct (get {"HOM_VAR" 1.0 "HET" 0.5 "HOM_REF" 0.0} (:type g))]
                 (Math/abs (- e-pct (/ allele-count (+ allele-count ref-count)))))))
           (from-ad [g]
-            (let [ads (map #(Float/parseFloat %) (string/split (get-in g [:attributes attr]) #","))
+            (let [ads (map float (get-in g [:attributes attr]))
                   alleles (cons (:ref-allele vc) (:alt-alleles vc))
                   ref-count (first ads)
                   allele-count (apply + (map #(nth ads (.indexOf alleles %)) (set (:alleles g))))]
               (calc-expected g ref-count allele-count)))
           (from-ao [g]
             (let [alt-count (Float/parseFloat (get-in g [:attributes "AO"]))
-                  total-count (Float/parseFloat (get-in g [:attributes "DP"]))]
+                  total-count (float (get-in g [:attributes "DP"]))]
               (calc-expected g (- total-count alt-count) alt-count)))]
     (let [g (-> vc :genotypes first)]
       (cond

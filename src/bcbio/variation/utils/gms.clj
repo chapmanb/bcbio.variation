@@ -3,7 +3,8 @@
   Uses full GMS files to generate VCF of potentially problematic low-GMS regions:
   http://sourceforge.net/apps/mediawiki/gma-bio/index.php"
   (:import [org.broadinstitute.sting.utils.variantcontext VariantContextBuilder Allele]
-           [org.broadinstitute.sting.utils.codecs.vcf StandardVCFWriter VCFHeader
+           [org.broadinstitute.sting.utils.variantcontext.writer VariantContextWriterFactory]
+           [org.broadinstitute.sting.utils.codecs.vcf VCFHeader
             VCFInfoHeaderLine VCFHeaderLineCount VCFHeaderLineType])
   (:use [clojure.java.io]
         [ordered.map :only [ordered-map]]
@@ -82,7 +83,8 @@
     (when (itx/needs-run? out-file)
       (let [gms-files (download-chrom-gms-data chrom ftp-config out-dir)
             readers (map reader (vals gms-files))]
-        (with-open [writer (StandardVCFWriter. (file out-file) (get-seq-dict ref))]
+        (with-open [writer (VariantContextWriterFactory/create (file out-file)
+                                                               (get-seq-dict ref))]
           (.writeHeader writer (get-vcf-header (keys gms-files)))
           (loop [line-iters (->> (map line-seq readers)
                                  (map (fn [x] (drop-while #(.startsWith % "#") x))))]

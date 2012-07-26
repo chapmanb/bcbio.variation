@@ -6,7 +6,7 @@
 ##ALT=<ID=INV,Description="Inversion">
 ##FILTER=<ID=overlap,Description="Indicates that the variant overlaps with another variant">
 ##FILTER=<ID=q0,Description="Quality score of being variant below 0">
-##INFO=<ID=BKPT,Number=-1,Type=String,Description="Breakpoint type of an imprecise structural variation">
+##INFO=<ID=BKPT,Number=0,Type=String,Description="Breakpoint type of an imprecise structural variation">
 ##INFO=<ID=CN,Number=1,Type=Integer,Description="Copy number">
 ##INFO=<ID=END,Number=1,Type=Integer,Description="End position of the variant described in this record">
 ##INFO=<ID=EXON,Number=0,Type=Flag,Description="Exon Region">
@@ -15,7 +15,7 @@
 ##INFO=<ID=IMPRECISE,Number=0,Type=Flag,Description="Imprecise structural variation">
 ##INFO=<ID=MATEID,Number=1,Type=String,Description="ID of partner breakend together with which novel adjacency is formed">
 ##INFO=<ID=NS,Number=1,Type=Integer,Description="Number of Samples With Data">
-##INFO=<ID=SVLEN,Number=-1,Type=Integer,Description="Difference in length between REF and ALT alleles">
+##INFO=<ID=SVLEN,Number=0,Type=Integer,Description="Difference in length between REF and ALT alleles">
 ##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of structural variant">
 ##INFO=<ID=TI,Number=.,Type=String,Description="Transcript ID">
 ##reference=NCBI37;
