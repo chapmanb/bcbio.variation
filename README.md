@@ -1,4 +1,4 @@
-j# bcbio.variation
+# bcbio.variation
 
 A Clojure interface to the [Genome Analysis Toolkit (GATK)][1] to analyze
 variant data in [VCF files][2]. It supports scoring for the

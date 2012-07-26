@@ -58,14 +58,13 @@
 (defn organize-gatk-report-table
   "Parses a GATK output table and filters based on supplied input function."
   [eval-file table-name filter-fn]
-  (let [cols (-> (GATKReport. (file eval-file))
-                 (.getTable table-name)
-                 .getColumns
-                 rest)
-        headers (map #(-> % (.getColumnName) keyword) cols)]
-    (->> (for [i (range (count (.values (first cols))))]
+  (let [table (-> (GATKReport. (file eval-file))
+                  (.getTable table-name))
+        cols (rest (.getColumnInfo table))
+        headers (map #(keyword (.getColumnName %)) cols)]
+    (->> (for [i (range (.getNumRows table))]
            (zipmap headers
-                   (map #(nth (vec (.values %)) i) cols)))
+                   (map #(.get table i (inc %)) (range (count headers)))))
          (filter filter-fn))))
 
 (defn summary-eval-metrics

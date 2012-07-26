@@ -4,6 +4,7 @@
   (:import [org.broadinstitute.sting.utils.codecs.vcf VCFCodec]
            [org.broadinstitute.sting.utils.variantcontext VariantContextBuilder
             Allele]
+           [org.broad.tribble.readers AsciiLineReader PositionalBufferedStream]
            [java.io StringReader]
            [net.sf.picard.util IntervalTree])
   (:use [clojure.set :only [intersection]]
@@ -118,14 +119,18 @@
             (cond
              (.startsWith line "#") line
              (nochange-alt? line) nil
-             :else line))]
+             :else line))
+          (prep-line [line]
+            (if (instance? PositionalBufferedStream line)
+              (.readLine (AsciiLineReader.) line)
+              line))]
     (proxy [VCFCodec] []
       (decode [line]
-        (when-let [work-line (check-sv-line line)]
+        (when-let [work-line (check-sv-line (prep-line line))]
           (when-let [vc (proxy-super decode work-line)]
             vc)))
       (decodeLoc [line]
-        (when-let [work-line (check-sv-line line)]
+        (when-let [work-line (check-sv-line (prep-line line))]
           (when-let [vc (proxy-super decode work-line)]
             vc))))))
 

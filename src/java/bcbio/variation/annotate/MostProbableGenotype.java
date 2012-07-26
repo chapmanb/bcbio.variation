@@ -28,7 +28,7 @@ import cern.jet.math.Arithmetic;
 import org.broadinstitute.sting.gatk.contexts.AlignmentContext;
 import org.broadinstitute.sting.gatk.contexts.ReferenceContext;
 import org.broadinstitute.sting.gatk.refdata.RefMetaDataTracker;
-import org.broadinstitute.sting.gatk.walkers.annotator.interfaces.AnnotatorCompatibleWalker;
+import org.broadinstitute.sting.gatk.walkers.annotator.interfaces.AnnotatorCompatible;
 import org.broadinstitute.sting.gatk.walkers.annotator.interfaces.InfoFieldAnnotation;
 import org.broadinstitute.sting.gatk.walkers.annotator.interfaces.ExperimentalAnnotation;
 import org.broadinstitute.sting.gatk.walkers.genotyper.IndelGenotypeLikelihoodsCalculationModel;
@@ -52,7 +52,7 @@ import java.util.*;
 public class MostProbableGenotype extends InfoFieldAnnotation implements ExperimentalAnnotation {
     private static final String MPG = "MPG";
 
-    public Map<String, Object> annotate(RefMetaDataTracker tracker, AnnotatorCompatibleWalker walker, ReferenceContext ref, Map<String, AlignmentContext> stratifiedContexts, VariantContext vc) {
+    public Map<String, Object> annotate(RefMetaDataTracker tracker, AnnotatorCompatible walker, ReferenceContext ref, Map<String, AlignmentContext> stratifiedContexts, VariantContext vc) {
 //        if ( ! vc.isVariant() || vc.isFiltered() )
 //            return null;
 
@@ -211,13 +211,8 @@ public class MostProbableGenotype extends InfoFieldAnnotation implements Experim
             if ( context == null ) 
                 continue;
 
-            ReadBackedPileup pileup = null;
-             if (context.hasExtendedEventPileup())
-                 pileup = context.getExtendedEventPileup();
-             else if (context.hasBasePileup())
-                 pileup = context.getBasePileup();
-
-             if (pileup == null)
+            ReadBackedPileup pileup = context.getBasePileup();
+            if (pileup == null)
                  continue;
 
             for (final PileupElement p: pileup) {

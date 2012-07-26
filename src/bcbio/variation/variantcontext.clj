@@ -34,7 +34,7 @@
    :sample-name (.getSampleName g)
    :qual (.getPhredScaledQual g)
    :type (-> g .getType .name)
-   :attributes (into {} (.getAttributes g))
+   :attributes (into {} (.getExtendedAttributes g))
    :alleles (vec (.getAlleles g))
    :genotype g))
 

@@ -1,6 +1,5 @@
 (ns bcbio.variation.report
   "Parse and provide detailed information from GATKReport outputs."
-  (:import [org.broadinstitute.sting.gatk.report GATKReport])
   (:use [ordered.map :only [ordered-map]]
         [clojure.math.combinatorics :only [cartesian-product]]
         [bcbio.variation.variantcontext :only [parse-vcf get-vcf-retriever

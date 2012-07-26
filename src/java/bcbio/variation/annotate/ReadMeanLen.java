@@ -11,7 +11,7 @@ import org.broadinstitute.sting.gatk.contexts.AlignmentContext;
 import org.broadinstitute.sting.gatk.contexts.ReferenceContext;
 import org.broadinstitute.sting.gatk.refdata.RefMetaDataTracker;
 import org.broadinstitute.sting.gatk.walkers.annotator.interfaces.ActiveRegionBasedAnnotation;
-import org.broadinstitute.sting.gatk.walkers.annotator.interfaces.AnnotatorCompatibleWalker;
+import org.broadinstitute.sting.gatk.walkers.annotator.interfaces.AnnotatorCompatible;
 import org.broadinstitute.sting.gatk.walkers.annotator.interfaces.InfoFieldAnnotation;
 import org.broadinstitute.sting.gatk.walkers.annotator.interfaces.ExperimentalAnnotation;
 import org.broadinstitute.sting.utils.MathUtils;
@@ -44,16 +44,13 @@ public class ReadMeanLen extends InfoFieldAnnotation implements ExperimentalAnno
         return Arrays.asList(new VCFInfoHeaderLine("ReadMeanLen", 1, VCFHeaderLineType.Float, "Mean number of aligned bases for reads - low number indicate possible mis-alignments"));
     }
 
-    public Map<String, Object> annotate(RefMetaDataTracker tracker, AnnotatorCompatibleWalker walker, ReferenceContext ref, Map<String, AlignmentContext> stratifiedContexts, VariantContext vc) {
+    public Map<String, Object> annotate(RefMetaDataTracker tracker, AnnotatorCompatible walker, ReferenceContext ref, Map<String, AlignmentContext> stratifiedContexts, VariantContext vc) {
         if ( stratifiedContexts.size() == 0 )
             return null;
 
         double readLenSum = 0;
 		double numReads = 0;
         for ( Map.Entry<String, AlignmentContext> sample : stratifiedContexts.entrySet() ) {
-            if ( !sample.getValue().hasBasePileup() )
-                continue;
-
             for ( PileupElement p : sample.getValue().getBasePileup() )	{
         	        int readPos = AlignmentUtils.calcAlignmentByteArrayOffset(p.getRead().getCigar(), p, 0, 0);
         	        final int numAlignedBases = AlignmentUtils.getNumAlignedBases(p.getRead());

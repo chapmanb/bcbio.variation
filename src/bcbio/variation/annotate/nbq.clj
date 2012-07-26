@@ -33,18 +33,14 @@
     - Get quality from reads and pull out qualities in surrounding region
     - Calculate mean and return."
   [_ _ _ _ contexts _]
-  (letfn [(get-pileup [context]
-            (if (.hasExtendedEventPileup context)
-              (.getExtendedEventPileup context)
-              (.getBasePileup context)))
-          (neighbor-qualities [[offset read]]
+  (letfn [(neighbor-qualities [[offset read]]
             (let [quals (-> read .getBaseQualities vec)]
               (map #(nth quals % nil) (range (- offset flank-bp) (+ offset flank-bp)))))
           (pileup-qualities [pileup]
             (map neighbor-qualities (map vector (.getOffsets pileup) (.getReads pileup))))]
     {"NBQ" (->> contexts
                 vals
-                (map get-pileup)
+                (map #(.getBasePileup %))
                 (map pileup-qualities)
                 flatten
                 (remove nil?)
