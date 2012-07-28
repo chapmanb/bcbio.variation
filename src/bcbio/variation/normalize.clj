@@ -14,7 +14,6 @@
                                                get-vcf-line-parser
                                                from-genotype]]
         [bcbio.align.ref :only [get-seq-dict get-seq-name-map]]
-        [bcbio.variation.structural :only [nochange-alt?]]
         [ordered.map :only (ordered-map)]
         [ordered.set :only (ordered-set)])
   (:require [clojure.string :as string]
@@ -121,6 +120,12 @@
           (contains? #{"NO_CALL" "MIXED" "HOM_REF"}
                      (-> vc :genotypes first :type))))
 
+(defn nochange-alt?
+  "Check a VCF input line for identical REF and ALT calls"
+  [line]
+  (let [parts (string/split line #"\t")]
+    (= (nth parts 3) (nth parts 4))))
+
 (defn- sort-by-position
   "Sort stream of line inputs by position.
   Requires loading the entire file into memory during the sort-by phase
@@ -191,8 +196,7 @@
               (subs info 1)
               info))
           (fix-info [xs]
-            (assoc xs 7 (-> (nth xs 7)
-                            empty-attribute-info)))
+            (assoc xs 7 (empty-attribute-info (nth xs 7))))
           (fix-chrom [new xs]
             (assoc xs 0 new))]
     (let [parts (string/split line #"\t")
@@ -318,6 +322,11 @@
               (and (= ref "N") (.startsWith alt "N") (> (count alt) 1))))
           (remove-5pad-n [xs]
             (if (is-5pad-n? xs) [] xs))
+          (remove-nochange-alt [xs]
+            (cond
+             (empty? xs) []
+             (= (nth xs 3) (nth xs 4)) []
+             :else xs))
           (fix-info-spaces [xs]
             (assoc xs 7
                    (string/replace (nth xs 7) " " "_")))
@@ -328,7 +337,8 @@
                    (remove-gap 3)
                    (remove-gap 4)
                    (fix-info-spaces)
-                   (remove-5pad-n)
+                   remove-5pad-n
+                   remove-nochange-alt
                    (string/join "\t"))))]
     (let [out-file (itx/add-file-part in-vcf-file "preclean" out-dir)]
       (when (itx/needs-run? out-file)

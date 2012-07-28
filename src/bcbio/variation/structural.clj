@@ -104,36 +104,6 @@
      (= "SYMBOLIC" (:type vc)) (alt-sv-type vc)
      :else nil)))
 
-(defn nochange-alt?
-  "Check a VCF input line for identical REF and ALT calls"
-  [line]
-  (let [parts (string/split line #"\t")]
-    (= (nth parts 3) (nth parts 4))))
-
-(defn structural-vcfcodec []
-  "Provide VCFCodec decoder that returns structural variants.
-  Check SV inputs for validity, fixing or filtering where possible.
-  Fixes:
-    - identical ref/alt calls: an apparent SV no-call"
-  (letfn [(check-sv-line [line]
-            (cond
-             (.startsWith line "#") line
-             (nochange-alt? line) nil
-             :else line))
-          (prep-line [line]
-            (if (instance? PositionalBufferedStream line)
-              (.readLine (AsciiLineReader.) line)
-              line))]
-    (proxy [VCFCodec] []
-      (decode [line]
-        (when-let [work-line (check-sv-line (prep-line line))]
-          (when-let [vc (proxy-super decode work-line)]
-            vc)))
-      (decodeLoc [line]
-        (when-let [work-line (check-sv-line (prep-line line))]
-          (when-let [vc (proxy-super decode work-line)]
-            vc))))))
-
 (defn value-from-attr
   "Retrieve normalized integer values from an attribute."
   ([vc attr-name]
@@ -279,7 +249,7 @@
           (in-intervals? [bed-source vc]
             (or (instance? StringReader bed-source)
                 (not (nil? (first (.query bed-source (:chr vc) (:start-ci vc) (:end-ci vc)))))))]
-    (with-open [vcf-source (get-vcf-source vcf-file ref-file :codec (structural-vcfcodec))
+    (with-open [vcf-source (get-vcf-source vcf-file ref-file)
                 bed-source (if-not (nil? interval-file) (get-bed-source interval-file ref-file)
                                    (StringReader. ""))]
       (let [vs-iter (filter (partial in-intervals? bed-source)
@@ -334,8 +304,8 @@
                    :nosv1 (itx/add-file-part (:file c1) "nosv" out-dir)
                    :nosv2 (itx/add-file-part (:file c2) "nosv" out-dir))]
     (when (itx/needs-run? (vals out-files))
-      (with-open [vcf1-s (get-vcf-source (:file c1) ref :codec (structural-vcfcodec))
-                  vcf2-s (get-vcf-source (:file c2) ref :codec (structural-vcfcodec))]
+      (with-open [vcf1-s (get-vcf-source (:file c1) ref)
+                  vcf2-s (get-vcf-source (:file c2) ref)]
         (write-vcf-w-template (:file c1) out-files
                               (concat
                                (find-concordant-svs (:file c1) (:file c2) disc-kwds
