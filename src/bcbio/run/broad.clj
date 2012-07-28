@@ -2,16 +2,29 @@
   "High level functions to run software from Broad: GATK, Picard"
   (:import [org.broadinstitute.sting.gatk CommandLineGATK]
            [net.sf.samtools SAMFileReader SAMFileReader$ValidationStringency]
-           [net.sf.picard.sam BuildBamIndex])
+           [net.sf.picard.sam BuildBamIndex CreateSequenceDictionary])
   (:use [clojure.java.io]
         [bcbio.align.ref :only [sort-bed-file]])
   (:require [fs.core :as fs]
             [bcbio.run.itx :as itx]))
 
+(defn- create-ref-dict-gatk
+  "Ensure reference dictionary "
+  [args]
+  (when-let [ref-file (second (drop-while
+                               #(not (contains? #{"-R" "--reference_sequence"} %))
+                               args))]
+    (let [dict-file (str (itx/file-root ref-file) ".dict")]
+      (when (itx/needs-run? dict-file)
+        (.instanceMain (CreateSequenceDictionary.)
+                       (into-array [(str "r=" ref-file) (str "o=" dict-file)])))
+      dict-file)))
+
 (defn run-gatk
   "Run a GATK commandline in an idempotent file-safe transaction."
   [program args file-info map-info]
-  (if (itx/needs-run? (map #(% file-info) (get map-info :out [])))
+  (when (itx/needs-run? (map #(% file-info) (get map-info :out [])))
+    (create-ref-dict-gatk args)
     (let [std-args (concat ["-T" program]
                            (when-not (contains? (set args) "--unsafe")
                              ["--unsafe" "LENIENT_VCF_PROCESSING"]))]
