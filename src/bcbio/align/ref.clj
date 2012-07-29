@@ -1,15 +1,25 @@
 (ns bcbio.align.ref
   "Deal with reference sequences for alignment and variant calling."
   (:import [org.broadinstitute.sting.gatk.datasources.reference ReferenceDataSource]
-           [net.sf.picard.reference ReferenceSequenceFileFactory])
+           [net.sf.picard.reference ReferenceSequenceFileFactory]
+           [net.sf.picard.sam BuildBamIndex CreateSequenceDictionary])
   (:use [clojure.java.io]
         [ordered.map :only [ordered-map]])
   (:require [clojure.string :as string]
             [bcbio.run.itx :as itx]))
 
+(defn create-ref-dict
+  [ref-file]
+  (let [dict-file (str (itx/file-root ref-file) ".dict")]
+    (when (itx/needs-run? dict-file)
+      (.instanceMain (CreateSequenceDictionary.)
+                     (into-array [(str "r=" ref-file) (str "o=" dict-file)])))
+    dict-file))
+
 (defn get-seq-dict
   "Retrieve Picard sequence dictionary from FASTA reference file."
   [ref-file]
+  (create-ref-dict ref-file)
   (ReferenceDataSource. (file ref-file))
   (-> ref-file
       file

@@ -1,10 +1,9 @@
 (ns bcbio.run.broad
   "High level functions to run software from Broad: GATK, Picard"
   (:import [org.broadinstitute.sting.gatk CommandLineGATK]
-           [net.sf.samtools SAMFileReader SAMFileReader$ValidationStringency]
-           [net.sf.picard.sam BuildBamIndex CreateSequenceDictionary])
+           [net.sf.samtools SAMFileReader SAMFileReader$ValidationStringency])
   (:use [clojure.java.io]
-        [bcbio.align.ref :only [sort-bed-file]])
+        [bcbio.align.ref :only [sort-bed-file create-ref-dict]])
   (:require [fs.core :as fs]
             [bcbio.run.itx :as itx]))
 
@@ -14,11 +13,7 @@
   (when-let [ref-file (second (drop-while
                                #(not (contains? #{"-R" "--reference_sequence"} %))
                                args))]
-    (let [dict-file (str (itx/file-root ref-file) ".dict")]
-      (when (itx/needs-run? dict-file)
-        (.instanceMain (CreateSequenceDictionary.)
-                       (into-array [(str "r=" ref-file) (str "o=" dict-file)])))
-      dict-file)))
+    (create-ref-dict ref-file)))
 
 (defn run-gatk
   "Run a GATK commandline in an idempotent file-safe transaction."
