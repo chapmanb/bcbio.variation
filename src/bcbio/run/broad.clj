@@ -1,7 +1,8 @@
 (ns bcbio.run.broad
   "High level functions to run software from Broad: GATK, Picard"
   (:import [org.broadinstitute.sting.gatk CommandLineGATK]
-           [net.sf.samtools SAMFileReader SAMFileReader$ValidationStringency])
+           [net.sf.samtools SAMFileReader SAMFileReader$ValidationStringency]
+           [net.sf.picard.sam BuildBamIndex])
   (:use [clojure.java.io]
         [bcbio.align.ref :only [sort-bed-file create-ref-dict]])
   (:require [fs.core :as fs]
