@@ -155,6 +155,7 @@
               (combine-variants in-files ref
                                 :merge-type :full :out-dir out-dir
                                 :intervals (genome-safe-intervals intervals ref exp)
+                                :check-ploidy? false
                                 :unsafe true)))]
     (let [out-fname (format "%s-%s.vcf" (:sample exp) (:name call))
           in-files (if (coll? (:file call)) (:file call) [(:file call)])
