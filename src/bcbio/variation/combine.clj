@@ -48,7 +48,8 @@
           args (concat ["-R" ref
                         "-o" :out-vcf
                         "--rod_priority_list" (string/join "," (map-indexed unique-name vcfs))]
-                       (if unsafe ["--unsafe" "ALLOW_SEQ_DICT_INCOMPATIBILITY"] [])
+                       ;(if unsafe ["--unsafe" "ALLOW_SEQ_DICT_INCOMPATIBILITY"] [])
+                       (if unsafe ["--unsafe" "ALL"] [])
                        (if quiet-out? ["--suppressCommandLineHeader" "--setKey" "null"] [])
                        (flatten (map-indexed #(list (str "--variant:" (unique-name %1 %2)) %2) vcfs))
                        (broad/gatk-cl-intersect-intervals intervals ref)
