@@ -85,13 +85,11 @@
 (defrecord VcfRetriever [sources]
   VcfRetrievable
   (has-variants? [this space start end ref alt]
-    (letfn [(allele-set [x]
-              (set (string/split x #",")))]
-      (some #(and (= start (:start %))
-                  (= end (:end %))
-                  (= ref (:ref-allele %))
-                  (seq (intersection (allele-set (:alt-alleles %))) (allele-set alt)))
-            (variants-in-region this space start end))))
+    (some #(and (= start (:start %))
+                (= end (:end %))
+                (= ref (:ref-allele %))
+                (seq (intersection (set (:alt-alleles %))) (set alt)))
+          (variants-in-region this space start end)))
   (variants-in-region [_ space start end]
     (mapcat #(map from-vc (iterator-seq (.query % space start end)))
             sources))
