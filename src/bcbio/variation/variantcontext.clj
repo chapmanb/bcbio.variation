@@ -88,7 +88,7 @@
     (some #(and (= start (:start %))
                 (= end (:end %))
                 (= ref (:ref-allele %))
-                (seq (intersection (set (:alt-alleles %))) (set alt)))
+                (seq (intersection (set (:alt-alleles %)) (set alt))))
           (variants-in-region this space start end)))
   (variants-in-region [_ space start end]
     (mapcat #(map from-vc (iterator-seq (.query % space start end)))
