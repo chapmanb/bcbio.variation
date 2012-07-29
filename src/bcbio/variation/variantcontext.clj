@@ -11,6 +11,7 @@
            [org.broadinstitute.sting.gatk.arguments ValidationExclusion$TYPE]
            [java.util EnumSet])
   (:use [clojure.java.io]
+        [clojure.set :only [intersection]]
         [lazymap.core :only [lazy-hash-map]]
         [bcbio.align.ref :only [get-seq-dict]])
   (:require [clojure.string :as string]
@@ -84,11 +85,13 @@
 (defrecord VcfRetriever [sources]
   VcfRetrievable
   (has-variants? [this space start end ref alt]
-    (some #(and (= start (:start %))
-                (= end (:end %))
-                (= ref (:ref-allele %))
-                (= alt (:alt-alleles %)))
-          (variants-in-region this space start end)))
+    (letfn [(allele-set [x]
+              (set (string/split x #",")))]
+      (some #(and (= start (:start %))
+                  (= end (:end %))
+                  (= ref (:ref-allele %))
+                  (seq (intersection (allele-set (:alt-alleles %))) (allele-set alt)))
+            (variants-in-region this space start end))))
   (variants-in-region [_ space start end]
     (mapcat #(map from-vc (iterator-seq (.query % space start end)))
             sources))
