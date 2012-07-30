@@ -9,6 +9,7 @@
   (:use [clojure.java.io]
         [clojure.set :only [union]]
         [ordered.set :only [ordered-set]]
+        [bcbio.align.ref :only [extract-sequence]]
         [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template
                                                get-vcf-source]])
   (:require [clojure.string :as string]
@@ -25,7 +26,7 @@
      1))
 
 (defn- get-vc-alleles [vc]
-  (map #(.getBaseString %) (cons (:ref-allele vc) (:alt-alleles vc))))
+  (vec (map #(.getBaseString %) (cons (:ref-allele vc) (:alt-alleles vc)))))
 
 (defn is-multi-indel?
   "Identify complex indels that can be split into multiple calls."
@@ -121,10 +122,16 @@
 (defn- multiple-alignment
   "Perform alignment of input sequences using BioJava."
   [seqs]
-  (map #(.getSequenceAsString %)
-       (-> (map #(DNASequence. %) seqs)
-           (Alignments/getMultipleSequenceAlignment (to-array []))
-           .getAlignedSequences)))
+  (letfn [(original-seq-position [seqs]
+            (let [orig-order (into {} (map-indexed (fn [i x] [x i]) seqs))]
+              (fn [x]
+                (get orig-order (string/replace x "-" "")))))]
+    (take 2
+          (sort-by (original-seq-position seqs)
+                   (map #(.getSequenceAsString %)
+                        (-> (map #(DNASequence. %) seqs)
+                            (Alignments/getMultipleSequenceAlignment (to-array []))
+                            .getAlignedSequences))))))
 
 (defn- fix-ref-alignment-gaps
   "Ensure reference alignment gaps have consistent gap schemes."
@@ -146,10 +153,12 @@
 
 (defn- split-complex-indel
   "Split complex indels into individual variant components."
-  [vc]
+  [vc ref]
   {:pre [(= 1 (:num-samples vc))]}
-  (let [alleles (split-alleles vc (->> (get-vc-alleles vc)
+  (let [alleles (split-alleles vc (->> (conj (get-vc-alleles vc)
+                                             (extract-sequence ref (:chr vc) (:start vc) (:end vc)))
                                        (remove empty?)
+                                       (remove nil?)
                                        multiple-alignment
                                        fix-ref-alignment-gaps))]
     (map (fn [[i x]] (new-split-vc (:vc vc) i x)) (map-indexed vector alleles))))
@@ -192,7 +201,7 @@
   Variant representations can have a MNP and also a single SNP representing
   the same information. In this case we ignore SNPs overlapping a MNP region
   and rely on MNP splitting to resolve the SNPs."
-  [vc-iter mnp-blockers]
+  [vc-iter mnp-blockers ref]
   (letfn [(overlaps-previous-mnp? [vc blockers]
             (contains? (get blockers (:chr vc) #{}) (:start vc)))
           (add-mnp-info [coll vc]
@@ -210,13 +219,13 @@
               (condp = (:type vc)
                 "MNP" (split-mnp vc)
                 "INDEL" (if (is-multi-indel? vc)
-                          (split-complex-indel vc)
+                          (split-complex-indel vc ref)
                           [(maybe-strip-indel vc)])
                 [(:vc vc)])))
           (add-normalized-vcs [vcs blockers]
             (when (seq vcs)
               (concat (process-vc (first vcs) blockers)
-                      (get-normalized-vcs (rest vcs) (add-mnp-info blockers (first vcs))))))]
+                      (get-normalized-vcs (rest vcs) (add-mnp-info blockers (first vcs)) ref))))]
     (lazy-seq (add-normalized-vcs vc-iter mnp-blockers))))
 
 (defn left-align-variants
@@ -245,6 +254,6 @@
          (let [la-file (left-align-variants in-file ref :out-dir out-dir)]
            (with-open [vcf-source (get-vcf-source la-file ref)]
              (write-vcf-w-template in-file {:out out-file}
-                                   (get-normalized-vcs (parse-vcf vcf-source) {})
+                                   (get-normalized-vcs (parse-vcf vcf-source) {} ref)
                                    ref))))
        out-file)))

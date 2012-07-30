@@ -35,6 +35,19 @@
           (map-indexed vector
                        (map #(.getSequenceName %) (.getSequences (get-seq-dict ref-file))))))
 
+(defn extract-sequence
+  "Retrieve sequence in the provided region from input reference file."
+  [ref-file contig start end]
+  (let [seq-ref (ReferenceSequenceFileFactory/getReferenceSequenceFile (file ref-file))
+        seq-dict (-> seq-ref .getSequenceDictionary)]
+    (when (and (contains? (set (map #(.getSequenceName %) (.getSequences seq-dict))) contig)
+               (<= end (.getSequenceLength (.getSequence seq-dict contig))))
+      (-> seq-ref
+          (.getSubsequenceAt contig start end)
+          .getBases
+          (#(map char %))
+          (#(apply str %))))))
+
 (defn sort-bed-file
   "Sort a BED file relative to the input reference"
   [bed-file ref-file]
