@@ -16,15 +16,16 @@
                      (into-array [(str "r=" ref-file) (str "o=" dict-file)])))
     dict-file))
 
-(defn get-seq-dict
+(defn get-seq-dict*
   "Retrieve Picard sequence dictionary from FASTA reference file."
   [ref-file]
   (create-ref-dict ref-file)
   (ReferenceDataSource. (file ref-file))
-  (-> ref-file
-      file
+  (-> (file ref-file)
       ReferenceSequenceFileFactory/getReferenceSequenceFile
       .getSequenceDictionary))
+
+(def get-seq-dict (memoize get-seq-dict*))
 
 (defn get-seq-name-map
   "Retrieve map of sequence names to index positions in the input reference.
