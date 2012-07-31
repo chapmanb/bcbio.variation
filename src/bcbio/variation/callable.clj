@@ -34,13 +34,14 @@
     (:out-bed file-info)))
 
 (defn features-in-region [source space start end]
-  (for [f (.query source space start end)]
-    {:chr (.getChr f)
-     :start (.getStart f)
-     :end (.getEnd f)
-     :name (.getName f)
-     :score (.getScore f)
-     :strand (.getStrand f)}))
+  (with-open [bed-iter (.query source space start end)]
+    (vec (for [f bed-iter]
+           {:chr (.getChr f)
+            :start (.getStart f)
+            :end (.getEnd f)
+            :name (.getName f)
+            :score (.getScore f)
+            :strand (.getStrand f)}))))
 
 (defn get-bed-source
   "Provide tribble feature source for a BED formatted file."
@@ -49,6 +50,10 @@
         work-bed (sort-bed-file bed-file ref-file)
         idx (IndexFactory/createIntervalIndex (file work-bed) (BEDCodec.) batch-size)]
     (AbstractFeatureReader/getFeatureReader work-bed (BEDCodec.) idx)))
+
+(defn get-bed-iterator
+  [bed-file ref-file]
+  (.iterator (get-bed-source bed-file ref-file)))
 
 (defn get-callable-bed
   "Create BED file of callable regions from the BAM alignment file.
@@ -59,9 +64,9 @@
   (let [orig-bed-file (identify-callable align-bam ref :out-dir out-dir
                                          :intervals intervals)
         out-file (itx/add-file-part orig-bed-file "intervals")]
-    (with-open [source (get-bed-source orig-bed-file ref)
+    (with-open [bed-iter (get-bed-iterator orig-bed-file ref)
                 wtr (writer out-file)]
-      (doseq [f (.iterator source)]
+      (doseq [f bed-iter]
         (when (= (.getName f) "CALLABLE")
           (.write wtr (format "%s\t%s\t%s\n" (.getChr f)
                               (- (.getStart f) 2) (.getEnd f))))))

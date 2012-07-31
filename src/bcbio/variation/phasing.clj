@@ -14,7 +14,7 @@
   (:import [org.broadinstitute.sting.utils.interval IntervalUtils IntervalSetRule]
            [org.broadinstitute.sting.utils GenomeLocParser GenomeLoc])
   (:use [bcbio.variation.callable :only [get-bed-source features-in-region
-                                         limit-bed-intervals]]
+                                         limit-bed-intervals get-bed-iterator]]
         [bcbio.variation.structural :only [prep-itree get-itree-overlap
                                            remove-itree-vc get-itree-all]]
         [bcbio.variation.variantcontext :only [parse-vcf get-vcf-retriever get-vcf-source
@@ -37,7 +37,7 @@
   (letfn [(safe-same-regions? [[a b]]
             (if (not-any? nil? [a b]) (= a b) true))
           (same-regions? [prev cur]
-            (if (or (nil? bed-s) (instance? java.io.StringReader bed-s))
+            (if (nil? bed-s)
               true
               (safe-same-regions?
                (map #((juxt :chr :start :end)
@@ -297,17 +297,16 @@
             (apply + (map feature-size xs)))
           (genome-loc-list [x]
             (let [parser (GenomeLocParser. (get-seq-dict ref-file))]
-              (with-open [bed-source (get-bed-source x ref-file)]
-                (->> bed-source
-                     .iterator
+              (with-open [bed-iter (get-bed-iterator x ref-file)]
+                (->> bed-iter
                      (map #(.createGenomeLoc parser %))
                      doall))))
           (merge-intervals [x y]
             (IntervalUtils/mergeListsBySetOperator (genome-loc-list x)
                                                    (genome-loc-list y)
                                                    IntervalSetRule/INTERSECTION))]
-    (with-open [bed-source (get-bed-source total-bed ref-file)]
-      (let [total (count-bases (.iterator bed-source))
+    (with-open [bed-iter (get-bed-iterator total-bed ref-file)]
+      (let [total (count-bases bed-iter)
             compared (if (or (nil? call-bed) (= total-bed call-bed)) total
                          (count-bases (merge-intervals total-bed call-bed)))]
         {:percent (* 100.0 (/ compared total))
@@ -366,11 +365,11 @@
         call-intervals (when-let [f (get call :intervals (:intervals exp))]
                          (limit-bed-intervals f call exp config))]
     (with-open [ref-retriever (get-vcf-retriever (:ref exp) (:file ref))
-                call-vcf-s (get-vcf-source (:file call) (:ref exp))
-                bed-s (if call-intervals
-                        (get-bed-source call-intervals (:ref exp))
-                        (java.io.StringReader. ""))]
-      (let [compared-calls (score-phased-calls call-vcf-s ref-retriever :bed-source bed-s)]
+                call-vcf-s (get-vcf-source (:file call) (:ref exp))]
+      (let [compared-calls (score-phased-calls call-vcf-s ref-retriever
+                                               :bed-source
+                                               (when call-intervals
+                                                 (get-bed-source call-intervals (:ref exp))))]
         {:c-files (write-concordance-output (convert-cmps-to-grade compared-calls)
                                             [:concordant :discordant
                                              :discordant-missing :phasing-error]
@@ -411,11 +410,11 @@
                (second (get phased-calls true)))
         to-capture (concat [:concordant]
                            (map #(keyword (format "%s-discordant" (:name %)))
-                                [cmp1 cmp2]))]
+                                [cmp1 cmp2]))
+        bed-s (when-let [f (get cmp2 :intervals (:intervals exp))]
+                (get-bed-source f (:ref exp)))]
     (with-open [vcf1-retriever (get-vcf-retriever (:ref exp) (:file cmp1))
-                vcf2-s (get-vcf-source (:file cmp2) (:ref exp))
-                bed-s (if-let [f (get cmp2 :intervals (:intervals exp))]
-                        (get-bed-source f (:ref exp)) (java.io.StringReader. ""))]
+                vcf2-s (get-vcf-source (:file cmp2) (:ref exp))]
       {:c-files (-> (convert-cmps-to-compare (:name cmp1) (:name cmp2)
                                              (score-phased-calls vcf2-s vcf1-retriever
                                                                  :bed-source bed-s))

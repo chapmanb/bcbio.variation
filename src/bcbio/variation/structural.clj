@@ -5,14 +5,12 @@
            [org.broadinstitute.sting.utils.variantcontext VariantContextBuilder
             Allele]
            [org.broad.tribble.readers AsciiLineReader PositionalBufferedStream]
-           [java.io StringReader]
            [net.sf.picard.util IntervalTree])
   (:use [clojure.set :only [intersection]]
         [ordered.map :only [ordered-map]]
         [bcbio.variation.variantcontext :only [get-vcf-source parse-vcf
                                                from-vc write-vcf-w-template]]
-        [bcbio.variation.callable :only [get-bed-source]]
-        )
+        [bcbio.variation.callable :only [get-bed-source features-in-region]])
   (:require [clojure.string :as string]
             [fs.core :as fs]
             [bcbio.run.itx :as itx]))
@@ -247,12 +245,11 @@
                     (assoc :end-ci (second end-cis))
                     (assoc :sv-type sv-type)))))
           (in-intervals? [bed-source vc]
-            (or (instance? StringReader bed-source)
-                (not (nil? (first (.query bed-source (:chr vc) (:start-ci vc) (:end-ci vc)))))))]
-    (with-open [vcf-source (get-vcf-source vcf-file ref-file)
-                bed-source (if-not (nil? interval-file) (get-bed-source interval-file ref-file)
-                                   (StringReader. ""))]
-      (let [vs-iter (filter (partial in-intervals? bed-source)
+            (or (nil? bed-source)
+                (seq (features-in-region bed-source (:chr vc) (:start-ci vc) (:end-ci vc)))))]
+    (with-open [vcf-source (get-vcf-source vcf-file ref-file)]
+      (let [vs-iter (filter (partial in-intervals? (when interval-file
+                                                     (get-bed-source interval-file ref-file)))
                             (keep updated-sv-vc (parse-vcf vcf-source)))]
         (case out-format
           :itree (prep-itree vs-iter :start-ci :end-ci)
