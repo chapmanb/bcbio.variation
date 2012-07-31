@@ -77,6 +77,12 @@
                             (file in-file) cur-codec)]
         (AbstractFeatureReader/getFeatureReader (.getAbsolutePath (file in-file)) cur-codec idx)))))
 
+(defn get-vcf-iterator
+  "Create an iterator over VCF VariantContexts."
+  [in-file ref-file & {:keys [ensure-safe codec]}]
+  (.iterator (get-vcf-source in-file ref-file :ensure-safe ensure-safe
+                             :codec codec)))
+
 (defprotocol VcfRetrievable
   "Provide a retriever of variants from zero to many inputs."
   (has-variants? [this space start end ref alt])
@@ -91,8 +97,10 @@
                 (seq (intersection (set (:alt-alleles %)) (set alt))))
           (variants-in-region this space start end)))
   (variants-in-region [_ space start end]
-    (mapcat #(map from-vc (iterator-seq (.query % space start end)))
-            sources))
+    (letfn [(get-vcs-in-source [source]
+              (with-open [vcf-iter (.query source space start end)]
+                (doall (map from-vc (iterator-seq vcf-iter)))))]
+      (mapcat get-vcs-in-source sources)))
   java.io.Closeable
   (close [_]
     (doseq [x sources]
@@ -162,18 +170,18 @@
 (defn write-vcf-from-filter
   "Write VCF file from input using a filter function."
   [vcf ref out-part passes?]
-  (with-open [source (get-vcf-source vcf ref)]
+  (with-open [vcf-iter (get-vcf-iterator vcf ref)]
     (write-vcf-w-template vcf {:out (itx/add-file-part vcf out-part)}
-                          (map :vc (filter passes? (parse-vcf source)))
+                          (map :vc (filter passes? (parse-vcf vcf-iter)))
                           ref)))
 
 (defn -main [vcf ref approach]
-  (with-open [vcf-s (get-vcf-source vcf ref)]
+  (with-open [vcf-iter (get-vcf-iterator vcf ref)]
     (letfn [(item-iter []
               (case approach
                 "line" (map :vc (line-vcf-parser vcf))
-                "gatk" (iterator-seq (.iterator vcf-s))
-                "orig" (map :vc (parse-vcf vcf-s))))]
+                "gatk" (iterator-seq (.iterator vcf-iter))
+                "orig" (map :vc (parse-vcf vcf-iter))))]
       (write-vcf-w-template vcf {:out "vctest.vcf"} (item-iter) ref)
       ;; (doseq [[i x] (map-indexed vector (item-iter))]
       ;;   (when (= 0 (mod i 10000))

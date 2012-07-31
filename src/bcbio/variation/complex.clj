@@ -11,7 +11,7 @@
         [ordered.set :only [ordered-set]]
         [bcbio.align.ref :only [extract-sequence]]
         [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template
-                                               get-vcf-source]])
+                                               get-vcf-iterator]])
   (:require [clojure.string :as string]
             [bcbio.run.broad :as broad]
             [bcbio.run.itx :as itx]))
@@ -252,8 +252,8 @@
            out-file (itx/add-file-part base-name "nomnp" out-dir)]
        (when (itx/needs-run? out-file)
          (let [la-file (left-align-variants in-file ref :out-dir out-dir)]
-           (with-open [vcf-source (get-vcf-source la-file ref)]
+           (with-open [vcf-iter (get-vcf-iterator la-file ref)]
              (write-vcf-w-template in-file {:out out-file}
-                                   (get-normalized-vcs (parse-vcf vcf-source) {} ref)
+                                   (get-normalized-vcs (parse-vcf vcf-iter) {} ref)
                                    ref))))
        out-file)))

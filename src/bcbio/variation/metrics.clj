@@ -4,7 +4,7 @@
    metrics to use for filtering."
   (:use [clojure.java.io]
         [clojure.set]
-        [bcbio.variation.variantcontext :only [parse-vcf get-vcf-source]]
+        [bcbio.variation.variantcontext :only [parse-vcf get-vcf-iterator]]
         [clojure.string :only [split-lines]]
         [clj-ml.data :only [make-dataset]]
         [clj-ml.classifiers :only [make-classifier classifier-train]]
@@ -70,8 +70,8 @@
             (assoc (reduce collect-attributes collect (:attributes vc))
               "QUAL" (cons (:qual vc)
                            (get collect "QUAL" []))))]
-    (with-open [vcf-source (get-vcf-source vcf-file ref-file)]
-      (reduce collect-vc {} (filter passes-filter? (parse-vcf vcf-source))))))
+    (with-open [vcf-iter (get-vcf-iterator vcf-file ref-file)]
+      (reduce collect-vc {} (filter passes-filter? (parse-vcf vcf-iter))))))
 
 (defn vcf-stats
   "Collect summary statistics associated with variant calls."
@@ -109,10 +109,10 @@
                :rows (map (fn [x]
                             (map #(get x %) sort-names))
                           rows)}))]
-    (with-open [vcf-source (get-vcf-source vcf-file ref-file)]
+    (with-open [vcf-iter (get-vcf-iterator vcf-file ref-file)]
       (prep-table
        (reduce classifier-metrics {:rows [] :names #{} :nil-names #{}}
-               (filter passes-filter? (parse-vcf vcf-source)))))))
+               (filter passes-filter? (parse-vcf vcf-iter)))))))
 
 (defn get-vcf-classifier-metrics
   "Collect metrics from multiple vcf files into tables suitable for

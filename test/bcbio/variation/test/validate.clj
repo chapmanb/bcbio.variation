@@ -34,8 +34,8 @@
   (diploid-calls-to-haploid dip-vcf ref) => dip-out)
 
 (facts "Generalized attribute retrieval from variant contexts"
-  (with-open [vcf-s (get-vcf-source top-vcf ref)]
-    (let [vcf-iter (parse-vcf vcf-s)
+  (with-open [vcf-iter (get-vcf-iterator top-vcf ref)]
+    (let [vcf-iter (parse-vcf vcf-iter)
           attrs ["AD" "QUAL" "DP"]
           config {:normalize "minmax"}
           normalizer (get-vc-attrs-normalized attrs top-vcf ref config)]

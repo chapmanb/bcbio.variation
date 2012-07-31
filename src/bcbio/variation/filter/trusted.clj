@@ -6,7 +6,7 @@
   (:use [bcbio.variation.multiple :only [multiple-overlap-analysis remove-mod-name
                                          prep-cmp-name-lookup get-vc-set-calls]]
         [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template
-                                               get-vcf-source]])
+                                               get-vcf-iterator]])
   (:require [clojure.string :as string]
             [bcbio.run.itx :as itx]))
 
@@ -76,9 +76,9 @@
                                          config :remove-mods? true))]
     (let [out-file (itx/add-file-part base-vcf "trusted")]
       (when (itx/needs-run? out-file)
-        (with-open [base-vcf-s (get-vcf-source base-vcf (:ref exp))]
+        (with-open [base-vcf-iter (get-vcf-iterator base-vcf (:ref exp))]
           (write-vcf-w-template base-vcf {:out out-file}
-                                (->> (parse-vcf base-vcf-s)
+                                (->> (parse-vcf base-vcf-iter)
                                      (filter #(is-trusted-variant? % params (:calls exp)))
                                      (map :vc))
                                 (:ref exp))))

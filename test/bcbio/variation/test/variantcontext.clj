@@ -7,8 +7,8 @@
       ref (str (fs/file data-dir "GRCh37.fa"))
       vcf-file (str (fs/file data-dir "gatk-calls.vcf"))]
   (facts "Parsing VCF file to VariantContext"
-    (with-open [vcf-source (get-vcf-source vcf-file ref)]
-      (let [vc (first (parse-vcf vcf-source))]
+    (with-open [vcf-iter (get-vcf-iterator vcf-file ref)]
+      (let [vc (first (parse-vcf vcf-iter))]
         (:chr vc) => "MT"
         (:start vc) => 73
         (:type vc) => "SNP"

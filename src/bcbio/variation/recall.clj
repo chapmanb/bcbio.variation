@@ -15,7 +15,7 @@
         [bcbio.variation.callable :only [get-callable-checker is-callable?]]
         [bcbio.variation.combine :only [combine-variants multiple-samples?]]
         [bcbio.variation.config :only [load-config]]
-        [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template get-vcf-source
+        [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template get-vcf-iterator
                                                get-vcf-header]])
   (:require [clojure.string :as string]
             [fs.core :as fs]
@@ -42,9 +42,9 @@
           out {:called (itx/add-file-part in-vcf (str sample-str "called") out-dir)
                :nocall (itx/add-file-part in-vcf (str sample-str "nocall") out-dir)}]
       (when (itx/needs-run? (vals out))
-        (with-open [in-vcf-s (get-vcf-source in-vcf ref)]
+        (with-open [in-vcf-iter (get-vcf-iterator in-vcf ref)]
           (write-vcf-w-template in-vcf out
-                                (remove nil? (map split-nocall-vc (parse-vcf in-vcf-s)))
+                                (remove nil? (map split-nocall-vc (parse-vcf in-vcf-iter)))
                                 ref
                                 :header-update-fn (partial set-header-to-sample sample))))
       out)))
@@ -260,11 +260,11 @@
               [:out (maybe-callable-vc vc call-source)]))]
     (let [out-file (itx/add-file-part in-vcf "wrefs")]
       (when (itx/needs-run? out-file)
-        (with-open [in-vcf-s (get-vcf-source in-vcf ref)
+        (with-open [in-vcf-iter (get-vcf-iterator in-vcf ref)
                     call-source (get-callable-checker align-bam ref :out-dir out-dir
                                                       :intervals intervals)]
           (write-vcf-w-template in-vcf {:out out-file}
-                                (convert-vcs in-vcf-s call-source) ref)))
+                                (convert-vcs in-vcf-iter call-source) ref)))
       out-file)))
 
 (defn -main [config-file]

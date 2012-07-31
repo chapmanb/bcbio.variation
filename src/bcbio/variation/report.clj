@@ -4,7 +4,7 @@
         [clojure.math.combinatorics :only [cartesian-product]]
         [bcbio.variation.variantcontext :only [parse-vcf get-vcf-retriever
                                                variants-in-region
-                                               get-vcf-source]]
+                                               get-vcf-iterator]]
         [bcbio.variation.callable :only [get-callable-checker is-callable?]]
         [bcbio.variation.evaluate :only [organize-gatk-report-table]]
         [bcbio.variation.metrics :only [ml-on-vcf-metrics passes-filter? nonref-passes-filter?]])
@@ -25,15 +25,15 @@
 (defn- count-variants
   "Count variants that pass an optional checker function."
   [f ref-file check?]
-  (with-open [vcf-source (get-vcf-source f ref-file)]
-    (count (filter check? (parse-vcf vcf-source)))))
+  (with-open [vcf-iter (get-vcf-iterator f ref-file)]
+    (count (filter check? (parse-vcf vcf-iter)))))
 
 (defn discordance-metrics
   "Provide metrics to distinguish types of discordance in a comparison.
   These identify variants which differ due to being missing in one variant
   call versus calls present in both with different genotypes."
   [file1 file2 ref-file]
-  (with-open [file1-source (get-vcf-source file1 ref-file)
+  (with-open [file1-iter (get-vcf-iterator file1 ref-file)
               vcf-retriever (get-vcf-retriever ref-file file2)]
     (reduce (fn [coll vc]
               (let [other-vcs (variants-in-region vcf-retriever
@@ -41,7 +41,7 @@
                     vc-type (if-not (empty? other-vcs) :total :unique)]
                 (assoc coll vc-type (inc (get coll vc-type)))))
             {:total 0 :unique 0}
-            (parse-vcf file1-source))))
+            (parse-vcf file1-iter))))
 
 (defn nocoverage-count
   "Calculate count of variant in input file without coverage in the comparison."
@@ -242,12 +242,12 @@
   "Summary table of classification metrics from GATK variant recalibration."
   [cmp-info wrtr]
   (letfn [(get-metric-counts [in-vcf]
-            (with-open [vcf-source (get-vcf-source in-vcf (get-in cmp-info [:exp :ref]))]
+            (with-open [vcf-iter (get-vcf-iterator in-vcf (get-in cmp-info [:exp :ref]))]
               (reduce (fn [coll vc]
                         (let [culprit (get-in vc [:attributes "culprit"])]
                           (if (or (nil? culprit) (= (count (:filters vc)) 0)) coll
                               (assoc coll culprit (inc (get coll culprit 0))))))
-                      {} (parse-vcf vcf-source))))
+                      {} (parse-vcf vcf-iter))))
           (get-recal-metrics [in-vcf]
             (sort-by :count >
                      (map (fn [[m c]] {:metric m :count c}) (get-metric-counts in-vcf))))]

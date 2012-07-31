@@ -9,7 +9,7 @@
         [bcbio.variation.metrics :only [nonref-passes-filter?]]
         [bcbio.variation.variantcontext :only [parse-vcf get-vcf-retriever
                                                variants-in-region
-                                               get-vcf-source write-vcf-w-template]])
+                                               get-vcf-iterator write-vcf-w-template]])
   (:require [clojure.string :as string]
             [fs.core :as fs]
             [bcbio.run.itx :as itx]
@@ -79,9 +79,9 @@
                        set-name))]
     (let [out-file (itx/add-file-part vcf-in set-name nil)]
       (when (itx/needs-run? out-file)
-        (with-open [in-source (get-vcf-source vcf-in ref)]
+        (with-open [in-iter (get-vcf-iterator vcf-in ref)]
           (write-vcf-w-template vcf-in {:out out-file}
-                                (map :vc (filter in-set? (parse-vcf in-source)))
+                                (map :vc (filter in-set? (parse-vcf in-iter)))
                                 ref)))
       out-file)))
 
@@ -125,13 +125,13 @@
                           flatten
                           (map :align)
                           (remove nil?))]
-      (with-open [disc-source (get-vcf-source disc-vcf ref)
+      (with-open [disc-iter (get-vcf-iterator disc-vcf ref)
                   other-retriever (get-vcf-retriever ref other-conc-vcf)
                   call-source (get-callable-checker align-bams ref
                                                     :out-dir (str (fs/parent out-dir)))]
         (when (itx/needs-run? out-file)
           (write-vcf-w-template disc-vcf {:out out-file}
-                                (get-shared-discordant (parse-vcf disc-source)
+                                (get-shared-discordant (parse-vcf disc-iter)
                                                        other-retriever call-source)
                                 ref)))
       out-file)))

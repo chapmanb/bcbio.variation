@@ -4,7 +4,7 @@
   (:use [ordered.map :only [ordered-map]]
         [bcbio.variation.api.file :only [retrieve-file]]
         [bcbio.variation.filter.classify :only [get-vc-attrs]]
-        [bcbio.variation.variantcontext :only [get-vcf-header get-vcf-source parse-vcf]]))
+        [bcbio.variation.variantcontext :only [get-vcf-header get-vcf-iterator parse-vcf]]))
 
 (def ^{:doc "Metrics to expose, ranked in order of priority with default min/max values."
        :private true}
@@ -47,13 +47,13 @@
 (defn- get-raw-metrics
   "Retrieve raw metrics values from input VCF for provided keys."
   [ks vcf-file ref-file]
-  (with-open [vcf-source (get-vcf-source vcf-file ref-file)]
+  (with-open [vcf-iter (get-vcf-iterator vcf-file ref-file)]
     (reduce (fn [coll vc]
               (reduce (fn [inner-coll [key val]]
                         (assoc inner-coll key
                                (cons val (get inner-coll key))))
                       coll (get-vc-attrs vc (keys coll))))
-            (zipmap ks (repeat [])) (parse-vcf vcf-source))))
+            (zipmap ks (repeat [])) (parse-vcf vcf-iter))))
 
 (defn- clean-raw-metrics
   "Remove nil values and empty input metrics."

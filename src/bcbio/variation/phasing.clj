@@ -17,7 +17,7 @@
                                          limit-bed-intervals get-bed-iterator]]
         [bcbio.variation.structural :only [prep-itree get-itree-overlap
                                            remove-itree-vc get-itree-all]]
-        [bcbio.variation.variantcontext :only [parse-vcf get-vcf-retriever get-vcf-source
+        [bcbio.variation.variantcontext :only [parse-vcf get-vcf-retriever get-vcf-iterator
                                                variants-in-region
                                                write-vcf-w-template]]
         [bcbio.align.ref :only [get-seq-dict]]
@@ -54,14 +54,14 @@
   "Separate phased haplotypes provided in diploid input genome.
    We split at each phase break, returning a lazy list of variant
    contexts grouped into phases."
-  [vcf-source & {:keys [bed-source]}]
+  [vcf-iter & {:keys [bed-source]}]
   (let [prev (atom nil)]
     (letfn [(split-at-phased [vc]
               (let [continue-phase (or (nil? @prev)
                                        (is-phased? vc @prev bed-source))]
                 (reset! prev vc)
                 continue-phase))]
-      (partition-by split-at-phased (parse-vcf vcf-source)))))
+      (partition-by split-at-phased (parse-vcf vcf-iter)))))
 
 ;; ## Compare phased variants
 
@@ -231,7 +231,7 @@
    - Evaluate second region with standard scoring: expected to called
    - Collect expected variants in the intervening region between phased blocks,
      report those missing in the comparison input as errors."
-  [call-vcf-s expect-get & {:keys [bed-source]}]
+  [call-vcf-iter expect-get & {:keys [bed-source]}]
   (let [prev (atom nil)]
     (letfn [(get-intervene-expect [region1 region2]
               (let [vc1 (last region1)
@@ -261,7 +261,7 @@
                                   (score-phased-region expect-get region)))]
                 (reset! prev region)
                 out))]
-      (map score-phased-and-intervene (concat (parse-phased-haplotypes call-vcf-s
+      (map score-phased-and-intervene (concat (parse-phased-haplotypes call-vcf-iter
                                                                        :bed-source bed-source)
                                               [[{:chr "finished_sentinel" :start 1}]])))))
 
@@ -365,8 +365,8 @@
         call-intervals (when-let [f (get call :intervals (:intervals exp))]
                          (limit-bed-intervals f call exp config))]
     (with-open [ref-retriever (get-vcf-retriever (:ref exp) (:file ref))
-                call-vcf-s (get-vcf-source (:file call) (:ref exp))]
-      (let [compared-calls (score-phased-calls call-vcf-s ref-retriever
+                call-vcf-iter (get-vcf-iterator (:file call) (:ref exp))]
+      (let [compared-calls (score-phased-calls call-vcf-iter ref-retriever
                                                :bed-source
                                                (when call-intervals
                                                  (get-bed-source call-intervals (:ref exp))))]
@@ -414,9 +414,9 @@
         bed-s (when-let [f (get cmp2 :intervals (:intervals exp))]
                 (get-bed-source f (:ref exp)))]
     (with-open [vcf1-retriever (get-vcf-retriever (:ref exp) (:file cmp1))
-                vcf2-s (get-vcf-source (:file cmp2) (:ref exp))]
+                vcf2-iter (get-vcf-iterator (:file cmp2) (:ref exp))]
       {:c-files (-> (convert-cmps-to-compare (:name cmp1) (:name cmp2)
-                                             (score-phased-calls vcf2-s vcf1-retriever
+                                             (score-phased-calls vcf2-iter vcf1-retriever
                                                                  :bed-source bed-s))
                     (write-concordance-output to-capture (:sample exp) cmp1 cmp2
                                               (get-in config [:dir :out]) (:ref exp)))
@@ -433,7 +433,7 @@
               (when-not (= 0 (:num-samples vc))
                 (or (= 1 (apply max (map #(count (:alleles %)) (:genotypes vc))))
                     (contains? #{"HOM_REF" "HOM_VAR"} (:type vc)))))]
-      (with-open [vcf-source (get-vcf-source vcf-file ref-file)]
-        (let [vcf-iter (parse-vcf vcf-source)]
+      (with-open [vcf-iter (get-vcf-iterator vcf-file ref-file)]
+        (let [vcf-iter (parse-vcf vcf-iter)]
           (when-not (empty? vcf-iter)
             (every? is-vc-haploid? (take sample-size vcf-iter))))))))

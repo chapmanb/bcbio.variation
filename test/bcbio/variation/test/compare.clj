@@ -124,8 +124,8 @@
     (merge-classified-metrics [["A" "B" "C"] ["C" "D"]]) => {:top-metrics ["A" "C" "B" "D"]}))
 
 (facts "Handle haplotype phasing specified in VCF output files."
-  (with-open [pvcf-source (get-vcf-source pvcf ref)]
-    (let [haps (parse-phased-haplotypes pvcf-source)]
+  (with-open [pvcf-iter (get-vcf-iterator pvcf ref)]
+    (let [haps (parse-phased-haplotypes pvcf-iter)]
       (count haps) => 5
       (count (first haps)) => 6
       (-> haps first first :start) => 9
@@ -134,8 +134,8 @@
 
 (facts "Compare phased calls to haploid reference genotypes."
   (with-open [ref-vcf-get (get-vcf-retriever ref ref-vcf)
-              pvcf-s (get-vcf-source pvcf ref)]
-    (let [cmps (score-phased-calls pvcf-s ref-vcf-get)]
+              pvcf-iter (get-vcf-iterator pvcf ref)]
+    (let [cmps (score-phased-calls pvcf-iter ref-vcf-get)]
       (map :variant-type (first cmps)) => [:snp :snp :indel :snp :snp]
       (:comparison (ffirst cmps)) => :discordant
       (map :comparison (nth cmps 3)) => [:ref-concordant :phasing-error
@@ -145,8 +145,8 @@
 
 (facts "Compare two sets of haploid reference calls"
   (with-open [ref-vcf-get (get-vcf-retriever ref ref-vcf)
-              ref2-vcf-s (get-vcf-source ref2-vcf ref)]
-    (let [cmps (score-phased-calls ref2-vcf-s ref-vcf-get)]
+              ref2-vcf-iter (get-vcf-iterator ref2-vcf ref)]
+    (let [cmps (score-phased-calls ref2-vcf-iter ref-vcf-get)]
       (count cmps) => 2
       (count (first cmps)) => 10
       (drop 6 (map :comparison (first cmps))) => [:ref-concordant :concordant
@@ -217,8 +217,8 @@
       union-file (str (fs/file (get-in config [:dir :prep]) "multiple"
                                "Test1-multiall-fullcombine-gatk-annotated.vcf"))]
   (facts "Prepare trusted variant file"
-    (with-open [vcf-source (get-vcf-source union-file (-> config :experiments first :ref))]
-      (let [vc (first (parse-vcf vcf-source))
+    (with-open [vcf-iter (get-vcf-iterator union-file (-> config :experiments first :ref))]
+      (let [vc (first (parse-vcf vcf-iter))
             calls (-> config :experiments first :calls)
             data (variant-set-metadata vc calls)]
         (-> data :total count) => 3

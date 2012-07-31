@@ -50,12 +50,12 @@
     (-> vcf-list first :start-ci) => 6066065
     (-> vcf-itree (get-itree-overlap "22" 15883520 15883620) first :end-ci) => 15883626
     (count vcf-by-region) => 1
-    (with-open [vcf-source1 (get-vcf-source sv-vcf1 ref)
-                vcf-source2 (get-vcf-source sv-vcf2 ref)]
-      (doall (map #(get-sv-type % params) (parse-vcf vcf-source1))) =>
+    (with-open [vcf-iter1 (get-vcf-iterator sv-vcf1 ref)
+                vcf-iter2 (get-vcf-iterator sv-vcf2 ref)]
+      (doall (map #(get-sv-type % params) (parse-vcf vcf-iter1))) =>
       (concat [:INS] (repeat 6 :BND)
               [nil :DEL :INS :DEL :DUP :INV :INS])
-      (doall (map #(get-sv-type % params) (parse-vcf vcf-source2))) =>
+      (doall (map #(get-sv-type % params) (parse-vcf vcf-iter2))) =>
       [:DUP :BND :BND :INS :CNV :DEL :INV])))
 
 (facts "Compare structural variation calls from two inputs."
@@ -68,6 +68,6 @@
   (-> (compare-sv "Test" {:name "svindfb" :file indel-vcf1} {:name "svindgatk" :file indel-vcf2}
                   ref :params {:min-indel 2 :default-cis [[100 10]]})
       :sv-concordant
-      (get-vcf-source ref)
+      (get-vcf-iterator ref)
       parse-vcf
       count) => 18)

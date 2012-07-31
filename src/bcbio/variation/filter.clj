@@ -6,7 +6,7 @@
         [bcbio.variation.filter.classify :only [pipeline-classify-filter]]
         [bcbio.variation.filter.trusted :only [get-support-vcfs get-trusted-variants]]
         [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template
-                                               get-vcf-source]])
+                                               get-vcf-iterator]])
   (:require [bcbio.run.broad :as broad]
             [bcbio.run.itx :as itx]))
 
@@ -98,9 +98,9 @@
                       (.make))])]
     (let [out-file (itx/add-file-part in-vcf "nofilter")]
       (when (itx/needs-run? out-file)
-        (with-open [vcf-source (get-vcf-source in-vcf ref)]
+        (with-open [vcf-iter (get-vcf-iterator in-vcf ref)]
           (write-vcf-w-template in-vcf {:out out-file}
-                                (map remove-vc-filter (parse-vcf vcf-source))
+                                (map remove-vc-filter (parse-vcf vcf-iter))
                                 ref)))
       out-file)))
 

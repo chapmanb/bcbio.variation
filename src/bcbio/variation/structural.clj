@@ -8,7 +8,7 @@
            [net.sf.picard.util IntervalTree])
   (:use [clojure.set :only [intersection]]
         [ordered.map :only [ordered-map]]
-        [bcbio.variation.variantcontext :only [get-vcf-source parse-vcf
+        [bcbio.variation.variantcontext :only [get-vcf-iterator parse-vcf
                                                from-vc write-vcf-w-template]]
         [bcbio.variation.callable :only [get-bed-source features-in-region]])
   (:require [clojure.string :as string]
@@ -247,10 +247,10 @@
           (in-intervals? [bed-source vc]
             (or (nil? bed-source)
                 (seq (features-in-region bed-source (:chr vc) (:start-ci vc) (:end-ci vc)))))]
-    (with-open [vcf-source (get-vcf-source vcf-file ref-file)]
+    (with-open [vcf-iter (get-vcf-iterator vcf-file ref-file)]
       (let [vs-iter (filter (partial in-intervals? (when interval-file
                                                      (get-bed-source interval-file ref-file)))
-                            (keep updated-sv-vc (parse-vcf vcf-source)))]
+                            (keep updated-sv-vc (parse-vcf vcf-iter)))]
         (case out-format
           :itree (prep-itree vs-iter :start-ci :end-ci)
           (vec vs-iter))))))
@@ -301,14 +301,14 @@
                    :nosv1 (itx/add-file-part (:file c1) "nosv" out-dir)
                    :nosv2 (itx/add-file-part (:file c2) "nosv" out-dir))]
     (when (itx/needs-run? (vals out-files))
-      (with-open [vcf1-s (get-vcf-source (:file c1) ref)
-                  vcf2-s (get-vcf-source (:file c2) ref)]
+      (with-open [vcf1-iter (get-vcf-iterator (:file c1) ref)
+                  vcf2-iter (get-vcf-iterator (:file c2) ref)]
         (write-vcf-w-template (:file c1) out-files
                               (concat
                                (find-concordant-svs (:file c1) (:file c2) disc-kwds
                                                     ref interval-file params)
-                               (find-non-svs :nosv1 vcf1-s params)
-                               (find-non-svs :nosv2 vcf2-s params))
+                               (find-non-svs :nosv1 vcf1-iter params)
+                               (find-non-svs :nosv2 vcf2-iter params))
                               ref))
       ;; Remove SV VCF indexes since they use alternative Codecs
       (doseq [fname (vals out-files)]

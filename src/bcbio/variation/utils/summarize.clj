@@ -5,7 +5,7 @@
         [bcbio.variation.callable :only [get-bed-source features-in-region]]
         [bcbio.variation.config :only [load-config]]
         [bcbio.variation.metrics :only [passes-filter?]]
-        [bcbio.variation.variantcontext :only [parse-vcf get-vcf-source]])
+        [bcbio.variation.variantcontext :only [parse-vcf get-vcf-iterator]])
   (:require [clojure.string :as string]
             [clojure.data.csv :as csv]
             [incanter.stats :as istats]
@@ -96,11 +96,11 @@
   (let [out-file (str (itx/file-root vcf) "-variantsum.csv")]
     (when (itx/needs-run? out-file)
       (itx/with-tx-files [tx-out-files {:out out-file} [:out] []]
-        (with-open [vcf-source (get-vcf-source vcf ref)
+        (with-open [vcf-iter (get-vcf-iterator vcf ref)
                     wtr (writer (:out tx-out-files))]
           (doseq [[i out] (map-indexed vector
                                        (map (partial flatten-vc (add-interval-retrievers config ref))
-                                            (filter passes-filter? (parse-vcf vcf-source))))]
+                                            (filter passes-filter? (parse-vcf vcf-iter))))]
             (when (= i 0)
               (csv/write-csv wtr [(map name (keys out))]))
             (csv/write-csv wtr [(vals out)])

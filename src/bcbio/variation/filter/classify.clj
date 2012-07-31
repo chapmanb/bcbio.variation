@@ -9,7 +9,7 @@
         [clj-ml.classifiers :only [make-classifier classifier-train
                                    classifier-evaluate classifier-classify]]
         [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template
-                                               get-vcf-source has-variants?
+                                               get-vcf-iterator has-variants?
                                                get-vcf-retriever]])
   (:require [clojure.string :as string]
             [incanter.stats :as stats]
@@ -75,12 +75,12 @@
   [attrs in-vcf ref]
   (letfn [(get-quartiles [[k v]]
             [k (stats/quantile v :probs [0.05 0.95])])]
-    (with-open [vcf-s (get-vcf-source in-vcf ref)]
+    (with-open [vcf-iter (get-vcf-iterator in-vcf ref)]
       (->> (reduce (fn [coll vc]
                     (reduce (fn [icoll [k v]]
                               (assoc icoll k (cons v (get icoll k))))
                             coll (get-vc-attrs vc attrs)))
-                  (zipmap attrs (repeat [])) (parse-vcf vcf-s))
+                  (zipmap attrs (repeat [])) (parse-vcf vcf-iter))
            (map get-quartiles)
            (into {})))))
 
@@ -120,9 +120,9 @@
 (defn- get-train-inputs
   "Retrieve normalized training inputs from VCF file."
   [group in-vcf attrs normalizer ref]
-  (with-open [vcf-s (get-vcf-source in-vcf ref)]
+  (with-open [vcf-iter (get-vcf-iterator in-vcf ref)]
     (doall (map (partial get-vc-inputs attrs normalizer group)
-                (parse-vcf vcf-s)))))
+                (parse-vcf vcf-iter)))))
 
 (defn- train-vcf-classifier
   "Do the work of training a variant classifier."
@@ -185,11 +185,11 @@
         normalizer (get-vc-attrs-normalized (:classifiers config) base-vcf ref config)]
     (when (itx/needs-run? out-file)
       (println "Filter VCF with" (str c))
-      (with-open [vcf-s (get-vcf-source base-vcf ref)
+      (with-open [vcf-iter (get-vcf-iterator base-vcf ref)
                   trusted-get (get-vcf-retriever ref trusted-vcf)]
         (write-vcf-w-template base-vcf {:out out-file}
                               (map (partial filter-vc c normalizer trusted-get config)
-                                   (parse-vcf vcf-s))
+                                   (parse-vcf vcf-iter))
                               ref :header-update-fn (add-cfilter-header (:classifiers config)))))
     out-file))
 

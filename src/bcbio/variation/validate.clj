@@ -19,7 +19,7 @@
         [bcbio.variation.combine :only [combine-variants]]
         [bcbio.variation.multiple :only [prep-cmp-name-lookup
                                          multiple-overlap-analysis]]
-        [bcbio.variation.variantcontext :only [parse-vcf get-vcf-source
+        [bcbio.variation.variantcontext :only [parse-vcf get-vcf-iterator
                                                write-vcf-w-template]])
   (:require [bcbio.run.broad :as broad]
             [bcbio.run.itx :as itx]))
@@ -76,24 +76,24 @@
 (defn- get-top-variants
   "Retrieve top variants sorted by metrics of interest."
   [vcf-file finalizer ref]
-  (with-open [vcf-source (get-vcf-source vcf-file ref)]
+  (with-open [vcf-iter (get-vcf-iterator vcf-file ref)]
     (let [metric-gettr (extract-sort-metrics finalizer)]
       (set
        (map (juxt :chr :start)
             (take (get-in finalizer [:params :validate :count])
                   (reverse
-                   (sort-by metric-gettr (parse-vcf vcf-source)))))))))
+                   (sort-by metric-gettr (parse-vcf vcf-iter)))))))))
 
 (defmethod get-to-validate :top
   [in-vcf finalizer ref]
   (let [out-file (itx/add-file-part in-vcf "topsubset")]
     (when (itx/needs-run? out-file)
       (let [to-keep (get-top-variants in-vcf finalizer ref)]
-        (with-open [vcf-source (get-vcf-source in-vcf ref)]
+        (with-open [vcf-iter (get-vcf-iterator in-vcf ref)]
           (write-vcf-w-template in-vcf {:out out-file}
                                 (map :vc
                                      (filter #(contains? to-keep ((juxt :chr :start) %))
-                                             (parse-vcf vcf-source)))
+                                             (parse-vcf vcf-iter)))
                                 ref))))
     out-file))
 

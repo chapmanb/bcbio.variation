@@ -31,7 +31,7 @@
         [bcbio.variation.structural :only [compare-sv-pipeline]]
         [bcbio.variation.validate :only [pipeline-validate]]
         [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template
-                                               get-vcf-source]])
+                                               get-vcf-iterator]])
   (:require [clojure.string :as string]
             [clojure.data.csv :as csv]
             [fs.core :as fs]
@@ -68,7 +68,7 @@
 
 (defn- vc-by-match-category
   "Lazy stream of VariantContexts categorized by concordant/discordant matching."
-  [vcf-source]
+  [vcf-iter]
   (letfn [(genotype-alleles [g]
             (vec (map #(.toString %) (:alleles g))))
           (is-concordant? [vc]
@@ -76,7 +76,7 @@
                    set
                    count)
                1))]
-    (for [vc (parse-vcf vcf-source)]
+    (for [vc (parse-vcf vcf-iter)]
       [(if (is-concordant? vc) :concordant :discordant)
        (:vc vc)])))
 
@@ -87,8 +87,8 @@
         out-map {:concordant (itx/add-file-part combo-file "concordant")
                  :discordant (itx/add-file-part combo-file "discordant")}]
     (if-not (fs/exists? (:concordant out-map))
-      (with-open [combo-vcf-s (get-vcf-source combo-file ref)]
-        (write-vcf-w-template combo-file out-map (vc-by-match-category combo-vcf-s)
+      (with-open [combo-vcf-iter (get-vcf-iterator combo-file ref)]
+        (write-vcf-w-template combo-file out-map (vc-by-match-category combo-vcf-iter)
                               ref)))
     out-map))
 

@@ -15,20 +15,20 @@
         [bcbio.variation.config :only [load-config]]
         [bcbio.variation.combine :only [combine-variants]]
         [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template
-                                               get-vcf-source]])
+                                               get-vcf-iterator]])
   (:require [bcbio.run.itx :as itx]))
 
 (defn get-rsids
   "Retrieve all rsIDs from the input vcf-file"
   [vcf-file ref]
-  (with-open [vcf-source (get-vcf-source vcf-file ref)]
-    (set (remove nil? (map :id (parse-vcf vcf-source))))))
+  (with-open [vcf-iter (get-vcf-iterator vcf-file ref)]
+    (set (remove nil? (map :id (parse-vcf vcf-iter))))))
 
 (defn get-allele-freqs
   "Retrieve allele frequencies from population VCF for IDs of interest."
   [vcf-file ref want-ids targets]
   (println "Retrieving allele freqs" (count want-ids) targets)
-  (with-open [vcf-source (get-vcf-source vcf-file ref)]
+  (with-open [vcf-iter (get-vcf-iterator vcf-file ref)]
     (reduce (fn [coll vc]
               (if (and (not (nil? (:id vc)))
                        (contains? want-ids (:id vc)))
@@ -36,11 +36,11 @@
                                              (map #(get-in vc [:attributes (:orig-id %)] 0.0)
                                                   targets)))
                 coll))
-            {} (parse-vcf vcf-source))))
+            {} (parse-vcf vcf-iter))))
 
 (defn add-pop-freqs
   "Lazy generator of variant contexts with added population frequencies."
-  [vcf-source allele-freqs ann-ids]
+  [vcf-iter allele-freqs ann-ids]
   (letfn [(update-allele-freq [vc new-freqs]
             (-> (VariantContextBuilder. (:vc vc))
                 (.attributes (reduce (fn [coll cur-id]
@@ -48,7 +48,7 @@
                                      (:attributes vc) ann-ids))
                 .make))]
     (map #(update-allele-freq % (get allele-freqs (:id %) {}))
-         (parse-vcf vcf-source))))
+         (parse-vcf vcf-iter))))
 
 (defn- add-popfreq-header
   "Add new population frequency information to the VCF input header if needed."
@@ -76,9 +76,9 @@
                                        (get-rsids orig-vcf ref)
                                        (get-in call [:annotate :targets]))]
     (if (itx/needs-run? out-file)
-      (with-open [vcf-source (get-vcf-source orig-vcf ref)]
+      (with-open [vcf-iter (get-vcf-iterator orig-vcf ref)]
         (write-vcf-w-template orig-vcf {:out out-file}
-                              (add-pop-freqs vcf-source allele-freqs
+                              (add-pop-freqs vcf-iter allele-freqs
                                              (map :new-id (get-in call [:annotate :targets])))
                               ref
                               :header-update-fn

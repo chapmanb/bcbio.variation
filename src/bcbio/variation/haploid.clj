@@ -8,7 +8,7 @@
   (:import [org.broadinstitute.sting.utils.variantcontext 
             VariantContextBuilder GenotypesContext GenotypeBuilder])
   (:use [clojure.java.io]
-        [bcbio.variation.variantcontext :only [parse-vcf get-vcf-source write-vcf-w-template]])
+        [bcbio.variation.variantcontext :only [parse-vcf get-vcf-iterator write-vcf-w-template]])
   (:require [clojure.string :as string]
             [bcbio.run.itx :as itx]))
 
@@ -66,9 +66,9 @@
   (let [out-files {:haploid (itx/add-file-part vcf "haploid" out-dir)
                    :unchanged (itx/add-file-part vcf "nonhaploid" out-dir)}]
     (when (itx/needs-run? (vals out-files))
-      (with-open [vcf-source (get-vcf-source vcf ref)]
+      (with-open [vcf-iter (get-vcf-iterator vcf ref)]
         (write-vcf-w-template vcf out-files
-                              (map convert-to-haploid (parse-vcf vcf-source))
+                              (map convert-to-haploid (parse-vcf vcf-iter))
                               ref)))
     (:haploid out-files)))
 
@@ -84,9 +84,9 @@
                   (get (zipmap (map #(.name %) (keys in-map)) (vals in-map))
                        "HOM_VAR")))))]
   (let [out-file (str (itx/file-root vcf-file) "-het-pls.csv")]
-    (with-open [vcf-source (get-vcf-source vcf-file ref-file)
+    (with-open [vcf-iter (get-vcf-iterator vcf-file ref-file)
                 wtr (writer out-file)]
-      (doseq [val (->> (parse-vcf vcf-source)
+      (doseq [val (->> (parse-vcf vcf-iter)
                        (filter #(= "HET" (-> % :genotypes first :type)))
                        (map get-pl)
                        (remove nil?))]

@@ -9,7 +9,7 @@
         [ordered.set :only (ordered-set)]
         [bcbio.variation.normalize :only [hg19-map]]
         [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template
-                                               get-vcf-source]])
+                                               get-vcf-iterator]])
   (:require [clojure.data.csv :as csv]
             [bcbio.run.itx :as itx]))
 
@@ -76,9 +76,9 @@
   [vcf-file mastervar-file ref-file & {:keys [out-dir]}]
   (let [out-file (itx/add-file-part vcf-file "cgmetrics" out-dir)]
     (when (itx/needs-run? out-file)
-      (with-open [vcf-source (get-vcf-source vcf-file ref-file)]
+      (with-open [vcf-iter (get-vcf-iterator vcf-file ref-file)]
         (write-vcf-w-template vcf-file {:out out-file}
-                              (add-cgmetrics-iter vcf-source
+                              (add-cgmetrics-iter vcf-iter
                                                   (get-masterVar-metrics mastervar-file))
                               ref-file :header-update-fn add-cgmetrics-header)))
     out-file))
