@@ -83,35 +83,33 @@
   (.iterator (get-vcf-source in-file ref-file :ensure-safe ensure-safe
                              :codec codec)))
 
-(defprotocol VcfRetrievable
-  "Provide a retriever of variants from zero to many inputs."
-  (has-variants? [this space start end ref alt])
-  (variants-in-region [this space start end]))
+(defn variants-in-region
+ "Retrieve variants located in potentially multiple variant files"
+ [retriever space start end]
+ (letfn [(get-vcs-in-source [source]
+           (with-open [vcf-iter (.query source space start end)]
+             (doall (map from-vc (iterator-seq vcf-iter)))))]
+   (mapcat get-vcs-in-source (:sources retriever))))
 
-(defrecord VcfRetriever [sources]
-  VcfRetrievable
-  (has-variants? [this space start end ref alt]
-    (some #(and (= start (:start %))
-                (= end (:end %))
-                (= ref (:ref-allele %))
-                (seq (intersection (set (:alt-alleles %)) (set alt))))
-          (variants-in-region this space start end)))
-  (variants-in-region [_ space start end]
-    (letfn [(get-vcs-in-source [source]
-              (with-open [vcf-iter (.query source space start end)]
-                (doall (map from-vc (iterator-seq vcf-iter)))))]
-      (mapcat get-vcs-in-source sources)))
+(defn has-variants?
+  "Look for matching variants present in any of the variant files."
+  [retriever space start end ref alt]
+  (some #(and (= start (:start %))
+              (= end (:end %))
+              (= ref (:ref-allele %))
+              (seq (intersection (set (:alt-alleles %)) (set alt))))
+        (variants-in-region retriever space start end)))
+
+(defrecord VariantRetriever [sources]
   java.io.Closeable
   (close [_]
     (doseq [x sources]
       (.close x))))
 
 (defn get-vcf-retriever
-  "Indexed VCF file retrieval for zero to multiple files with clean handle closing."
+  "Indexed variant file retrieval for zero to multiple files with clean handle closing."
   [ref & vcf-files]
-  (VcfRetriever. (->> vcf-files
-                      (remove nil?)
-                      (map #(get-vcf-source % ref)))))
+  (VariantRetriever. (map #(get-vcf-source % ref) (remove nil? vcf-files))))
 
 (defn parse-vcf
   "Lazy iterator of VariantContext information from VCF file."
