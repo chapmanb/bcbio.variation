@@ -8,6 +8,7 @@
         [clj-ml.data :only [make-dataset dataset-set-class make-instance]]
         [clj-ml.classifiers :only [make-classifier classifier-train
                                    classifier-evaluate classifier-classify]]
+        [bcbio.variation.filter.intervals :only [pipeline-combine-intervals]]
         [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template
                                                get-vcf-iterator has-variants?
                                                get-vcf-retriever]])
@@ -200,6 +201,7 @@
             (-> (filter #(= type (:name %)) train-info)
                        first
                        :file))]
+    (pipeline-combine-intervals exp config)
     (filter-vcf-w-classifier in-vcf (get-train-vcf "concordant")
                              (get-train-vcf "discordant")
                              (get-train-vcf "trusted")

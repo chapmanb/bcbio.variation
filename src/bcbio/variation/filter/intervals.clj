@@ -28,12 +28,14 @@
 
 (defn combine-multiple-intervals
   "Combine intervals from an initial BED and coverage BAM files."
-  [initial-bed align-bams ref & {:keys [out-dir]}]
+  [initial-bed align-bams ref & {:keys [out-dir name]}]
   (let [all-beds (cons initial-bed (map #(get-callable-bed % ref :out-dir out-dir
                                                            :intervals initial-bed)
                                         align-bams))
         loc-parser (GenomeLocParser. (.getReference (ReferenceDataSource. (file ref))))
-        out-file (itx/add-file-part initial-bed "multicombine" out-dir)]
+        out-file (itx/add-file-part initial-bed
+                                    (format "%s%s" (if name (str "-" name) "") "multicombine")
+                                    out-dir)]
     (when (itx/needs-run? out-file)
       (with-open [wtr (writer out-file)]
         (doseq [x (IntervalUtils/sortAndMergeIntervals
@@ -41,3 +43,14 @@
                    IntervalMergingRule/ALL)]
           (.write wtr (format "%s\t%s\t%s\n" (.getContig x) (dec (.getStart x)) (.getStop x))))))
     out-file))
+
+(defn pipeline-combine-intervals
+  "Combine multiple intervals as part of processing and filtering pipeline."
+  [exp config]
+  (let [base-intervals (:intervals exp)
+        all-aligns (remove nil? (map :align (cons exp (:calls exp))))]
+    (when (and base-intervals (seq all-aligns))
+      (combine-multiple-intervals base-intervals all-aligns
+                                  (:ref exp)
+                                  :name (:sample exp)
+                                  :out-dir (get-in config [:dir :prep] (get-in config [:dir :out]))))))
