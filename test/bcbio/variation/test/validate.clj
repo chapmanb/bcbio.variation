@@ -3,6 +3,7 @@
   (:use [midje.sweet]
         [bcbio.variation.haploid :exclude [-main]]
         [bcbio.variation.filter.classify]
+        [bcbio.variation.filter.intervals]
         [bcbio.variation.validate]
         [bcbio.variation.variantcontext :exclude [-main]])
   (:require [fs.core :as fs]
@@ -19,8 +20,12 @@
                dip-vcf (str (fs/file data-dir "phasing-input-diploid.vcf"))
                dip-out (itx/add-file-part dip-vcf "haploid")
                c-out (itx/add-file-part top-vcf "cfilter")
-               cbin-out (str (itx/file-root top-vcf) "-classifier.bin")]
-           (doseq [x (concat [top-out dip-out c-out cbin-out])]
+               cbin-out (str (itx/file-root top-vcf) "-classifier.bin")
+               align-bam (str (fs/file data-dir "aligned-reads.bam"))
+               region-bed (str (fs/file data-dir "aligned-reads-regions.bed"))
+               region-multi-out (itx/add-file-part region-bed "multicombine")
+               region-out (fs/glob (fs/file data-dir "aligned-reads-callable*"))]
+           (doseq [x (concat [top-out dip-out c-out cbin-out region-multi-out] region-out)]
              (itx/remove-path x))
            ?form)))
 
@@ -50,3 +55,6 @@
 (facts "Final filtration of variants using classifier"
   (filter-vcf-w-classifier top-vcf top-vcf c-neg-vcf nil ref
                            {:classifiers ["AD" "QUAL" "DP"]}) => c-out)
+
+(facts "Prepare combined interval lists based on filtering criteria"
+  (combine-multiple-intervals region-bed [align-bam] ref) => region-multi-out)
