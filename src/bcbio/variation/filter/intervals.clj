@@ -48,7 +48,7 @@
   "Combine multiple intervals as part of processing and filtering pipeline."
   [exp config]
   (let [base-intervals (:intervals exp)
-        all-aligns (remove nil? (map :align (cons exp (:calls exp))))]
+        all-aligns (set (remove nil? (map :align (cons exp (:calls exp)))))]
     (when (and base-intervals (seq all-aligns))
       (combine-multiple-intervals base-intervals all-aligns
                                   (:ref exp)
