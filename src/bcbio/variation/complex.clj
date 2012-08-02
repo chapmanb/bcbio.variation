@@ -5,7 +5,8 @@
             VariantContextBuilder GenotypesContext GenotypeBuilder
             VariantContextUtils]
            [org.biojava3.core.sequence DNASequence]
-           [org.biojava3.alignment Alignments])
+           [org.biojava3.alignment Alignments SimpleGapPenalty
+            Alignments$PairwiseSequenceScorerType])
   (:use [clojure.java.io]
         [clojure.set :only [union]]
         [ordered.set :only [ordered-set]]
@@ -48,8 +49,8 @@
   [vc alleles]
   (letfn [(mnp-ref-padding [ref-allele vc]
             {:post [(>= % 0)]}
-            (- (inc (- (:end vc) (:start vc)))
-               (count (string/replace ref-allele "-" ""))))
+            (max 0 (- (inc (- (:end vc) (:start vc)))
+                      (count (string/replace ref-allele "-" "")))))
           (contains-indel? [alleles i]
             (contains? (set (map #(str (nth % i)) alleles)) "-"))
           (is-start-indel? [alleles start pos]
@@ -67,20 +68,23 @@
                                         (string/replace "-" ""))
                                    alleles)
                   cur-alleles (map-indexed (fn [i x] (Allele/create x (= 0 i)))
-                                           (into (ordered-set) str-alleles))]
-              {:offset (+ start ref-pad)
-               :end end
-               :size (dec (.length (first cur-alleles)))
+                                           (into (ordered-set) str-alleles))
+                  size (dec (.length (first cur-alleles)))
+                  w-gap-start (-> (first alleles) (subs 0 start) (string/replace "-" "") count)]
+              {:offset (+ ref-pad w-gap-start)
+               :end (+ ref-pad w-gap-start size)
+               :next-start end
+               :size size
                :ref-allele (first cur-alleles)
                :alleles (rest cur-alleles)}))]
     (let [ref-pad (mnp-ref-padding (first alleles) vc)]
       (remove nil?
               (loop [i 0 final []]
                 (cond
-                 (> i (-> alleles first count)) final
+                 (> i (-> alleles first (string/replace "-" "") count)) final
                  (has-variant-base? alleles i)
                  (let [next-var (extract-variants alleles i ref-pad)]
-                   (recur (:end next-var) (conj final next-var)))
+                   (recur (:next-start next-var) (conj final next-var)))
                  :else (recur (inc i) final)))))))
 
 (defn genotype-w-alleles
@@ -125,13 +129,21 @@
   (letfn [(original-seq-position [seqs]
             (let [orig-order (into {} (map-indexed (fn [i x] [x i]) seqs))]
               (fn [x]
-                (get orig-order (string/replace x "-" "")))))]
-    (take 2
-          (sort-by (original-seq-position seqs)
-                   (map #(.getSequenceAsString %)
-                        (-> (map #(DNASequence. %) seqs)
-                            (Alignments/getMultipleSequenceAlignment (to-array []))
-                            .getAlignedSequences))))))
+                (get orig-order (string/replace x "-" "")))))
+          (all-gap? [xs]
+            (= (set (map str xs)) #{"-"}))
+          (finalize-alignment [seqs]
+            (let [n 2
+                  gap-free (remove all-gap? (partition n (apply interleave (take n seqs))))]
+              [(string/join "" (map first gap-free))
+               (string/join "" (map second gap-free))]))]
+    (let [align-args (to-array [(SimpleGapPenalty. 20 1)])
+          orig-align (sort-by (original-seq-position seqs)
+                        (map #(.getSequenceAsString %)
+                             (-> (map #(DNASequence. %) seqs)
+                                 (Alignments/getMultipleSequenceAlignment align-args)
+                                 .getAlignedSequences)))]
+      (finalize-alignment orig-align))))
 
 (defn- fix-ref-alignment-gaps
   "Ensure reference alignment gaps have consistent gap schemes."
@@ -145,10 +157,7 @@
               (string/join "" (cons nogap-x
                                     (repeat (- (count x) (count nogap-x)) "-")))))]
     (let [ref-allele (first alleles)]
-      (cons (if (or (has-internal-gaps? ref-allele)
-                    (and (has-5-gaps? ref-allele) (has-3-gaps? (second alleles))))
-              (make-3-gap-only ref-allele)
-              ref-allele)
+      (cons (if (has-internal-gaps? ref-allele) (make-3-gap-only ref-allele) ref-allele)
             (map #(if (has-internal-gaps? %) (make-3-gap-only %) %) (rest alleles))))))
 
 (defn- split-complex-indel
@@ -159,8 +168,7 @@
                                              (extract-sequence ref (:chr vc) (:start vc) (:end vc)))
                                        (remove empty?)
                                        (remove nil?)
-                                       multiple-alignment
-                                       fix-ref-alignment-gaps))]
+                                       multiple-alignment))]
     (map (fn [[i x]] (new-split-vc (:vc vc) i x)) (map-indexed vector alleles))))
 
 (defn- maybe-strip-indel
