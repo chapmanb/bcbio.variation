@@ -150,7 +150,7 @@
                                   (#(if-not (:classifiers params)
                                       %
                                       (pipeline-classify-filter % (cons trusted-info train-info)
-                                                                exp params)))))
+                                                                exp params config)))))
                     (#(assoc-in % [fkey :name] (format "%s-%s" (get-in % [fkey :name]) "recal")))
                     (assoc-in [fkey :mod] "recal")
                     (assoc :re-compare true))))
