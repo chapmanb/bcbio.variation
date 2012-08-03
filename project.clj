@@ -62,9 +62,7 @@
             "variant-evaluate" ["run" "-m" "bcbio.variation.evaluate"]
             "variant-gms" ["run" "-m" "bcbio.variation.utils.gms"]
             "variant-haploid" ["run" "-m" "bcbio.variation.haploid"]
-            "variant-background" ["run" "-m" "bcbio.variation.utils.background"]
-            "variant-popfreq" ["run" "-m" "bcbio.variation.utils.popfreq"]
-            "variant-summarize" ["run" "-m" "bcbio.variation.utils.summarize"]
+            "variant-utils" ["run" "-m" "bcbio.variation.utils.core"]
             "variant-recall" ["run" "-m" "bcbio.variation.recall"]
             "variant-reorder" ["run" "-m" "bcbio.align.reorder"]
             "variant-vctest" ["run" "-m" "bcbio.variation.variantcontext"]}

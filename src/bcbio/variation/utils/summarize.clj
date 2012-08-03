@@ -116,6 +116,3 @@
       (for [exp (:experiments config)]
         (for [call (:calls exp)]
           (vcf-to-table (:file call) (:ref exp) (:summary call))))))))
-
-(defn -main [config-file]
-  (vcf-to-table-config config-file))

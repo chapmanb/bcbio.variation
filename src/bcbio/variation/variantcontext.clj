@@ -86,10 +86,10 @@
 (defn variants-in-region
  "Retrieve variants located in potentially multiple variant files"
  [retriever space start end]
- (letfn [(get-vcs-in-source [source]
+ (letfn [(get-vcs-in-source [[source fname]]
            (with-open [vcf-iter (.query source space start end)]
-             (doall (map from-vc (iterator-seq vcf-iter)))))]
-   (mapcat get-vcs-in-source (:sources retriever))))
+             (doall (map #(assoc (from-vc %) :fname fname) (iterator-seq vcf-iter)))))]
+   (mapcat get-vcs-in-source (map vector (:sources retriever) (:fnames retriever)))))
 
 (defn has-variants?
   "Look for matching variants present in any of the variant files."
@@ -100,7 +100,7 @@
               (seq (intersection (set (:alt-alleles %)) (set alt))))
         (variants-in-region retriever space start end)))
 
-(defrecord VariantRetriever [sources]
+(defrecord VariantRetriever [sources fnames]
   java.io.Closeable
   (close [_]
     (doseq [x sources]
@@ -109,7 +109,9 @@
 (defn get-vcf-retriever
   "Indexed variant file retrieval for zero to multiple files with clean handle closing."
   [ref & vcf-files]
-  (VariantRetriever. (map #(get-vcf-source % ref) (remove nil? vcf-files))))
+  (let [fnames (remove nil? vcf-files)]
+    (VariantRetriever. (map #(get-vcf-source % ref) fnames)
+                       fnames)))
 
 (defn parse-vcf
   "Lazy iterator of VariantContext information from VCF file."

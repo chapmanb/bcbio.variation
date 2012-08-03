@@ -85,7 +85,7 @@
                               (add-popfreq-header (get-in call [:annotate :targets])))))
     out-file))
 
-(defn -main [config-file]
+(defn annotate-with-popfreq [config-file]
   (let [config (load-config config-file)]
     (doseq [exp (:experiments config)]
       (doseq [call (:calls exp)]
