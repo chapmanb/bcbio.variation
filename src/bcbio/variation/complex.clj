@@ -127,9 +127,14 @@
   "Perform alignment of input sequences using BioJava."
   [seqs]
   (letfn [(original-seq-position [seqs]
-            (let [orig-order (into {} (map-indexed (fn [i x] [x i]) seqs))]
+            (let [orig-order (into {} (map-indexed (fn [i x] [x i])
+                                                   (into (ordered-set) seqs)))]
               (fn [x]
                 (get orig-order (string/replace x "-" "")))))
+          (unique-aligns [xs]
+            (vals (reduce (fn [coll x]
+                            (assoc coll (string/replace x "-" "") x))
+                          {} xs)))
           (all-gap? [xs]
             (= (set (map str xs)) #{"-"}))
           (finalize-alignment [seqs]
@@ -138,11 +143,11 @@
               [(string/join "" (map first gap-free))
                (string/join "" (map second gap-free))]))]
     (let [align-args (to-array [(SimpleGapPenalty. 20 1)])
-          orig-align (sort-by (original-seq-position seqs)
-                        (map #(.getSequenceAsString %)
-                             (-> (map #(DNASequence. %) seqs)
-                                 (Alignments/getMultipleSequenceAlignment align-args)
-                                 .getAlignedSequences)))]
+          base-align (map #(.getSequenceAsString %)
+                          (-> (map #(DNASequence. %) seqs)
+                              (Alignments/getMultipleSequenceAlignment align-args)
+                              .getAlignedSequences))
+          orig-align (sort-by (original-seq-position seqs) (unique-aligns base-align))]
       (finalize-alignment orig-align))))
 
 (defn- fix-ref-alignment-gaps
@@ -158,7 +163,7 @@
                                     (repeat (- (count x) (count nogap-x)) "-")))))]
     (let [ref-allele (first alleles)]
       (cons (if (has-internal-gaps? ref-allele) (make-3-gap-only ref-allele) ref-allele)
-            (map #(if (has-internal-gaps? %) (make-3-gap-only %) %) (rest alleles))))))
+            (rest alleles)))))
 
 (defn- split-complex-indel
   "Split complex indels into individual variant components."
