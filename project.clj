@@ -60,11 +60,10 @@
   :aliases {"variant-compare" ["run" "-m" "bcbio.variation.compare"]
             "variant-web" ["run" "-m" "bcbio.variation.web.server"]
             "variant-evaluate" ["run" "-m" "bcbio.variation.evaluate"]
-            "variant-gms" ["run" "-m" "bcbio.variation.utils.gms"]
             "variant-haploid" ["run" "-m" "bcbio.variation.haploid"]
-            "variant-utils" ["run" "-m" "bcbio.variation.utils.core"]
             "variant-recall" ["run" "-m" "bcbio.variation.recall"]
             "variant-reorder" ["run" "-m" "bcbio.align.reorder"]
+            "variant-utils" ["run" "-m" "bcbio.variation.utils.core"]
             "variant-vctest" ["run" "-m" "bcbio.variation.variantcontext"]}
   :cljsbuild {:builds
               [{:builds nil

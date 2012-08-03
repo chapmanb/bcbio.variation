@@ -113,7 +113,7 @@
                       :quiet-out? true))
   (shutdown-agents))
 
-(defn -main [config-file]
+(defn prepare-gms-vcfs-from-config [config-file]
   (let [config (load-config config-file)]
     (make-work-dirs config)
     (prepare-gms-vcfs config)))

@@ -15,13 +15,15 @@
 
 (defn report-vrn-summary
   "Report details on a variant based on items found in inputs."
-  [vc retriever fname-map]
+  [wtr vc retriever fname-map]
   (let [hits (variants-in-region retriever (:chr vc) (:start vc) (:end vc))]
-    (println (string/join "," [(:chr vc) (:start vc)
-                               (.getBaseString (:ref-allele vc))
-                               (string/join ";" (map #(.getBaseString %) (:alt-alleles vc)))
-                               (string/join ";" (sort (vec (set (map #(get fname-map (:fname %))
-                                                                     hits)))))]))))
+    (.write wtr (str (string/join ","
+                                  [(:chr vc) (:start vc)
+                                   (.getBaseString (:ref-allele vc))
+                                   (string/join ";" (map #(.getBaseString %) (:alt-alleles vc)))
+                                   (string/join ";" (sort (vec (set (map #(get fname-map (:fname %))
+                                                                         hits)))))])
+                     "\n"))))
 
 (defn annotate-with-callsummary
   "Annotate input VCF with summary details from input files."
@@ -30,7 +32,10 @@
         exp (-> config :experiments first)
         orig-files (filter fs/exists? (map #(get-prepped-fname % exp config) (:calls exp)))
         fname-map (zipmap orig-files (map :name (:calls exp)))
-        retriever (apply get-vcf-retriever (cons (:ref exp) orig-files))]
-    (with-open [vrn-iter (get-vcf-iterator in-file (:ref exp))]
+        retriever (apply get-vcf-retriever (cons (:ref exp) orig-files))
+        out-file (str (itx/file-root in-file) ".csv")]
+    (with-open [vrn-iter (get-vcf-iterator in-file (:ref exp))
+                wtr (writer out-file)]
       (doseq [vc (filter #(empty? (:filters %)) (parse-vcf vrn-iter))]
-        (report-vrn-summary vc retriever fname-map)))))
+        (report-vrn-summary wtr vc retriever fname-map)))
+    out-file))
