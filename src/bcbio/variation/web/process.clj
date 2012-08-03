@@ -43,8 +43,7 @@
                          :calls [{:name "reference"
                                   :file (:variants ref)
                                   :remove-refcalls true
-                                  :normalize true
-                                  :refcalls false}
+                                  :normalize true}
                                  {:name "contestant"
                                   :prep true
                                   :preclean true

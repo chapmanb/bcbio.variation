@@ -125,8 +125,8 @@
         start-vcfs (vec (map #(gatk-normalize % exp all-intervals out-dir transition)
                              (:calls exp)))
         _ (transition :combine "Creating merged VCF files for all comparisons")
-        merged-vcfs (create-merged (map :file start-vcfs) align-bams (:calls exp)
-                                   (:ref exp) :out-dir out-dir
+        merged-vcfs (create-merged (map :file start-vcfs) align-bams exp
+                                   :out-dir out-dir
                                    :intervals all-intervals)
         _ (transition :annotate "Annotate VCFs with metrics")
         ann-vcfs (map (fn [[v b c]]

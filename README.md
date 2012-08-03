@@ -96,7 +96,8 @@ provide example starting points and details on available options are below:
            metadata: Dictionary of annotations associated with the call set.
                      Finalizers use these to provide annotation specific
                      filtering of calls.
-           refcalls: Add reference calls if has alignment info (boolean; default false).
+           recall: Recall, using GATK, all non-called variant positions after
+                   merging multiple input calls. (boolean; default false)
            annotate: Annotate calls with GATK annotations (boolean; default false).
            normalize: Normalize MNPs and indels (boolean: default true).
            prep: Prep with in-order chromosomes and sample names (boolean; default false).

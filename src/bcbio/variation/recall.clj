@@ -71,8 +71,8 @@
 
 (defn recall-nocalls
   "Recall variations at no-calls in a sample using UnifiedGenotyper."
-  [in-vcf sample align-bam ref & {:keys [out-dir cores]}]
-  (let [sample-str (if (.contains in-vcf sample) "" (str sample "-"))
+  [in-vcf sample call-name align-bam ref & {:keys [out-dir cores]}]
+  (let [sample-str (if (.contains in-vcf call-name) "" (str call-name "-"))
         out-file (itx/add-file-part in-vcf (str sample-str "wrefs") out-dir)]
     (when (itx/needs-run? out-file)
       (let [{:keys [called nocall]} (split-nocalls in-vcf sample ref out-dir)
@@ -87,21 +87,22 @@
   "Create merged VCF files with no-call/ref-calls for each of the inputs.
   Works at a higher level than `recall-nocalls` and does the work of
   preparing a set of all merged variants, then re-calling at non-missing positions."
-  [vcfs align-bams vcf-configs ref & {:keys [out-dir intervals cores]}]
-  (letfn [(merge-vcf [vcf sample all-vcf align-bam ref]
+  [vcfs align-bams exp & {:keys [out-dir intervals cores]}]
+  (letfn [(merge-vcf [vcf call-name all-vcf align-bam ref]
             (let [ready-vcf (combine-variants [vcf all-vcf] ref
                                               :merge-type :full :intervals intervals
                                               :out-dir out-dir :check-ploidy? false)]
-              (recall-nocalls ready-vcf sample align-bam ref :out-dir out-dir
-                              :cores cores)))]
-    (let [merged (combine-variants vcfs ref :merge-type :minimal :intervals intervals
-                                   :out-dir out-dir :check-ploidy? false)]
+              (recall-nocalls ready-vcf (:sample exp) call-name align-bam ref
+                              :out-dir out-dir :cores cores)))]
+    (let [merged (combine-variants vcfs (:ref exp) :merge-type :minimal :intervals intervals
+                                   :out-dir out-dir :check-ploidy? false
+                                   :name-map (zipmap vcfs (map :name (:calls exp))))]
       (map (fn [[v b vcf-config]]
-             (if (and (get vcf-config :refcalls false)
+             (if (and (get vcf-config :recall false)
                       (not (nil? b)))
-               (merge-vcf v (:name vcf-config) merged b ref)
+               (merge-vcf v (:name vcf-config) merged b (:ref exp))
                v))
-           (map vector vcfs align-bams vcf-configs)))))
+           (map vector vcfs align-bams (:calls exp))))))
 
 (defn- split-vcf-sample-line
   "Split VCF line into shared attributes and sample specific genotypes.
@@ -219,7 +220,7 @@
   "Perform recalling on all specific inputs in an experiment"
   [exp out-dir config]
   (let [recall-vcfs (map (fn [call]
-                           (recall-nocalls (:file call) (:name call) (:align call)
+                           (recall-nocalls (:file call) (:sample exp) (:name call) (:align call)
                                            (:ref exp) :out-dir out-dir
                                            :cores (get-in config [:resources :cores])))
                          (split-config-multi (:calls exp) (:ref exp) out-dir))

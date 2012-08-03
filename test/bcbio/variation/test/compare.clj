@@ -37,8 +37,8 @@
                out-sum-compare (str (itx/file-root vcf1) "-summary.eval")
                filter-out (itx/add-file-part vcf1 "filter")
                nofilter-out (itx/add-file-part filter-out "nofilter")
-               combine-out [(itx/add-file-part vcf1 "fullcombine-Test1-wrefs")
-                            (itx/add-file-part vcf2 "fullcombine-Test1-wrefs")]
+               combine-out [(itx/add-file-part vcf1 "fullcombine-wrefs")
+                            (itx/add-file-part vcf2 "fullcombine-wrefs")]
                combine-out-xtra [(itx/add-file-part vcf1 "mincombine")
                                  (itx/add-file-part vcf1 "fullcombine")
                                  (itx/add-file-part vcf1 "fullcombine-Test1-called")
@@ -80,8 +80,10 @@
        :percent_non_reference_sensitivity) => "88.89")
 
 (facts "Create merged VCF files for comparison"
-  (let [config {:refcalls true :name "Test1"}]
-    (create-merged [vcf1 vcf2] [align-bam align-bam] [config config] ref)) => combine-out)
+  (let [config {:sample "Test1"
+                :ref ref
+                :calls [{:recall true :name "gatk"} {:recall true :name "freebayes"}]}]
+    (create-merged [vcf1 vcf2] [align-bam align-bam] config)) => combine-out)
 
 (facts "Filter variant calls avoiding false positives."
   (variant-filter vcf1 ["QD < 2.0" "MQ < 40.0"] ref) => filter-out
