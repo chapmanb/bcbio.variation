@@ -37,8 +37,8 @@
                out-sum-compare (str (itx/file-root vcf1) "-summary.eval")
                filter-out (itx/add-file-part vcf1 "filter")
                nofilter-out (itx/add-file-part filter-out "nofilter")
-               combine-out [(itx/add-file-part vcf1 "fullcombine-wrefs")
-                            (itx/add-file-part vcf2 "fullcombine-wrefs")]
+               combine-out [(itx/add-file-part vcf1 "fullcombine-wrefs-cleaned")
+                            (itx/add-file-part vcf2 "fullcombine-wrefs-cleaned")]
                combine-out-xtra [(itx/add-file-part vcf1 "mincombine")
                                  (itx/add-file-part vcf1 "fullcombine")
                                  (itx/add-file-part vcf1 "fullcombine-Test1-called")

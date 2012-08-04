@@ -84,11 +84,12 @@
 
 (defn select-by-sample
   "Select only the sample of interest from input VCF files."
-  [sample in-file name ref & {:keys [out-dir intervals remove-refcalls]
+  [sample in-file name ref & {:keys [out-dir intervals remove-refcalls ext]
                               :or {remove-refcalls false}}]
   (let [base-dir (if (nil? out-dir) (fs/parent in-file) out-dir)
-        file-info {:out-vcf (str (fs/file base-dir
-                                          (format "%s-%s.vcf" sample name)))}
+        file-info {:out-vcf (if ext (itx/add-file-part in-file ext out-dir)
+                                (str (fs/file base-dir
+                                              (format "%s-%s.vcf" sample name))))}
         args (concat ["-R" ref
                       "--sample_name" (vcf-sample-name sample in-file ref)
                       "--variant" in-file

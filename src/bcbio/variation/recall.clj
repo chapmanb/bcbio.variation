@@ -13,9 +13,11 @@
         [ordered.map :only [ordered-map]]
         [ordered.set :only [ordered-set]]
         [bcbio.variation.callable :only [get-callable-checker is-callable?]]
-        [bcbio.variation.combine :only [combine-variants multiple-samples?]]
+        [bcbio.variation.combine :only [combine-variants multiple-samples?
+                                        select-by-sample]]
         [bcbio.variation.config :only [load-config]]
         [bcbio.variation.haploid :only [diploid-calls-to-haploid]]
+        [bcbio.variation.normalize :only [fix-vcf-sample]]
         [bcbio.variation.phasing :only [is-haploid?]]
         [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template get-vcf-iterator
                                                get-vcf-header]])
@@ -79,9 +81,10 @@
     (when (itx/needs-run? out-file)
       (let [{:keys [called nocall]} (split-nocalls in-vcf sample ref out-dir)
             orig-nocall (call-at-known-alleles nocall align-bam ref :cores cores)
+            fix-nocall (fix-vcf-sample orig-nocall sample ref)
             ready-nocall (if (is-haploid? called ref)
-                           (diploid-calls-to-haploid orig-nocall ref)
-                           orig-nocall)
+                           (diploid-calls-to-haploid fix-nocall ref)
+                           fix-nocall)
             combine-out (combine-variants [called ready-nocall] ref :merge-type :full
                                           :quiet-out? true)]
         (fs/rename combine-out out-file)
@@ -105,7 +108,11 @@
       (map (fn [[v b vcf-config]]
              (if (and (get vcf-config :recall false)
                       (not (nil? b)))
-               (merge-vcf v (:name vcf-config) merged b (:ref exp))
+               (let [merged (merge-vcf v (:name vcf-config) merged b (:ref exp))]
+                 (if (get vcf-config :remove-refcalls true)
+                   (select-by-sample (:sample exp) merged nil (:ref exp)
+                                     :remove-refcalls true :ext "cleaned")
+                   merged))
                v))
            (map vector vcfs align-bams (:calls exp))))))
 

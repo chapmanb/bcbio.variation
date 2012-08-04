@@ -10,6 +10,7 @@
            [org.broad.tribble.readers AsciiLineReader])
   (:use [clojure.java.io]
         [bcbio.variation.variantcontext :only [write-vcf-w-template
+                                               get-vcf-iterator parse-vcf
                                                get-vcf-line-parser
                                                from-genotype]]
         [bcbio.align.ref :only [get-seq-dict get-seq-name-map]]
@@ -86,20 +87,23 @@
 
 ;; ## Resort and normalize variants
 
+(defn- update-genotype-sample
+  "Update genotype to have the provided sample name."
+  [vc sample]
+  (if (= 1 (count (.getGenotypes vc)))
+    (let [g (first (.getGenotypes vc))]
+      [(-> (GenotypeBuilder. g)
+           (.name sample)
+           .make)])
+    (.getGenotypes vc)))
+
 (defn- fix-vc
   "Build a new variant context with updated sample name and normalized alleles.
   Based on :prep-allele-count in the configuration updates haploid allele calls. This
   normalizes the representation in Mitochondrial and Y chromosomes which are
   haploid but are often represented as diploid with a single call."
   [sample config orig]
-  (letfn [(update-genotype-sample [vc]
-            (if (= 1 (count (.getGenotypes vc)))
-              (let [g (first (.getGenotypes vc))]
-                [(-> (GenotypeBuilder. g)
-                     (.name sample)
-                     .make)])
-              (.getGenotypes vc)))
-          (normalize-allele-calls [g]
+  (letfn [(normalize-allele-calls [g]
             {:pre [(contains? #{1 (:prep-allele-count config)} (count (.getAlleles g)))]}
             (if (= (count (.getAlleles g)) (:prep-allele-count config)) g
                 (-> (GenotypeBuilder. g)
@@ -109,7 +113,7 @@
     (-> orig
         (assoc :vc
           (-> (VariantContextBuilder. (:vc orig))
-              (.genotypes (map normalize-allele-calls (update-genotype-sample (:vc orig))))
+              (.genotypes (map normalize-allele-calls (update-genotype-sample (:vc orig) sample)))
               .make)))))
 
 (defn- no-call-genotype?
@@ -235,7 +239,7 @@
 
 (defn- update-header
   "Update header information, removing contig and adding sample names."
-  [sample config]
+  [sample & config]
   (letfn [(clean-metadata [header]
             (apply ordered-set (remove #(= "contig" (.getKey %)) (.getMetaDataInInputOrder header))))]
     (fn [_ header]
@@ -245,6 +249,17 @@
             (VCFHeader. (clean-metadata header) (ordered-set sample))
             (VCFHeader. (clean-metadata header) #{}))
         header))))
+
+(defn fix-vcf-sample
+  "Update a VCF file with one item to have the given sample name."
+  [in-file sample ref]
+  (let [out-file (itx/add-file-part in-file "samplefix")]
+    (when (itx/needs-run? out-file)
+      (with-open [vcf-iter (get-vcf-iterator in-file ref)]
+        (write-vcf-w-template in-file {:out out-file}
+                              (map #(update-genotype-sample % sample) (parse-vcf vcf-iter))
+                              ref :header-update-fn (update-header sample))))
+    out-file))
 
 (defn- write-prepped-vcf
   "Write VCF file with correctly ordered and cleaned variants."
