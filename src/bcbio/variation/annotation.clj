@@ -12,7 +12,9 @@
    "MappingQualityRankSumTest" "MappingQualityZero"
    "MeanNeighboringBaseQuality" "QualByDepth"
    "ReadPosRankSumTest" "RMSMappingQuality"
-   "DepthPerAlleleBySample"])
+   "DepthPerAlleleBySample" "AlleleBalanceConfidenceInterval"
+   "MostProbableGenotype" "ReadMeanLen" "ReadMeanPos"
+   "ReadPosEndDist"])
 
 (defn add-gatk-annotations
   "Add GATK annotation metrics to variant calls."
