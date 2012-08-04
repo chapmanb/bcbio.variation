@@ -257,7 +257,7 @@
     (when (itx/needs-run? out-file)
       (with-open [vcf-iter (get-vcf-iterator in-file ref)]
         (write-vcf-w-template in-file {:out out-file}
-                              (map #(update-genotype-sample % sample) (parse-vcf vcf-iter))
+                              (map #(update-genotype-sample (:vc %) sample) (parse-vcf vcf-iter))
                               ref :header-update-fn (update-header sample))))
     out-file))
 
