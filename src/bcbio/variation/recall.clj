@@ -15,6 +15,8 @@
         [bcbio.variation.callable :only [get-callable-checker is-callable?]]
         [bcbio.variation.combine :only [combine-variants multiple-samples?]]
         [bcbio.variation.config :only [load-config]]
+        [bcbio.variation.haploid :only [diploid-calls-to-haploid]]
+        [bcbio.variation.phasing :only [is-haploid?]]
         [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template get-vcf-iterator
                                                get-vcf-header]])
   (:require [clojure.string :as string]
@@ -76,7 +78,10 @@
         out-file (itx/add-file-part in-vcf (str sample-str "wrefs") out-dir)]
     (when (itx/needs-run? out-file)
       (let [{:keys [called nocall]} (split-nocalls in-vcf sample ref out-dir)
-            ready-nocall (call-at-known-alleles nocall align-bam ref :cores cores)
+            orig-nocall (call-at-known-alleles nocall align-bam ref :cores cores)
+            ready-nocall (if (is-haploid? called ref)
+                           (diploid-calls-to-haploid orig-nocall ref)
+                           orig-nocall)
             combine-out (combine-variants [called ready-nocall] ref :merge-type :full
                                           :quiet-out? true)]
         (fs/rename combine-out out-file)
