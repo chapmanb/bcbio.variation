@@ -3,6 +3,7 @@
   variations and MNPs"
   (:use [midje.sweet]
         [bcbio.variation.complex]
+        [bcbio.variation.normalize]
         [bcbio.variation.structural]
         [bcbio.variation.variantcontext])
   (:require [fs.core :as fs]
@@ -32,8 +33,10 @@
                indel-vcf2 (str (fs/file data-dir "sv-indels-gatk.vcf"))
                indel-out (str (fs/file data-dir "Test-svindfb-svindgatk-svconcordance.vcf"))
                nomnp-out (itx/add-file-part mnp-vcf "nomnp")
+               headerfix-out (itx/add-file-part mnp-vcf "samplefix")
                params {:min-indel 100}]
-           (doseq [x (concat [nomnp-out indel-out cindel-out] (vals sv-out) (vals sv-out2))]
+           (doseq [x (concat [nomnp-out indel-out cindel-out headerfix-out]
+                             (vals sv-out) (vals sv-out2))]
              (itx/remove-path x))
            ?form)))
 
@@ -71,3 +74,6 @@
       (get-vcf-iterator ref)
       parse-vcf
       count) => 18)
+
+(facts "Fix VCF header problems"
+  (fix-vcf-sample mnp-vcf "Test1" ref) => headerfix-out)

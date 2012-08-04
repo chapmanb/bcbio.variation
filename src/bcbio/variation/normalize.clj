@@ -87,15 +87,6 @@
 
 ;; ## Resort and normalize variants
 
-(defn- update-genotype-sample
-  "Update genotype to have the provided sample name."
-  [vc sample]
-  (if (= 1 (count (.getGenotypes vc)))
-    (let [g (first (.getGenotypes vc))]
-      [(-> (GenotypeBuilder. g)
-           (.name sample)
-           .make)])
-    (.getGenotypes vc)))
 
 (defn- fix-vc
   "Build a new variant context with updated sample name and normalized alleles.
@@ -103,13 +94,23 @@
   normalizes the representation in Mitochondrial and Y chromosomes which are
   haploid but are often represented as diploid with a single call."
   [sample config orig]
-  (letfn [(normalize-allele-calls [g]
-            {:pre [(contains? #{1 (:prep-allele-count config)} (count (.getAlleles g)))]}
-            (if (= (count (.getAlleles g)) (:prep-allele-count config)) g
-                (-> (GenotypeBuilder. g)
-                    (.alleles (repeat (:prep-allele-count config)
-                                      (first (.getAlleles g))))
-                    .make)))]
+  (letfn [(update-genotype-sample [vc sample]
+            (if (= 1 (count (.getGenotypes vc)))
+              (let [g (first (.getGenotypes vc))]
+                [(-> (GenotypeBuilder. g)
+                     (.name sample)
+                     .make)])
+              (.getGenotypes vc)))
+          (normalize-allele-calls [g]
+            {:pre [(or (nil? (:prep-allele-count config))
+                       (contains? #{1 (:prep-allele-count config)} (count (.getAlleles g))))]}
+            (if (or (nil? (:prep-allele-count config))
+                    (= (count (.getAlleles g)) (:prep-allele-count config)))
+              g
+              (-> (GenotypeBuilder. g)
+                  (.alleles (repeat (:prep-allele-count config)
+                                    (first (.getAlleles g))))
+                  .make)))]
     (-> orig
         (assoc :vc
           (-> (VariantContextBuilder. (:vc orig))
@@ -257,7 +258,7 @@
     (when (itx/needs-run? out-file)
       (with-open [vcf-iter (get-vcf-iterator in-file ref)]
         (write-vcf-w-template in-file {:out out-file}
-                              (map #(update-genotype-sample (:vc %) sample) (parse-vcf vcf-iter))
+                              (map #(:vc (fix-vc sample {} %)) (parse-vcf vcf-iter))
                               ref :header-update-fn (update-header sample))))
     out-file))
 
