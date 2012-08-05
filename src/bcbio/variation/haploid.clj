@@ -3,8 +3,7 @@
   We assess diploid GATK calls based on the phred-normalized likelihood (PL). Lower variant
   PLs are likely to be true and included. The GATK documentation contains a detailed example
   of the format and interpretation:
-  http://www.broadinstitute.org/gsa/wiki/index.php/
-  Understanding_the_Unified_Genotyper%27s_VCF_files#How_genotypes_are_represented_in_a_VCF"
+  http://gatk.vanillaforums.com/discussion/36/understanding-unifiedgenotypers-vcf-files/p1"
   (:import [org.broadinstitute.sting.utils.variantcontext 
             VariantContextBuilder GenotypesContext GenotypeBuilder])
   (:use [clojure.java.io]
@@ -22,18 +21,22 @@
     "SNP" 1e-5
     1e-50))
 
+(defn get-likelihoods
+  "Retrieve all likelihoods (PL) for genotype."
+  [g]
+  (when (.hasLikelihoods g)
+    (let [in-map (-> (.getLikelihoods g) (.getAsMap true))]
+      (zipmap (map #(.name %) (keys in-map)) (vals in-map)))))
+
 (defn- get-haploid-genotype
   "Retrieve updated genotype with haploid allele."
   [vc]
   (let [g (-> vc :genotypes first)]
     (letfn [(maybe-variant-haploid [g vc]
-              (when (.hasLikelihoods g)
-                (let [in-map (-> (.getLikelihoods g) (.getAsMap true))
-                      variant-prob (get (zipmap (map #(.name %) (keys in-map)) (vals in-map))
-                                        "HOM_VAR")]
-                  (when (> variant-prob (get-haploid-thresh vc))
-                    (first (filter #(and (.isNonReference %) (.isCalled %))
-                                   (.getAlleles g)))))))
+              (when-let [variant-prob (get (get-likelihoods g) "HOM_VAR")]
+                (when (> variant-prob (get-haploid-thresh vc))
+                  (first (filter #(and (.isNonReference %) (.isCalled %))
+                                   (.getAlleles g))))))
             (extract-mixed-allele [alleles]
               (let [ready (remove #(.isNoCall %) alleles)]
                 (when (= 1 (count ready))

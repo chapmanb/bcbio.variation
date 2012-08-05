@@ -3,6 +3,7 @@
   :dependencies [[org.clojure/clojure "1.4.0"]
                  [org.clojure/math.combinatorics "0.0.2" :exclusions [org.clojure/clojure]]
                  [org.clojure/data.csv "0.1.2" :exclusions [org.clojure/clojure]]
+                 [org.clojure/core.match "0.2.0-alpha9"]
                  ;; GATK requirements
                  [org.clojars.chapmanb/gatk-lite "2.0.21"]
                  [org.clojars.chapmanb/picard "1.73"]

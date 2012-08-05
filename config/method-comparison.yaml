@@ -45,7 +45,7 @@ experiments:
         params:
           #annotations:  [QD, HaplotypeScore, MQRankSum, ReadPosRankSum, FS, MQ, DP, AB]
           filters: [HRun > 5.0]
-          classifiers: [AD, DP, QUAL]
+          classifiers: [AD, DP, QUAL, PL]
           trusted:
             total: 0.75
             technology: 0.65

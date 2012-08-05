@@ -54,7 +54,7 @@
 
 (facts "Final filtration of variants using classifier"
   (filter-vcf-w-classifier top-vcf top-vcf c-neg-vcf nil ref
-                           {:classifiers ["AD" "QUAL" "DP"]}) => c-out)
+                           {:classifiers ["AD" "QUAL" "DP" "PL"]}) => c-out)
 
 (facts "Prepare combined interval lists based on filtering criteria"
   (combine-multiple-intervals region-bed [align-bam] ref) => region-multi-out)

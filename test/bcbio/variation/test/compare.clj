@@ -188,7 +188,6 @@
 (facts "Choose a reference genome based on VCF contig"
   (pick-best-ref vcf1 [ref]) => ref)
 
-
 (let [config-file (str (fs/file "." "config" "method-comparison.yaml"))
       config (load-config config-file)
       out-dir (str (fs/file (get-in config [:dir :prep]) "multiple"))
@@ -202,7 +201,7 @@
              :false-negatives
              (str (fs/file out-dir (format "Test1-multiall-no%s-fullcombine-%s%s.vcf" x x ext)))
              :false-positives
-             (str (fs/file out-dir (format "Test1-dis%s-fullcombine-Intersection-shared.vcf" x)))
+             (str (fs/file out-dir (format "Test1-dis%s-fullcombine-Intersection-shared%s.vcf" x ext)))
              :target-overlaps
              (str (fs/file out-dir (format "Test1-multiall-fullcombine-%s%s.vcf" x ext)))})]
     (against-background [(before :facts (vec (map itx/remove-path [out-dir trusted-out])))]

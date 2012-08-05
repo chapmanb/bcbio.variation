@@ -3,11 +3,13 @@
   (:import [org.broadinstitute.sting.utils.variantcontext VariantContextBuilder]
            [org.broadinstitute.sting.utils.codecs.vcf VCFHeader VCFInfoHeaderLine
             VCFHeaderLineType VCFFilterHeaderLine])
-  (:use [ordered.set :only [ordered-set]]
+  (:use [clojure.core.match :only [match]]
+        [ordered.set :only [ordered-set]]
         [clj-ml.utils :only [serialize-to-file deserialize-from-file]]
         [clj-ml.data :only [make-dataset dataset-set-class make-instance]]
         [clj-ml.classifiers :only [make-classifier classifier-train
                                    classifier-evaluate classifier-classify]]
+        [bcbio.variation.haploid :only [get-likelihoods]]
         [bcbio.variation.filter.intervals :only [pipeline-combine-intervals]]
         [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template
                                                get-vcf-iterator has-variants?
@@ -54,6 +56,20 @@
        ;; (println (format "AD not found in attributes %s %s %s"
        ;;                  (:attributes g) (:chr vc) (:start vc)))
        ))))
+
+(defmethod get-vc-attr "PL"
+  ^{:doc "Provide likelihood ratios for genotype compared to next most likely call.
+          For haploid calls, get the homozygous reference or homozygous variant
+          likelihood. For diploid calls, get the largest alternative value."}
+  [vc attr]
+  {:pre [(= 1 (:num-samples vc))
+         (contains? #{1 2} (-> vc :genotypes first :alleles count))]}
+  (let [g (-> vc :genotypes first)
+        pls (dissoc (get-likelihoods (:genotype g)) (:type g))]
+    (match [(count (:alleles g)) (:type g)]
+       [2 _] (apply max (vals pls))
+       [1 "HOM_VAR"] (get pls "HOM_REF")
+       [1 "HOM_REF"] (get pls "HOM_VAR"))))
 
 (defmethod get-vc-attr "QUAL"
   [vc attr]

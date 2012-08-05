@@ -150,10 +150,12 @@
                            :base-ext (format "multiall-no%s" target-name))
          (select-variant-by-set ref target-name)
          (add-variant-annotations (:align target-call) ref target-call :out-dir out-dir))
-     :false-positives (gen-target-fps (remove #(not-target? target-name (first %))
-                                              cmps-by-name)
-                                      target-name (:union notarget-concordant)
-                                      ref out-dir)}))
+     :false-positives (-> (gen-target-fps (remove #(not-target? target-name (first %))
+                                                  cmps-by-name)
+                                          target-name (:union notarget-concordant)
+                                          ref out-dir)
+                          (add-variant-annotations (:align target-call) ref target-call
+                                                   :out-dir out-dir))}))
 
 (defn multiple-overlap-analysis
   "Provide high level concordance overlap comparisons for multiple call approaches.
