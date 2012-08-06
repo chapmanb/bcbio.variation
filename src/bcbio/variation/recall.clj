@@ -14,7 +14,7 @@
         [ordered.set :only [ordered-set]]
         [bcbio.variation.callable :only [get-callable-checker is-callable?]]
         [bcbio.variation.combine :only [combine-variants multiple-samples?
-                                        select-by-sample]]
+                                        select-by-sample fix-minimal-combined]]
         [bcbio.variation.config :only [load-config]]
         [bcbio.variation.haploid :only [diploid-calls-to-haploid]]
         [bcbio.variation.normalize :only [fix-vcf-sample]]
@@ -102,9 +102,10 @@
                                               :out-dir out-dir :check-ploidy? false)]
               (recall-nocalls ready-vcf (:sample exp) call-name align-bam ref
                               :out-dir out-dir :cores cores)))]
-    (let [merged (combine-variants vcfs (:ref exp) :merge-type :minimal :intervals intervals
-                                   :out-dir out-dir :check-ploidy? false
-                                   :name-map (zipmap vcfs (map :name (:calls exp))))]
+    (let [merged (-> (combine-variants vcfs (:ref exp) :merge-type :minimal :intervals intervals
+                                       :out-dir out-dir :check-ploidy? false
+                                       :name-map (zipmap vcfs (map :name (:calls exp))))
+                     (fix-minimal-combined vcfs (:ref exp)))]
       (map (fn [[v b vcf-config]]
              (if (and (get vcf-config :recall false)
                       (not (nil? b)))

@@ -40,6 +40,7 @@
                combine-out [(itx/add-file-part vcf1 "fullcombine-wrefs-cleaned")
                             (itx/add-file-part vcf2 "fullcombine-wrefs-cleaned")]
                combine-out-xtra [(itx/add-file-part vcf1 "mincombine")
+                                 (itx/add-file-part vcf1 "mincombine-fix")
                                  (itx/add-file-part vcf1 "fullcombine")
                                  (itx/add-file-part vcf1 "fullcombine-Test1-called")
                                  (itx/add-file-part vcf1 "fullcombine-Test1-nocall")

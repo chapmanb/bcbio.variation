@@ -6,11 +6,15 @@
       a. Generate callability at each position
       b. Combine original calls with merged positions
       c. Walk through each no-call and set as reference if callable"
+  (:import [org.broadinstitute.sting.utils.variantcontext 
+            VariantContextBuilder])
   (:use [bcbio.variation.complex :only [normalize-variants]]
         [bcbio.variation.haploid :only [diploid-calls-to-haploid]]
         [bcbio.variation.normalize :only [prep-vcf clean-problem-vcf]]
         [bcbio.variation.phasing :only [is-haploid?]]
-        [bcbio.variation.variantcontext :only [get-vcf-header]])
+        [bcbio.variation.variantcontext :only [get-vcf-header write-vcf-w-template
+                                               get-vcf-iterator parse-vcf
+                                               get-vcf-retriever variants-in-region]])
   (:require [fs.core :as fs]
             [clojure.string :as string]
             [bcbio.run.itx :as itx]
@@ -61,6 +65,40 @@
         (fs/mkdirs base-dir))
       (broad/run-gatk "CombineVariants" args file-info {:out [:out-vcf]})
       (:out-vcf file-info))))
+
+;; ## Clean multi-alleles
+
+(defn- clean-multialleles
+  "Clean up variant contexts with multi-allele, consolidating calls and removing unused alleles."
+  [retriever vcs]
+  (letfn [(others-at-pos [vcs retriever]
+            (filter #(apply = (map (juxt :chr :start :ref-allele) [% (first vcs)]))
+                    (apply variants-in-region
+                           (cons retriever ((juxt :chr :start :end) (first vcs))))))]
+    (let [alleles (reduce (fn [coll allele]
+                            (let [allele-str (.getBaseString allele)]
+                              (assoc coll allele-str (inc (get coll allele-str 0)))))
+                          {} (cons (-> vcs first :alt-alleles first)
+                                   (mapcat :alt-alleles (others-at-pos vcs retriever))))]
+      (-> (VariantContextBuilder. (:vc (first vcs)))
+          (.alleles [(.getBaseString (:ref-allele (first vcs)))
+                     (-> (sort-by val > alleles) first key)])
+          .make))))
+
+(defn fix-minimal-combined
+  "Fix multiple alleles in a VCF produced by combining multiple inputs.
+   This combines calls present at multiple positions and removes multi-alleles
+   not present in input calls."
+  [combined-vcf vcfs ref]
+  (let [out-file (itx/add-file-part combined-vcf "fix")]
+    (when (itx/needs-run? out-file)
+      (with-open [vcf-iter (get-vcf-iterator combined-vcf ref)]
+        (write-vcf-w-template combined-vcf {:out out-file}
+                              (map (partial clean-multialleles (apply get-vcf-retriever (cons ref vcfs)))
+                                   (partition-by (juxt :chr :start :ref-allele)
+                                                 (parse-vcf vcf-iter)))
+                              ref)))
+    out-file))
 
 (defn multiple-samples?
   "Check if the input VCF file has multiple genotyped samples."
