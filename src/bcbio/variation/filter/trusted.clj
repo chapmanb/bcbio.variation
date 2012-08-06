@@ -65,8 +65,10 @@
               (if (> v 1)
                 (>= n v)
                 (>= (/ n (get md-counts k)) v))))]
-    (some (partial param-passes? (variant-set-metadata vc calls) (calc-md-counts calls))
-          params)))
+    (let [use-calls (remove :recall calls)]
+      (some (partial param-passes? (variant-set-metadata vc use-calls)
+                     (calc-md-counts use-calls))
+            params))))
 
 (defn get-trusted-variants
   "Retrieve VCF file of trusted variants based on specific parameters."

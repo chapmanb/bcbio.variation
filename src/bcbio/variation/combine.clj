@@ -78,8 +78,7 @@
     (let [alleles (reduce (fn [coll allele]
                             (let [allele-str (.getBaseString allele)]
                               (assoc coll allele-str (inc (get coll allele-str 0)))))
-                          {} (cons (-> vcs first :alt-alleles first)
-                                   (mapcat :alt-alleles (others-at-pos vcs retriever))))]
+                          {} (mapcat :alt-alleles (others-at-pos vcs retriever)))]
       (-> (VariantContextBuilder. (:vc (first vcs)))
           (.alleles [(.getBaseString (:ref-allele (first vcs)))
                      (-> (sort-by val > alleles) first key)])
