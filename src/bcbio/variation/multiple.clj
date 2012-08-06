@@ -99,9 +99,30 @@
     {:union union-vcf
      :intersection (select-variant-by-set union-vcf ref "Intersection")}))
 
-(defn- gen-target-fps
-  "Generate false positives: discordant calls also called in other samples."
-  [target-cmps target-name other-conc-vcf ref out-dir]
+(defmulti gen-target-fps
+  "Generate false positives, dispatching differently when the target is from recalling."
+  (fn [_ _ _ _ is-recalled? _ _]
+    (if is-recalled? :recall :default)))
+
+(defmethod gen-target-fps :recall
+  ^{:doc "False positive generation for combine call sets resulting from recalling.
+          Report calls found in only a single original set"}
+  [target-cmps target-name _ target-overlap-vcf is-recalled? ref out-dir]
+  (let [calls (vec (set (mapcat (juxt :c1 :c2) (vals target-cmps))))
+        out-file (itx/add-file-part target-overlap-vcf "singles" out-dir)]
+    (letfn [(is-single-fp? [vc]
+              (= 1 (count (disj (get-vc-set-calls vc calls) target-name))))]
+      (when (itx/needs-run? out-file)
+        (with-open [in-iter (get-vcf-iterator target-overlap-vcf ref)]
+          (write-vcf-w-template target-overlap-vcf {:out out-file}
+                                (map :vc (filter is-single-fp? (parse-vcf in-iter)))
+                                ref))))
+    out-file))
+
+(defmethod gen-target-fps :default
+  ^{:doc "False positive generation for single call sets: report discordant variants
+          callable in other samples."}
+  [target-cmps target-name other-conc-vcf _ _ ref out-dir]
   (letfn [(check-shared [fetch any-callable]
             (fn [x]
               (and (nonref-passes-filter? x)
@@ -138,7 +159,7 @@
 
 (defn- gen-target-problems
   "Create files of false negatives and positives from target-name."
-  [target-name target-call cmps-by-name true-p-vcf ref out-dir config]
+  [target-name target-call cmps-by-name true-p-vcf target-overlap-vcf ref out-dir config]
   (let [notarget-concordant (gen-all-concordant cmps-by-name ref out-dir config
                                                 :do-include? (partial not-target? target-name)
                                                 :base-ext (format "multino%s" target-name))]
@@ -150,12 +171,11 @@
                            :base-ext (format "multiall-no%s" target-name))
          (select-variant-by-set ref target-name)
          (add-variant-annotations (:align target-call) ref target-call :out-dir out-dir))
-     :false-positives (-> (gen-target-fps (remove #(not-target? target-name (first %))
-                                                  cmps-by-name)
-                                          target-name (:union notarget-concordant)
-                                          ref out-dir)
-                          (add-variant-annotations (:align target-call) ref target-call
-                                                   :out-dir out-dir))}))
+     :false-positives (gen-target-fps (remove #(not-target? target-name (first %))
+                                              cmps-by-name)
+                                      target-name (:union notarget-concordant)
+                                      target-overlap-vcf (:recall target-call)
+                                      ref out-dir)}))
 
 (defn multiple-overlap-analysis
   "Provide high level concordance overlap comparisons for multiple call approaches.
@@ -187,16 +207,17 @@
     (let [all-overlap (gen-all-concordant cmps-by-name ref out-dir config)
           true-p-vcf (add-variant-annotations (:intersection all-overlap) (:align target-call)
                                               ref target-call :out-dir out-dir)
+          target-overlaps (-> all-overlap
+                              :union
+                              (select-variant-by-set ref target-name)
+                              (add-variant-annotations (:align target-call) ref
+                                                       target-call :out-dir out-dir))
           target-problems (gen-target-problems target-name target-call cmps-by-name
-                                               true-p-vcf ref out-dir config)]
+                                               true-p-vcf target-overlaps ref out-dir config)]
       (ordered-map :true-positives true-p-vcf
                    :false-negatives (:false-negatives target-problems)
                    :false-positives (:false-positives target-problems)
-                   :target-overlaps (-> all-overlap
-                                        :union
-                                        (select-variant-by-set ref target-name)
-                                        (add-variant-annotations (:align target-call) ref
-                                                                 target-call :out-dir out-dir))))))
+                   :target-overlaps target-overlaps))))
 
 (defn pipeline-compare-multiple
   "Perform high level pipeline comparison of a target with multiple experiments."

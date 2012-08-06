@@ -201,7 +201,7 @@
              :false-negatives
              (str (fs/file out-dir (format "Test1-multiall-no%s-fullcombine-%s%s.vcf" x x ext)))
              :false-positives
-             (str (fs/file out-dir (format "Test1-dis%s-fullcombine-Intersection-shared%s.vcf" x ext)))
+             (str (fs/file out-dir (format "Test1-dis%s-fullcombine-Intersection-shared.vcf" x)))
              :target-overlaps
              (str (fs/file out-dir (format "Test1-multiall-fullcombine-%s%s.vcf" x ext)))})]
     (against-background [(before :facts (vec (map itx/remove-path [out-dir trusted-out])))]
