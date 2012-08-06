@@ -1,0 +1,93 @@
+---
+dir:
+  base: /usr/local/projects/xprize/quaternary/NA19239_fosmid
+  out: work
+  prep: work/prep
+experiments:
+  - sample: NA19239
+    ref: /usr/local/db/homosapiens/b37/human_g1k_v37.fasta
+    intervals: /usr/local/projects/xprize/secondary/NA19239/illumina_solid/boundaries/NA19239-fosmid-all.bed
+    calls:
+      - name: allfos
+        file:  
+         - /usr/local/projects/xprize/secondary/NA19239/illumina/fosmid/snp/gatk/NA19239-illumina-fosmid.snp.vcf
+         - /usr/local/projects/xprize/secondary/NA19239/illumina/fosmid/indel/gatk/NA19239-illumina-fosmid.indel.vcf
+        align: /usr/local/projects/xprize/secondary/NA19239/illumina/fosmid/NA19239-illumina-fosmid.bam
+        preclean: true
+        prep: true
+        make-haploid: true
+        recall: true
+        annotate: true
+        remove-refcalls: true
+      - name: ifos
+        metadata:
+          caller: gatk
+          technology: illumina
+        file:  
+         - /usr/local/projects/xprize/secondary/NA19239/illumina/fosmid/snp/gatk/NA19239-illumina-fosmid.snp.vcf
+         - /usr/local/projects/xprize/secondary/NA19239/illumina/fosmid/indel/gatk/NA19239-illumina-fosmid.indel.vcf
+        align: /usr/local/projects/xprize/secondary/NA19239/illumina/fosmid/NA19239-illumina-fosmid.bam
+        preclean: true
+        prep: true
+        make-haploid: true
+        remove-refcalls: true
+      - name: ifosfb
+        metadata:
+          caller: freebayes
+          technology: illumina
+        align: /usr/local/projects/xprize/secondary/NA19239/illumina/fosmid/NA19239-illumina-fosmid.bam
+        file: /usr/local/projects/xprize/secondary/NA19239/illumina/fosmid/freebayes/NA19239-illumina-fosmid-freebayes-latest.vcf
+        prep: true
+        remove-refcalls: true
+        annotate: true
+        make-haploid: true
+      - name: ifospu
+        metadata:
+          caller: mpileup
+          technology: illumina
+        file: /usr/local/projects/xprize/secondary/NA19239/illumina/fosmid/snp/samtools/NA19239-illumina-fosmid.pileup.vcf
+        align: /usr/local/projects/xprize/secondary/NA19239/illumina/fosmid/NA19239-illumina-fosmid.bam
+        prep: true
+        make-haploid: true
+        remove-refcalls: true
+      - name: sfos
+        metadata:
+          caller: gatk
+          technology: solid
+        file:
+         - /usr/local/projects/xprize/secondary/NA19239/solid/fosmid/snp/gatk/NA19239-solid-fosmid.snp.vcf
+         - /usr/local/projects/xprize/secondary/NA19239/solid/fosmid/indel/gatk/NA19239-solid-fosmid.indel.vcf
+        align: /usr/local/projects/xprize/secondary/NA19239/solid/fosmid/NA19239-solid-fosmid.bam
+        prep: true
+        preclean: true
+        make-haploid: true
+      - name: sfospu
+        metadata:
+          caller: mpileup
+          technology: solid
+        file: /usr/local/projects/xprize/secondary/NA19239/solid/fosmid/snp/samtools/NA19239-solid-fosmid.pileup.vcf
+        align: /usr/local/projects/xprize/secondary/NA19239/solid/fosmid/NA19239-solid-fosmid.bam
+        prep: true
+        preclean: true
+        make-haploid: true
+      - name: affy1
+        metadata:
+          caller: genotyping
+          technology: genotyping
+        file: /usr/local/projects/xprize/primary/microarray/affy/vcf/NA19239_1.vcf
+        prep: true
+        prep-sort-pos: true
+        remove-refcalls: true
+    finalize:
+      - method: multiple
+        target: allfos
+      - method: recal-filter
+        target: [allfos, ifosfb]
+        params:
+          support: allfos
+          #annotations: [QD, HaplotypeScore, MQRankSum, ReadPosRankSum, FS, MQ, DP]
+          classifiers: [AD, DP, PL, ReadPosEndDist]
+          trusted:
+            total: 0.65
+            technology: 0.65
+            caller: 0.65
