@@ -23,6 +23,7 @@ experiments:
         metadata:
           caller: gatk
           technology: illumina
+          stringency: strict
         file:  
          - /usr/local/projects/xprize/secondary/NA19239/illumina/fosmid/snp/gatk/NA19239-illumina-fosmid.snp.vcf
          - /usr/local/projects/xprize/secondary/NA19239/illumina/fosmid/indel/gatk/NA19239-illumina-fosmid.indel.vcf
@@ -35,6 +36,7 @@ experiments:
         metadata:
           caller: freebayes
           technology: illumina
+          stringency: lenient
         align: /usr/local/projects/xprize/secondary/NA19239/illumina/fosmid/NA19239-illumina-fosmid.bam
         file: /usr/local/projects/xprize/secondary/NA19239/illumina/fosmid/freebayes/NA19239-illumina-fosmid-freebayes-latest.vcf
         prep: true
@@ -45,6 +47,7 @@ experiments:
         metadata:
           caller: mpileup
           technology: illumina
+          stringency: lenient
         file: /usr/local/projects/xprize/secondary/NA19239/illumina/fosmid/snp/samtools/NA19239-illumina-fosmid.pileup.vcf
         align: /usr/local/projects/xprize/secondary/NA19239/illumina/fosmid/NA19239-illumina-fosmid.bam
         prep: true
@@ -54,6 +57,7 @@ experiments:
         metadata:
           caller: gatk
           technology: solid
+          stringency: strict
         file:
          - /usr/local/projects/xprize/secondary/NA19239/solid/fosmid/snp/gatk/NA19239-solid-fosmid.snp.vcf
          - /usr/local/projects/xprize/secondary/NA19239/solid/fosmid/indel/gatk/NA19239-solid-fosmid.indel.vcf
@@ -65,6 +69,7 @@ experiments:
         metadata:
           caller: mpileup
           technology: solid
+          stringency: lenient
         file: /usr/local/projects/xprize/secondary/NA19239/solid/fosmid/snp/samtools/NA19239-solid-fosmid.pileup.vcf
         align: /usr/local/projects/xprize/secondary/NA19239/solid/fosmid/NA19239-solid-fosmid.bam
         prep: true
@@ -74,6 +79,7 @@ experiments:
         metadata:
           caller: genotyping
           technology: genotyping
+          stringency: strict
         file: /usr/local/projects/xprize/primary/microarray/affy/vcf/NA19239_1.vcf
         prep: true
         prep-sort-pos: true
@@ -86,8 +92,9 @@ experiments:
         params:
           support: allfos
           #annotations: [QD, HaplotypeScore, MQRankSum, ReadPosRankSum, FS, MQ, DP]
-          classifiers: [AD, DP, PL, ReadPosEndDist]
+          classifiers: [QUAL, AD, DP, PL, ReadPosEndDist]
           trusted:
             total: 0.65
             technology: 0.65
             caller: 0.65
+            stringency: 0.99

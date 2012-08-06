@@ -102,14 +102,14 @@
                                               :out-dir out-dir :check-ploidy? false)]
               (recall-nocalls ready-vcf (:sample exp) call-name align-bam ref
                               :out-dir out-dir :cores cores)))]
-    (let [merged (-> (combine-variants vcfs (:ref exp) :merge-type :minimal :intervals intervals
+    (let [min-merged (-> (combine-variants vcfs (:ref exp) :merge-type :minimal :intervals intervals
                                        :out-dir out-dir :check-ploidy? false
                                        :name-map (zipmap vcfs (map :name (:calls exp))))
-                     (fix-minimal-combined vcfs (:ref exp)))]
+                         (fix-minimal-combined vcfs (:ref exp)))]
       (map (fn [[v b vcf-config]]
              (if (and (get vcf-config :recall false)
                       (not (nil? b)))
-               (let [merged (merge-vcf v (:name vcf-config) merged b (:ref exp))]
+               (let [merged (merge-vcf v (:name vcf-config) min-merged b (:ref exp))]
                  (if (get vcf-config :remove-refcalls true)
                    (select-by-sample (:sample exp) merged nil (:ref exp)
                                      :remove-refcalls true :ext "cleaned")

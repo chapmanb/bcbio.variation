@@ -72,16 +72,22 @@
   "Clean up variant contexts with multi-allele, consolidating calls and removing unused alleles."
   [retriever vcs]
   (letfn [(others-at-pos [vcs retriever]
-            (filter #(apply = (map (juxt :chr :start :ref-allele) [% (first vcs)]))
+            (filter #(apply = (map (juxt :chr :start) [% (first vcs)]))
                     (apply variants-in-region
-                           (cons retriever ((juxt :chr :start :end) (first vcs))))))]
-    (let [alleles (reduce (fn [coll allele]
-                            (let [allele-str (.getBaseString allele)]
-                              (assoc coll allele-str (inc (get coll allele-str 0)))))
-                          {} (mapcat :alt-alleles (others-at-pos vcs retriever)))]
+                           (cons retriever ((juxt :chr :start :end) (first vcs))))))
+          (get-ref-alt-alleles [vc]
+            (let [ref (.getBaseString (:ref-allele vc))]
+              (map (fn [x] [ref (.getBaseString x)]) (:alt-alleles vc))))]
+    (let [alleles (reduce (fn [coll x]
+                            (assoc coll x (inc (get coll x 0))))
+                          {} (cons (-> vcs first get-ref-alt-alleles first)
+                                   (mapcat get-ref-alt-alleles (others-at-pos vcs retriever))))
+          final-alleles (-> (sort-by val > alleles) first key)]
       (-> (VariantContextBuilder. (:vc (first vcs)))
-          (.alleles [(.getBaseString (:ref-allele (first vcs)))
-                     (-> (sort-by val > alleles) first key)])
+          (.alleles final-alleles)
+          (.stop (+ (:start (first vcs)) (if (apply = (map count final-alleles))
+                                           0
+                                           (count (first final-alleles)))))
           .make))))
 
 (defn fix-minimal-combined
@@ -94,7 +100,7 @@
       (with-open [vcf-iter (get-vcf-iterator combined-vcf ref)]
         (write-vcf-w-template combined-vcf {:out out-file}
                               (map (partial clean-multialleles (apply get-vcf-retriever (cons ref vcfs)))
-                                   (partition-by (juxt :chr :start :ref-allele)
+                                   (partition-by (juxt :chr :start)
                                                  (parse-vcf vcf-iter)))
                               ref)))
     out-file))
