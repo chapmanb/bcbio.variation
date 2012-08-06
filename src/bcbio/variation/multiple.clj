@@ -110,8 +110,15 @@
   [target-cmps target-name _ target-overlap-vcf is-recalled? ref out-dir]
   (let [calls (vec (set (mapcat (juxt :c1 :c2) (vals target-cmps))))
         out-file (itx/add-file-part target-overlap-vcf "singles" out-dir)]
-    (letfn [(is-single-fp? [vc]
-              (= 1 (count (disj (get-vc-set-calls vc calls) target-name))))]
+    (letfn [(is-lenient-caller? [callset]
+              (let [md-name "lenient"
+                    call-config (first (filter #(= callset (:name %)) calls))]
+                (println callset call-config)
+                (= md-name (get-in call-config [:metadata :stringency] md-name))))
+            (is-single-fp? [vc]
+              (let [callsets (disj (get-vc-set-calls vc calls) target-name)]
+                (and (= 1 (count callsets))
+                     (is-lenient-caller? (first callsets)))))]
       (when (itx/needs-run? out-file)
         (with-open [in-iter (get-vcf-iterator target-overlap-vcf ref)]
           (write-vcf-w-template target-overlap-vcf {:out out-file}
