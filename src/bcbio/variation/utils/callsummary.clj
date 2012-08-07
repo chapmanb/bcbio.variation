@@ -17,8 +17,11 @@
   "Report details on a variant based on items found in inputs."
   [wtr vc retriever fname-map]
   (letfn [(get-alt-alleles [vc]
-            (map #(.getBaseString %) (:alt-alleles vc)))]
-    (let [hits (variants-in-region retriever (:chr vc) (:start vc) (:end vc))]
+            (map #(.getBaseString %) (:alt-alleles vc)))
+          (get-match-variants [vc]
+            (filter #(= (:start %) (:start vc))
+                    (variants-in-region retriever (:chr vc) (:start vc) (:end vc))))]
+    (let [hits (get-match-variants vc)]
       (.write wtr (str (string/join ","
                                     [(:chr vc) (:start vc)
                                      (.getBaseString (:ref-allele vc))
