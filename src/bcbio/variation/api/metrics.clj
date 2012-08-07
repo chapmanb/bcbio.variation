@@ -84,7 +84,7 @@
         plot-metrics (if (nil? metrics) (available-metrics vcf-file) metrics)
         raw-metrics (clean-raw-metrics
                      (get-raw-metrics (map :id plot-metrics) vcf-file ref-file))]
-    {:filename vcf-file
+    {:filename in-vcf-file
      :created-on (java.util.Date.)
      :metrics (map #(merge % (prepare-plot-metrics (:id %) (get raw-metrics (:id %))))
                    (remove #(nil? (get raw-metrics (:id %))) plot-metrics))}))
