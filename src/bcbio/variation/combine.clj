@@ -77,15 +77,21 @@
                            (cons retriever ((juxt :chr :start :end) (first vcs))))))
           (get-ref-alt-alleles [vc]
             (let [ref (.getBaseString (:ref-allele vc))]
-              (map (fn [x] [ref (.getBaseString x)]) (:alt-alleles vc))))]
+              (map (fn [x] [ref (.getBaseString x)]) (:alt-alleles vc))))
+          (sort-by-allele-count [xs]
+            (let [count-groups (group-by val xs)
+                  topcount-alleles (keys (get count-groups (apply max (keys count-groups))))]
+              (first (sort-by #(count (first %)) topcount-alleles))))]
     (let [alleles (reduce (fn [coll x]
                             (assoc coll x (inc (get coll x 0))))
-                          {} (cons (-> vcs first get-ref-alt-alleles first)
-                                   (mapcat get-ref-alt-alleles (others-at-pos vcs retriever))))
-          final-alleles (-> (sort-by val > alleles) first key)]
+                          {} (mapcat get-ref-alt-alleles (others-at-pos vcs retriever)))
+          final-alleles (if (empty? alleles)
+                          (-> vcs first get-ref-alt-alleles first)
+                          (sort-by-allele-count alleles))]
       (-> (VariantContextBuilder. (:vc (first vcs)))
           (.alleles final-alleles)
-          (.stop (+ (:start (first vcs)) (if (apply = (map count final-alleles))
+          (.stop (+ (:start (first vcs)) (if (and (= 1 (count (first final-alleles)))
+                                                  (apply = (map count final-alleles)))
                                            0
                                            (count (first final-alleles)))))
           .make))))
