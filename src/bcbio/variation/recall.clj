@@ -239,7 +239,6 @@
                          (split-config-multi (:calls exp) (:ref exp) out-dir))
         clean-multi (map #(remove-sample-info % out-dir)
                          (filter multiple-samples? (set (map :file (:calls exp)))))]
-    (println (count recall-vcfs))
     (batch-combine-variants (concat clean-multi recall-vcfs) (:ref exp) :merge-type :full
                             :quiet-out? true :check-ploidy? false)))
 

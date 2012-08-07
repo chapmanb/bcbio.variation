@@ -113,7 +113,6 @@
     (letfn [(is-lenient-caller? [callset]
               (let [md-name "lenient"
                     call-config (first (filter #(= callset (:name %)) calls))]
-                (println callset call-config)
                 (= md-name (get-in call-config [:metadata :stringency] md-name))))
             (is-single-fp? [vc]
               (let [callsets (disj (get-vc-set-calls vc calls) target-name)]

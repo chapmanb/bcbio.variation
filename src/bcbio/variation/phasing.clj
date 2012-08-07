@@ -46,7 +46,7 @@
     (let [g (-> vc :genotypes first)]
       (and (= (:chr vc) (:chr prev-vc))
            (same-regions? prev-vc vc)
-           (or ;(= 1 (count (:alleles g)))
+           (or (= 1 (count (:alleles g)))
                (.isPhased (:genotype g))
                (<= (:start vc) (:end prev-vc)))))))
 
