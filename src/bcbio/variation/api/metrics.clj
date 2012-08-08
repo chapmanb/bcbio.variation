@@ -31,7 +31,7 @@
 (defn- prepare-plot-metrics
   "Bin metrics in preparation for histogram display using predefined min-max boundaries."
   [metric raw]
-  (let [bins 20
+  (let [bins 100
         [bin-min bin-max] (:range (get im/expose-metrics metric))
         data (get-histogram-bins raw bins bin-min bin-max)]
     {:vals (:y data)

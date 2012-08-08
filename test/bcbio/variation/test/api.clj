@@ -23,7 +23,7 @@
   (let [out (plot-ready-metrics vcf1 ref)]
     (:filename out) => vcf1
     (-> out :metrics first :id) => "QUAL"
-    (-> out :metrics first :x-scale :domain) => (just [0.0 100000.0])
+    (-> out :metrics first :x-scale :domain) => (just [0.0 10000.0])
     (apply + (-> out :metrics first :vals)) => 1.0))
 
 (facts "Index file for rapid retrieval of variants."

@@ -11,35 +11,36 @@
 
 (def ^{:doc "Metrics to expose, ranked in order of priority with default min/max values."}
   expose-metrics
-  (ordered-map "QUAL" {:range [0.0 100000.0]}
-               "DP" {:range [0.0 5000.0]
+  (ordered-map "QUAL" {:range [0.0 10000.0]
+                       :desc "Variant quality score, phred-scaled"}
+               "DP" {:range [0.0 500.0]
                      :desc "Read depth after filtering of low quality reads"}
-               "MQ" {:range [0.0 75.0]
+               "MQ" {:range [25.0 75.0]
                      :desc "Mapping quality"}
-               "QD" {:range [0.0 200.0]
+               "QD" {:range [0.0 50.0]
                      :desc "Variant confidence by depth"}
-               "HaplotypeScore" {:range [0.0 250.0]
+               "HaplotypeScore" {:range [0.0 50.0]
                                  :desc "Consistency of the site with at most two segregating haplotypes"}
-               "ReadPosEndDist" {:range [0.0 100.0]
+               "ReadPosEndDist" {:range [0.0 50.0]
                                  :desc "Mean distance from either end of read"}))
 
 (def ^{:doc "Default metrics that are always available." :private true}
   default-metrics
-  [{:id "QUAL" :desc "Variant quality score, phred-scaled" :type :float}])
+  [{:id "QUAL" :type :float}])
 
 (defn available-metrics
   "Retrieve metrics available for variant input file."
   [vcf-file]
   (letfn [(convert-header [line]
-            (let [cur-id (.getID line)]
-              {:id cur-id
-               :desc (:desc (get expose-metrics cur-id))
-               :type (case (.name (.getType line))
-                       "Integer" :float
-                       "Float" :float
-                       "String" :text
-                       "Character" :text
-                       :else nil)}))]
+            {:id (.getID line)
+             :type (case (.name (.getType line))
+                     "Integer" :float
+                     "Float" :float
+                     "String" :text
+                     "Character" :text
+                     :else nil)})
+          (add-base-info [x]
+            (merge x (get expose-metrics (:id x))))]
     (let [metrics-order (reduce (fn [coll [i x]] (assoc coll x i))
                                 {} (map-indexed vector (keys expose-metrics)))]
       (->> (get-vcf-header vcf-file)
@@ -48,6 +49,7 @@
            (filter #(contains? expose-metrics (.getID %)))
            (map convert-header)
            (concat default-metrics)
+           (map add-base-info)
            (sort-by #(get metrics-order (:id %)))))))
 
 (defn- create-metrics-tables
