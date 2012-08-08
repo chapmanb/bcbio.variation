@@ -62,7 +62,8 @@
 (defn index-variant-file
   "Pre-index a variant file with associated metrics."
   [in-file ref-file]
-  (let [metrics (available-metrics in-file)
+  (let [batch-size 10000
+        metrics (available-metrics in-file)
         index-file (str (itx/file-root in-file) "-metrics.db")]
     (when-not (fs/exists? index-file)
       (itx/with-tx-file [tx-index index-file]
@@ -70,13 +71,14 @@
           (sql/transaction
            (create-metrics-tables metrics))
           (with-open [vcf-iter (get-vcf-iterator in-file ref-file)]
-            (doseq [vc (parse-vcf vcf-iter)]
+            (doseq [vcs (partition-all batch-size (parse-vcf vcf-iter))]
               (sql/transaction
-               (sql/insert-record :metrics
-                                  (-> (get-vc-attrs vc (map :id metrics))
-                                      (assoc :contig (:chr vc))
-                                      (assoc :start (:start vc))
-                                      (assoc :refallele (.getBaseString (:ref-allele vc)))))))))))
+               (doseq [vc vcs]
+                 (sql/insert-record :metrics
+                                    (-> (get-vc-attrs vc (map :id metrics))
+                                        (assoc :contig (:chr vc))
+                                        (assoc :start (:start vc))
+                                        (assoc :refallele (.getBaseString (:ref-allele vc))))))))))))
     index-file))
 
 (defn get-raw-metrics
