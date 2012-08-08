@@ -11,22 +11,35 @@
 
 (def ^{:doc "Metrics to expose, ranked in order of priority with default min/max values."}
   expose-metrics
-  (ordered-map "QUAL" [0.0 100000.0]
-               "DP" [0.0 5000.0]
-               "MQ" [0.0 75.0]
-               "QD" [0.0 200.0]
-               "HaplotypeScore" [0.0 250.0]))
+  (ordered-map "QUAL" {:range [0.0 100000.0]}
+               "DP" {:range [0.0 5000.0]
+                     :desc "Read depth after filtering of low quality reads"}
+               "MQ" {:range [0.0 75.0]
+                     :desc "Mapping quality"}
+               "QD" {:range [0.0 200.0]
+                     :desc "Variant confidence by depth"}
+               "HaplotypeScore" {:range [0.0 250.0]
+                                 :desc "Consistency of the site with at most two segregating haplotypes"}
+               "ReadPosEndDist" {:range [0.0 100.0]
+                                 :desc "Mean distance from either end of read"}))
 
 (def ^{:doc "Default metrics that are always available." :private true}
   default-metrics
-  [{:id "QUAL" :desc "Variant quality score, phred-scaled"}])
+  [{:id "QUAL" :desc "Variant quality score, phred-scaled" :type :float}])
 
 (defn available-metrics
   "Retrieve metrics available for variant input file."
   [vcf-file]
   (letfn [(convert-header [line]
-            {:id (.getID line)
-             :desc (.getDescription line)})]
+            (let [cur-id (.getID line)]
+              {:id cur-id
+               :desc (:desc (get expose-metrics cur-id))
+               :type (case (.name (.getType line))
+                       "Integer" :float
+                       "Float" :float
+                       "String" :text
+                       "Character" :text
+                       :else nil)}))]
     (let [metrics-order (reduce (fn [coll [i x]] (assoc coll x i))
                                 {} (map-indexed vector (keys expose-metrics)))]
       (->> (get-vcf-header vcf-file)
@@ -44,7 +57,7 @@
                                    [:contig :text]
                                    [:start :integer]
                                    [:refallele :text]]
-                                  (map (fn [x] [(:id x) :float]) metrics))))
+                                  (map (fn [x] [(:id x) (:type x)]) metrics))))
 
 (defn index-variant-file
   "Pre-index a variant file with associated metrics."
@@ -77,7 +90,6 @@
         (doall (map (fn [orig]
                       (reduce (fn [coll x]
                                 (assoc coll x (get orig (keyword (string/lower-case x)))))
-                              {:id (format "%s-%s-%s" (:contig orig) (:start orig)
-                                           (:refallele orig))}
+                              {:id [(:contig orig) (:start orig) (:refallele orig)]}
                               plot-metrics))
                     rows))))))

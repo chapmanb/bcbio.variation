@@ -32,7 +32,7 @@
   "Bin metrics in preparation for histogram display using predefined min-max boundaries."
   [metric raw]
   (let [bins 20
-        [bin-min bin-max] (get im/expose-metrics metric)
+        [bin-min bin-max] (:range (get im/expose-metrics metric))
         data (get-histogram-bins raw bins bin-min bin-max)]
     {:vals (:y data)
      :bin-width (- (second (:x data)) (first (:x data)))
