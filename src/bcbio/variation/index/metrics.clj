@@ -65,17 +65,18 @@
   (let [metrics (available-metrics in-file)
         index-file (str (itx/file-root in-file) "-metrics.db")]
     (when-not (fs/exists? index-file)
-      (sql/with-connection (get-sqlite-db index-file :create true)
-        (sql/transaction
-         (create-metrics-tables metrics))
-        (with-open [vcf-iter (get-vcf-iterator in-file ref-file)]
-          (doseq [vc (parse-vcf vcf-iter)]
-            (sql/transaction
-             (sql/insert-record :metrics
-                                (-> (get-vc-attrs vc (map :id metrics))
-                                    (assoc :contig (:chr vc))
-                                    (assoc :start (:start vc))
-                                    (assoc :refallele (.getBaseString (:ref-allele vc))))))))))
+      (itx/with-tx-file [tx-index index-file]
+        (sql/with-connection (get-sqlite-db tx-index :create true)
+          (sql/transaction
+           (create-metrics-tables metrics))
+          (with-open [vcf-iter (get-vcf-iterator in-file ref-file)]
+            (doseq [vc (parse-vcf vcf-iter)]
+              (sql/transaction
+               (sql/insert-record :metrics
+                                  (-> (get-vc-attrs vc (map :id metrics))
+                                      (assoc :contig (:chr vc))
+                                      (assoc :start (:start vc))
+                                      (assoc :refallele (.getBaseString (:ref-allele vc)))))))))))
     index-file))
 
 (defn get-raw-metrics

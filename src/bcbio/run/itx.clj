@@ -83,6 +83,16 @@
          (finally
           (fs/delete-dir (fs/parent (get ~tx-file-info (first ~need-tx)))))))))
 
+(defmacro with-tx-file
+  "Handle a single file in a transaction directory."
+  [[tx-file orig-file] & body]
+  `(let [~tx-file (:out (safe-tx-files {:out ~orig-file} [:out]))]
+     (try
+       ~@body
+       (rename-tx-files {:out ~tx-file} {:out ~orig-file} [:out] [])
+       (finally
+        (fs/delete-dir (fs/parent ~tx-file))))))
+
 ;; ## Naming
 ;; Generate new file names from existing ones
 
