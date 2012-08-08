@@ -21,7 +21,7 @@
   "Convert a map of metrics names and ranges into JEXL filter expressions"
   [filter-map]
   (letfn [(to-jexl [[metric [min max]]]
-            (format "%s < %s && %s > %s" metric min metric max))]
+            (format "%s > %s && %s < %s" (name metric) min (name metric) max))]
     (map to-jexl filter-map)))
 
 (defn variant-filter

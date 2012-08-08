@@ -22,7 +22,11 @@
                "HaplotypeScore" {:range [0.0 50.0]
                                  :desc "Consistency of the site with at most two segregating haplotypes"}
                "ReadPosEndDist" {:range [0.0 50.0]
-                                 :desc "Mean distance from either end of read"}))
+                                 :desc "Mean distance from either end of read"}
+               "AD" {:range [0.0 1.0]
+                     :desc "Deviation from expected allele balance for ref/alt alleles"}
+               "PL" {:range [-250.0 0]
+                     :desc "Normalized, phred-scaled likelihoods for alternative genotype"}))
 
 (def ^{:doc "Default metrics that are always available." :private true}
   default-metrics
@@ -45,8 +49,11 @@
                                 {} (map-indexed vector (keys expose-metrics)))]
       (->> (get-vcf-header vcf-file)
            .getMetaDataInInputOrder
-           (filter #(= "INFO" (.getKey %)))
+           (filter #(contains? #{"INFO" "FORMAT"} (.getKey %)))
            (filter #(contains? expose-metrics (.getID %)))
+           (group-by #(.getID %))
+           vals
+           (map first)
            (map convert-header)
            (concat default-metrics)
            (map add-base-info)

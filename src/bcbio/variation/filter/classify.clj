@@ -26,13 +26,13 @@
   (fn [vc attr] attr))
 
 (defmethod get-vc-attr "AD"
+  ^{:doc "AD: Allelic depth for ref and alt alleles. Converted to percent
+          deviation from expected for haploid/diploid calls.
+          Also calculates allele depth from AO and DP used by FreeBayes.
+          AO is the count of the alternative allele."}
   [vc attr]
   {:pre [(= 1 (:num-samples vc))
          (contains? #{1 2} (-> vc :genotypes first :alleles count))]}
-  "AD: Allelic depth for ref and alt alleles. Converted to percent
-   deviation from expected for haploid/diploid calls.
-   Also calculates allele depth from AO and DP used by FreeBayes.
-   AO is the count of the alternative allele."
   (letfn [(calc-expected [g ref-count allele-count]
             {:pre [(not (neg? ref-count))]}
             (when (or (pos? ref-count) (pos? allele-count))
@@ -65,11 +65,13 @@
   {:pre [(= 1 (:num-samples vc))
          (contains? #{1 2} (-> vc :genotypes first :alleles count))]}
   (let [g (-> vc :genotypes first)
-        pls (dissoc (get-likelihoods (:genotype g)) (:type g))]
-    (match [(count (:alleles g)) (:type g)]
-       [2 _] (apply max (vals pls))
-       [1 "HOM_VAR"] (get pls "HOM_REF")
-       [1 "HOM_REF"] (get pls "HOM_VAR"))))
+        pls (dissoc (get-likelihoods (:genotype g) :no-convert true)
+                    (:type g))]
+    (match [(count (:alleles g)) (:type g) (count pls)]
+       [_ _ 0] 0.0
+       [2 _ _] (apply max (vals pls))
+       [1 "HOM_VAR" _] (get pls "HOM_REF")
+       [1 "HOM_REF" _] (get pls "HOM_VAR"))))
 
 (defmethod get-vc-attr "QUAL"
   [vc attr]
