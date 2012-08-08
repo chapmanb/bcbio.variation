@@ -35,6 +35,7 @@ test/data/*-*nosv.vcf
 test/data/*-classifier.bin
 test/data/*-sorted.bed
 test/data/*-multicombine.bed
+test/data/*-metrics.db
 test/data/*sum.csv
 test/data/method-comparison-summary*
 test/data/prep/

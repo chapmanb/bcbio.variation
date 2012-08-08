@@ -4,7 +4,7 @@
             [clojure.java.jdbc :as sql]
             [fs.core :as fs]))
 
-(defn- get-db [fname & {:as opts}]
+(defn get-sqlite-db [fname & {:as opts}]
   "Retrieve SQLite database connection"
   (merge
    {:classname "org.sqlite.JDBC"
@@ -29,7 +29,7 @@
   "Prepare input database for storing user and file information in SQLite."
   [db-file]
   (when-not (fs/exists? db-file)
-    (sql/with-connection (get-db db-file :create true)
+    (sql/with-connection (get-sqlite-db db-file :create true)
       (sql/transaction
        (create-user-tables))))
   db-file)
@@ -37,7 +37,7 @@
 (defn get-analyses
   "Retrieve list of analyses run for a specific user and analysis type"
   [username atype db-file]
-  (sql/with-connection (get-db db-file)
+  (sql/with-connection (get-sqlite-db db-file)
     (sql/with-query-results rows
       ["SELECT * FROM analysis WHERE username = ? AND type = ? ORDER BY created DESC"
        username atype]
@@ -55,7 +55,7 @@
                     :name (name k)
                     :location (string/replace f (str (:location info) "/") "")})
                  (:files info)))]
-    (sql/with-connection (get-db db-file)
+    (sql/with-connection (get-sqlite-db db-file)
       (sql/transaction
        (sql/insert-record :analysis (-> info
                                         (dissoc :files)
