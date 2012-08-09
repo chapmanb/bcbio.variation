@@ -2,7 +2,8 @@
   "High level API to run analyses."
   (:use [bcbio.variation.filter :only [variant-filter jexl-filters-from-map]]
         [bcbio.variation.api.shared :only [web-config]])
-  (:require [bcbio.variation.api.file :as file-api]))
+  (:require [fs.core :as fs]
+            [bcbio.variation.api.file :as file-api]))
 
 (defmulti do-analysis
   "Run analysis on provided inputs, dispatching on analysis type"
@@ -22,8 +23,13 @@
         filter-file (variant-filter in-file
                                     (jexl-filters-from-map (:metrics params))
                                     (:genome genome))
+        local-out-dir (fs/file (fs/parent in-file) (name atype))
         remote-dir (file-api/put-files [filter-file] (:filename params) (name atype)
                                        creds)]
+    (when-not (fs/exists? local-out-dir)
+      (fs/mkdirs local-out-dir))
+    (doseq [ext ["" ".idx"]]
+      (fs/rename (str filter-file ext) (str (fs/file local-out-dir (fs/base-name filter-file)) ext)))
     (file-api/get-files :vcf creds [remote-dir])))
 
 (defmethod do-analysis :score

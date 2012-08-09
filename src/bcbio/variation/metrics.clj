@@ -14,9 +14,9 @@
 
 ;; ## Convenience functions
 
-(defn- to-float [x]
+(defn to-float [x]
   (if (number? x)
-    x
+    (float x)
     (try
       (Float/parseFloat x)
       (catch Exception e nil))))

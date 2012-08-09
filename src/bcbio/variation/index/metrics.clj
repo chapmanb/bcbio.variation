@@ -1,6 +1,7 @@
 (ns bcbio.variation.index.metrics
   "Pre-index a variant file for quick retrieval of associated metrics."
   (:use [ordered.map :only [ordered-map]]
+        [bcbio.variation.metrics :only [passes-filter?]]
         [bcbio.variation.filter.classify :only [get-vc-attrs]]
         [bcbio.variation.variantcontext :only [get-vcf-header get-vcf-iterator parse-vcf]]
         [bcbio.variation.web.db :only [get-sqlite-db]])
@@ -80,7 +81,7 @@
           (sql/transaction
            (create-metrics-tables metrics))
           (with-open [vcf-iter (get-vcf-iterator in-file ref-file)]
-            (doseq [vcs (partition-all batch-size (parse-vcf vcf-iter))]
+            (doseq [vcs (partition-all batch-size (filter passes-filter? (parse-vcf vcf-iter)))]
               (sql/transaction
                (doseq [vc vcs]
                  (sql/insert-record :metrics

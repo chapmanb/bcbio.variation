@@ -121,7 +121,7 @@
     (-> metrics first :rows count) => 10
     (-> wnil-metrics first :cols) => ["AC" "AF" "AN" "DP" "QUAL" "ReadPosRankSum"]
     (-> wnil-metrics first :rows count) => 2
-    (-> metrics second :rows first) => [2.0 1.0 2.0 938.0 22437.3]
+    (-> metrics second :rows first) => (just (map roughly [2.0 1.0 2.0 938.0 22437.3]))
     (classify-decision-tree metrics) => ["DP"]
     (classify-decision-tree wnil-metrics) => []
     (merge-classified-metrics [["A" "B" "C"] ["C" "D"]]) => {:top-metrics ["A" "C" "B" "D"]}))

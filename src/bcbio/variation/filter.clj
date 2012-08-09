@@ -5,6 +5,7 @@
   (:use [clojure.string :only [split]]
         [bcbio.variation.filter.classify :only [pipeline-classify-filter]]
         [bcbio.variation.filter.trusted :only [get-support-vcfs get-trusted-variants]]
+        [bcbio.variation.metrics :only [to-float]]
         [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template
                                                get-vcf-iterator]])
   (:require [bcbio.run.broad :as broad]
@@ -21,7 +22,9 @@
   "Convert a map of metrics names and ranges into JEXL filter expressions"
   [filter-map]
   (letfn [(to-jexl [[metric [min max]]]
-            (format "%s > %s && %s < %s" (name metric) min (name metric) max))]
+            (format "%s < %.1f || %s > %.1f"
+                    (name metric) (to-float min)
+                    (name metric) (to-float max)))]
     (map to-jexl filter-map)))
 
 (defn variant-filter
@@ -31,7 +34,8 @@
         args (concat ["-R" ref
                       "--variant" in-vcf
                       "-o" :out-vcf
-                      "-l" "ERROR"]
+                      "-l" "ERROR"
+                      "--unsafe" "ALLOW_SEQ_DICT_INCOMPATIBILITY"]
                       (jexl-from-config jexl-filters))]
     (broad/run-gatk "VariantFiltration" args file-info {:out [:out-vcf]})
     (:out-vcf file-info)))

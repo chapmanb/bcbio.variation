@@ -24,7 +24,7 @@
     (:filename out) => vcf1
     (-> out :metrics first :id) => "QUAL"
     (-> out :metrics first :x-scale :domain) => (just [0.0 10000.0])
-    (apply + (-> out :metrics first :vals)) => 1.0))
+    (apply + (-> out :metrics first :vals)) => (roughly 1.0)))
 
 (facts "Index file for rapid retrieval of variants."
   (im/index-variant-file vcf1 ref) => out-index
