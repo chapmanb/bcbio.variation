@@ -50,18 +50,24 @@
   (letfn [(mnp-ref-padding [ref-allele vc]
             {:post [(>= % 0)]}
             (max 0 (- (inc (- (:end vc) (:start vc)))
-                      (count (string/replace ref-allele "-" "")))))
+                           (count (string/replace ref-allele "-" "")))))
           (contains-indel? [alleles i]
-            (contains? (set (map #(str (nth % i)) alleles)) "-"))
-          (is-start-indel? [alleles start pos]
-            (and (= 0 start)
-                 (some empty? (map #(string/replace (subs % start pos) "-" "") alleles))))
+            (when (< i (count (first alleles)))
+              (contains? (set (map #(str (nth % i)) alleles)) "-")))
+          (is-start-indel? [alleles i]
+            (contains-indel? alleles (inc i)))
+          (is-match? [alleles i]
+            (= 1 (count (set (map #(str (nth % i)) alleles)))))
           (extend-indels [alleles i]
-            (if-not (contains-indel? alleles i) 
-              {:start i :end (inc i)}
-              {:start (max (dec i) 0)
-               :end (inc (last (take-while #(or (contains-indel? alleles %) (is-start-indel? alleles i %))
-                                           (range i (count (first alleles))))))}))
+            {:start (if (and (is-start-indel? alleles i)
+                             (or (contains-indel? alleles i)
+                                 (is-match? alleles i)))
+                      (max (dec i) 0)
+                      i)
+             :end (inc (or (last (take-while #(or (contains-indel? alleles %)
+                                                  (is-start-indel? alleles %))
+                                             (range i (count (first alleles)))))
+                           i))})
           (extract-variants [alleles pos ref-pad]
             (let [{:keys [start end]} (extend-indels alleles pos)
                   str-alleles (map #(-> (str (subs % start end))
@@ -69,9 +75,11 @@
                                    alleles)
                   cur-alleles (map-indexed (fn [i x] (Allele/create x (= 0 i)))
                                            (into (ordered-set) str-alleles))
-                  size (dec (.length (first cur-alleles)))
+                  ;;size (max 0 (dec (.length (first cur-alleles))))
+                  size (let [base (.length (first cur-alleles))]
+                         (if (some empty? str-alleles) base (dec base)))
                   w-gap-start (-> (first alleles) (subs 0 start) (string/replace "-" "") count)]
-              {:offset (+ ref-pad w-gap-start)
+              {:offset (+ (if (pos? start) ref-pad 0) w-gap-start)
                :end (+ ref-pad w-gap-start size)
                :next-start end
                :size size
@@ -81,7 +89,7 @@
       (remove nil?
               (loop [i 0 final []]
                 (cond
-                 (> i (-> alleles first (string/replace "-" "") count)) final
+                 (>= i (-> alleles first count)) final
                  (has-variant-base? alleles i)
                  (let [next-var (extract-variants alleles i ref-pad)]
                    (recur (:next-start next-var) (conj final next-var)))
@@ -174,6 +182,8 @@
                                        (remove empty?)
                                        (remove nil?)
                                        multiple-alignment))]
+    (when-not (= (count alleles) (count (set (map :offset alleles))))
+      (throw (Exception. (str "Mutiple alleles at same position: " (vec alleles)))))
     (map (fn [[i x]] (new-split-vc (:vc vc) i x)) (map-indexed vector alleles))))
 
 (defn- maybe-strip-indel
