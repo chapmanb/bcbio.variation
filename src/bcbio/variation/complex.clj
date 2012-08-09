@@ -39,7 +39,7 @@
                       count)))]
     (and (= "INDEL" (:type vc))
          (and (> (.length (:ref-allele vc)) 1)
-              (> (apply max (map #(.length %) (:alt-alleles vc))) 1)
+              (> (apply min (map #(.length %) (:alt-alleles vc))) 1)
               (not (monomorphic-alleles? vc))))))
 
 (defn- split-alleles
