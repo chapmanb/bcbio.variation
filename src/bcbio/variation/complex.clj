@@ -60,18 +60,29 @@
           (contains-indel? [alleles i]
             (when (< i (count (first alleles)))
               (contains? (set (map #(str (nth % i)) alleles)) "-")))
-          (is-start-indel? [alleles i]
+          (starts-an-indel? [alleles i]
             (contains-indel? alleles (inc i)))
           (is-match? [alleles i]
             (= 1 (count (set (map #(str (nth % i)) alleles)))))
+          (is-not-prepadded-indel? [alleles i]
+            (or (and (not (contains-indel? alleles i))
+                     (not (is-match? alleles i)))
+                (pos? i)))
+          (is-internal-indel? [alleles i]
+            (and (pos? i)
+                 (contains-indel? alleles i)
+                 (is-match? alleles (dec i))))
+          (is-fiveprime-indel? [alleles i]
+            (and (starts-an-indel? alleles i)
+                 (or (contains-indel? alleles i)
+                     (is-match? alleles i))))
           (extend-indels [alleles i]
-            {:start (if (and (is-start-indel? alleles i)
-                             (or (contains-indel? alleles i)
-                                 (is-match? alleles i)))
+            {:start (if (or (is-internal-indel? alleles i)
+                            (is-fiveprime-indel? alleles i))
                       (max (dec i) 0)
                       i)
              :end (inc (or (last (take-while #(or (contains-indel? alleles %)
-                                                  (is-start-indel? alleles %))
+                                                  (starts-an-indel? alleles %))
                                              (range i (count (first alleles)))))
                            i))})
           (extract-variants [alleles pos ref-pad]
@@ -85,11 +96,7 @@
                          (if (some empty? str-alleles) base (dec base)))
                   w-gap-start (-> (first alleles) (subs 0 start) (string/replace "-" "") count)]
               {:offset (+ w-gap-start
-                          (if (or (and (not (contains-indel? alleles start))
-                                       (not (is-match? alleles start)))
-                                  (pos? start))
-                            ref-pad
-                            0))
+                          (if (is-not-prepadded-indel? alleles start) ref-pad 0))
                :end (+ ref-pad w-gap-start size)
                :next-start end
                :size size
