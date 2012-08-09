@@ -47,10 +47,16 @@
   Handles reference no-variant padding bases on the 5' end of
   the sequence, writing only variants at the adjusted positions."
   [vc alleles]
-  (letfn [(mnp-ref-padding [ref-allele vc]
+  (letfn [(mnp-ref-padding [alleles vc]
             {:post [(>= % 0)]}
-            (max 0 (- (inc (- (:end vc) (:start vc)))
-                           (count (string/replace ref-allele "-" "")))))
+            (let [first-bases (map #(str (nth % 0)) alleles)
+                  gatk-pad (max 0 (- (inc (- (:end vc) (:start vc)))
+                                     (count (string/replace (first alleles) "-" ""))))]
+              (cond (or (apply = first-bases)
+                        (= #{"-"} (set first-bases))
+                        (pos? gatk-pad)) gatk-pad
+                        (some #(= % "-") first-bases) 1
+                        :else 0)))
           (contains-indel? [alleles i]
             (when (< i (count (first alleles)))
               (contains? (set (map #(str (nth % i)) alleles)) "-")))
@@ -75,17 +81,21 @@
                                    alleles)
                   cur-alleles (map-indexed (fn [i x] (Allele/create x (= 0 i)))
                                            (into (ordered-set) str-alleles))
-                  ;;size (max 0 (dec (.length (first cur-alleles))))
                   size (let [base (.length (first cur-alleles))]
                          (if (some empty? str-alleles) base (dec base)))
                   w-gap-start (-> (first alleles) (subs 0 start) (string/replace "-" "") count)]
-              {:offset (+ (if (pos? start) ref-pad 0) w-gap-start)
+              {:offset (+ w-gap-start
+                          (if (or (and (not (contains-indel? alleles start))
+                                       (not (is-match? alleles start)))
+                                  (pos? start))
+                            ref-pad
+                            0))
                :end (+ ref-pad w-gap-start size)
                :next-start end
                :size size
                :ref-allele (first cur-alleles)
                :alleles (rest cur-alleles)}))]
-    (let [ref-pad (mnp-ref-padding (first alleles) vc)]
+    (let [ref-pad (mnp-ref-padding alleles vc)]
       (remove nil?
               (loop [i 0 final []]
                 (cond
@@ -183,7 +193,8 @@
                                        (remove nil?)
                                        multiple-alignment))]
     (when-not (= (count alleles) (count (set (map :offset alleles))))
-      (throw (Exception. (str "Mutiple alleles at same position: " (vec alleles)))))
+      (throw (Exception. (format "Mutiple alleles at same position: %s %s %s"
+                                 (:chr vc) (:start vc) (vec alleles)))))
     (map (fn [[i x]] (new-split-vc (:vc vc) i x)) (map-indexed vector alleles))))
 
 (defn- maybe-strip-indel
