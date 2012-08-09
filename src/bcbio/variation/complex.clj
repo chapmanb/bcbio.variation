@@ -47,35 +47,38 @@
   Handles reference no-variant padding bases on the 5' end of
   the sequence, writing only variants at the adjusted positions."
   [vc alleles]
-  (letfn [(mnp-ref-padding [alleles vc]
-            {:post [(>= % 0)]}
-            (let [first-bases (map #(str (nth % 0)) alleles)
-                  gatk-pad (max 0 (- (inc (- (:end vc) (:start vc)))
-                                     (count (string/replace (first alleles) "-" ""))))]
-              (cond (or (apply = first-bases)
-                        (= #{"-"} (set first-bases))
-                        (pos? gatk-pad)) gatk-pad
-                        (some #(= % "-") first-bases) 1
-                        :else 0)))
-          (contains-indel? [alleles i]
+  (letfn [(contains-indel? [alleles i]
             (when (< i (count (first alleles)))
               (contains? (set (map #(str (nth % i)) alleles)) "-")))
           (starts-an-indel? [alleles i]
             (contains-indel? alleles (inc i)))
           (is-match? [alleles i]
             (= 1 (count (set (map #(str (nth % i)) alleles)))))
-          (is-not-prepadded-indel? [alleles i]
-            (or (and (not (contains-indel? alleles i))
-                     (not (is-match? alleles i)))
-                (pos? i)))
           (is-internal-indel? [alleles i]
             (and (pos? i)
                  (contains-indel? alleles i)
                  (is-match? alleles (dec i))))
           (is-fiveprime-indel? [alleles i]
-            (and (starts-an-indel? alleles i)
-                 (or (contains-indel? alleles i)
-                     (is-match? alleles i))))
+            (and (zero? i)
+                 (or
+                  (starts-an-indel? alleles i)
+                  (contains-indel? alleles i))))
+          (needs-padding? [alleles i]
+            (or (pos? i)
+                (and (is-fiveprime-indel? alleles i)
+                     (is-match? alleles i))
+                (and (not (is-fiveprime-indel? alleles i))
+                     (not (is-match? alleles i)))))
+          (mnp-ref-padding [alleles vc]
+            {:post [(>= % 0)]}
+            (let [first-no-indel (first (drop-while #(contains-indel? alleles %)
+                                                    (range 0 (count (first alleles)))))
+                  gatk-pad (max 0 (- (inc (- (:end vc) (:start vc)))
+                                     (count (string/replace (first alleles) "-" ""))))]
+              (cond (or (is-match? alleles 0) (pos? gatk-pad)) gatk-pad
+                    (and (contains-indel? alleles 0)
+                         (not (is-match? alleles first-no-indel))) 1
+                    :else 0)))
           (extend-indels [alleles i]
             {:start (if (or (is-internal-indel? alleles i)
                             (is-fiveprime-indel? alleles i))
@@ -95,8 +98,8 @@
                   size (let [base (.length (first cur-alleles))]
                          (if (some empty? str-alleles) base (dec base)))
                   w-gap-start (-> (first alleles) (subs 0 start) (string/replace "-" "") count)]
-              {:offset (+ w-gap-start
-                          (if (is-not-prepadded-indel? alleles start) ref-pad 0))
+              {:offset (+ w-gap-start 
+                          (if (needs-padding? alleles start) ref-pad 0))
                :end (+ ref-pad w-gap-start size)
                :next-start end
                :size size
