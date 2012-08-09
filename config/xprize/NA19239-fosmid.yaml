@@ -6,7 +6,7 @@ dir:
 experiments:
   - sample: NA19239
     ref: /usr/local/db/homosapiens/b37/human_g1k_v37.fasta
-    intervals: /usr/local/projects/xprize/secondary/NA19239/illumina_solid/boundaries/NA19239-fosmid-all.bed
+    intervals: /usr/local/projects/xprize/secondary/NA19239/illumina_solid/boundaries/NA19239-intersect-fosmid-final.bed
     calls:
       - name: allfos
         file:  
@@ -92,7 +92,7 @@ experiments:
         params:
           support: allfos
           #annotations: [QD, HaplotypeScore, MQRankSum, ReadPosRankSum, FS, MQ, DP]
-          classifiers: [QUAL, AD, DP, PL, ReadPosEndDist]
+          classifiers: [QUAL, DP, ReadPosEndDist]
           trusted:
             total: 0.65
             technology: 0.65

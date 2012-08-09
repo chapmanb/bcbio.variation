@@ -90,10 +90,9 @@
                           (sort-by-allele-count alleles))]
       (-> (VariantContextBuilder. (:vc (first vcs)))
           (.alleles final-alleles)
-          (.stop (+ (:start (first vcs)) (if (and (= 1 (count (first final-alleles)))
-                                                  (apply = (map count final-alleles)))
-                                           0
-                                           (count (first final-alleles)))))
+          (.stop (+ (:start (first vcs)) (if (= 0 (count (second final-alleles)))
+                                           (count (first final-alleles))
+                                           (max 0 (dec (count (first final-alleles)))))))
           .make))))
 
 (defn fix-minimal-combined
