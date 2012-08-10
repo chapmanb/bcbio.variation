@@ -135,9 +135,10 @@
 
 (defn- split-mnp
   "Split a MNP into individual alleles"
-  [vc]
-  {:pre [(= 1 (:num-samples vc))]}
-  (let [alleles (split-alleles vc (get-vc-alleles vc))]
+  [orig-vc]
+  {:pre [(= 1 (:num-samples orig-vc))]}
+  (let [vc (pad-vc-alleles orig-vc)
+        alleles (split-alleles vc (get-vc-alleles vc))]
     (map (fn [[i x]] (new-split-vc (:vc vc) i x)) (map-indexed vector alleles))))
 
 ;; ## Indels
