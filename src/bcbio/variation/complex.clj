@@ -69,14 +69,9 @@
                      (is-match? alleles i))
                 (and (not (is-fiveprime-indel? alleles i))
                      (not (is-match? alleles i)))))
-          (first-noindel-mismatch? [alleles i]
-            (let [first-no-indel (first (drop-while #(contains-indel? alleles %)
-                                                    (range i (count (first alleles)))))]
-              (not (is-match? alleles first-no-indel))))
           (has-nopad-five-indel? [alleles i]
             (and (is-fiveprime-indel? alleles i)
-                 (contains-indel? alleles i)
-                 (first-noindel-mismatch? alleles i)))
+                 (contains-indel? alleles i)))
           (extend-indels [alleles i]
             {:start (if (or (is-internal-indel? alleles i)
                             (is-fiveprime-indel? alleles i))
