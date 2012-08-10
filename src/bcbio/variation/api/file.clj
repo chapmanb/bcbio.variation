@@ -39,7 +39,7 @@
   ([ftype creds dirnames]
      (when-let [gs-client (get-gs-client creds)]
        (let [dirnames (if (or (nil? dirnames) (empty? dirnames))
-                        (cons "." (gs/list-dirs gs-client "."))
+                        ["."]
                         dirnames)]
          (apply concat
                 (map (partial get-gs-dirname-files ftype gs-client) dirnames))))))
