@@ -45,12 +45,13 @@
                  [domina "1.0.0-beta4" :exclusions [org.clojure/clojurescript]]
                  [jayq "0.1.0-alpha4"]
                  [com.keminglabs/chosen "0.1.6"]]
-  :profiles {:dev
-             {:dependencies
-              [[midje "1.4.0" :exclusions [org.clojure/clojure]]]}}
-  :plugins [[lein-cljsbuild "0.2.1"]
+  :plugins [[lein-cljsbuild "0.2.5"]
             [lein-marginalia "0.7.1"]
             [lein-midje "2.0.0-SNAPSHOT"]]
+  :profiles {:dev {:dependencies
+                   [[midje "1.4.0" :exclusions [org.clojure/clojure]]]}
+             :cljs {:dependencies [[org.reflections/reflections "0.9.5-RC2"
+                                    :exclusions [com.google.collections/google-collections]]]}}
   :repositories {"biojava" {:url "http://www.biojava.org/download/maven/"
                             :snapshots false}}
   :java-source-paths ["src/java"]

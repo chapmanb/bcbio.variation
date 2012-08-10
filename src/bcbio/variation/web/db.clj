@@ -28,6 +28,8 @@
 (defn prepare-web-db
   "Prepare input database for storing user and file information in SQLite."
   [db-file]
+  (when-not (fs/exists? (fs/parent db-file))
+    (fs/mkdirs (fs/parent db-file)))
   (when-not (fs/exists? db-file)
     (sql/with-connection (get-sqlite-db db-file :create true)
       (sql/transaction
