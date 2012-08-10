@@ -221,7 +221,7 @@
   [orig-vc ref]
   {:pre [(= 1 (:num-samples orig-vc))]}
   (let [vc (pad-vc-alleles orig-vc)
-        prev-pad (or (extract-sequence ref (:chr vc) (:start vc) (:end vc)) "N")
+        prev-pad (or (extract-sequence ref (:chr vc) (dec (:start vc)) (dec (:start vc))) "N")
         alleles (split-alleles vc (->> (conj (get-vc-alleles vc)
                                              (extract-sequence ref (:chr vc) (:start vc) (:end vc)))
                                        (remove empty?)
