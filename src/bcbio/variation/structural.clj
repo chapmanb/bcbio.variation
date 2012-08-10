@@ -322,7 +322,8 @@
   [c1 c2 exp config]
   (let [out-dir (get-in config [:dir :prep] (get-in config [:dir :out]))
         intervals (get c1 :intervals (get c2 :intervals (:intervals exp)))
-        params (get exp :params {:min-indel min-indel :default-cis [[100 10] [1000 200] [1e6 500]]})
+        params (get exp :params {:min-indel min-indel
+                                 :default-cis [[200 10] [500 100] [1000 200] [1e6 500]]})
         out-files (compare-sv (:sample exp) c1 c2 (:ref exp) :out-dir out-dir
                               :interval-file intervals :params params)]
     [(assoc c1 :file (:nosv1 out-files))
