@@ -46,7 +46,7 @@
   "Detect single call SNP variants within a MNP genotype.
   Handles reference no-variant padding bases on the 5' end of
   the sequence, writing only variants at the adjusted positions."
-  [vc alleles]
+  [vc alleles & {:keys [prev-pad]}]
   (letfn [(contains-indel? [alleles i]
             (when (< i (count (first alleles)))
               (contains? (set (map #(str (nth % i)) alleles)) "-")))
@@ -73,7 +73,7 @@
             (let [first-no-indel (first (drop-while #(contains-indel? alleles %)
                                                     (range i (count (first alleles)))))]
               (not (is-match? alleles first-no-indel))))
-          (has-mismatch-five-indel? [alleles i]
+          (has-nopad-five-indel? [alleles i]
             (and (is-fiveprime-indel? alleles i)
                  (contains-indel? alleles i)
                  (first-noindel-mismatch? alleles i)))
@@ -88,7 +88,8 @@
                            i))})
           (extract-variants [alleles pos]
             (let [{:keys [start end]} (extend-indels alleles pos)
-                  str-alleles (map #(-> (str (subs % start end))
+                  str-alleles (map #(-> (str (if (has-nopad-five-indel? alleles start) prev-pad "")
+                                             (subs % start end))
                                         (string/replace "-" ""))
                                    alleles)
                   cur-alleles (map-indexed (fn [i x] (Allele/create x (= 0 i)))
@@ -96,7 +97,7 @@
                   size (let [base (.length (first cur-alleles))]
                          (if (some empty? str-alleles) base (dec base)))
                   w-gap-start (-> (first alleles) (subs 0 start) (string/replace "-" "") count)]
-              {:offset (+ w-gap-start (if (has-mismatch-five-indel? alleles start) -1 0))
+              {:offset (+ w-gap-start (if (has-nopad-five-indel? alleles start) -1 0))
                :end (+ w-gap-start size)
                :next-start end
                :size size
@@ -197,15 +198,19 @@
   (letfn [(get-vc-info [vc]
             (let [alleles (map #(.getBaseString %) (.getAlleles vc))]
               {:start (.getStart vc)
-               :pad 0 ;(inc (- (- (.getEnd vc) (.getStart vc)) (count (first alleles))))
                :alleles alleles}))
-          (check-split-vc [orig new]
-            (let [int-pos (max 0 (- (+ (:start new) (:pad new))
-                                    (+ (:start orig) (:pad orig))))
+          (get-check-ref [orig new]
+            (let [int-pos (- (:start new) (:start orig))
                   check-ref (first (:alleles new))]
-              (when-not (or (>= int-pos (count (first (:alleles orig))))
-                            (= (subs (first (:alleles orig)) int-pos (+ int-pos (count check-ref)))
-                               check-ref))
+              (if (neg? int-pos)
+                [0 (subs check-ref (Math/abs int-pos))]
+                [int-pos check-ref])))
+          (check-split-vc [orig new]
+            (let [[int-pos check-ref] (get-check-ref orig new)]
+              (when (or (>= int-pos (count (first (:alleles orig))))
+                        (neg? int-pos)
+                        (not= (subs (first (:alleles orig)) int-pos (+ int-pos (count check-ref)))
+                           check-ref))
                 (throw (Exception. (format "Matching problem with split alleles: %s %s %s %s"
                                            (:chr vc) (:start vc) orig new))))))]
     (doall (map (partial check-split-vc (get-vc-info (:vc vc)))
@@ -216,11 +221,13 @@
   [orig-vc ref]
   {:pre [(= 1 (:num-samples orig-vc))]}
   (let [vc (pad-vc-alleles orig-vc)
+        prev-pad (or (extract-sequence ref (:chr vc) (:start vc) (:end vc)) "N")
         alleles (split-alleles vc (->> (conj (get-vc-alleles vc)
                                              (extract-sequence ref (:chr vc) (:start vc) (:end vc)))
                                        (remove empty?)
                                        (remove nil?)
-                                       multiple-alignment))]
+                                       multiple-alignment)
+                               :prev-pad prev-pad)]
     (when-not (= (count alleles) (count (set (map :offset alleles))))
       (throw (Exception. (format "Mutiple alleles at same position: %s %s %s"
                                  (:chr vc) (:start vc) (vec alleles)))))
