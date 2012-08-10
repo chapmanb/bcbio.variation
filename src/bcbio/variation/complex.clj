@@ -69,16 +69,14 @@
                      (is-match? alleles i))
                 (and (not (is-fiveprime-indel? alleles i))
                      (not (is-match? alleles i)))))
-          (mnp-ref-padding [alleles vc]
-            {:post [(>= % 0)]}
+          (first-noindel-mismatch? [alleles i]
             (let [first-no-indel (first (drop-while #(contains-indel? alleles %)
-                                                    (range 0 (count (first alleles)))))
-                  gatk-pad (max 0 (- (inc (- (:end vc) (:start vc)))
-                                     (count (string/replace (first alleles) "-" ""))))]
-              (cond (or (is-match? alleles 0) (pos? gatk-pad)) gatk-pad
-                    (and (contains-indel? alleles 0)
-                         (not (is-match? alleles first-no-indel))) 0
-                    :else 0)))
+                                                    (range i (count (first alleles)))))]
+              (not (is-match? alleles first-no-indel))))
+          (has-mismatch-five-indel? [alleles i]
+            (and (is-fiveprime-indel? alleles i)
+                 (contains-indel? alleles i)
+                 (first-noindel-mismatch? alleles i)))
           (extend-indels [alleles i]
             {:start (if (or (is-internal-indel? alleles i)
                             (is-fiveprime-indel? alleles i))
@@ -88,7 +86,7 @@
                                                   (starts-an-indel? alleles %))
                                              (range i (count (first alleles)))))
                            i))})
-          (extract-variants [alleles pos ref-pad]
+          (extract-variants [alleles pos]
             (let [{:keys [start end]} (extend-indels alleles pos)
                   str-alleles (map #(-> (str (subs % start end))
                                         (string/replace "-" ""))
@@ -98,25 +96,20 @@
                   size (let [base (.length (first cur-alleles))]
                          (if (some empty? str-alleles) base (dec base)))
                   w-gap-start (-> (first alleles) (subs 0 start) (string/replace "-" "") count)]
-              {:offset (+ w-gap-start 
-                          (cond (needs-padding? alleles start) ref-pad
-                                (and (is-fiveprime-indel? alleles start)
-                                     (contains-indel? alleles start)) -1
-                                :else 0))
-               :end (+ ref-pad w-gap-start size)
+              {:offset (+ w-gap-start (if (has-mismatch-five-indel? alleles start) -1 0))
+               :end (+ w-gap-start size)
                :next-start end
                :size size
                :ref-allele (first cur-alleles)
                :alleles (rest cur-alleles)}))]
-    (let [ref-pad (mnp-ref-padding alleles vc)]
-      (remove nil?
-              (loop [i 0 final []]
-                (cond
-                 (>= i (-> alleles first count)) final
-                 (has-variant-base? alleles i)
-                 (let [next-var (extract-variants alleles i ref-pad)]
-                   (recur (:next-start next-var) (conj final next-var)))
-                 :else (recur (inc i) final)))))))
+    (remove nil?
+            (loop [i 0 final []]
+              (cond
+               (>= i (-> alleles first count)) final
+               (has-variant-base? alleles i)
+               (let [next-var (extract-variants alleles i)]
+                 (recur (:next-start next-var) (conj final next-var)))
+               :else (recur (inc i) final))))))
 
 (defn genotype-w-alleles
   "Retrieve a new genotype with the given alleles.
@@ -204,7 +197,7 @@
   (letfn [(get-vc-info [vc]
             (let [alleles (map #(.getBaseString %) (.getAlleles vc))]
               {:start (.getStart vc)
-               :pad (inc (- (- (.getEnd vc) (.getStart vc)) (count (first alleles))))
+               :pad 0 ;(inc (- (- (.getEnd vc) (.getStart vc)) (count (first alleles))))
                :alleles alleles}))
           (check-split-vc [orig new]
             (let [int-pos (max 0 (- (+ (:start new) (:pad new))
