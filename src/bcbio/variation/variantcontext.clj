@@ -4,7 +4,8 @@
   (:import [org.broad.tribble.index IndexFactory]
            [org.broad.tribble AbstractFeatureReader]
            [org.broad.tribble.readers AsciiLineReader]
-           [org.broadinstitute.sting.utils.codecs.vcf VCFCodec]
+           [org.broadinstitute.sting.utils.codecs.vcf VCFCodec
+            VCFAlleleClipper]
            [org.broadinstitute.sting.utils.variantcontext.writer VariantContextWriterFactory
             Options]
            [org.broadinstitute.sting.gatk.refdata.tracks RMDTrackBuilder]
@@ -174,6 +175,13 @@
     (write-vcf-w-template vcf {:out (itx/add-file-part vcf out-part)}
                           (map :vc (filter passes? (parse-vcf vcf-iter)))
                           ref)))
+
+;; ## VCF helper functions
+
+(defn pad-vc-alleles
+  "Pad indel variant context alleles with reference bases"
+  [orig-vc]
+  (from-vc (VCFAlleleClipper/createVariantContextWithPaddedAlleles (:vc orig-vc))))
 
 (defn -main [vcf ref approach]
   (with-open [vcf-iter (get-vcf-iterator vcf ref)]

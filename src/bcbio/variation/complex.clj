@@ -12,7 +12,7 @@
         [ordered.set :only [ordered-set]]
         [bcbio.align.ref :only [extract-sequence]]
         [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template
-                                               get-vcf-iterator]])
+                                               get-vcf-iterator pad-vc-alleles]])
   (:require [clojure.string :as string]
             [bcbio.run.broad :as broad]
             [bcbio.run.itx :as itx]))
@@ -77,7 +77,7 @@
                                      (count (string/replace (first alleles) "-" ""))))]
               (cond (or (is-match? alleles 0) (pos? gatk-pad)) gatk-pad
                     (and (contains-indel? alleles 0)
-                         (not (is-match? alleles first-no-indel))) 1
+                         (not (is-match? alleles first-no-indel))) 0
                     :else 0)))
           (extend-indels [alleles i]
             {:start (if (or (is-internal-indel? alleles i)
@@ -99,7 +99,10 @@
                          (if (some empty? str-alleles) base (dec base)))
                   w-gap-start (-> (first alleles) (subs 0 start) (string/replace "-" "") count)]
               {:offset (+ w-gap-start 
-                          (if (needs-padding? alleles start) ref-pad 0))
+                          (cond (needs-padding? alleles start) ref-pad
+                                (and (is-fiveprime-indel? alleles start)
+                                     (contains-indel? alleles start)) -1
+                                :else 0))
                :end (+ ref-pad w-gap-start size)
                :next-start end
                :size size
@@ -193,11 +196,34 @@
       (cons (if (has-internal-gaps? ref-allele) (make-3-gap-only ref-allele) ref-allele)
             (rest alleles)))))
 
+(defn- sanity-check-split-vcs
+  "Confirm that new variants match correctly back to original.
+   Catch any potential errors in splitting by ensuring reference coordinates
+   and sequences match original."
+  [vc new-vcs]
+  (letfn [(get-vc-info [vc]
+            (let [alleles (map #(.getBaseString %) (.getAlleles vc))]
+              {:start (.getStart vc)
+               :pad (inc (- (- (.getEnd vc) (.getStart vc)) (count (first alleles))))
+               :alleles alleles}))
+          (check-split-vc [orig new]
+            (let [int-pos (max 0 (- (+ (:start new) (:pad new))
+                                    (+ (:start orig) (:pad orig))))
+                  check-ref (first (:alleles new))]
+              (when-not (or (>= int-pos (count (first (:alleles orig))))
+                            (= (subs (first (:alleles orig)) int-pos (+ int-pos (count check-ref)))
+                               check-ref))
+                (throw (Exception. (format "Matching problem with split alleles: %s %s %s %s"
+                                           (:chr vc) (:start vc) orig new))))))]
+    (doall (map (partial check-split-vc (get-vc-info (:vc vc)))
+                (map get-vc-info new-vcs)))))
+
 (defn- split-complex-indel
   "Split complex indels into individual variant components."
-  [vc ref]
-  {:pre [(= 1 (:num-samples vc))]}
-  (let [alleles (split-alleles vc (->> (conj (get-vc-alleles vc)
+  [orig-vc ref]
+  {:pre [(= 1 (:num-samples orig-vc))]}
+  (let [vc (pad-vc-alleles orig-vc)
+        alleles (split-alleles vc (->> (conj (get-vc-alleles vc)
                                              (extract-sequence ref (:chr vc) (:start vc) (:end vc)))
                                        (remove empty?)
                                        (remove nil?)
@@ -205,7 +231,10 @@
     (when-not (= (count alleles) (count (set (map :offset alleles))))
       (throw (Exception. (format "Mutiple alleles at same position: %s %s %s"
                                  (:chr vc) (:start vc) (vec alleles)))))
-    (map (fn [[i x]] (new-split-vc (:vc vc) i x)) (map-indexed vector alleles))))
+    (let [split-vcs (map (fn [[i x]] (new-split-vc (:vc vc) i x))
+                         (map-indexed vector alleles))]
+      (sanity-check-split-vcs vc split-vcs)
+      split-vcs)))
 
 (defn- maybe-strip-indel
   "Remove extra variant bases, if necessary, from 5' end of indels.
