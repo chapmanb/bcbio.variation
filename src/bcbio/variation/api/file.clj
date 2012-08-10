@@ -2,7 +2,8 @@
   "Provide top level API for retrieving available files for a user.
   Encapsulates distributed storage in GenomeSpace as well as locally
   produced files."
-  (:use [clojure.java.io])
+  (:use [clojure.java.io]
+        [bcbio.variation.api.shared :only [web-config]])
   (:require [clojure.string :as string]
             [clj-genomespace.core :as gs]
             [fs.core :as fs]))
@@ -46,14 +47,15 @@
 
 (defmulti retrieve-file
   "Retrieve files by name, transparently handling remote files."
-  (fn [fname _ _]
+  (fn [fname _]
     (let [parts (string/split fname #":" 2)]
       (when (= 2 (count parts))
         (keyword (first parts))))))
 
 (defmethod retrieve-file :gs
-  [fname creds cache-dir]
-  (let [remote-name (second (string/split fname #":" 2))
+  [fname creds]
+  (let [cache-dir (get-in @web-config [:dir :cache])
+        remote-name (second (string/split fname #":" 2))
         local-file (str (file cache-dir (if (.startsWith remote-name "/")
                                           (subs remote-name 1)
                                           remote-name)))
@@ -66,7 +68,7 @@
                      (fs/base-name remote-name) local-dir)))
     local-file))
 
-(defmethod retrieve-file :default [fname _ _]
+(defmethod retrieve-file :default [fname _]
   fname)
 
 (defn put-files

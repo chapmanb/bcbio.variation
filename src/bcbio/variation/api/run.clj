@@ -17,12 +17,11 @@
               and [min max] as values. Long term we could dispatch on
               different value types for categorical data."}
   [atype params creds]
-  (let [genome (-> @web-config :ref first)
-        in-file (file-api/retrieve-file (:filename params) creds
-                                        (get-in @web-config [:dir :cache]))
+  (let [ref-file (-> @web-config :ref first :genome)
+        in-file (file-api/retrieve-file (:filename params) creds)
         filter-file (variant-filter in-file
                                     (jexl-filters-from-map (:metrics params))
-                                    (:genome genome))
+                                    ref-file)
         local-out-dir (fs/file (fs/parent in-file) (name atype))
         remote-dir (file-api/put-files [filter-file] (:filename params) (name atype)
                                        creds)]

@@ -2,6 +2,7 @@
   "Provide high level API for accessing variant associated metrics."
   (:import [org.jfree.data.statistics HistogramDataset HistogramType])
   (:use [bcbio.variation.api.file :only [retrieve-file]]
+        [bcbio.variation.api.shared :only [web-config]]
         [bcbio.variation.filter.classify :only [get-vc-attrs]]
         [bcbio.variation.variantcontext :only [get-vcf-iterator parse-vcf]])
   (:require [bcbio.variation.index.metrics :as im]))
@@ -43,14 +44,15 @@
 ;; ## Available API functions
 
 (defn available-metrics
-  [file-id & {:keys [creds cache-dir]}]
-  (let [vcf-file (retrieve-file file-id creds cache-dir)]
+  [file-id & {:keys [creds]}]
+  (let [vcf-file (retrieve-file file-id creds)]
     (im/available-metrics vcf-file)))
 
 (defn plot-ready-metrics
   "Provide metrics for a VCF file ready for plotting and visualization."
-  [in-vcf-file ref-file & {:keys [metrics creds cache-dir]}]
-  (let [vcf-file (retrieve-file in-vcf-file creds cache-dir)
+  [in-vcf-file & {:keys [metrics creds]}]
+  (let [vcf-file (retrieve-file in-vcf-file creds)
+        ref-file (-> @web-config :ref first :genome)
         plot-metrics (if (nil? metrics) (im/available-metrics vcf-file) metrics)
         raw-metrics (clean-raw-metrics
                      (im/get-raw-metrics vcf-file ref-file :metrics (map :id plot-metrics))
@@ -62,7 +64,8 @@
 
 (defn get-raw-metrics
   "Retrieve raw metrics values from input VCF."
-  [variant-id ref-file & {:keys [metrics creds cache-dir]}]
-  (let [vcf-file (retrieve-file variant-id creds cache-dir)]
+  [variant-id & {:keys [metrics creds]}]
+  (let [vcf-file (retrieve-file variant-id creds)
+        ref-file (-> @web-config :ref first :genome)]
     (im/get-raw-metrics vcf-file ref-file :metrics (when metrics
                                                      (map :id metrics)))))

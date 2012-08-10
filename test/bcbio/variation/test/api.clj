@@ -1,7 +1,8 @@
 (ns bcbio.variation.test.api
   "Tests for top level API for variant metrics"
   (:use [midje.sweet]
-        [bcbio.variation.api.metrics])
+        [bcbio.variation.api.metrics]
+        [bcbio.variation.api.shared :only [set-config-from-file!]])
   (:require [fs.core :as fs]
             [bcbio.run.itx :as itx]
             [bcbio.variation.index.metrics :as im]))
@@ -9,6 +10,7 @@
 (background
  (around :facts
          (let [data-dir (str (fs/file "." "test" "data"))
+               web-yaml (str (fs/file "." "config" "web-processing.yaml"))
                ref (str (fs/file data-dir "GRCh37.fa"))
                vcf1 (str (fs/file data-dir "gatk-calls.vcf"))
                out-index (str (itx/file-root vcf1) "-metrics.db")]
@@ -18,9 +20,10 @@
            )))
 
 (facts "Retrieve available metrics from a variant file"
-  (map :id (available-metrics vcf1 {} nil)) => (has-prefix ["QUAL" "DP"])
-  (-> (get-raw-metrics vcf1 ref) first keys) => (contains ["QUAL" :id])
-  (let [out (plot-ready-metrics vcf1 ref)]
+  (set-config-from-file! web-yaml)
+  (map :id (available-metrics vcf1)) => (has-prefix ["QUAL" "DP"])
+  (-> (get-raw-metrics vcf1) first keys) => (contains ["QUAL" :id])
+  (let [out (plot-ready-metrics vcf1)]
     (:filename out) => vcf1
     (-> out :metrics first :id) => "QUAL"
     (-> out :metrics first :x-scale :domain) => (just [0.0 10000.0])
