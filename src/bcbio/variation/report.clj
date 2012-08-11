@@ -53,7 +53,8 @@
       (with-open [call-source (get-callable-checker align-file (-> compared :exp :ref)
                                                     :out-dir out-dir)]
         (count-variants in-vcf ref-file
-                        #(is-callable? call-source (:chr %) (:start %) (:end %)))))))
+                        #(and (passes-filter? %)
+                              (not (is-callable? call-source (:chr %) (:start %) (:end %)))))))))
 
 (defn get-summary-level
   "Retrieve expected summary level from configuration"
