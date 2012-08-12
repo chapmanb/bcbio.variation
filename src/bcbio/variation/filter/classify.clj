@@ -3,8 +3,7 @@
   (:import [org.broadinstitute.sting.utils.variantcontext VariantContextBuilder]
            [org.broadinstitute.sting.utils.codecs.vcf VCFHeader VCFInfoHeaderLine
             VCFHeaderLineType VCFFilterHeaderLine])
-  (:use [clojure.core.match :only [match]]
-        [ordered.set :only [ordered-set]]
+  (:use [ordered.set :only [ordered-set]]
         [clj-ml.utils :only [serialize-to-file deserialize-from-file]]
         [clj-ml.data :only [make-dataset dataset-set-class make-instance]]
         [clj-ml.classifiers :only [make-classifier classifier-train
@@ -67,11 +66,11 @@
   (let [g (-> vc :genotypes first)
         pls (dissoc (get-likelihoods (:genotype g) :no-convert true)
                     (:type g))]
-    (match [(count (:alleles g)) (:type g) (count pls)]
-       [_ _ 0] 0.0
-       [2 _ _] (apply max (vals pls))
-       [1 "HOM_VAR" _] (get pls "HOM_REF")
-       [1 "HOM_REF" _] (get pls "HOM_VAR"))))
+    (cond
+     (zero? (count pls)) 0.0
+     (> (count (:alleles g)) 1) (apply max (vals pls))
+     (= (:type g) "HOM_VAR") (get pls "HOM_REF")
+     (= (:type g) "HOM_REF") (get pls "HOM_VAR"))))
 
 (defmethod get-vc-attr "QUAL"
   [vc attr]
