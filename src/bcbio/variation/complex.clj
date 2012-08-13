@@ -31,30 +31,40 @@
 
 (defn is-multi-indel?
   "Identify complex indels that can be split into multiple calls."
-  [vc]
+  [orig-vc]
   (letfn [(monomorphic-alleles? [vc]
             (= 1 (->> (get-vc-alleles vc)
                       (map set)
                       (apply union)
-                      count)))]
-    (and (= "INDEL" (:type vc))
-         (and (> (.length (:ref-allele vc)) 1)
-              (> (apply min (map #(.length %) (:alt-alleles vc))) 1)
-              (not (monomorphic-alleles? vc))))))
+                      count)))
+          (has-multiple-nonref-alleles? [vc]
+            (and (> (.length (:ref-allele vc)) 1)
+                 (> (apply min (map #(.length %) (:alt-alleles vc))) 1)
+                 (not (monomorphic-alleles? vc))))
+          (has-ref-padding-mismatch? [vc]
+            (let [alleles (get-vc-alleles vc)]
+              (not= (nth (first alleles) 0) (nth (second alleles) 0))))]
+    (let [vc (pad-vc-alleles orig-vc)]
+      (and (= "INDEL" (:type vc))
+           (or (has-multiple-nonref-alleles? vc)
+               (has-ref-padding-mismatch? vc))))))
+
+(defn- contains-indel? [alleles i]
+  (when (< i (count (first alleles)))
+    (contains? (set (map #(str (nth % i)) alleles)) "-")))
+
+(defn- starts-an-indel? [alleles i]
+  (contains-indel? alleles (inc i)))
+
+(defn- is-match? [alleles i]
+  (= 1 (count (set (map #(str (nth % i)) alleles)))))
 
 (defn- split-alleles
   "Detect single call SNP variants within a MNP genotype.
   Handles reference no-variant padding bases on the 5' end of
   the sequence, writing only variants at the adjusted positions."
   [vc alleles & {:keys [prev-pad]}]
-  (letfn [(contains-indel? [alleles i]
-            (when (< i (count (first alleles)))
-              (contains? (set (map #(str (nth % i)) alleles)) "-")))
-          (starts-an-indel? [alleles i]
-            (contains-indel? alleles (inc i)))
-          (is-match? [alleles i]
-            (= 1 (count (set (map #(str (nth % i)) alleles)))))
-          (is-internal-indel? [alleles i]
+  (letfn [(is-internal-indel? [alleles i]
             (and (pos? i)
                  (contains-indel? alleles i)
                  (is-match? alleles (dec i))))
@@ -108,7 +118,7 @@
                :else (recur (inc i) final))))))
 
 (defn genotype-w-alleles
-  "Retrieve a new genotype with the given alleles.
+ "Retrieve a new genotype with the given alleles.
    Creates a single genotype from the VariantContext, copying the existing
    genotype and substituting in the provided alleles and phasing information."
   [vc alleles is-phased]
@@ -171,20 +181,60 @@
           orig-align (sort-by (original-seq-position seqs) (unique-aligns base-align))]
       (finalize-alignment orig-align))))
 
-(defn- fix-ref-alignment-gaps
-  "Ensure reference alignment gaps have consistent gap schemes."
+(defn- fix-gap-start-mismatch
+  "Left align variants that start with a gap mismatch."
   [alleles]
-  (letfn [(has-5-gaps? [x] (.startsWith x "-"))
-          (has-3-gaps? [x] (.endsWith x "-"))
-          (has-internal-gaps? [x] (and (> (count x) 2)
-                                       (.contains (subs x 1 (dec (count x))) "-")))
-          (make-3-gap-only [x]
-            (let [nogap-x (string/replace x "-" "")]
-              (string/join "" (cons nogap-x
-                                    (repeat (- (count x) (count nogap-x)) "-")))))]
-    (let [ref-allele (first alleles)]
-      (cons (if (has-internal-gaps? ref-allele) (make-3-gap-only ref-allele) ref-allele)
-            (rest alleles)))))
+  (letfn [(make-5-gap-wref [x]
+            (let [anchor (subs x 0 1)
+                  nogap-x (string/replace (subs x 1) "-" "")]
+              (string/join "" (conj (vec (cons anchor
+                                               (repeat (dec (- (count x) (count nogap-x))) "-")))
+                                    nogap-x))))]
+    (if (.contains (second alleles) "-")
+      [(first alleles) (make-5-gap-wref (second alleles))]
+      alleles)))
+
+(defn- left-align-complex
+  "Ensure reference alignment gaps next to variants are consistently left aligned.
+   Adjacent SNP and indels can have the SNP placed anywhere within the indel. This left
+   aligns them to maintain anchoring via the 5' reference.
+    ATCT  => ATCT
+    AC--     A--C"
+  [alleles]
+  {:pre [= 2 (count alleles)]
+   :post [(= (count (first alleles))
+             (count (first %)))]}
+  (letfn [(gap-start-mismatch? [alleles i]
+            (or (and (starts-an-indel? alleles i)
+                     (not (is-match? alleles i))
+                     (not (contains-indel? alleles i)))
+                false))
+          (gap-end? [alleles i]
+            (and (pos? i)
+                 (not (contains-indel? alleles i))
+                 (contains-indel? alleles (dec i))))
+          (gap-allele-type [alleles i]
+            (cond
+             (gap-start-mismatch? alleles i) :gs-mismatch
+             (contains-indel? alleles i) :gap
+             (gap-end? alleles i) :gap-end
+             (is-match? alleles i) :match
+             :else :mismatch))
+          (split-at-match-gaps [[ann _]]
+            (if (= :gap-end ann) ann :match))
+          (get-region-allele [xs allele]
+            (apply str (map #(nth allele (second %)) xs)))
+          (get-region-alleles [alleles xs]
+            (let [orig-alleles (map (partial get-region-allele xs) alleles)]
+              (if (contains? (set (map first xs)) :gs-mismatch) 
+                (fix-gap-start-mismatch orig-alleles)
+                orig-alleles)))
+          (concat-results [allele-parts]
+            (vec (map #(apply str (map % allele-parts)) [first second])))]
+    (concat-results
+     (->> (map (fn [x] [(gap-allele-type alleles x) x]) (range (count (first alleles))))
+          (partition-by split-at-match-gaps)
+          (map (partial get-region-alleles alleles))))))
 
 (defn- sanity-check-split-vcs
   "Confirm that new variants match correctly back to original.
@@ -222,7 +272,8 @@
                                              (extract-sequence ref (:chr vc) (:start vc) (:end vc)))
                                        (remove empty?)
                                        (remove nil?)
-                                       multiple-alignment)
+                                       multiple-alignment
+                                       left-align-complex)
                                :prev-pad prev-pad)]
     (when-not (= (count alleles) (count (set (map :offset alleles))))
       (throw (Exception. (format "Mutiple alleles at same position: %s %s %s"
