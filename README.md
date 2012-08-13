@@ -180,15 +180,30 @@ The options for filtering are:
 [u2]: http://en.wikipedia.org/wiki/YAML
 [u3]: https://github.com/chapmanb/bcbio.variation/blob/master/config/method-comparison.yaml
 [u4]: https://github.com/chapmanb/bcbio.variation/blob/master/config/reference-grading.yaml
-[u5]:
-http://www.broadinstitute.org/gsa/wiki/index.php/Variant_quality_score_recalibration
+[u5]: http://www.broadinstitute.org/gsa/wiki/index.php/Variant_quality_score_recalibration
+
+## Utilities
+
+This library also contains useful command line utilities to help with variant
+preparation and analysis:
+
+- Create a BAM file compatible with GATK. This converts coordinates between hg19
+  and GRCh37 for human samples, reorders chromosomes relative to the input file
+  and adds run group information with a defined sample name:
+
+    lein variant-reorder your_file.bam /path/to/GRCh37.fa SampleName
+    
+- Provide a summary CSV file of call information for a VCF file, including
+  mappings back to an original set of pairwise analyses:
+
+    lein variant-utils callsummary variants.vcf original-combined-config.yaml
 
 ## Contributors
 
-Brad Chapman
-Chris Fields
-Kevin Lynagh
-Justin Zook
+- Brad Chapman
+- Chris Fields
+- Kevin Lynagh
+- Justin Zook
 
 ## License
 
