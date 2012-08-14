@@ -103,7 +103,7 @@
               (.getGenotypes vc)))
           (normalize-allele-calls [g]
             {:pre [(or (nil? (:prep-allele-count config))
-                       (contains? #{1 (:prep-allele-count config)} (count (.getAlleles g))))]}
+                       (contains? (set [1 (:prep-allele-count config)]) (count (.getAlleles g))))]}
             (if (or (nil? (:prep-allele-count config))
                     (= (count (.getAlleles g)) (:prep-allele-count config)))
               g
@@ -240,7 +240,7 @@
 
 (defn- update-header
   "Update header information, removing contig and adding sample names."
-  [sample & config]
+  [sample config]
   (letfn [(clean-metadata [header]
             (apply ordered-set (remove #(= "contig" (.getKey %)) (.getMetaDataInInputOrder header))))]
     (fn [_ header]
@@ -259,7 +259,7 @@
       (with-open [vcf-iter (get-vcf-iterator in-file ref)]
         (write-vcf-w-template in-file {:out out-file}
                               (map #(:vc (fix-vc sample {} %)) (parse-vcf vcf-iter))
-                              ref :header-update-fn (update-header sample))))
+                              ref :header-update-fn (update-header sample {}))))
     out-file))
 
 (defn- write-prepped-vcf
