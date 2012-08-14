@@ -246,7 +246,7 @@
     (fn [_ header]
       (case (count (.getGenotypeSamples header))
         1 (VCFHeader. (clean-metadata header) (ordered-set sample))
-        0 (if (:sv-genotype config)
+        0 (if (:prep-sv-genotype config)
             (VCFHeader. (clean-metadata header) (ordered-set sample))
             (VCFHeader. (clean-metadata header) #{}))
         header))))
