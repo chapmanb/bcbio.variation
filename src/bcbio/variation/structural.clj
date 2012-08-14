@@ -134,6 +134,12 @@
 
 (defn- length-from-svlen [x] (value-from-attr x "SVLEN"))
 
+(defn- length-from-info
+  "Length of variation from INFO annotations, handling SVLEN and END."
+  [x]
+  (max (length-from-svlen x)
+       (- (value-from-attr x "END") (:start x))))
+
 (defn- insertion-length
   "Length of insertion variation, handling ALT allele, INSEQ
   and well-known named insertions."
@@ -146,6 +152,7 @@
                                                      (subs 1 (dec (count alt-allele)))
                                                      (string/split #":")
                                                      last)
+             (= alt-allele "<INS>") nil
              :else (throw (Exception. (str "Unknown insert allele" alt-allele)))))
           (get-allele-insert [x]
             (let [alt-allele (-> x :alt-alleles first .getDisplayString)]
@@ -154,7 +161,9 @@
                 (dec (count alt-allele)))))]
     (if-let [seq (get-insseq x)]
       (count seq)
-      (get-allele-insert x))))
+      (if-let [named-insert (get-allele-insert x)]
+        named-insert
+        (length-from-info x)))))
 
 (defn- deletion-length
   "Length of deletion variations, handling SVLEN and allele specifications."
@@ -165,21 +174,15 @@
       (- (-> vc :ref-allele .length)
          (apply min (map #(.length %) (:alt-alleles vc)))))))
 
-(defn- duplication-length
-  "Length of duplication variation, handling SVLEN and END."
-  [x]
-  (max (length-from-svlen x)
-       (- (value-from-attr x "END") (:start x))))
-
 (defn- get-sv-length
   "Retrieve length of a structural variant for different variation types."
   [vc]
   (case (:sv-type vc)
          :DEL (deletion-length vc)
          :INS (insertion-length vc)
-         :INV (length-from-svlen vc)
-         :DUP (duplication-length vc)
-         :CNV (duplication-length vc)
+         :INV (length-from-info vc)
+         :DUP (length-from-info vc)
+         :CNV (length-from-info vc)
          :BND 0
          (throw (Exception. (str "Structural variant type not handled: "
                                  (:sv-type vc))))))
