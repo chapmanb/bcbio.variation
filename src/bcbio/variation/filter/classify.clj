@@ -50,7 +50,7 @@
     (let [g (-> vc :genotypes first)]
       (cond
        (get-in g [:attributes "AO"]) (from-ao g)
-       (get-in g [:attributes attr]) (from-ad g)
+       (seq (get-in g [:attributes attr])) (from-ad g)
        :else nil
        ;; (println (format "AD not found in attributes %s %s %s"
        ;;                  (:attributes g) (:chr vc) (:start vc)))
