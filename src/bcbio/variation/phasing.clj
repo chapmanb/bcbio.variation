@@ -15,6 +15,7 @@
            [org.broadinstitute.sting.utils GenomeLocParser GenomeLoc])
   (:use [bcbio.variation.callable :only [get-bed-source features-in-region
                                          limit-bed-intervals get-bed-iterator]]
+        [bcbio.variation.filter.intervals :only [intersection-of-bed-files]]
         [bcbio.variation.structural :only [prep-itree get-itree-overlap
                                            remove-itree-vc get-itree-all]]
         [bcbio.variation.variantcontext :only [parse-vcf get-vcf-retriever get-vcf-iterator
@@ -295,16 +296,8 @@
              :else (- (.getEnd x) (dec (.getStart x)))))
           (count-bases [xs]
             (apply + (map feature-size xs)))
-          (genome-loc-list [x]
-            (let [parser (GenomeLocParser. (get-seq-dict ref-file))]
-              (with-open [bed-iter (get-bed-iterator x ref-file)]
-                (->> bed-iter
-                     (map #(.createGenomeLoc parser %))
-                     doall))))
           (merge-intervals [x y]
-            (IntervalUtils/mergeListsBySetOperator (genome-loc-list x)
-                                                   (genome-loc-list y)
-                                                   IntervalSetRule/INTERSECTION))]
+            (intersection-of-bed-files [x y] ref-file (GenomeLocParser. (get-seq-dict ref-file))))]
     (with-open [bed-iter (get-bed-iterator total-bed ref-file)]
       (let [total (count-bases bed-iter)
             compared (if (or (nil? call-bed) (= total-bed call-bed)) total

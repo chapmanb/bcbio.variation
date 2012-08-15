@@ -26,7 +26,7 @@
                                                     IntervalSetRule/INTERSECTION)
              (rest intervals)))))
 
-(defn- intersection-of-bed-files
+(defn intersection-of-bed-files
   "Generate list of intervals that intersect in all provided BED files."
   [all-beds ref loc-parser]
   (letfn [(intervals-by-chrom [bed-file]
