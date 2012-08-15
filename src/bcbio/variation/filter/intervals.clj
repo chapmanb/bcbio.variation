@@ -6,6 +6,7 @@
             IntervalMergingRule IntervalSetRule]
            [org.broadinstitute.sting.utils GenomeLocParser])
   (:use [clojure.java.io]
+        [clojure.set :only [intersection]]
         [bcbio.align.ref :only [get-seq-dict]]
         [bcbio.variation.callable :only [get-callable-bed get-bed-iterator]])
   (:require [bcbio.run.itx :as itx]))
@@ -33,9 +34,10 @@
             (group-by #(.getContig %) (bed-to-intervals bed-file ref loc-parser)))
           (get-by-contig [interval-groups contig]
             (map #(get % contig []) interval-groups))]
-    (let [interval-groups (map intervals-by-chrom all-beds)]
+    (let [interval-groups (map intervals-by-chrom all-beds)
+          contigs (vec (apply intersection (map #(set (keys %)) interval-groups)))]
       (mapcat #(intersect-by-contig (get-by-contig interval-groups %))
-              (keys (first interval-groups))))))
+              contigs))))
 
 (defn combine-multiple-intervals
   "Combine intervals from an initial BED and coverage BAM files."
