@@ -56,7 +56,7 @@
                             :snapshots false}}
   :java-source-paths ["src/java"]
  ;:jvm-opts ["-Xmx4g"]
-  :omit-source true
+  :omit-source false
   :aot [bcbio.variation.vcfwalker bcbio.variation.core bcbio.variation.annotate.nbq]
   :main bcbio.variation.core
   :aliases {"variant-compare" ["run" "-m" "bcbio.variation.compare"]
