@@ -16,7 +16,9 @@
   (let [config (-> config-file slurp yaml/parse-string)]
     (letfn [(maybe-fix-biodata [x]
               (if (.startsWith x "biodata:")
-                (str "gs:" (get-in [config :remote :biodata]) (string/replace-first x "biodata:"))
+                (str (get-in config [:dir :cache])
+                     (get-in config [:remote :biodata])
+                     (string/replace-first x "biodata:" ""))
                 x))
             (fix-gs-ref [ref]
               (reduce (fn [coll k]

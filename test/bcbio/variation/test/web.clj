@@ -8,7 +8,9 @@
             [bcbio.run.itx :as itx]))
 
 (let [conf-file (str (fs/file "config" "web-processing.yaml"))
-      config (-> conf-file slurp yaml/parse-string)
+      config-orig (-> conf-file slurp yaml/parse-string)
+      config (assoc config-orig :ref [(assoc (first (:ref config-orig))
+                                        :genome "test/data/GRCh37.fa")])
       test-dir (str (fs/file "test" "data"))
       work-info {:id "web-test" :dir (str (fs/file test-dir "web-test"))
                  :comparison-genome "NA00001"

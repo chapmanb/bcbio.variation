@@ -71,11 +71,11 @@
 
 (defn index-variant-file
   "Pre-index a variant file with associated metrics."
-  [in-file ref-file]
+  [in-file ref-file & {:keys [re-index?]}]
   (let [batch-size 10000
         metrics (available-metrics in-file)
         index-file (str (itx/file-root in-file) "-metrics.db")]
-    (when-not (fs/exists? index-file)
+    (when (or (itx/needs-run? index-file) re-index?)
       (itx/with-tx-file [tx-index index-file]
         (sql/with-connection (get-sqlite-db tx-index :create true)
           (sql/transaction

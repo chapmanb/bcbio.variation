@@ -3,8 +3,10 @@
   Encapsulates distributed storage in GenomeSpace as well as locally
   produced files."
   (:use [clojure.java.io]
-        [bcbio.variation.api.shared :only [web-config remote-file-cache]])
-  (:require [clojure.string :as string]
+        [bcbio.variation.api.shared :only [web-config remote-file-cache]]
+        [bcbio.variation.index.metrics :only [index-variant-file]])
+  (:require [clojure.java.shell :as shell]
+            [clojure.string :as string]
             [clj-genomespace.core :as gs]
             [fs.core :as fs]
             [bcbio.run.itx :as itx]))
@@ -33,6 +35,7 @@
            :tags (remove nil?
                          [(first (drop 3 (string/split (:dirname finfo) #"/" 4)))])
            :folder (:dirname finfo) :filename (:name finfo)
+           :size (:size finfo)
            :created-on (:date finfo)})
         (gs/list-files gs-client dirname (name ftype)))
    (mapcat (partial get-gs-dirname-files ftype gs-client) (gs/list-dirs gs-client dirname))))
@@ -75,9 +78,9 @@
     (when-not (fs/exists? local-file)
       (when-not (fs/exists? local-dir)
         (fs/mkdirs local-dir))
-      (let [gs-client (get-gs-client creds)
+      (let [gs-client (get-gs-client creds :pre-fetch? false)
             out-file (str (file local-dir (fs/base-name remote-name)))]
-        (when-not (contains? download-queue out-file)
+        (when-not (contains? @download-queue out-file)
           (itx/with-tx-file [out-file-tx out-file]
             (swap! download-queue conj out-file)
             (try
@@ -99,6 +102,50 @@
         (gs/upload gs-client gs-dir fname)))
     gs-dir))
 
+;; ## Pre-fetching of data for front end interactivity
+
+(defn- prep-biodata-dir
+  "Prepare biodata directory, synchronizing with GenomeSpace client."
+  [creds biodata-dir]
+  (letfn [(download-and-unpack [gs-id creds]
+            (let [zip-file (retrieve-file gs-id creds)]
+              (when (and (fs/exists? zip-file)
+                         (itx/needs-run? (itx/remove-zip-ext zip-file)))
+                (shell/sh "gunzip" zip-file)
+                (spit zip-file (str "unzipped to " (itx/remove-zip-ext zip-file))))))]
+  (doall (map #(download-and-unpack (:id %) creds)
+              (get-files :gz creds :dirnames [biodata-dir]
+                         :use-cache? false)))))
+
+(defn- retrieve-file-check-update
+  "Retrieve a file from GenomeSpace checking to see if the file changed remotely."
+  [finfo creds]
+  (let [local-file (retrieve-file (:id finfo) creds)
+        is-current? (and (= (fs/size local-file) (:size finfo))
+                         (>= (fs/mod-time local-file) (.getTime (:created-on finfo))))]
+    (when-not is-current?
+      (fs/delete local-file)
+      (retrieve-file (:id finfo) creds))
+    [local-file (not is-current?)]))
+
+(def ^{:doc "Provide list of files currently indexing."}
+  index-queue (atom #{}))
+
+(defn pre-index-variants
+  "Provide download and pre-indexing of GenomeSpace variant files."
+  [creds]
+  (letfn [(do-pre-index [finfo ref-file]
+            (let [[local-file is-new?] (retrieve-file-check-update finfo creds)]
+              (when-not (contains? @index-queue local-file)
+                (try
+                  (swap! index-queue conj local-file)
+                  (index-variant-file local-file ref-file :re-index? is-new?)
+                  (finally
+                   (swap! index-queue disj local-file))))))]
+    (let [ref-file (:genome (first (:ref @web-config)))]
+      (doall (map #(do-pre-index % ref-file)
+                  (get-files :vcf creds :use-cache? false))))))
+
 (defn pre-retrieve-gs
   "Retrieve and pre-index files for analysis from GenomeSpace."
   [client]
@@ -109,5 +156,5 @@
       (doall (map #(update-user-files % creds) [:vcf]))
       (when-let [cache-dir (get-in @web-config [:dir :cache])]
         (when-let [biodata-dir (get-in @web-config [:remote :biodata])]
-          (doall (map #(retrieve-file (:id %) creds)
-                      (get-files :notyet-fa creds :dirnames [biodata-dir]))))))))
+          (prep-biodata-dir creds biodata-dir))
+        (pre-index-variants creds)))))

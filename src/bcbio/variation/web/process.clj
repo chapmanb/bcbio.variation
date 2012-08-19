@@ -25,7 +25,6 @@
 (defn create-work-config
   "Create configuration for processing inputs using references supplied in config."
   [work-info config]
-  (println work-info)
   (if-not (fs/exists? (:dir work-info))
     (fs/mkdirs (:dir work-info)))
   (let [config-file (str (fs/file (:dir work-info) "process.yaml"))
