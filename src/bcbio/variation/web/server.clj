@@ -54,7 +54,7 @@
   (if-let [gs-client (cur-gs-client)]
     (map (fn [x] {:full (str (:folder x) "/" (:filename x))
                   :name (:filename x)})
-         (get-files ftype {:client gs-client} [dir]))
+         (get-files ftype {:client gs-client} :dirnames [dir]))
     []))
 
 (defremote get-status [run-id]

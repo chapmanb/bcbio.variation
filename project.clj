@@ -19,7 +19,7 @@
                  ;;
                  [org.biojava/biojava3-core "3.0.4"]
                  [org.biojava/biojava3-alignment "3.0.4"]
-                 [clj-genomespace "0.1.2-SNAPSHOT"]
+                 [clj-genomespace "0.1.3-SNAPSHOT"]
                  [incanter/incanter-core "1.3.0" :exclusions [org.clojure/clojure]]
                  [incanter/incanter-charts "1.3.0" :exclusions [org.clojure/clojure]]
                  [nz.ac.waikato.cms.weka/weka-stable "3.6.6"]

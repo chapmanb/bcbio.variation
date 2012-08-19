@@ -29,7 +29,7 @@
       (fs/mkdirs local-out-dir))
     (doseq [ext ["" ".idx"]]
       (fs/rename (str filter-file ext) (str (fs/file local-out-dir (fs/base-name filter-file)) ext)))
-    (file-api/get-files :vcf creds [remote-dir])))
+    (file-api/get-files :vcf creds :dirnames [remote-dir])))
 
 (defmethod do-analysis :score
   ^{:doc "Run comparison and scoring analysis on provided input files.

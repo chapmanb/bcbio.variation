@@ -11,6 +11,11 @@ ref:
     intervals: test/data/phasing-reference-regions.bed
     default-compare: test/data/phasing-contestant.vcf
 
+remote:
+  public:
+    - /Home/Public/chapmanb/xprize
+  biodata: /Home/Public/chapmanb/biodata
+
 dir:
   html-root: "public"
   cache: "tmp/cache"
