@@ -184,7 +184,7 @@
     (facts "Normalize variant representation of chromosomes, order, genotypes and samples."
       (prep-vcf vcf ref "Test1" :config {:prep-sort-pos true}) => out-vcf)
     (facts "Pre-cleaning of problematic VCF input files"
-      (clean-problem-vcf prevcf) => out-prevcf)))
+      (clean-problem-vcf prevcf "NA12878") => out-prevcf)))
 
 (facts "Choose a reference genome based on VCF contig"
   (pick-best-ref vcf1 [ref]) => ref)

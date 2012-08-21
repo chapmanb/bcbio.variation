@@ -211,7 +211,7 @@
           in-files (if (coll? (:file call)) (:file call) [(:file call)])
           _ (transition :clean (str "Cleaning input VCF: " (:name call)))
           clean-files (vec (map #(if-not (:preclean call) %
-                                         (clean-problem-vcf % :out-dir out-dir))
+                                         (clean-problem-vcf % (:sample exp) :out-dir out-dir))
                                 in-files))
           _ (transition :merge (str "Merging multiple input files: " (:name call)))
           merge-file (if (> (count clean-files) 1)

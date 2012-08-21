@@ -321,12 +321,23 @@
     - Gap characters (-) found in REF or ALT indels.
     - Filter out call with extra N padding on 5' side of indels.
     - Removes spaces in INFO fields."
-  [in-vcf-file & {:keys [out-dir]}]
+  [in-vcf-file sample & {:keys [out-dir]}]
   (letfn [(fix-bad-alt-header [x]
             (str "##ALT=<ID" (string/replace-first x "##ALT=Type" "") ">"))
+          (rename-samples [xs want]
+            (let [idx (ffirst (filter (fn [[i x]] (.startsWith x want))
+                                      (map-indexed vector xs)))]
+              (if idx (assoc (vec xs) idx want) xs)))
+          (fix-sample-names [x]
+            (let [[stay-parts samples] (split-at 9 (string/split x #"\t"))
+                  fix-samples (if (contains? (set samples) sample)
+                                samples
+                                (rename-samples samples sample))]
+              (string/join "\t" (concat stay-parts fix-samples))))
           (clean-header [x]
             (cond
              (.startsWith x "##ALT=Type=") (fix-bad-alt-header x)
+             (.startsWith x "#CHROM") (fix-sample-names x)
              :else x))
           (remove-gap [n xs]
             (assoc xs n
