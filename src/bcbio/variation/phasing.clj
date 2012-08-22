@@ -137,7 +137,7 @@
             (= "SNP" (:type x)))]
     (cond
      (some is-multi-indel? vcs) :indel
-     (some is-indel? vcs) :snp
+     (some is-indel? vcs) :indel
      (every? is-snp? vcs) :snp
      :else :unknown)))
 

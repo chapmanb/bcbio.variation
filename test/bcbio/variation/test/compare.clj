@@ -139,7 +139,7 @@
   (with-open [ref-vcf-get (get-vcf-retriever ref ref-vcf)
               pvcf-iter (get-vcf-iterator pvcf ref)]
     (let [cmps (score-phased-calls pvcf-iter ref-vcf-get)]
-      (map :variant-type (first cmps)) => [:snp :snp :indel :snp :snp]
+      (map :variant-type (first cmps)) => [:snp :snp :indel :indel :snp]
       (:comparison (ffirst cmps)) => :discordant
       (map :comparison (nth cmps 3)) => [:ref-concordant :phasing-error
                                          :ref-concordant :discordant]

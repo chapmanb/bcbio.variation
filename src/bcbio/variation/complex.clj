@@ -12,7 +12,7 @@
         [ordered.set :only [ordered-set]]
         [bcbio.align.ref :only [extract-sequence]]
         [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template
-                                               get-vcf-iterator pad-vc-alleles]])
+                                               get-vcf-iterator]])
   (:require [clojure.string :as string]
             [bcbio.run.broad :as broad]
             [bcbio.run.itx :as itx]))
@@ -31,7 +31,7 @@
 
 (defn is-multi-indel?
   "Identify complex indels that can be split into multiple calls."
-  [orig-vc]
+  [vc]
   (letfn [(monomorphic-alleles? [vc]
             (= 1 (->> (get-vc-alleles vc)
                       (map set)
@@ -44,10 +44,9 @@
           (has-ref-padding-mismatch? [vc]
             (let [alleles (get-vc-alleles vc)]
               (not= (nth (first alleles) 0) (nth (second alleles) 0))))]
-    (let [vc (pad-vc-alleles orig-vc)]
-      (and (= "INDEL" (:type vc))
-           (or (has-multiple-nonref-alleles? vc)
-               (has-ref-padding-mismatch? vc))))))
+    (and (= "INDEL" (:type vc))
+         (or (has-multiple-nonref-alleles? vc)
+             (has-ref-padding-mismatch? vc)))))
 
 (defn- contains-indel? [alleles i]
   (when (< i (count (first alleles)))
@@ -145,10 +144,9 @@
 
 (defn- split-mnp
   "Split a MNP into individual alleles"
-  [orig-vc]
-  {:pre [(= 1 (:num-samples orig-vc))]}
-  (let [vc (pad-vc-alleles orig-vc)
-        alleles (split-alleles vc (get-vc-alleles vc))]
+  [vc]
+  {:pre [(= 1 (:num-samples vc))]}
+  (let [alleles (split-alleles vc (get-vc-alleles vc))]
     (map (fn [[i x]] (new-split-vc (:vc vc) i x)) (map-indexed vector alleles))))
 
 ;; ## Indels
@@ -264,10 +262,9 @@
 
 (defn- split-complex-indel
   "Split complex indels into individual variant components."
-  [orig-vc ref]
-  {:pre [(= 1 (:num-samples orig-vc))]}
-  (let [vc (pad-vc-alleles orig-vc)
-        prev-pad (or (extract-sequence ref (:chr vc) (dec (:start vc)) (dec (:start vc))) "N")
+  [vc ref]
+  {:pre [(= 1 (:num-samples vc))]}
+  (let [prev-pad (or (extract-sequence ref (:chr vc) (dec (:start vc)) (dec (:start vc))) "N")
         alleles (split-alleles vc (->> (conj (get-vc-alleles vc)
                                              (extract-sequence ref (:chr vc) (:start vc) (:end vc)))
                                        (remove empty?)
