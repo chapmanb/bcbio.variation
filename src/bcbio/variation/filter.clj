@@ -35,7 +35,8 @@
                       "--variant" in-vcf
                       "-o" :out-vcf
                       "-l" "ERROR"
-                      "--unsafe" "ALLOW_SEQ_DICT_INCOMPATIBILITY"]
+                      "--unsafe" "ALL" ;"ALLOW_SEQ_DICT_INCOMPATIBILITY"
+                      ]
                       (jexl-from-config jexl-filters))]
     (broad/run-gatk "VariantFiltration" args file-info {:out [:out-vcf]})
     (:out-vcf file-info)))
