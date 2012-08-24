@@ -5,7 +5,8 @@
         [bcbio.variation.api.shared :only [web-config]]
         [bcbio.variation.filter.classify :only [get-vc-attrs]]
         [bcbio.variation.variantcontext :only [get-vcf-iterator parse-vcf]])
-  (:require [bcbio.variation.index.metrics :as im]))
+  (:require [bcbio.variation.index.metrics :as im]
+            [bcbio.variation.index.gemini :as gemini]))
 
 ;; ## Helper functions
 
@@ -29,11 +30,18 @@
           {}
           (zipmap metrics (map (fn [x] (map #(get % x) raw)) metrics))))
 
+(defn- get-metric-range
+  "Retrieve the configured range of a metric"
+  [metric]
+  (-> (apply merge (map (partial into {}) [im/expose-metrics gemini/gemini-metrics]))
+      (get metric)
+      :range))
+
 (defn- prepare-plot-metrics
   "Bin metrics in preparation for histogram display using predefined min-max boundaries."
   [metric raw]
   (let [bins 100
-        [bin-min bin-max] (:range (get im/expose-metrics metric))
+        [bin-min bin-max] (get-metric-range metric)
         data (get-histogram-bins raw bins bin-min bin-max)]
     {:vals (:y data)
      :bin-width (- (second (:x data)) (first (:x data)))
@@ -41,21 +49,36 @@
                :domain [bin-min bin-max]}
      :y-scale {:type :linear}}))
 
-;; ## Available API functions
+(defn- combined-raw-metrics
+  "Retrieve raw metrics from multiple sources, combining on IDs."
+  [vcf-file ref-file metrics]
+  (letfn [(metrics-by-id [metrics-fn]
+            (reduce (fn [coll x]
+                      (assoc coll (:id x) x))
+                    {}
+                    (metrics-fn vcf-file ref-file :metrics (when metrics (map :id metrics)))))]
+    (->> (merge-with merge
+                     (metrics-by-id im/get-raw-metrics)
+                     (metrics-by-id gemini/get-raw-metrics))
+         vals
+         (sort-by :id))))
+
+;; ## API functions
 
 (defn available-metrics
   [file-id & {:keys [creds]}]
   (let [vcf-file (retrieve-file file-id creds)]
-    (im/available-metrics vcf-file)))
+    (concat (im/available-metrics vcf-file)
+            (gemini/available-metrics vcf-file))))
 
 (defn plot-ready-metrics
   "Provide metrics for a VCF file ready for plotting and visualization."
   [in-vcf-file & {:keys [metrics creds]}]
   (let [vcf-file (retrieve-file in-vcf-file creds)
         ref-file (-> @web-config :ref first :genome)
-        plot-metrics (if (nil? metrics) (im/available-metrics vcf-file) metrics)
+        plot-metrics (or metrics (available-metrics vcf-file))
         raw-metrics (clean-raw-metrics
-                     (im/get-raw-metrics vcf-file ref-file :metrics (map :id plot-metrics))
+                     (combined-raw-metrics vcf-file ref-file plot-metrics)
                      (map :id plot-metrics))]
     {:filename in-vcf-file
      :created-on (java.util.Date.)
@@ -67,5 +90,4 @@
   [variant-id & {:keys [metrics creds]}]
   (let [vcf-file (retrieve-file variant-id creds)
         ref-file (-> @web-config :ref first :genome)]
-    (im/get-raw-metrics vcf-file ref-file :metrics (when metrics
-                                                     (map :id metrics)))))
+    (combined-raw-metrics vcf-file ref-file metrics)))

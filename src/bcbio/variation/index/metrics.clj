@@ -95,7 +95,8 @@
   "Retrieve table of raw metrics using indexed variant file"
   [in-file ref-file & {:keys [metrics]}]
   (let [index-db (index-variant-file in-file ref-file)
-        plot-metrics (if (nil? metrics) (map :id (available-metrics in-file)) metrics)]
+        plot-metrics (filter (partial contains? expose-metrics)
+                             (or metrics (map :id (available-metrics in-file))))]
     (sql/with-connection (get-sqlite-db index-db)
       (sql/with-query-results rows
         [(str "SELECT contig, start, refallele, " (string/join ", " plot-metrics)
