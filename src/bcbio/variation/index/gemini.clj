@@ -46,7 +46,7 @@
       (sql/with-connection (get-sqlite-db index-db)
         (sql/with-query-results rows
           [(str "SELECT chrom, start, ref, " (string/join ", " plot-metrics)
-                " FROM variants ORDER BY chrom, start")]
+                " FROM variants WHERE filter is NULL ORDER BY chrom, start")]
           (doall (map (fn [orig]
                         (reduce (fn [coll x]
                                   (assoc coll x (get orig (keyword (string/lower-case x)))))
