@@ -3,13 +3,14 @@
   Encapsulates distributed storage in GenomeSpace as well as locally
   produced files."
   (:use [clojure.java.io]
-        [bcbio.variation.api.shared :only [web-config remote-file-cache]]
-        [bcbio.variation.index.metrics :only [index-variant-file]])
+        [bcbio.variation.api.shared :only [web-config remote-file-cache]])
   (:require [clojure.java.shell :as shell]
             [clojure.string :as string]
             [clj-genomespace.core :as gs]
             [fs.core :as fs]
-            [bcbio.run.itx :as itx]))
+            [bcbio.run.itx :as itx]
+            [bcbio.variation.index.metrics :as metrics]
+            [bcbio.variation.index.gemini :as gemini]))
 
 (declare pre-retrieve-gs)
 (defn get-gs-client
@@ -17,14 +18,14 @@
    As a side effect, pre-retrieve and caches files and associated information."
   [creds & {:keys [pre-fetch?]
             :or {pre-fetch? true}}]
-  (let [{:keys [username password client]} creds]
-    (cond
-     (and client (gs/logged-in? client)) (do
-                                           (when pre-fetch?
-                                             (future (pre-retrieve-gs client)))
-                                           client)
-     (and username password) (gs/get-client username :password password)
-     :else nil)))
+  (let [{:keys [username password client]} creds
+        gs-client (cond
+                   (and client (gs/logged-in? client)) client
+                   (and username password) (gs/get-client username :password password)
+                   :else nil)]
+    (when (and pre-fetch? gs-client)
+      (future (pre-retrieve-gs client)))
+    gs-client))
 
 (defn- get-gs-dirname-files
   "Retrieve files of the specified type from GenomeSpace."
@@ -47,13 +48,15 @@
    - dirnames specify specific directories to list, defaults to all directories."
   [ftype creds & {:keys [dirnames use-cache?]
                   :or {use-cache? true}}]
-  (let [dirnames (if (or (nil? dirnames) (empty? dirnames))
-                   (cons "." (get-in @web-config [:remote :public]))
-                   dirnames)]
-    (when-let [gs-client (get-gs-client creds :pre-fetch? use-cache?)]
-      (if-let [cache-info (and use-cache? (get @remote-file-cache
+  (when-let [gs-client (get-gs-client creds :pre-fetch? use-cache?)]
+    (if-let [cache-info (and use-cache? (get @remote-file-cache
                                              [(gs/get-username gs-client) ftype]))]
-        cache-info
+        
+      cache-info
+      (let [dirnames (if (or (nil? dirnames) (empty? dirnames))
+                       (cons "." (remove #(.contains % (gs/get-username gs-client))
+                                         (get-in @web-config [:remote :public])))
+                       dirnames)]
         (apply concat
                (map (partial get-gs-dirname-files ftype gs-client) dirnames))))))
 
@@ -133,15 +136,16 @@
 
 (defn pre-index-variants
   "Provide download and pre-indexing of GenomeSpace variant files."
-  [creds]
+  [creds index-type index-fn]
   (letfn [(do-pre-index [finfo ref-file]
-            (let [[local-file is-new?] (retrieve-file-check-update finfo creds)]
-              (when-not (contains? @index-queue local-file)
+            (let [[local-file is-new?] (retrieve-file-check-update finfo creds)
+                  k {:type index-type :file local-file}]
+              (when-not (contains? @index-queue k)
                 (try
-                  (swap! index-queue conj local-file)
-                  (index-variant-file local-file ref-file :re-index? is-new?)
+                  (swap! index-queue conj k)
+                  (index-fn local-file ref-file :re-index? is-new?)
                   (finally
-                   (swap! index-queue disj local-file))))))]
+                   (swap! index-queue disj k))))))]
     (let [ref-file (:genome (first (:ref @web-config)))]
       (doall (map #(do-pre-index % ref-file)
                   (get-files :vcf creds :use-cache? false))))))
@@ -157,4 +161,5 @@
       (when-let [cache-dir (get-in @web-config [:dir :cache])]
         (when-let [biodata-dir (get-in @web-config [:remote :biodata])]
           (prep-biodata-dir creds biodata-dir))
-        (pre-index-variants creds)))))
+        (pre-index-variants creds "metrics" metrics/index-variant-file)
+        (pre-index-variants creds "gemini" gemini/index-variant-file)))))
