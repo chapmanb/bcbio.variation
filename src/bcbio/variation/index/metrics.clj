@@ -85,7 +85,7 @@
               (sql/transaction
                (doseq [vc vcs]
                  (sql/insert-record :metrics
-                                    (-> (get-vc-attrs vc (map :id metrics))
+                                    (-> (get-vc-attrs vc (map :id metrics) {})
                                         (assoc :contig (:chr vc))
                                         (assoc :start (:start vc))
                                         (assoc :refallele (.getBaseString (:ref-allele vc))))))))))))

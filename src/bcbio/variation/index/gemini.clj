@@ -37,6 +37,19 @@
   (when gemini-installed?
     (map (fn [[k v]] (assoc v :id k)) gemini-metrics)))
 
+(defn vc-attr-retriever
+  "Retrieve metrics by name from a gemini index for provided VariantContexts."
+  [in-file ref-file]
+  (let [index-db (index-variant-file in-file ref-file)]
+    (fn [vc attr]
+      (when index-db
+        (sql/with-connection (get-sqlite-db index-db)
+          (sql/with-query-results rows
+            [(str "SELECT " (name attr)
+                  " FROM variants WHERE chrom = ? AND start = ? and ref = ?")
+             (:chr vc) (:start vc) (.getBaseString (:ref-allele vc))]
+            (get (first rows) (keyword (string/lower-case attr)))))))))
+
 (defn get-raw-metrics
   "Retrieve table of Gemini metrics keyed on variant names."
   [in-file ref-file & {:keys [metrics]}]

@@ -16,20 +16,24 @@
   (:require [clojure.string :as string]
             [incanter.stats :as stats]
             [fs.core :as fs]
-            [bcbio.run.itx :as itx]))
+            [bcbio.run.itx :as itx]
+            [bcbio.variation.index.gemini :as gemini]))
 
 ;; ## Normalized attribute access
 
 (defmulti get-vc-attr
   "Generalized retrieval of attributes from variant with a single genotype."
-  (fn [vc attr] attr))
+  (fn [vc attr retrievers]
+    (if (contains? gemini/gemini-metrics attr)
+      :gemini
+      attr)))
 
 (defmethod get-vc-attr "AD"
   ^{:doc "AD: Allelic depth for ref and alt alleles. Converted to percent
           deviation from expected for haploid/diploid calls.
           Also calculates allele depth from AO and DP used by FreeBayes.
           AO is the count of the alternative allele."}
-  [vc attr]
+  [vc attr _]
   {:pre [(= 1 (:num-samples vc))
          (contains? #{1 2} (-> vc :genotypes first :alleles count))]}
   (letfn [(calc-expected [g ref-count allele-count]
@@ -60,7 +64,7 @@
   ^{:doc "Provide likelihood ratios for genotype compared to next most likely call.
           For haploid calls, get the homozygous reference or homozygous variant
           likelihood. For diploid calls, get the largest alternative value."}
-  [vc attr]
+  [vc attr _]
   {:pre [(= 1 (:num-samples vc))
          (contains? #{1 2} (-> vc :genotypes first :alleles count))]}
   (let [g (-> vc :genotypes first)
@@ -73,11 +77,21 @@
      (= (:type g) "HOM_REF") (get pls "HOM_VAR"))))
 
 (defmethod get-vc-attr "QUAL"
-  [vc attr]
+  [vc attr _]
   (:qual vc))
 
+(defmethod get-vc-attr :gemini
+  ^{:doc "Retrieve attribute information from associated Gemini index."}
+  [vc attr retrievers]
+  (when-let [getter (:gemini retrievers)]
+    (let [x (getter vc attr)]
+      (if-not (nil? x) x
+              (cond
+               (.startsWith attr "gms") 100.0
+               :else nil)))))
+
 (defmethod get-vc-attr :default
-  [vc attr]
+  [vc attr _]
   (let [x (get-in vc [:attributes attr])]
     (when-not (nil? x)
       (try (Float/parseFloat x)
@@ -85,22 +99,26 @@
 
 (defn get-vc-attrs
   "Retrieve attributes from variants independent of location."
-  [vc attrs]
-  (zipmap attrs (map (partial get-vc-attr vc) attrs)))
+  [vc attrs retrievers]
+  (zipmap attrs (map #(get-vc-attr vc % retrievers) attrs)))
 
 (defn get-vc-attr-ranges
   "Retrieve quantile ranges of attributes for min/max normalization."
-  [attrs in-vcf ref]
+  [attrs in-vcf ref retrievers]
   (letfn [(get-quartiles [[k v]]
             [k (stats/quantile v :probs [0.05 0.95])])]
     (with-open [vcf-iter (get-vcf-iterator in-vcf ref)]
       (->> (reduce (fn [coll vc]
                     (reduce (fn [icoll [k v]]
                               (assoc icoll k (cons v (get icoll k))))
-                            coll (get-vc-attrs vc attrs)))
+                            coll (get-vc-attrs vc attrs retrievers)))
                   (zipmap attrs (repeat [])) (parse-vcf vcf-iter))
            (map get-quartiles)
            (into {})))))
+
+(defn- get-external-retrievers
+  [in-file ref-file]
+  {:gemini (gemini/vc-attr-retriever in-file ref-file)})
 
 (defmulti get-vc-attrs-normalized
   "Normalized attributes for each variant context in an input file."
@@ -116,17 +134,19 @@
               (/ (- trunc-score minv) (- safe-maxv minv))))
           (min-max-norm-ranges [mm-ranges [k v]]
             [k (min-max-norm v (get mm-ranges k))])]
-    (let [mm-ranges (get-vc-attr-ranges attrs in-vcf ref)]
+    (let [retrievers (get-external-retrievers in-vcf ref)
+          mm-ranges (get-vc-attr-ranges attrs in-vcf ref retrievers)]
       (fn [vc]
-        (->> (get-vc-attrs vc attrs)
+        (->> (get-vc-attrs vc attrs retrievers)
              (map (partial min-max-norm-ranges mm-ranges))
              (into {}))))))
 
 ;; No normalization
 (defmethod get-vc-attrs-normalized :default
   [attrs in-vcf ref config]
-  (fn [vc]
-    (into {} (get-vc-attrs vc attrs))))
+  (let [retrievers (get-external-retrievers in-vcf ref)]
+    (fn [vc]
+      (into {} (get-vc-attrs vc attrs retrievers)))))
 
 ;; ## Linear classifier
 

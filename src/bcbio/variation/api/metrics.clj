@@ -3,7 +3,6 @@
   (:import [org.jfree.data.statistics HistogramDataset HistogramType])
   (:use [bcbio.variation.api.file :only [retrieve-file]]
         [bcbio.variation.api.shared :only [web-config]]
-        [bcbio.variation.filter.classify :only [get-vc-attrs]]
         [bcbio.variation.variantcontext :only [get-vcf-iterator parse-vcf]])
   (:require [bcbio.variation.index.metrics :as im]
             [bcbio.variation.index.gemini :as gemini]))
