@@ -46,8 +46,8 @@
           config {:normalize "minmax"}
           normalizer (get-vc-attrs-normalized attrs top-vcf ref config)]
       (first (#'bcbio.variation.filter.classify/get-train-inputs
-              1 top-vcf xtra-attrs normalizer ref)) => (contains [0.0 (roughly 0.621) 1.0 1]
-                                                                 :in-any-order :gaps-ok)
+              1 top-vcf :snp xtra-attrs normalizer ref)) => (contains [0.0 (roughly 0.621) 1.0 1]
+                                                                      :in-any-order :gaps-ok)
       (-> (get-vc-attr-ranges attrs top-vcf ref {}) (get "DP")) => [193.5 250.0]
       (-> (get-vc-attr-ranges attrs fb-vcf ref {}) (get "AD")) => (just [0.0
                                                                       (roughly 0.41239)])
