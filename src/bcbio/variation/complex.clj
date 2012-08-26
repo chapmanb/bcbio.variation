@@ -304,8 +304,8 @@
     (let [[orig-alleles first-var-i] (variant-allele-pos (cons (:ref-allele vc)
                                                                (-> vc :genotypes first :alleles)))
           [_ nocall-i] (variant-allele-pos (cons (:ref-allele vc) (:alt-alleles vc)))]
-      (if (or (nil? first-var-i) (= first-var-i 0)
-              (nil? nocall-i) (= nocall-i 0))
+      (if (or (nil? first-var-i) (<= first-var-i 1)
+              (nil? nocall-i) (<= nocall-i 1))
         (:vc vc)
         (strip-indel (:vc vc) first-var-i orig-alleles)))))
 
