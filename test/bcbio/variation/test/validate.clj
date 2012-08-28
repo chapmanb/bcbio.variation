@@ -44,7 +44,7 @@
           attrs ["AD" "QUAL" "DP"]
           xtra-attrs (conj attrs "gms_illumina")
           config {:normalize "minmax"}
-          normalizer (get-vc-attrs-normalized attrs top-vcf ref config)]
+          normalizer (get-vc-attrs-normalized attrs top-vcf ref config top-vcf)]
       (first (#'bcbio.variation.filter.classify/get-train-inputs
               1 top-vcf :snp xtra-attrs normalizer ref)) => (contains [0.0 (roughly 0.621) 1.0 1]
                                                                       :in-any-order :gaps-ok)

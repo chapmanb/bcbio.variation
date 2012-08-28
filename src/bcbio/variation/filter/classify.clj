@@ -121,12 +121,17 @@
   {:gemini (gemini/vc-attr-retriever in-file ref-file)})
 
 (defmulti get-vc-attrs-normalized
-  "Normalized attributes for each variant context in an input file."
-  (fn [_ _ _ config] (keyword (get config :normalize "default"))))
+  "Normalized attributes for each variant context in an input file.
+   Passed two input VCFs:
+    - in-vcf -- provides full range of inputs for classification and
+      used for building normalization ranges.
+    - work-vcf -- file for attribute retrieval, used to setup variable
+      retrieval from external sources like Gemini"
+  (fn [_ _ _ config _] (keyword (get config :normalize "default"))))
 
 ;; Min-max normalization
 (defmethod get-vc-attrs-normalized :minmax
-  [attrs in-vcf ref config]
+  [attrs in-vcf ref config work-vcf]
   (letfn [(min-max-norm [x [minv maxv]]
             (let [safe-maxv (if (= minv maxv) (inc maxv) maxv)
                   trunc-score-max (if (< x safe-maxv) x safe-maxv)
@@ -135,16 +140,17 @@
           (min-max-norm-ranges [mm-ranges [k v]]
             [k (min-max-norm v (get mm-ranges k))])]
     (let [retrievers (get-external-retrievers in-vcf ref)
-          mm-ranges (get-vc-attr-ranges attrs in-vcf ref retrievers)]
+          mm-ranges (get-vc-attr-ranges attrs in-vcf ref retrievers)
+          work-retrievers (get-external-retrievers work-vcf ref)]
       (fn [vc]
-        (->> (get-vc-attrs vc attrs retrievers)
+        (->> (get-vc-attrs vc attrs work-retrievers)
              (map (partial min-max-norm-ranges mm-ranges))
              (into {}))))))
 
 ;; No normalization
 (defmethod get-vc-attrs-normalized :default
-  [attrs in-vcf ref config]
-  (let [retrievers (get-external-retrievers in-vcf ref)]
+  [attrs _ ref config work-vcf]
+  (let [retrievers (get-external-retrievers work-vcf ref)]
     (fn [vc]
       (into {} (get-vc-attrs vc attrs retrievers)))))
 
@@ -178,10 +184,14 @@
 (defn- train-vcf-classifier
   "Do the work of training a variant classifier."
   [ctype attrs base-vcf true-vcf false-vcf ref config]
-  (let [normalizer (get-vc-attrs-normalized attrs base-vcf ref config)
+  (let [normalizer (partial get-vc-attrs-normalized attrs base-vcf ref config)
         ds (make-dataset "ds" (conj (vec attrs) {:c [:a :b]})
-                      (concat (get-train-inputs :a true-vcf ctype attrs normalizer ref)
-                              (get-train-inputs :b false-vcf ctype attrs normalizer ref))
+                         (concat (get-train-inputs :a true-vcf ctype attrs
+                                                   (normalizer true-vcf)
+                                                   ref)
+                                 (get-train-inputs :b false-vcf ctype attrs
+                                                   (normalizer false-vcf)
+                                                   ref))
                       {:class :c})
         c (classifier-train (make-classifier :support-vector-machine :smo) ds)]
     ;(println "Evaluate" (classifier-evaluate c :dataset ds ds))
@@ -235,7 +245,7 @@
   (let [out-file (itx/add-file-part base-vcf "cfilter")
         cs (build-vcf-classifiers (:classifiers config) base-vcf
                                   true-vcf false-vcf ref config)
-        normalizer (get-vc-attrs-normalized (:classifiers config) base-vcf ref config)]
+        normalizer (get-vc-attrs-normalized (:classifiers config) base-vcf ref config base-vcf)]
     (when (itx/needs-run? out-file)
       (println "Filter VCF with" (str cs))
       (with-open [vcf-iter (get-vcf-iterator base-vcf ref)
