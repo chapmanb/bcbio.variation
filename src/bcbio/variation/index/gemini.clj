@@ -47,7 +47,7 @@
           (sql/with-query-results rows
             [(str "SELECT " (name attr)
                   " FROM variants WHERE chrom = ? AND start = ? and ref = ?")
-             (:chr vc) (:start vc) (.getBaseString (:ref-allele vc))]
+             (str "chr" (:chr vc)) (dec (:start vc)) (.getBaseString (:ref-allele vc))]
             (get (first rows) (keyword (string/lower-case attr)))))))))
 
 (defn get-raw-metrics
