@@ -101,8 +101,9 @@
   (letfn [(is-ref-allele? [x]
             (apply = (map #(.getBaseString (% x)) [:cmp :ref])))
           (get-cmp-allele [i x]
-            {:ref (:ref-allele x)
-             :cmp (nth (get-alleles x) i)})
+            (when (< i (count (get-alleles x)))
+              {:ref (:ref-allele x)
+               :cmp (nth (get-alleles x) i)}))
           (get-all-alleles [x]
             (map #(get-cmp-allele % x) (range (count (get-alleles x)))))]
     (let [e-allele (when-not (nil? e-vc)
