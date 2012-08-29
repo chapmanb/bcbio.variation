@@ -2,6 +2,7 @@
   "Tests for top level API for variant metrics"
   (:use [midje.sweet]
         [bcbio.variation.api.metrics]
+        [bcbio.variation.api.file]
         [bcbio.variation.api.shared :only [set-config-from-file!]])
   (:require [fs.core :as fs]
             [bcbio.run.itx :as itx]
@@ -30,6 +31,11 @@
     (-> out :metrics first :id) => "QUAL"
     (-> out :metrics first :x-scale :domain) => (just [0.0 10000.0])
     (apply + (-> out :metrics first :vals)) => (roughly 1.0)))
+
+(facts "Retrieve locally cached files from GenomeSpace."
+  (set-config-from-file! web-yaml)
+  (first (get-files :vcf {:client nil})) => #(or (nil? %)
+                                                 (contains? % :id)))
 
 (facts "Index file for rapid retrieval of variants."
   (im/index-variant-file vcf1 ref) => out-index

@@ -16,12 +16,15 @@
 (defn get-gs-client
   "Top level retrieval of a client from username/password to pre-connected client.
    As a side effect, pre-retrieve and caches files and associated information."
-  [creds & {:keys [pre-fetch?]
+  [creds & {:keys [pre-fetch? allow-offline?]
             :or {pre-fetch? true}}]
   (let [{:keys [username password client]} creds
         gs-client (cond
                    (and client (gs/logged-in? client)) client
-                   (and username password) (gs/get-client username :password password)
+                   (and username password) (try (gs/get-client username :password password)
+                                                (catch Exception e
+                                                  (when-not allow-offline?
+                                                    (throw e))))
                    :else nil)]
     (when (and pre-fetch? gs-client)
       (future (pre-retrieve-gs client)))
@@ -41,6 +44,26 @@
         (gs/list-files gs-client dirname (name ftype)))
    (mapcat (partial get-gs-dirname-files ftype gs-client) (gs/list-dirs gs-client dirname))))
 
+(defn- get-local-dl-files
+  "Retrieve local files downloaded from remote GenomeSpace."
+  [ftype & {:keys [dirnames]}]
+  {:pre [(nil? dirnames)]}
+  (letfn [(check-dir-for-type [root _ files]
+            (->> files
+                 (filter #(.endsWith % (str "." (name ftype))))
+                 (map #(str (file root %)))))
+          (convert-to-api [cache-dir fname]
+            {:id fname
+             :tags []
+             :filename (str (fs/base-name fname))
+             :folder (string/replace (str (fs/parent fname)) (str (fs/file cache-dir)) "")
+             :size (fs/size fname)
+             :created-on (java.util.Date. (fs/mod-time fname))})]
+    (let [cache-dir (get-in @web-config [:dir :cache])]
+      (->> (fs/walk check-dir-for-type cache-dir)
+           flatten
+           (map (partial convert-to-api cache-dir))))))
+
 (defn get-files
   "Retrieve files information for files on the provided type.
    - creds is a dictionary of login credentials for GenomeSpace and can be:
@@ -48,7 +71,7 @@
    - dirnames specify specific directories to list, defaults to all directories."
   [ftype creds & {:keys [dirnames use-cache?]
                   :or {use-cache? true}}]
-  (when-let [gs-client (get-gs-client creds :pre-fetch? use-cache?)]
+  (if-let [gs-client (get-gs-client creds :pre-fetch? use-cache?)]
     (if-let [cache-info (and use-cache? (get @remote-file-cache
                                              [(gs/get-username gs-client) ftype]))]
         
@@ -58,7 +81,8 @@
                                          (get-in @web-config [:remote :public])))
                        dirnames)]
         (apply concat
-               (map (partial get-gs-dirname-files ftype gs-client) dirnames))))))
+               (map (partial get-gs-dirname-files ftype gs-client) dirnames))))
+    (get-local-dl-files ftype :dirnames dirnames)))
 
 (def ^{:doc "Provide list of files currently under download."}
   download-queue (atom #{}))
