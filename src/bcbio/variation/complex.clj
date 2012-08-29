@@ -15,7 +15,8 @@
                                                get-vcf-iterator]])
   (:require [clojure.string :as string]
             [bcbio.run.broad :as broad]
-            [bcbio.run.itx :as itx]))
+            [bcbio.run.itx :as itx]
+            [fs.core :as fs]))
 
 ;; ## Multi-nucleotide polymorphisms (MNPs)
 ;; Split into single variant primitives.
@@ -54,6 +55,11 @@
 
 (defn- starts-an-indel? [alleles i]
   (contains-indel? alleles (inc i)))
+
+(defn- gap-end? [alleles i]
+  (and (pos? i)
+       (not (contains-indel? alleles i))
+       (contains-indel? alleles (dec i))))
 
 (defn- is-match? [alleles i]
   (= 1 (count (set (map #(str (nth % i)) alleles)))))
@@ -207,10 +213,6 @@
                      (not (is-match? alleles i))
                      (not (contains-indel? alleles i)))
                 false))
-          (gap-end? [alleles i]
-            (and (pos? i)
-                 (not (contains-indel? alleles i))
-                 (contains-indel? alleles (dec i))))
           (gap-allele-type [alleles i]
             (cond
              (gap-start-mismatch? alleles i) :gs-mismatch
@@ -347,14 +349,16 @@
 
 (defn left-align-variants
   "Left align variants in an input VCF file for a standard representation.
-  Checks final line count of prepared file, returning left-aligned file
-  when converting every variant in the input."
-  [in-file ref & {:keys [out-dir]}]
+  Checks final line count of prepared file, returning left-aligned files
+  only when converting every variant in the input."
+  [in-file ref & {:keys [out-dir rerun?]}]
   (letfn [(line-count [f]
             (with-open [rdr (reader f)]
-              (count (line-seq rdr))))]
+              (count (remove #(.startsWith % "#") (line-seq rdr)))))]
     (let [file-info {:out-vcf (itx/add-file-part in-file "leftalign" out-dir)}
           args ["-R" ref "-o" :out-vcf "--variant" in-file]]
+      (when (and rerun? (fs/exists? (:out-vcf file-info)))
+        (fs/delete (:out-vcf file-info)))
       (broad/run-gatk "LeftAlignVariants" args file-info {:out [:out-vcf]})
       (if (= (line-count in-file) (line-count (:out-vcf file-info)))
         (:out-vcf file-info)
@@ -366,11 +370,16 @@
      (normalize-variants in-file ref nil))
   ([in-file ref out-dir & {:keys [out-fname]}]
      (let [base-name (if (nil? out-fname) (itx/remove-zip-ext in-file) out-fname)
-           out-file (itx/add-file-part base-name "nomnp" out-dir)]
+           out-file (itx/add-file-part base-name "nomnp" out-dir)
+           out-pre-file (itx/add-file-part base-name "worknomnp" out-dir)]
        (when (itx/needs-run? out-file)
-         (let [la-file (left-align-variants in-file ref :out-dir out-dir)]
+         (when (fs/exists? out-pre-file)
+           (fs/delete out-pre-file))
+         (let [la-file (left-align-variants in-file ref :out-dir out-dir :rerun? true)]
            (with-open [vcf-iter (get-vcf-iterator la-file ref)]
-             (write-vcf-w-template in-file {:out out-file}
+             (write-vcf-w-template in-file {:out out-pre-file}
                                    (get-normalized-vcs (parse-vcf vcf-iter) {} ref)
-                                   ref))))
+                                   ref))
+           (fs/rename (left-align-variants out-pre-file ref :out-dir out-dir :rerun? true)
+                      out-file)))
        out-file)))
