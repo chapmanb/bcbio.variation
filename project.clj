@@ -61,6 +61,7 @@
   :main bcbio.variation.core
   :aliases {"variant-compare" ["run" "-m" "bcbio.variation.compare"]
             "variant-web" ["run" "-m" "bcbio.variation.web.server"]
+            "variant-prep" ["run" "-m" "bcbio.variation.combine"]
             "variant-evaluate" ["run" "-m" "bcbio.variation.evaluate"]
             "variant-haploid" ["run" "-m" "bcbio.variation.haploid"]
             "variant-recall" ["run" "-m" "bcbio.variation.recall"]

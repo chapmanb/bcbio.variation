@@ -224,3 +224,24 @@
                           (normalize-variants prep-file (:ref exp) out-dir
                                               :out-fname out-fname)
                           prep-file)))))
+
+;; ## Top-level entry points
+
+(defn full-prep-vcf
+  "Provide convenient entry to fully normalize a variant file for comparisons."
+  [vcf-file ref-file]
+  (let [out-file (itx/add-file-part vcf-file "fullprep")]
+    (when (itx/needs-run? out-file)
+      (let [out-dir (str (fs/file (fs/parent vcf-file) "tmpprep"))
+            out-info (gatk-normalize {:name "fullprep" :file vcf-file :preclean true
+                                      :prep true :normalize true :prep-sv-genotype true}
+                                     {:sample (-> vcf-file get-vcf-header .getGenotypeSamples first)
+                                      :ref ref-file}
+                                     [] out-dir
+                                     (fn [_ x] (println x)))]
+        (fs/rename (:file out-info) out-file)
+        (fs/delete-dir out-dir)))
+    out-file))
+
+(defn -main [vcf-file ref-file]
+  (full-prep-vcf vcf-file ref-file))

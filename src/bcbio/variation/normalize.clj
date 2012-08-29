@@ -151,10 +151,13 @@
   if not specified or mixed."
   [config sample orig]
   (letfn [(maybe-fix-vc [g alt-allele]
-            (if (= "MIXED" (:type g))
-              (-> (GenotypeBuilder. (:genotype g))
-                  (.alleles) (remove #(.isNoCall %) (:alleles g))
-                  .make)
+            (case (:type g)
+              "MIXED" (-> (GenotypeBuilder. (:genotype g))
+                          (.alleles) (remove #(.isNoCall %) (:alleles g))
+                          .make)
+              "UNAVAILABLE" (-> (GenotypeBuilder. (:genotype g))
+                                (.alleles [alt-allele])
+                                .make)
               (:genotype g)))
           (ref-vc-genotype [gs alt-allele]
             (case (count gs)
@@ -166,12 +169,12 @@
               (map :genotype gs)))]
     (if (:prep-sv-genotype config)
       (let [new-gs (ref-vc-genotype (:genotypes orig)
-                                   (first (:alt-alleles orig)))]
+                                    (first (:alt-alleles orig)))]
         (-> orig
             (assoc :vc
-                   (-> (VariantContextBuilder. (:vc orig))
-                       (.genotypes new-gs)
-                       .make))
+              (-> (VariantContextBuilder. (:vc orig))
+                  (.genotypes new-gs)
+                  .make))
             (assoc :genotypes (map from-genotype new-gs))))
       orig)))
 

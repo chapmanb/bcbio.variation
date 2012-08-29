@@ -48,6 +48,21 @@ genome:
 An example of assessing variant calls produced by different calling algorithms:
 
     $ lein variant-compare config/method-comparison.yaml
+    
+### Normalize a variant file
+
+A tricky part of variant comparisons is that VCF format is flexible enough to
+allow multiple representations. As a result two files may contain the same
+variants, but one might have it present in a multi-nucleotide polymorphism while
+another represents it as an individual variant. 
+
+To produce a stable, decomposed variant file for comparison run:
+
+    $ lein variant-prep your_variants.vcf your_reference.fasta
+    
+This will also handle re-ordering variants to match the reference file ordering,
+essential for feeding into tools like GATK, and remapping hg19 to GRCh37
+chromosome names.
 
 ### Web interface
 

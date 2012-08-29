@@ -31,6 +31,7 @@ test/data/*-*haploid.vcf
 test/data/*-*cfilter.vcf
 test/data/*-*leftalign.vcf
 test/data/*-*samplefix.vcf
+test/data/*-*fullprep.vcf
 test/data/*-*nosv.vcf
 test/data/*-classifier.bin
 test/data/*-sorted.bed

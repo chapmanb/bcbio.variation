@@ -2,6 +2,7 @@
   "Tests for dealing with more complex variations: structural
   variations and MNPs"
   (:use [midje.sweet]
+        [bcbio.variation.combine :only [full-prep-vcf]]
         [bcbio.variation.complex]
         [bcbio.variation.normalize]
         [bcbio.variation.structural]
@@ -33,9 +34,10 @@
                indel-vcf2 (str (fs/file data-dir "sv-indels-gatk.vcf"))
                indel-out (str (fs/file data-dir "Test-svindfb-svindgatk-svconcordance.vcf"))
                nomnp-out (itx/add-file-part mnp-vcf "nomnp")
+               fullprep-out (itx/add-file-part mnp-vcf "fullprep")
                headerfix-out (itx/add-file-part mnp-vcf "samplefix")
                params {:min-indel 100}]
-           (doseq [x (concat [nomnp-out indel-out cindel-out headerfix-out]
+           (doseq [x (concat [nomnp-out indel-out cindel-out headerfix-out fullprep-out]
                              (vals sv-out) (vals sv-out2))]
              (itx/remove-path x))
            ?form)))
@@ -74,6 +76,9 @@
       (get-vcf-iterator ref)
       parse-vcf
       count) => 18)
+
+(facts "Full preparation pipeline for variant files"
+  (full-prep-vcf mnp-vcf ref) => fullprep-out)
 
 (facts "Fix VCF header problems"
   (fix-vcf-sample mnp-vcf "Test1" ref) => headerfix-out)
