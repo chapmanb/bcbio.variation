@@ -72,9 +72,9 @@
   [ftype creds & {:keys [dirnames use-cache?]
                   :or {use-cache? true}}]
   (if-let [gs-client (get-gs-client creds :pre-fetch? use-cache?)]
-    (if-let [cache-info (and use-cache? (get @remote-file-cache
-                                             [(gs/get-username gs-client) ftype]))]
-        
+    (if-let [cache-info (and use-cache? (nil? dirnames)
+                             (get @remote-file-cache
+                                  [(gs/get-username gs-client) ftype]))]
       cache-info
       (let [dirnames (if (or (nil? dirnames) (empty? dirnames))
                        (cons "." (remove #(.contains % (gs/get-username gs-client))
@@ -122,9 +122,10 @@
 
 (defn put-files
   "Put files back on remote GenomeSpace server relative to the base file."
-  [fnames base-file subdir creds]
+  [fnames base-file subdir creds & {:keys [pre-fetch?]
+                                    :or {pre-fetch? true}}]
   (let [gs-dir (str (fs/file (fs/parent (last (string/split base-file #":" 2))) subdir))]
-    (let [gs-client (get-gs-client creds)]
+    (let [gs-client (get-gs-client creds :pre-fetch? pre-fetch?)]
       (doseq [fname fnames]
         (gs/upload gs-client gs-dir fname)))
     gs-dir))

@@ -25,37 +25,40 @@
                  [nz.ac.waikato.cms.weka/weka-stable "3.6.6"]
                  [org.clojars.chapmanb/fast-random-forest "0.98"]
                  [com.leadtune/clj-ml "0.2.2" :exclusions [lt/weka hr.irb/fastRandomForest
-                                                           org.clojure/clojure]]
+                                                           org.clojure/clojure
+                                                           incanter/incanter-core
+                                                           incanter/incanter-charts]]
                  [fs "1.1.2" :exclusions [org.clojure/clojure]]
                  [clj-yaml "0.3.1"]
                  [doric "0.7.0" :exclusions [org.clojure/clojure]]
-                 [ordered "1.0.0" :exclusions [org.clojure/clojure]]
+                 [ordered "1.3.2" :exclusions [org.clojure/clojure]]
                  [de.kotka/lazymap "3.0.0"]
                  [pallet-fsm "0.1.0"]
                  [clj-time "0.4.3"]
-                 [clj-aws-s3 "0.3.1"]
+                 [clj-aws-s3 "0.3.1" :exclusions [org.codehaus.jackson/jackson-mapper-asl
+                                                  org.codehaus.jackson/jackson-core-asl]]
                  [org.clojure/java.jdbc "0.2.2"]
                  [org.xerial/sqlite-jdbc "3.7.2"]
                  [noir "1.2.2" :exclusions [org.clojure/clojure]]
                  [ring-anti-forgery "0.1.3"]
                  [fetch "0.1.0-alpha2" :exclusions [org.clojure/clojure]]
-                 [crate "0.2.0-alpha3"]
-                 [enlive "1.0.0"]
+                 [crate "0.2.0-alpha4" :exclusions [org.clojure/clojurescript]]
+                 [enlive "1.0.1" :exclusions [org.clojure/clojure]]
                  [hiccup "0.3.8"]
-                 [domina "1.0.0-beta4" :exclusions [org.clojure/clojurescript]]
+                 [domina "1.0.0" :exclusions [org.clojure/clojurescript]]
                  [jayq "0.1.0-alpha4"]
                  [com.keminglabs/chosen "0.1.6"]]
-  :plugins [[lein-cljsbuild "0.2.5"]
+  :plugins [[lein-cljsbuild "0.2.7"]
             [lein-marginalia "0.7.1"]
             [lein-midje "2.0.0-SNAPSHOT"]]
   :profiles {:dev {:dependencies
-                   [[midje "1.4.0" :exclusions [org.clojure/clojure]]]}
+                   [[midje "1.4.0" :exclusions [org.clojure/clojure ordered]]]}
              :cljs {:dependencies [[org.reflections/reflections "0.9.5-RC2"
                                     :exclusions [com.google.collections/google-collections]]]}}
   :repositories {"biojava" {:url "http://www.biojava.org/download/maven/"
                             :snapshots false}}
   :java-source-paths ["src/java"]
- ;:jvm-opts ["-Xmx4g"]
+                                        ;:jvm-opts ["-Xmx4g"]
   :omit-source false
   :aot [bcbio.variation.vcfwalker bcbio.variation.core bcbio.variation.annotate.nbq]
   :main bcbio.variation.core
@@ -69,10 +72,10 @@
             "variant-utils" ["run" "-m" "bcbio.variation.utils.core"]
             "variant-vctest" ["run" "-m" "bcbio.variation.variantcontext"]}
   :cljsbuild {:builds
-              [{:builds nil
-                :source-path "src/cljs"
-                :compiler
-                {:output-to "public/js/score.js"
-                 :optimizations :advanced
-                 :externs ["externs/jquery.js"]
-                 :pretty-print false}}]})
+              [{:source-path "src/cljs"
+                :compiler {:output-to "public/js/score.js"
+                           :optimizations :advanced
+                           :pretty-print false
+                           ;;:optimizations :whitespace
+                           ;;:pretty-print true
+                           :externs ["externs/jquery.js"]}}]})

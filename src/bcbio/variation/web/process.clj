@@ -149,7 +149,7 @@
                                                         (get-in comparison [:summary :sv])))
                        "\n")))
     (file-api/put-files (cons summary-file out-files) (:gs-variant-file work-info)
-                        "xprize" {:client gs-client})))
+                        "xprize" {:client gs-client} :pre-fetch? false)))
 
 (defn- prepare-final-files
   "Merge standard and structural variant outputs into final set of upload files."

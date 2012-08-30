@@ -26,14 +26,15 @@
 
 (defn- logged-out-html []
   (crate/html
-   [:form {:class "navbar-form"}
-    [:input {:type "text" :name "username" :class "input-medium" :placeholder "GenomeSpace Username"
-             :style "margin-top: 2px; margin-right: 4px"}]
-    [:input {:type "password" :name "password" :class "input-medium" :placeholder "Password"
-             :style "margin-top: 2px;"}]
-    [:button {:type "submit" :id "login-btn" :class "btn-info btn"} "Login"]
-    [:a {:class "btn btn-success" :href "http://www.genomespace.org/register" :target "_blank"}
-     "Register"]]))
+   [:div {:id "login-form"}
+    [:form {:class "navbar-form"}
+     [:input {:type "text" :name "username" :class "input-medium" :placeholder "GenomeSpace Username"
+              :style "margin-top: 2px; margin-right: 4px"}]
+     [:input {:type "password" :name "password" :class "input-medium" :placeholder "Password"
+              :style "margin-top: 2px;"}]
+     [:button {:type "submit" :id "login-btn" :class "btn-info btn"} "Login"]
+     [:a {:class "btn btn-success" :href "http://www.genomespace.org/register" :target "_blank"}
+      "Register"]]]))
 
 (declare login-listeners)
 
@@ -41,6 +42,7 @@
   "Check for logged in users, updating user management region accordingly."
   []
   (fm/remote (get-username) [user]
+             (domina/log (logged-out-html))
              (domina/set-html! (domina/by-id "user-manage")
                    (if (nil? user)
                      (logged-out-html)
@@ -52,7 +54,7 @@
   []
   (listen! (domina/by-id "login-btn")
            :click (fn [evt]
-                    (let [login-vals (->> (xpath "//div[@id='user-manage']/form/input")
+                    (let [login-vals (->> (xpath "//div[@id='user-manage']/div/form/input")
                                           (domina/nodes)
                                           (map form-input)
                                           (into {}))]
