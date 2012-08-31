@@ -45,14 +45,17 @@
 (defn variant-format-filter
   "Perform hard filtering base on JEXL expressions on metrics in the Genotype FORMAT field."
   [in-vcf exps ref]
-  (letfn [(format-filter [exps]
-            {:pre [(= 1 (count exps))]}
-            (let [[attr op-str str-val] (string/split (first exps) #" ")
+  (letfn [(format-filter [exp]
+            (let [[attr op-str str-val] (string/split exp #" ")
                   val (to-float str-val)
                   op (eval (read-string op-str))]
               (fn [vc]
-                (not (op (get-vc-attr vc attr {}) val)))))]
-    (write-vcf-from-filter in-vcf ref "ffilter" (format-filter exps))))
+                (not (op (get-vc-attr vc [:format attr] {}) val)))))
+          (format-filter-multi [exps]
+            (let [int-filters (map format-filter exps)]
+              (fn [vc]
+                (every? true? (map #(% vc) int-filters)))))]
+    (write-vcf-from-filter in-vcf ref "ffilter" (format-filter-multi exps))))
 
 (defn- variant-recalibration
   "Perform the variant recalibration step with input training VCF files.

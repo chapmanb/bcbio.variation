@@ -56,11 +56,11 @@
                                                                       (roughly 0.41239)])
       (get-vc-attrs (first vcf-iter) xtra-attrs {}) => {"gms_illumina" nil
                                                         "AD" 0.0 "QUAL" 5826.09 "DP" 250.0}
-      (get-vc-attr (first vcf-iter) "FORMAT_DP" {}) => 5
+      (get-vc-attr (first vcf-iter) [:format "DP"] {}) => 5
       (-> (first vcf-iter) normalizer (get "QUAL")) => (roughly 0.621))))
 
 (facts "Filter based on genotype FORMAT queries"
-  (variant-format-filter top-vcf ["FORMAT_DP < 10"] ref) => ffilter-out)
+  (variant-format-filter top-vcf ["DP < 10"] ref) => ffilter-out)
 
 (facts "Final filtration of variants using classifier"
   (filter-vcf-w-classifier top-vcf top-vcf c-neg-vcf nil ref

@@ -81,7 +81,7 @@
   [vc attr _]
   (:qual vc))
 
-(defmethod get-vc-attr "FORMAT_DP"
+(defmethod get-vc-attr [:format "DP"]
   ^{:doc "Retrieve depth from Genotype FORMAT metrics.
           Handles custom cases like cortex_var with alternative
           depth attributes."}
