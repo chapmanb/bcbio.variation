@@ -4,6 +4,7 @@
         [bcbio.variation.haploid :exclude [-main]]
         [bcbio.variation.filter.classify]
         [bcbio.variation.filter.intervals]
+        [bcbio.variation.filter]
         [bcbio.variation.validate]
         [bcbio.variation.variantcontext :exclude [-main]])
   (:require [fs.core :as fs]
@@ -24,8 +25,10 @@
                align-bam (str (fs/file data-dir "aligned-reads.bam"))
                region-bed (str (fs/file data-dir "aligned-reads-regions.bed"))
                region-multi-out (itx/add-file-part region-bed "multicombine")
-               region-out (fs/glob (fs/file data-dir "aligned-reads-callable*"))]
-           (doseq [x (concat [top-out dip-out c-out cbin-out region-multi-out] region-out)]
+               region-out (fs/glob (fs/file data-dir "aligned-reads-callable*"))
+               ffilter-out (itx/add-file-part top-vcf "ffilter")]
+           (doseq [x (concat [top-out dip-out c-out cbin-out region-multi-out ffilter-out]
+                             region-out)]
              (itx/remove-path x))
            ?form)))
 
@@ -53,7 +56,11 @@
                                                                       (roughly 0.41239)])
       (get-vc-attrs (first vcf-iter) xtra-attrs {}) => {"gms_illumina" nil
                                                         "AD" 0.0 "QUAL" 5826.09 "DP" 250.0}
+      (get-vc-attr (first vcf-iter) "FORMAT_DP" {}) => 5
       (-> (first vcf-iter) normalizer (get "QUAL")) => (roughly 0.621))))
+
+(facts "Filter based on genotype FORMAT queries"
+  (variant-format-filter top-vcf ["FORMAT_DP < 10"] ref) => ffilter-out)
 
 (facts "Final filtration of variants using classifier"
   (filter-vcf-w-classifier top-vcf top-vcf c-neg-vcf nil ref

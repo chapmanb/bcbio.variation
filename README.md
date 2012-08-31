@@ -111,6 +111,10 @@ provide example starting points and details on available options are below:
            metadata: Dictionary of annotations associated with the call set.
                      Finalizers use these to provide annotation specific
                      filtering of calls.
+           filters: Provide hard filtering of variants prior to comparison with 
+                    specified JEXL GATK expressions.
+           format-filters: Provide hard filtering of variants based on
+                           attributes in the genotype FORMAT field.
            recall: Recall, using GATK, all non-called variant positions after
                    merging multiple input calls. (boolean; default false)
            annotate: Annotate calls with GATK annotations (boolean; default false).

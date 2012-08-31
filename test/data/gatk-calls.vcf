@@ -38,7 +38,7 @@
 ##contig=<ID=MT,length=16571,assembly=GRCh37>
 ##source=SelectVariants
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	Test1
-MT	73	.	G	A	5826.09	PASS	AC=2;AF=1.00;AN=2;DP=250;DS;Dels=0.00;FS=0.000;HRun=0;HaplotypeScore=2.6163;MQ=51.06;MQ0=0;QD=23.30;set=7_100326_FC6107FAAXX-sort-dup-gatkrecal-realign-variants-snp-filterSNP	GT:AD:DP:GQ:PL	1/1:0,250:250:99:5820,645,0
+MT	73	.	G	A	5826.09	PASS	AC=2;AF=1.00;AN=2;DP=250;DS;Dels=0.00;FS=0.000;HRun=0;HaplotypeScore=2.6163;MQ=51.06;MQ0=0;QD=23.30;set=7_100326_FC6107FAAXX-sort-dup-gatkrecal-realign-variants-snp-filterSNP	GT:AD:DP:GQ:PL:COV	1/1:0,250:250:99:5820,645,0:0,5
 MT	150	.	T	C	7171.91	PASS	AC=2;AF=1.00;AN=2;DP=239;DS;Dels=0.00;FS=0.000;HRun=1;HaplotypeScore=0.0000;MQ=45.37;MQ0=0;QD=30.01;set=7_100326_FC6107FAAXX-sort-dup-gatkrecal-realign-variants-snp-filterSNP	GT:AD:DP:GQ:PL	1/1:0,239:239:99:7168,697,0
 MT	152	rs117135796	T	C	9054.79	PASS	AC=2;AF=1.00;AN=2;BaseQRankSum=1.523;DB;DP=250;DS;Dels=0.00;FS=4.161;HRun=1;HaplotypeScore=0.0000;MQ=47.55;MQ0=0;MQRankSum=-0.112;QD=36.22;ReadPosRankSum=-0.237;set=7_100326_FC6107FAAXX-sort-dup-gatkrecal-realign-variants-snp-filterSNP	GT:AD:DP:GQ:PL	1/1:1,249:250:99:9019,706,0
 MT	195	.	C	T	7590.67	PASS	AC=2;AF=1.00;AN=2;DP=250;DS;Dels=0.00;FS=0.000;HRun=1;HaplotypeScore=0.9734;MQ=49.73;MQ0=0;QD=30.36;set=7_100326_FC6107FAAXX-sort-dup-gatkrecal-realign-variants-snp-filterSNP	GT:AD:DP:GQ:PL	1/1:0,250:250:99:7587,733,0

@@ -29,6 +29,7 @@ test/data/*-nofilter*vcf
 test/data/*-*subset*vcf
 test/data/*-*haploid.vcf
 test/data/*-*cfilter.vcf
+test/data/*-*ffilter.vcf
 test/data/*-*leftalign.vcf
 test/data/*-*samplefix.vcf
 test/data/*-*fullprep.vcf

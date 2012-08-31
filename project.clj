@@ -39,7 +39,9 @@
                                                   org.codehaus.jackson/jackson-core-asl]]
                  [org.clojure/java.jdbc "0.2.2"]
                  [org.xerial/sqlite-jdbc "3.7.2"]
-                 [noir "1.2.2" :exclusions [org.clojure/clojure]]
+                 [clj-stacktrace "0.2.4"]
+                 [noir "1.2.2" :exclusions [org.clojure/clojure
+                                            clj-stacktrace]]
                  [ring-anti-forgery "0.1.3"]
                  [fetch "0.1.0-alpha2" :exclusions [org.clojure/clojure]]
                  [crate "0.2.0-alpha4" :exclusions [org.clojure/clojurescript]]

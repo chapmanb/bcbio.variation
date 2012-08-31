@@ -170,10 +170,13 @@
 (defn write-vcf-from-filter
   "Write VCF file from input using a filter function."
   [vcf ref out-part passes?]
-  (with-open [vcf-iter (get-vcf-iterator vcf ref)]
-    (write-vcf-w-template vcf {:out (itx/add-file-part vcf out-part)}
-                          (map :vc (filter passes? (parse-vcf vcf-iter)))
-                          ref)))
+  (let [out-file (itx/add-file-part vcf out-part)]
+    (when (itx/needs-run? out-file)
+      (with-open [vcf-iter (get-vcf-iterator vcf ref)]
+        (write-vcf-w-template vcf {:out out-file}
+                              (map :vc (filter passes? (parse-vcf vcf-iter)))
+                              ref)))
+    out-file))
 
 (defn -main [vcf ref approach]
   (with-open [vcf-iter (get-vcf-iterator vcf ref)]

@@ -17,7 +17,8 @@
         [bcbio.variation.combine :only [combine-variants gatk-normalize]]
         [bcbio.variation.config :only [load-config do-transition]]
         [bcbio.variation.evaluate :only [calc-variant-eval-metrics]]
-        [bcbio.variation.filter :only [variant-filter pipeline-recalibration]]
+        [bcbio.variation.filter :only [variant-filter variant-format-filter
+                                       pipeline-recalibration]]
         [bcbio.variation.metrics :only [vcf-stats write-summary-table]]
         [bcbio.variation.multiple :only [prep-cmp-name-lookup pipeline-compare-multiple]]
         [bcbio.variation.phasing :only [is-haploid? compare-two-vcf-phased]]
@@ -134,9 +135,12 @@
                                                  :intervals all-intervals))
                       (map vector merged-vcfs align-bams (:calls exp)))
         _ (transition :filter "Post annotation filtering")
-        filter-vcfs (map (fn [[v c]] (if-not (nil? (:filters c))
-                                       (variant-filter v (:filters c) (:ref exp))
-                                       v))
+        filter-vcfs (map (fn [[v c]]
+                           (cond
+                            (:filters c) (variant-filter v (:filters c) (:ref exp))
+                            (:format-filters c) (variant-format-filter v (:format-filters c)
+                                                                       (:ref exp))
+                            :else v))
                          (map vector ann-vcfs (:calls exp)))]
     (map (fn [[c v b]] (-> c
                            (assoc :file v)

@@ -3,12 +3,13 @@
   (:import [org.broadinstitute.sting.utils.variantcontext
             VariantContextBuilder])
   (:use [clojure.string :only [split]]
-        [bcbio.variation.filter.classify :only [pipeline-classify-filter]]
+        [bcbio.variation.filter.classify :only [pipeline-classify-filter get-vc-attr]]
         [bcbio.variation.filter.trusted :only [get-support-vcfs get-trusted-variants]]
         [bcbio.variation.metrics :only [to-float]]
         [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template
-                                               get-vcf-iterator]])
-  (:require [bcbio.run.broad :as broad]
+                                               get-vcf-iterator write-vcf-from-filter]])
+  (:require [clojure.string :as string]
+            [bcbio.run.broad :as broad]
             [bcbio.run.itx :as itx]))
 
 (defn jexl-from-config [jexl-filters]
@@ -40,6 +41,18 @@
                       (jexl-from-config jexl-filters))]
     (broad/run-gatk "VariantFiltration" args file-info {:out [:out-vcf]})
     (:out-vcf file-info)))
+
+(defn variant-format-filter
+  "Perform hard filtering base on JEXL expressions on metrics in the Genotype FORMAT field."
+  [in-vcf exps ref]
+  (letfn [(format-filter [exps]
+            {:pre [(= 1 (count exps))]}
+            (let [[attr op-str str-val] (string/split (first exps) #" ")
+                  val (to-float str-val)
+                  op (eval (read-string op-str))]
+              (fn [vc]
+                (not (op (get-vc-attr vc attr {}) val)))))]
+    (write-vcf-from-filter in-vcf ref "ffilter" (format-filter exps))))
 
 (defn- variant-recalibration
   "Perform the variant recalibration step with input training VCF files.

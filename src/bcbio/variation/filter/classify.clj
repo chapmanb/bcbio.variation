@@ -9,6 +9,7 @@
         [clj-ml.classifiers :only [make-classifier classifier-train
                                    classifier-evaluate classifier-classify]]
         [bcbio.variation.haploid :only [get-likelihoods]]
+        [bcbio.variation.metrics :only [to-float]]
         [bcbio.variation.filter.intervals :only [pipeline-combine-intervals]]
         [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template
                                                get-vcf-iterator has-variants?
@@ -79,6 +80,19 @@
 (defmethod get-vc-attr "QUAL"
   [vc attr _]
   (:qual vc))
+
+(defmethod get-vc-attr "FORMAT_DP"
+  ^{:doc "Retrieve depth from Genotype FORMAT metrics.
+          Handles custom cases like cortex_var with alternative
+          depth attributes."}
+  [vc attr _]
+  {:pre [(= 1 (:num-samples vc))]}
+  (let [g-attrs (-> vc :genotypes first :attributes)]
+    (cond
+     (contains? g-attrs "COV") (int (apply + (map to-float (string/split (get g-attrs "COV") #","))))
+     (contains? g-attrs "DP") (get g-attrs "DP")
+     (contains? g-attrs "AD") (apply + (get g-attrs "AD"))
+     :else nil)))
 
 (defmethod get-vc-attr :gemini
   ^{:doc "Retrieve attribute information from associated Gemini index."}
