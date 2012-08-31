@@ -66,7 +66,7 @@
 
 (defn available-metrics
   [file-id & {:keys [creds]}]
-  (let [vcf-file (retrieve-file file-id creds)]
+  (let [vcf-file (when file-id (retrieve-file file-id creds))]
     (concat (im/available-metrics vcf-file)
             (gemini/available-metrics vcf-file))))
 

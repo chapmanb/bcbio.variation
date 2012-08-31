@@ -33,8 +33,16 @@
   default-metrics
   [{:id "QUAL" :type :float}])
 
-(defn available-metrics
-  "Retrieve metrics available for variant input file."
+(defmulti available-metrics
+  (fn [in-file] in-file))
+
+(defmethod available-metrics nil
+  ^{:doc "Retrieve all available default metrics without file information"}
+  [_]
+  (map (fn [[k v]] (assoc v :id k)) expose-metrics))
+
+(defmethod available-metrics :default
+  ^{:doc "Retrieve metrics available for variant input file."}
   [vcf-file]
   (letfn [(convert-header [line]
             {:id (.getID line)
