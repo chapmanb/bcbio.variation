@@ -29,6 +29,7 @@
   (ordered-map "aaf_1kg_all" {:range [0.0 1.0]
                               :desc "1000 genomes allele frequency, all populations"}
                "gms_illumina" {:range [0.0 100.0]
+                               :y-scale {:type :log}
                                :desc "Genome Mappability Score with an Illumina error model"}))
 
 (defn available-metrics
@@ -36,6 +37,31 @@
   [_]
   (when gemini-installed?
     (map (fn [[k v]] (assoc v :id k)) gemini-metrics)))
+
+(defmulti finalize-gemini-attr
+  "Provide additional post-processing of gemini supplied attributes."
+  (fn [attr val] (keyword (string/lower-case attr))))
+
+(defmethod finalize-gemini-attr :gms_illumina
+  [_ val]
+  (if (nil? val) 100.0 val))
+
+(defmethod finalize-gemini-attr :gms_solid
+  [_ val]
+  (if (nil? val) 100.0 val))
+
+(defmethod finalize-gemini-attr :gms_iontorrent
+  [_ val]
+  (if (nil? val) 100.0 val))
+
+(defmethod finalize-gemini-attr :default
+  [_ val]
+  val)
+
+(defn- gemini-metric-from-row
+  [row attr]
+  (finalize-gemini-attr attr
+                        (get row (keyword (string/lower-case attr)))))
 
 (defn vc-attr-retriever
   "Retrieve metrics by name from a gemini index for provided VariantContexts."
@@ -48,7 +74,7 @@
             [(str "SELECT " (name attr)
                   " FROM variants WHERE chrom = ? AND start = ? and ref = ?")
              (str "chr" (:chr vc)) (dec (:start vc)) (.getBaseString (:ref-allele vc))]
-            (get (first rows) (keyword (string/lower-case attr)))))))))
+            (gemini-metric-from-row (first rows) attr)))))))
 
 (defn get-raw-metrics
   "Retrieve table of Gemini metrics keyed on variant names."
@@ -62,7 +88,7 @@
                 " FROM variants WHERE filter is NULL ORDER BY chrom, start")]
           (doall (map (fn [orig]
                         (reduce (fn [coll x]
-                                  (assoc coll x (get orig (keyword (string/lower-case x)))))
+                                  (assoc coll x (gemini-metric-from-row orig x)))
                                 {:id [(string/replace (:chrom orig) "chr" "") (inc (:start orig)) (:ref orig)]}
                                 plot-metrics))
                       rows)))))))
