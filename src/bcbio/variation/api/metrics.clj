@@ -55,12 +55,16 @@
             (reduce (fn [coll x]
                       (assoc coll (:id x) x))
                     {}
-                    (metrics-fn vcf-file ref-file :metrics (when metrics (map :id metrics)))))]
-    (->> (merge-with merge
-                     (metrics-by-id im/get-raw-metrics)
-                     (metrics-by-id gemini/get-raw-metrics))
-         vals
-         (sort-by :id))))
+                    (metrics-fn vcf-file ref-file :metrics (when metrics (map :id metrics)))))
+          (present-metrics-by-id [base metrics-fn]
+            (-> (metrics-by-id metrics-fn)
+                (select-keys (keys base))))]
+    (let [base-metrics (metrics-by-id im/get-raw-metrics)]
+      (->> (merge-with merge
+                       base-metrics
+                       (present-metrics-by-id base-metrics gemini/get-raw-metrics))
+           vals
+           (sort-by :id)))))
 
 ;; ## API functions
 

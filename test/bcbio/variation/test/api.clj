@@ -3,7 +3,8 @@
   (:use [midje.sweet]
         [bcbio.variation.api.metrics]
         [bcbio.variation.api.file]
-        [bcbio.variation.api.shared :only [set-config-from-file!]])
+        [bcbio.variation.api.shared :only [set-config-from-file!]]
+        [bcbio.variation.index.subsample])
   (:require [fs.core :as fs]
             [bcbio.run.itx :as itx]
             [bcbio.variation.index.gemini :as gemini]
@@ -31,6 +32,11 @@
     (-> out :metrics first :id) => "QUAL"
     (-> out :metrics first :x-scale :domain) => (just [0.0 10000.0])
     (apply + (-> out :metrics first :vals)) => (roughly 1.0)))
+
+(facts "Subsample full metrics files using clustering."
+  (let [params {:subsample {:method :k-means :count 5}}]
+    (count (subsample-by-cluster (get-raw-metrics vcf1)
+                                 params)) => (get-in params [:subsample :count])))
 
 (facts "Retrieve locally cached files from GenomeSpace."
   (set-config-from-file! web-yaml)

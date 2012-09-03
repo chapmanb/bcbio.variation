@@ -24,7 +24,8 @@
                  [incanter/incanter-charts "1.3.0" :exclusions [org.clojure/clojure]]
                  [nz.ac.waikato.cms.weka/weka-stable "3.6.6"]
                  [org.clojars.chapmanb/fast-random-forest "0.98"]
-                 [com.leadtune/clj-ml "0.2.2" :exclusions [lt/weka hr.irb/fastRandomForest
+                 [com.leadtune/clj-ml "0.2.4" :exclusions [cs.waikato.ac.nz/weka
+                                                           hr.irb/fastRandomForest
                                                            org.clojure/clojure
                                                            incanter/incanter-core
                                                            incanter/incanter-charts]]
