@@ -92,6 +92,18 @@
         ["SELECT * from metrics LIMIT 1"]
         (not= want-cols (-> rows first keys set))))))
 
+(defn- num-variants
+  [index-file]
+  (sql/with-connection (get-sqlite-db index-file)
+    (sql/with-query-results rows
+      ["SELECT count(*) from metrics"]
+      (-> rows first vals first))))
+
+(defn- all-metrics-as-subsample
+  [index-file]
+  (sql/with-connection (get-sqlite-db index-file)
+    (sql/update-values :metrics ["start > -1"] {:issubsample 1})))
+
 (declare get-raw-metrics)
 (defn- subsample-metrics
   "Identify a subsample of records to use in visualization"
@@ -128,7 +140,9 @@
                                         (assoc :refallele (.getBaseString (:ref-allele vc)))
                                         (assoc :issubsample 0)))))))))
       (when subsample-params
-        (subsample-metrics index-file in-file ref-file subsample-params)))
+        (if (> (num-variants index-file) (get-in subsample-params [:subsample :count]))
+          (subsample-metrics index-file in-file ref-file subsample-params)
+          (all-metrics-as-subsample index-file))))
     index-file))
 
 (defn get-raw-metrics
