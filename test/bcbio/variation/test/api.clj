@@ -17,7 +17,8 @@
                ref (str (fs/file data-dir "GRCh37.fa"))
                vcf1 (str (fs/file data-dir "gatk-calls.vcf"))
                out-index (str (itx/file-root vcf1) "-metrics.db")
-               gemini-index (str (itx/file-root vcf1) "-gemini.db")]
+               gemini-index (str (itx/file-root vcf1) "-gemini.db")
+               sub-params {:subsample {:method :k-means :count 5}}]
            (doseq [x [out-index gemini-index]]
              (itx/remove-path x))
            ?form
@@ -34,9 +35,11 @@
     (apply + (-> out :metrics first :vals)) => (roughly 1.0)))
 
 (facts "Subsample full metrics files using clustering."
-  (let [params {:subsample {:method :k-means :count 5}}]
-    (count (subsample-by-cluster (get-raw-metrics vcf1)
-                                 params)) => (get-in params [:subsample :count])))
+  (count (subsample-by-cluster (get-raw-metrics vcf1)
+                               sub-params)) => (get-in sub-params [:subsample :count])
+  (im/index-variant-file vcf1 ref :re-index? true :subsample-params sub-params) => out-index
+  (count (im/get-raw-metrics vcf1 ref
+                             :use-subsample? true)) => (get-in sub-params [:subsample :count]))
 
 (facts "Retrieve locally cached files from GenomeSpace."
   (set-config-from-file! web-yaml)

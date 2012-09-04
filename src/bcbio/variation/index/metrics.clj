@@ -3,6 +3,7 @@
   (:use [ordered.map :only [ordered-map]]
         [bcbio.variation.metrics :only [passes-filter?]]
         [bcbio.variation.filter.classify :only [get-vc-attrs]]
+        [bcbio.variation.index.subsample :only [subsample-by-cluster]]
         [bcbio.variation.variantcontext :only [get-vcf-header get-vcf-iterator parse-vcf]]
         [bcbio.variation.web.db :only [get-sqlite-db]])
   (:require [clojure.string :as string]
@@ -68,22 +69,50 @@
            (map add-base-info)
            (sort-by #(get metrics-order (:id %)))))))
 
+(def ^{:doc "Common columns for variant metrics table."
+       :private true}
+  shared-metrics-cols [[:contig :text]
+                       [:start :integer]
+                       [:refallele :text]
+                       [:issubsample :integer]])
+
 (defn- create-metrics-tables
   "Create table to represent variant metrics"
   [metrics]
-  (apply sql/create-table (concat [:metrics
-                                   [:contig :text]
-                                   [:start :integer]
-                                   [:refallele :text]]
+  (apply sql/create-table (concat [:metrics] shared-metrics-cols
                                   (map (fn [x] [(:id x) (:type x)]) metrics))))
+
+(defn- index-needs-update?
+  "Check if an index file has up to date columns"
+  [index-file metrics]
+  (let [want-cols (set (concat (map first shared-metrics-cols)
+                               (map #(keyword (string/lower-case (:id %))) metrics)))]
+    (sql/with-connection (get-sqlite-db index-file)
+      (sql/with-query-results rows
+        ["SELECT * from metrics LIMIT 1"]
+        (not= want-cols (-> rows first keys set))))))
+
+(declare get-raw-metrics)
+(defn- subsample-metrics
+  "Identify a subsample of records to use in visualization"
+  [index-file in-file ref-file params]
+  (let [sub-ids (subsample-by-cluster (get-raw-metrics in-file ref-file) params)]
+    (sql/with-connection (get-sqlite-db index-file)
+      (sql/transaction
+       (doseq [xid sub-ids]
+         (sql/update-values :metrics
+                            (cons "contig=? AND start=? and refallele=?" (vec xid))
+                            {:issubsample 1}))))))
 
 (defn index-variant-file
   "Pre-index a variant file with associated metrics."
-  [in-file ref-file & {:keys [re-index?]}]
+  [in-file ref-file & {:keys [re-index? subsample-params]}]
   (let [batch-size 10000
         metrics (available-metrics in-file)
         index-file (str (itx/file-root in-file) "-metrics.db")]
-    (when (or (itx/needs-run? index-file) re-index?)
+    (when (or re-index?
+              (itx/needs-run? index-file)
+              (index-needs-update? index-file metrics))
       (itx/with-tx-file [tx-index index-file]
         (sql/with-connection (get-sqlite-db tx-index :create true)
           (sql/transaction
@@ -96,19 +125,24 @@
                                     (-> (get-vc-attrs vc (map :id metrics) {})
                                         (assoc :contig (:chr vc))
                                         (assoc :start (:start vc))
-                                        (assoc :refallele (.getBaseString (:ref-allele vc))))))))))))
+                                        (assoc :refallele (.getBaseString (:ref-allele vc)))
+                                        (assoc :issubsample 0)))))))))
+      (when subsample-params
+        (subsample-metrics index-file in-file ref-file subsample-params)))
     index-file))
 
 (defn get-raw-metrics
   "Retrieve table of raw metrics using indexed variant file"
-  [in-file ref-file & {:keys [metrics]}]
+  [in-file ref-file & {:keys [metrics use-subsample?]}]
   (let [index-db (index-variant-file in-file ref-file)
         plot-metrics (filter (partial contains? expose-metrics)
                              (or metrics (map :id (available-metrics in-file))))]
     (sql/with-connection (get-sqlite-db index-db)
       (sql/with-query-results rows
         [(str "SELECT contig, start, refallele, " (string/join ", " plot-metrics)
-              " FROM metrics ORDER BY contig, start")]
+              " FROM metrics"
+              (if use-subsample? " WHERE issubsample=1 " " "))]
+              "ORDER BY contig, start"
         (doall (map (fn [orig]
                       (reduce (fn [coll x]
                                 (assoc coll x (get orig (keyword (string/lower-case x)))))
