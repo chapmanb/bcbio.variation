@@ -25,7 +25,7 @@
   representative items from each cluster."
   [metrics params]
   (letfn [(get-attrs [attrs x] (map #(get x %) attrs))]
-    (let [clusterer (mlclust/make-clusterer (get-in params [:subsample :method])
+    (let [clusterer (mlclust/make-clusterer (keyword (get-in params [:subsample :method]))
                                             {:number-clusters (get-in params [:subsample :count])})
           attrs (-> metrics first (dissoc :id) keys)
           ds (mldata/make-dataset "ds" attrs

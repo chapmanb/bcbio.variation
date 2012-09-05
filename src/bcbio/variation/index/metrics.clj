@@ -139,10 +139,10 @@
                                         (assoc :start (:start vc))
                                         (assoc :refallele (.getBaseString (:ref-allele vc)))
                                         (assoc :issubsample 0)))))))))
-      (when subsample-params
-        (if (> (num-variants index-file) (get-in subsample-params [:subsample :count]))
-          (subsample-metrics index-file in-file ref-file subsample-params)
-          (all-metrics-as-subsample index-file))))
+      (if (and subsample-params
+               (> (num-variants index-file) (get-in subsample-params [:subsample :count])))
+        (subsample-metrics index-file in-file ref-file subsample-params)
+        (all-metrics-as-subsample index-file)))
     index-file))
 
 (defn get-raw-metrics
