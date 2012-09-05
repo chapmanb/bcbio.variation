@@ -50,12 +50,13 @@
 
 (defn- combined-raw-metrics
   "Retrieve raw metrics from multiple sources, combining on IDs."
-  [vcf-file ref-file metrics]
+  [vcf-file ref-file metrics use-subsample?]
   (letfn [(metrics-by-id [metrics-fn]
             (reduce (fn [coll x]
                       (assoc coll (:id x) x))
                     {}
-                    (metrics-fn vcf-file ref-file :metrics (when metrics (map :id metrics)))))
+                    (metrics-fn vcf-file ref-file :metrics (when metrics (map :id metrics))
+                                :use-subsample? use-subsample?)))
           (present-metrics-by-id [base metrics-fn]
             (-> (metrics-by-id metrics-fn)
                 (select-keys (keys base))))]
@@ -81,7 +82,7 @@
         ref-file (-> @web-config :ref first :genome)
         plot-metrics (or metrics (available-metrics vcf-file))
         raw-metrics (clean-raw-metrics
-                     (combined-raw-metrics vcf-file ref-file plot-metrics)
+                     (combined-raw-metrics vcf-file ref-file plot-metrics false)
                      (map :id plot-metrics))]
     {:filename in-vcf-file
      :created-on (java.util.Date.)
@@ -90,7 +91,7 @@
 
 (defn get-raw-metrics
   "Retrieve raw metrics values from input VCF."
-  [variant-id & {:keys [metrics creds]}]
+  [variant-id & {:keys [metrics creds use-subsample?]}]
   (let [vcf-file (retrieve-file variant-id creds)
         ref-file (-> @web-config :ref first :genome)]
-    (combined-raw-metrics vcf-file ref-file metrics)))
+    (combined-raw-metrics vcf-file ref-file metrics use-subsample?)))

@@ -13,7 +13,7 @@ ref:
 
 params:
   subsample:
-    method: k-mer
+    method: k-means
     count: 10000
 
 remote:

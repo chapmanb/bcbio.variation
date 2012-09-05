@@ -169,7 +169,7 @@
                 (try
                   (swap! index-queue conj k)
                   (index-fn local-file ref-file :re-index? is-new?
-                            :subsample-params (get-in @web-config [:params]))
+                            :subsample-params (:params @web-config))
                   (finally
                    (swap! index-queue disj k))))))]
     (let [ref-file (:genome (first (:ref @web-config)))]
