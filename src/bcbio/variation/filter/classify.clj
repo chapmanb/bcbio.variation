@@ -13,7 +13,7 @@
         [bcbio.variation.filter.intervals :only [pipeline-combine-intervals]]
         [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template
                                                get-vcf-iterator has-variants?
-                                               get-vcf-retriever]])
+                                               get-vcf-retriever variants-in-region]])
   (:require [clojure.string :as string]
             [incanter.stats :as stats]
             [fs.core :as fs]
@@ -253,10 +253,31 @@
                     #{"CScoreFilter"}))
         .make)))
 
+(defn- get-target-variants
+  "Retrieve variants from original file based on variants in target file."
+  [orig-file target-file ref-file ext]
+  (letfn [(get-orig-variants [retriever vc]
+            (map :vc (variants-in-region retriever (:chr vc) (:start vc) (:end vc))))]
+    (let [out-file (itx/add-file-part orig-file ext)]
+      (when (itx/needs-run? out-file)
+        (with-open [vcf-iter (get-vcf-iterator target-file ref-file)
+                    retriever (get-vcf-retriever ref-file orig-file)]
+          (write-vcf-w-template orig-file {:out out-file}
+                                (mapcat (partial get-orig-variants retriever)
+                                        (parse-vcf vcf-iter))
+                                ref-file)))
+      out-file)))
+
 (defn filter-vcf-w-classifier
   "Filter an input VCF file using a trained classifier on true/false variants."
-  [base-vcf true-vcf false-vcf trusted-vcf ref config]
+  [base-vcf orig-true-vcf orig-false-vcf trusted-vcf ref config & {:keys [train-w-base?]}]
   (let [out-file (itx/add-file-part base-vcf "cfilter")
+        true-vcf (if train-w-base?
+                   (get-target-variants base-vcf orig-true-vcf ref "tps")
+                   orig-true-vcf)
+        false-vcf (if train-w-base?
+                    (get-target-variants base-vcf orig-false-vcf ref "fps")
+                    orig-false-vcf)
         cs (build-vcf-classifiers (:classifiers config) base-vcf
                                   true-vcf false-vcf ref config)
         normalizer (get-vc-attrs-normalized (:classifiers config) base-vcf ref config base-vcf)]
@@ -272,7 +293,7 @@
 
 (defn pipeline-classify-filter
   "Fit VCF classification-based filtering into analysis pipeline."
-  [in-vcf train-info exp params config]
+  [in-vcf train-info call exp params config]
   (letfn [(get-train-vcf [type]
             (-> (filter #(= type (:name %)) train-info)
                        first
@@ -281,4 +302,5 @@
     (filter-vcf-w-classifier in-vcf (get-train-vcf "concordant")
                              (get-train-vcf "discordant")
                              (get-train-vcf "trusted")
-                             (:ref exp) params)))
+                             (:ref exp) params
+                             :train-w-base? (get call :recall false))))

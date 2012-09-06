@@ -66,6 +66,7 @@
                       "--genotyping_mode" "GENOTYPE_GIVEN_ALLELES"
                       "--output_mode" "EMIT_ALL_SITES"
                       "-stand_call_conf" "0.0"
+                      "-stand_emit_conf" "0.0"
                       "--genotype_likelihoods_model" "BOTH"]
                      (if cores ["-nt" (str cores)] [])
                      (reduce #(concat %1 ["-A" %2]) [] annotations))]

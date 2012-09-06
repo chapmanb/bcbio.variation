@@ -26,6 +26,7 @@
                "ReadPosEndDist" {:range [0.0 50.0]
                                  :desc "Mean distance from either end of read"}
                "AD" {:range [0.0 1.0]
+                     :y-scale {:type :log}
                      :desc "Deviation from expected allele balance for ref/alt alleles"}
                "PL" {:range [-250.0 0]
                      :desc "Normalized, phred-scaled likelihoods for alternative genotype"}))

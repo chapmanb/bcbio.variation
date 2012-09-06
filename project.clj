@@ -5,7 +5,7 @@
                  [org.clojure/data.csv "0.1.2" :exclusions [org.clojure/clojure]]
                  [org.clojure/core.match "0.2.0-alpha9"]
                  ;; GATK requirements
-                 [org.clojars.chapmanb/gatk-lite "2.1.2"]
+                 [org.clojars.chapmanb/gatk-lite "2.1.8"]
                  [org.clojars.chapmanb/picard "1.73"]
                  [org.clojars.chapmanb/sam "1.73"]
                  [org.clojars.chapmanb/tribble "110"]
