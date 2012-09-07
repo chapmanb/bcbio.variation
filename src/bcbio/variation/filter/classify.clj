@@ -257,7 +257,9 @@
   "Retrieve variants from original file based on variants in target file."
   [orig-file target-file ref-file ext]
   (letfn [(get-orig-variants [retriever vc]
-            (map :vc (variants-in-region retriever (:chr vc) (:start vc) (:end vc))))]
+            (->> (variants-in-region retriever (:chr vc) (:start vc) (:end vc))
+                 (filter #(= (:start %) (:start vc)))
+                 (map :vc)))]
     (let [out-file (itx/add-file-part orig-file ext)]
       (when (itx/needs-run? out-file)
         (with-open [vcf-iter (get-vcf-iterator target-file ref-file)
