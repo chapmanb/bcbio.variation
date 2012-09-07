@@ -19,7 +19,7 @@
         [bcbio.variation.structural :only [prep-itree get-itree-overlap
                                            remove-itree-vc get-itree-all]]
         [bcbio.variation.variantcontext :only [parse-vcf get-vcf-retriever get-vcf-iterator
-                                               variants-in-region
+                                               variants-in-region merge-headers
                                                write-vcf-w-template]]
         [bcbio.align.ref :only [get-seq-dict]]
         [ordered.map :only [ordered-map]])
@@ -285,7 +285,8 @@
                             (filter #(contains? (set to-capture) (first %))
                                     (map (juxt :comparison :vc)
                                          (flatten vc-info)))
-                            ref))
+                            ref
+                            :header-update-fn (merge-headers (:file other-info))))
     out-files))
 
 (defn count-comparison-bases

@@ -4,11 +4,13 @@
   (:import [org.broad.tribble.index IndexFactory]
            [org.broad.tribble AbstractFeatureReader]
            [org.broad.tribble.readers AsciiLineReader]
-           [org.broadinstitute.sting.utils.codecs.vcf VCFCodec]
+           [org.broadinstitute.sting.utils.codecs.vcf
+            VCFCodec VCFUtils VCFHeader]
            [org.broadinstitute.sting.utils.variantcontext.writer VariantContextWriterFactory
             Options]
            [org.broadinstitute.sting.gatk.refdata.tracks RMDTrackBuilder]
            [org.broadinstitute.sting.gatk.arguments ValidationExclusion$TYPE]
+           [org.apache.log4j Logger]
            [java.util EnumSet])
   (:use [clojure.java.io]
         [clojure.set :only [intersection]]
@@ -139,6 +141,13 @@
     (.readHeader (VCFCodec.) vcf-reader)))
 
 ;; ## Writing VCF files
+
+(defn merge-headers
+  [& merge-files]
+  (fn [_ header]
+    (VCFHeader. (VCFUtils/smartMergeHeaders (cons header (map get-vcf-header merge-files))
+                                            (Logger/getLogger ""))
+                (.getGenotypeSamples header))))
 
 (defn write-vcf-w-template
   "Write VCF output files starting with an original input template VCF.
