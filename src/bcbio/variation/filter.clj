@@ -50,7 +50,8 @@
                   val (to-float str-val)
                   op (eval (read-string op-str))]
               (fn [vc]
-                (not (op (get-vc-attr vc [:format attr] {}) val)))))
+                (when-let [vc-val (get-vc-attr vc [:format attr] {})]
+                  (not (op vc-val val))))))
           (format-filter-multi [exps]
             (let [int-filters (map format-filter exps)]
               (fn [vc]

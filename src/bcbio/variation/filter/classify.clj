@@ -61,6 +61,10 @@
        ;;                  (:attributes g) (:chr vc) (:start vc)))
        ))))
 
+(defmethod get-vc-attr [:format "AD"]
+  [vc attr retrievers]
+  (get-vc-attr vc "AD" retrievers))
+
 (defmethod get-vc-attr "PL"
   ^{:doc "Provide likelihood ratios for genotype compared to next most likely call.
           For haploid calls, get the homozygous reference or homozygous variant
