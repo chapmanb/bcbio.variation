@@ -8,7 +8,7 @@
            [net.sf.picard.util IntervalTree])
   (:use [clojure.set :only [intersection]]
         [ordered.map :only [ordered-map]]
-        [bcbio.variation.variantcontext :only [get-vcf-iterator parse-vcf
+        [bcbio.variation.variantcontext :only [get-vcf-iterator parse-vcf merge-headers
                                                from-vc write-vcf-w-template]]
         [bcbio.variation.callable :only [get-bed-source features-in-region]])
   (:require [clojure.string :as string]
@@ -312,7 +312,7 @@
                                                     ref interval-file params)
                                (find-non-svs :nosv1 vcf1-iter params)
                                (find-non-svs :nosv2 vcf2-iter params))
-                              ref))
+                              ref :header-update-fn (merge-headers (:file c2))))
       ;; Remove SV VCF indexes since they use alternative Codecs
       (doseq [fname (vals out-files)]
         (let [x (str fname ".idx")]
@@ -357,5 +357,6 @@
   (let [out-files {:out1 (itx/add-file-part f1 "overlap")
                    :out2 (itx/add-file-part f2 "overlap")}]
     (when (itx/needs-run? (vals out-files))
-      (write-vcf-w-template f1 out-files (find-overlapping-svs f1 f2 ref params) ref))
+      (write-vcf-w-template f1 out-files (find-overlapping-svs f1 f2 ref params) ref
+                            :header-update-fn (merge-headers f2)))
     out-files))
