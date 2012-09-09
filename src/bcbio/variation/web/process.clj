@@ -13,8 +13,6 @@
             [doric.core :as doric]
             [fs.core :as fs]
             [hiccup.core :as hiccup]
-            [noir.session :as session]
-            [noir.response :as response]
             [net.cgrand.enlive-html :as html]
             [clj-genomespace.core :as gs]
             [bcbio.variation.web.db :as db]
@@ -167,7 +165,7 @@
       (merge-files-into comparisons :discordant-missing :sv-reference-discordant)))
 
 (defn run-scoring-analysis
-  "Run scoring analysis from details provided in current session."
+  "Run scoring analysis from provided work information."
   [work-info gs-client]
   (let [process-config (create-work-config work-info @web-config)
         comparisons (first (variant-comparison-from-config process-config))]
@@ -180,12 +178,12 @@
 
 (defmulti get-input-files
   "Prepare working directory, downloading input files."
-  (fn [work-info params]
+  (fn [work-info params gs-client]
     (let [gs-info (:gs-variant-file params)]
       (if (or (nil? gs-info) (empty? gs-info)) :upload :gs))))
 
 (defmethod get-input-files :upload
-  [work-info params]
+  [work-info params _]
   (letfn [(download-file [tmp-dir params kw]
             (let [cur-param (get params kw)
                   out-file (fs/file tmp-dir (:filename cur-param))]
@@ -196,11 +194,11 @@
                   [:variant-file :region-file]))))
 
 (defmethod get-input-files :gs
-  [work-info params]
+  [work-info params gs-client]
   (letfn [(gs-do-download [gs-file tmp-dir]
             (let [local-file (fs/file tmp-dir (fs/base-name gs-file))]
               (when-not (fs/exists? local-file)
-                (gs/download (session/get :gs-client)
+                (gs/download gs-client
                              (str (fs/parent gs-file))
                              (str (fs/base-name gs-file))
                              tmp-dir))
@@ -214,7 +212,7 @@
 
 (defn run-scoring
   "Download form-supplied input files and start scoring analysis."
-  [orig-work-info params]
+  [orig-work-info params username gs-client]
   (letfn [(add-gs-info [work-info params]
             (let [remote-fname (:gs-variant-file params)]
               (if-not (or (nil? remote-fname) (empty? remote-fname))
@@ -222,9 +220,10 @@
                 work-info)))]
     (let [work-info (-> orig-work-info
                         (add-gs-info params)
-                        (assoc :in-files (get-input-files orig-work-info params)))
-          comparisons (run-scoring-analysis work-info (session/get :gs-client))]
-      (when-let [username (session/get :username)]
+                        (assoc :in-files (get-input-files orig-work-info params
+                                                          gs-client)))
+          comparisons (run-scoring-analysis work-info gs-client)]
+      (when username
         (db/add-analysis {:username username :files (:c-files comparisons)
                           :analysis_id (:id work-info)
                           :description (format "%s: %s" (:comparison-genome work-info)
@@ -243,19 +242,16 @@
               {:id work-id :dir (str cur-dir)
                :comparison-genome (:comparison-genome params)}))]
     (let [work-info (prep-tmp-dir)]
-      (session/put! :work-info (assoc (session/get :work-info (ordered-map))
-                                 (:id work-info) work-info))
       {:work-info work-info
        :out-html (scoring-html (:id work-info))})))
 
 ;; ## File retrieval from processing
 
 (defn- get-run-info
-  "Retrieve run information from stored database or current session."
-  [run-id username]
+  "Retrieve run information from stored database or current work-info."
+  [run-id username session-work-info]
   (if (nil? username)
-    (let [work-info (get (session/get :work-info) run-id)]
-      [(:comparison-genome work-info) (:dir work-info)])
+    [(:comparison-genome session-work-info) (:dir session-work-info)]
     (let [work-info (->> (db/get-analyses username :scoring (:db @web-config))
                          (filter #(= run-id (:analysis_id %)))
                          first)
@@ -265,11 +261,11 @@
 
 (defn get-variant-file
   "Retrieve processed output file for web display."
-  [run-id name username]
+  [run-id name username work-info]
   (letfn [(sample-file [sample-name ext]
             (let [base-name "contestant-reference"]
               (format "%s-%s-%s" sample-name base-name ext)))]
-    (let [[sample-name base-dir] (get-run-info run-id username)
+    (let [[sample-name base-dir] (get-run-info run-id username work-info)
           file-map {"concordant" (sample-file sample-name "concordant.vcf")
                     "discordant" (sample-file sample-name "discordant.vcf")
                     "discordant-missing" (sample-file sample-name "discordant-missing.vcf")
@@ -278,7 +274,7 @@
           name (get file-map name)
           fname (if-not (or (nil? work-dir)
                             (nil? name)) (str (fs/file work-dir name)))]
-      (response/content-type "text/plain"
-                             (if (and (not (nil? fname)) (fs/exists? fname))
-                               (slurp fname)
-                               "Variant file not found")))))
+
+      (if (and (not (nil? fname)) (fs/exists? fname))
+        (slurp fname)
+        "Variant file not found"))))

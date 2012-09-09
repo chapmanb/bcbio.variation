@@ -6,9 +6,9 @@
         [domina.xpath :only [xpath]]
         [bcbio.variation.score :only [set-upload-active set-gs-active]])
   (:require [domina :as domina]
-            [fetch.remotes :as remotes]
+            [shoreleave.remotes.http-rpc :as rpc]
             [crate.core :as crate])
-  (:require-macros [fetch.macros :as fm]))
+  (:require-macros [shoreleave.remotes.macros :as sl]))
 
 (defn- form-input [content]
   [(keyword (domina/attr content "name"))
@@ -41,13 +41,13 @@
 (defn- update-login
   "Check for logged in users, updating user management region accordingly."
   []
-  (fm/remote (get-username) [user]
-             (domina/log (logged-out-html))
-             (domina/set-html! (domina/by-id "user-manage")
-                   (if (nil? user)
-                     (logged-out-html)
-                     (logged-in-html user)))
-             (login-listeners)))
+  (sl/rpc :get-username [user]
+          (domina/log (logged-out-html))
+          (domina/set-html! (domina/by-id "user-manage")
+                            (if (nil? user)
+                              (logged-out-html)
+                              (logged-in-html user)))
+          (login-listeners)))
 
 (defn- login-listeners
   "Add listeners for login related clicks. Updated when DOM changes."
@@ -58,18 +58,18 @@
                                           (domina/nodes)
                                           (map form-input)
                                           (into {}))]
-                      (fm/remote (login login-vals) [result]
-                                 (if (nil? result)
-                                   (js/alert "Invalid username/password")
-                                   (do
-                                     (update-login)
-                                     (set-gs-active)))))
+                      (sl/rpc (login login-vals) [result]
+                              (if (nil? result)
+                                (js/alert "Invalid username/password")
+                                (do
+                                  (update-login)
+                                  (set-gs-active)))))
                     (prevent-default evt)))
   (listen! (domina/by-id "logout-btn")
            :click (fn [evt]
-                    (fm/remote (logout) []
-                               (update-login)
-                               (set-upload-active))
+                    (sl/rpc (logout) []
+                            (update-login)
+                            (set-upload-active))
                     (prevent-default evt))))
 
 (defn ^:export handle-login

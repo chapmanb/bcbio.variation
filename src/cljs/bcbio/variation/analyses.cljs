@@ -4,15 +4,15 @@
   (:require [domina :as domina]
             [domina.css :as css]
             [domina.events :as events]
-            [fetch.remotes :as remotes])
-  (:require-macros [fetch.macros :as fm]))
+            [shoreleave.remotes.http-rpc :as rpc])
+  (:require-macros [shoreleave.remotes.macros :as sl]))
 
 (defn- display-selected-analysis
   "Update page with details from a selected analysis."
   [analysis-id]
-  (fm/remote (get-summary analysis-id) [sum-html]
-             (domina/set-html! (domina/by-id "user-analyses")
-                               sum-html)))
+  (sl/rpc (get-summary analysis-id) [sum-html]
+          (domina/set-html! (domina/by-id "user-analyses")
+                            sum-html)))
 
 (defn ^:export display-analyses
   "Correctly set the top level navigation toolbar."
