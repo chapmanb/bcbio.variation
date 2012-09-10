@@ -41,7 +41,7 @@
 (defn- update-login
   "Check for logged in users, updating user management region accordingly."
   []
-  (sl/rpc :get-username [user]
+  (sl/rpc (get-username) [user]
           (domina/log (logged-out-html))
           (domina/set-html! (domina/by-id "user-manage")
                             (if (nil? user)

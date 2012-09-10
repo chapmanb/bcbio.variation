@@ -101,24 +101,26 @@
        (-> (response (web-process/get-variant-file runid name (get-username* session)
                                                    (get (:work-info session) runid)))
            (content-type "text/plain")))
+  (GET "/" req (response (web-process/html-submit-page)))
   (route/files "/" {:root "public" :allow-symlinks? true})
   (route/not-found "Not found"))
 
-(defn app []
+(def main-handler
   (-> main-routes
-      (wrap-file (get-in @web-config [:dir :html-root]))
+      wrap-file-info
+      wrap-anti-forgery
       wrap-rpc-session
       wrap-session
       wrap-keyword-params
       wrap-params
-      wrap-multipart-params
-      ;wrap-file-info
-      ;wrap-anti-forgery
-      ))
+      wrap-multipart-params))
+
+(defn default-config []
+  (set-config-from-file! "config/web-processing.yaml"))
 
 (defn -main
   ([config-file]
      (-main config-file "8080"))
   ([config-file port]
      (set-config-from-file! config-file)
-     (run-jetty (app) {:join? false :port (Integer/parseInt port)})))
+     (run-jetty #'main-handler {:join? false :port (Integer/parseInt port)})))

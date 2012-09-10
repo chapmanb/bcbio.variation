@@ -42,19 +42,20 @@
                  [org.xerial/sqlite-jdbc "3.7.2"]
                  [compojure "1.1.3"]
                  [ring/ring-core "1.1.5"]
-                 [ring/ring-jetty-adapter "1.0.2"]
+                 [ring/ring-jetty-adapter "1.1.5"]
                  [shoreleave/shoreleave-remote "0.2.2"]
                  [com.cemerick/shoreleave-remote-ring "0.0.2"]
                  [ring-anti-forgery "0.2.0"]
-                 [crate "0.2.0-alpha4" :exclusions [org.clojure/clojurescript]]
                  [enlive "1.0.1" :exclusions [org.clojure/clojure]]
-                 [hiccup "0.3.8"]
+                 [hiccup "1.0.1"]
+                 [crate "0.2.0-alpha4" :exclusions [org.clojure/clojurescript]]
                  [domina "1.0.0" :exclusions [org.clojure/clojurescript]]
                  [jayq "0.1.0-alpha4"]
                  [com.keminglabs/chosen "0.1.6"]]
   :plugins [[lein-cljsbuild "0.2.7"]
             [lein-marginalia "0.7.1"]
-            [lein-midje "2.0.0-SNAPSHOT"]]
+            [lein-midje "2.0.0-SNAPSHOT"]
+            [lein-ring "0.7.5"]]
   :profiles {:dev {:dependencies
                    [[midje "1.4.0" :exclusions [org.clojure/clojure ordered]]]}
              :cljs {:dependencies [[org.reflections/reflections "0.9.5-RC2"
@@ -62,7 +63,8 @@
   :repositories {"biojava" {:url "http://www.biojava.org/download/maven/"
                             :snapshots false}}
   :java-source-paths ["src/java"]
-                                        ;:jvm-opts ["-Xmx4g"]
+  :jvm-opts ["-Dorg.eclipse.jetty.util.log.class=org.eclipse.jetty.util.log.StdErrLog"]
+  ;:jvm-opts ["-Xmx4g"]
   :omit-source false
   :aot [bcbio.variation.vcfwalker bcbio.variation.core bcbio.variation.annotate.nbq]
   :main bcbio.variation.core
@@ -75,6 +77,8 @@
             "variant-reorder" ["run" "-m" "bcbio.align.reorder"]
             "variant-utils" ["run" "-m" "bcbio.variation.utils.core"]
             "variant-vctest" ["run" "-m" "bcbio.variation.variantcontext"]}
+  :ring {:handler bcbio.variation.web.server/main-handler
+         :init bcbio.variation.web.server/default-config}
   :cljsbuild {:builds
               [{:source-path "src/cljs"
                 :compiler {:output-to "public/js/score.js"

@@ -14,6 +14,7 @@
             [fs.core :as fs]
             [hiccup.core :as hiccup]
             [net.cgrand.enlive-html :as html]
+            [ring.middleware.anti-forgery :as anti-forgery]
             [clj-genomespace.core :as gs]
             [bcbio.variation.web.db :as db]
             [bcbio.variation.api.file :as file-api]))
@@ -68,16 +69,23 @@
                html/emit*))))
 
 (defn- base-page-w-content
-  "Update main page HTML with specified content"
-  [new-hiccup-html]
-  (let [html-dir (get-in @web-config [:dir :html-root])]
-    (apply str (html/emit*
-                (html/transform (html/html-resource (fs/file html-dir "index.html"))
-                                [:div#main-content]
-                                (-> new-hiccup-html
-                                    java.io.StringReader.
-                                    html/html-resource
-                                    html/content))))))
+  "Update main page HTML with specified content at selector"
+  [selector new-hiccup-html]
+  (-> (html/html-resource (file (get-in @web-config [:dir :html-root] "public") "index.html"))
+      (html/transform selector (-> new-hiccup-html
+                                   java.io.StringReader.
+                                   html/html-resource
+                                   html/content))
+      html/emit*
+      (#(apply str %))))
+
+(defn html-submit-page
+  "Return main HTML page with submit information."
+  []
+  (base-page-w-content [:div#anti-forgery]
+                       (hiccup/html [:input {:class "hidden"
+                                             :name "__anti-forgery-token"
+                                             :value anti-forgery/*anti-forgery-token*}])))
 
 (defn html-scoring-summary
   "Generate summary of scoring results for display."
@@ -98,9 +106,10 @@
 (defn scoring-html
   "Update main page HTML with content for scoring."
   [run-id]
-  (let [html-dir (get-in @web-config [:dir :html-root])
+  (let [html-dir (get-in @web-config [:dir :html-root] "public")
         template-dir (str (fs/file html-dir "template"))]
-    (base-page-w-content 
+    (base-page-w-content
+     [:div#main-content]
      (hiccup/html
       [:div {:id "scoring-in-process"}
        [:h3 "Status"]
@@ -117,6 +126,7 @@
   "Update main page with list of performed analyses."
   [username]
   (base-page-w-content
+   [:div#main-content]
    (hiccup/html
     (if (nil? username)
       [:p "Please login to display previously run analyses."]

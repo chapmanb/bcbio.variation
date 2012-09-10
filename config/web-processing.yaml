@@ -22,7 +22,6 @@ remote:
   biodata: /Home/Public/chapmanb/biodata
 
 dir:
-  html-root: "public"
+  html-dir: "public"
   cache: "tmp/cache"
   work: "tmp"
-  template: "template"
