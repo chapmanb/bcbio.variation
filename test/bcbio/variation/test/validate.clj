@@ -24,6 +24,7 @@
                cbin-out (str (itx/file-root top-vcf) "-classifier.bin")
                align-bam (str (fs/file data-dir "aligned-reads.bam"))
                region-bed (str (fs/file data-dir "aligned-reads-regions.bed"))
+               exclude-bed (str (fs/file data-dir "aligned-reads-regions-exclude.bed"))
                region-multi-out (itx/add-file-part region-bed "multicombine")
                region-out (fs/glob (fs/file data-dir "aligned-reads-callable*"))
                ffilter-out (itx/add-file-part top-vcf "ffilter")]
@@ -67,4 +68,5 @@
                            {:classifiers ["AD" "QUAL" "DP" "PL"]}) => c-out)
 
 (facts "Prepare combined interval lists based on filtering criteria"
-  (combine-multiple-intervals region-bed [align-bam] ref) => region-multi-out)
+  (combine-multiple-intervals region-bed [align-bam] ref
+                              :exclude-intervals exclude-bed) => region-multi-out)

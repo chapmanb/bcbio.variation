@@ -4,7 +4,8 @@
   to coverage. These functions manage creation of reduced BED files."
   (:import [org.broadinstitute.sting.utils.interval IntervalUtils
             IntervalMergingRule IntervalSetRule]
-           [org.broadinstitute.sting.utils GenomeLocParser])
+           [org.broadinstitute.sting.utils GenomeLocParser
+            GenomeLocSortedSet])
   (:use [clojure.java.io]
         [clojure.set :only [intersection]]
         [bcbio.align.ref :only [get-seq-dict]]
@@ -27,21 +28,33 @@
                                                     IntervalSetRule/INTERSECTION)
              (rest intervals)))))
 
+(defn- prep-intervals-by-contig
+  "Intersect and exclude intervals on a contig."
+  [start-intervals exclude-intervals loc-parser]
+  (let [overlaps (intersect-by-contig start-intervals)]
+    (if (empty? exclude-intervals)
+      overlaps
+      (-> (GenomeLocSortedSet/createSetFromList loc-parser overlaps)
+          (.subtractRegions (GenomeLocSortedSet/createSetFromList loc-parser exclude-intervals))
+          .toList))))
+
 (defn intersection-of-bed-files
   "Generate list of intervals that intersect in all provided BED files."
-  [all-beds ref loc-parser]
+  [all-beds ref loc-parser & {:keys [exclude-bed]}]
   (letfn [(intervals-by-chrom [bed-file]
             (group-by #(.getContig %) (bed-to-intervals bed-file ref loc-parser)))
           (get-by-contig [interval-groups contig]
             (map #(get % contig []) interval-groups))]
     (let [interval-groups (map intervals-by-chrom all-beds)
+          exclude-by-contig (if exclude-bed (intervals-by-chrom exclude-bed) {})
           contigs (vec (apply intersection (map #(set (keys %)) interval-groups)))]
-      (mapcat #(intersect-by-contig (get-by-contig interval-groups %))
+      (mapcat #(prep-intervals-by-contig (get-by-contig interval-groups %)
+                                         (get exclude-by-contig % []) loc-parser)
               contigs))))
 
 (defn combine-multiple-intervals
   "Combine intervals from an initial BED and coverage BAM files."
-  [initial-bed align-bams ref & {:keys [out-dir name]}]
+  [initial-bed align-bams ref & {:keys [out-dir name exclude-intervals]}]
   (let [all-beds (cons initial-bed (map #(get-callable-bed % ref :out-dir out-dir
                                                            :intervals initial-bed)
                                         align-bams))
@@ -52,7 +65,8 @@
     (when (itx/needs-run? out-file)
       (with-open [wtr (writer out-file)]
         (doseq [x (IntervalUtils/sortAndMergeIntervals
-                   loc-parser (intersection-of-bed-files all-beds ref loc-parser)
+                   loc-parser (intersection-of-bed-files all-beds ref loc-parser
+                                                         :exclude-bed exclude-intervals)
                    IntervalMergingRule/ALL)]
           (.write wtr (format "%s\t%s\t%s\n" (.getContig x) (dec (.getStart x)) (.getStop x))))))
     out-file))
@@ -65,5 +79,6 @@
     (when (and base-intervals (seq all-aligns))
       (combine-multiple-intervals base-intervals all-aligns
                                   (:ref exp)
+                                  :exclude-intervals (:exclude-intervals exp)
                                   :name (:sample exp)
                                   :out-dir (get-in config [:dir :prep] (get-in config [:dir :out]))))))
