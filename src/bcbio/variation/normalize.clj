@@ -75,18 +75,49 @@
    "chrUn_gl000242" "GL000242", "chrUn_gl000221" "GL000221", "chrUn_gl000232" "GL000232",
    "chrUn_gl000243" "GL000243"})
 
+(defn- fix-non-version-names
+  "Convert any non-versioned names into the representative version in ref-dict."
+  [base-map ref-dict]
+  (letfn [(find-best-match [x check]
+            (first (filter #(.startsWith % x) check)))]
+    (reduce (fn [coll [k v]]
+              (assoc coll k
+                     (if (contains? ref-dict v)
+                       v
+                       (find-best-match v (keys ref-dict)))))
+            {} base-map)))
+
+(defn- add-alt-keys
+  "Add alternative key variations:
+    - underscore to dash in hg19 names
+    - chr added to all GRCh37 names instead of hg19 names"
+  [base-map modtype]
+  {:pre [(= modtype :underscore)]}
+  (reduce (fn [coll [k v]]
+            (-> coll
+                (assoc k v)
+                (assoc (string/replace k "_" "-") v)
+                (assoc (str "chr" v) v)))
+          {} base-map))
+
+(defn prep-rename-map
+  "Fix GRCh37/hg19 name mappings to handle common problem cases."
+  [map-key ref-file]
+  (let [remappers {:GRCh37 hg19-map}]
+    (-> (get remappers map-key)
+        (fix-non-version-names (get-seq-name-map ref-file))
+        (add-alt-keys :underscore))))
+
 (defmethod chr-name-remap :GRCh37
-  [_ ref-chrs vcf-chrs]
-  (letfn [(maybe-remap-name [x]
-            {:post [(contains? ref-chrs %)]}
-            (if (contains? ref-chrs x)
-              x
-              (get hg19-map x)))]
-    (zipmap vcf-chrs
-            (map maybe-remap-name vcf-chrs))))
+  [map-key ref-chrs vcf-chrs ref-file]
+  (let [rename-map (prep-rename-map map-key ref-file)]
+    (letfn [(maybe-remap-name [x]
+              {:post [(contains? ref-chrs %)]}
+              (or (get rename-map x) x))]
+      (zipmap vcf-chrs
+              (map maybe-remap-name vcf-chrs)))))
 
 ;; ## Resort and normalize variants
-
 
 (defn- fix-vc
   "Build a new variant context with updated sample name and normalized alleles.
@@ -197,7 +228,7 @@
     - INFO lines with empty attributes (starting with ';'), found in
       Complete Genomics VCF files
     - Chromosome renaming."
-  [line ref-info config]
+  [line ref-info ref-file config]
   (letfn [(empty-attribute-info [info]
             (if (.startsWith info ";")
               (subs info 1)
@@ -208,7 +239,8 @@
             (assoc xs 0 new))]
     (let [parts (string/split line #"\t")
           cur-chrom (first (vals
-                            (chr-name-remap (:prep-org config) ref-info [(first parts)])))]
+                            (chr-name-remap (:prep-org config) ref-info [(first parts)]
+                                            ref-file)))]
       {:chrom cur-chrom
        :line (->> parts
                   (fix-chrom cur-chrom)
@@ -224,7 +256,7 @@
                                 (str (fs/file tmp-dir (str "prep" (.getSequenceName x) ".vcf")))])
                        (-> ref-file get-seq-dict .getSequences))))
           (write-by-chrom [ref-wrtrs line]
-            (let [line-info (fix-vcf-line line ref-wrtrs config)]
+            (let [line-info (fix-vcf-line line ref-wrtrs ref-file config)]
               (.write (get ref-wrtrs (:chrom line-info))
                       (str (:line line-info) "\n"))))]
     (let [ref-chrs (ref-chr-files ref-file)

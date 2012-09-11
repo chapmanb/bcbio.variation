@@ -6,7 +6,7 @@
   (:use [clojure.java.io]
         [bcbio.align.ref :only [get-seq-dict]]
         [bcbio.run.broad :only [index-bam]]
-        [bcbio.variation.normalize :only [hg19-map]])
+        [bcbio.variation.normalize :only [prep-rename-map]])
   (:require [bcbio.run.itx :as itx]))
 
 (defn- updated-bam-header
@@ -26,13 +26,14 @@
 
 (defn get-new-chr-order
   "Retrieve order of chromosomes to fetch and mapping to new index."
-  [bam-names ref-names]
+  [bam-names ref-names ref-file]
   (letfn [(get-bam-name-map [bam-names orig-ref-names]
-            (let [ref-names (set orig-ref-names)]
+            (let [ref-names (set orig-ref-names)
+                  name-remap (prep-rename-map :GRCh37 ref-file)]
               (reduce (fn [coll x]
                         (assoc coll (cond
                                      (contains? ref-names x) x
-                                     (contains? hg19-map x) (get hg19-map x)
+                                     (contains? name-remap x) (get name-remap x)
                                      :else (throw (Exception. (str "Could not map " x))))
                                x))
                       {} bam-names)))
@@ -88,7 +89,7 @@
               bam-names (map #(.getSequenceName %) (-> in-bam .getFileHeader .getSequenceDictionary
                                                        .getSequences))
               header (updated-bam-header in-bam ref-file call exp)]
-          (if-let [chr-order (get-new-chr-order bam-names ref-names)]
+          (if-let [chr-order (get-new-chr-order bam-names ref-names ref-file)]
             (do
               (with-open [out-bam (.makeSAMOrBAMWriter (SAMFileWriterFactory.)
                                                        header true (file out-file))]
