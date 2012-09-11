@@ -7,12 +7,14 @@ experiments:
   - sample: NA19239
     ref: /usr/local/db/homosapiens/b37/human_g1k_v37.fasta
     intervals: /usr/local/projects/xprize/secondary/NA19239/illumina_solid/boundaries/NA19239-intersect-fosmid-final.bed
+    exclude-intervals: /usr/local/devel/xprize/share/gemini/b37-rmsk.bed
     calls:
       - name: allfos
         file:  
          - /usr/local/projects/xprize/secondary/NA19239/illumina/fosmid/snp/gatk/NA19239-illumina-fosmid.snp.vcf
          - /usr/local/projects/xprize/secondary/NA19239/illumina/fosmid/indel/gatk/NA19239-illumina-fosmid.indel.vcf
         align: /usr/local/projects/xprize/secondary/NA19239/illumina/fosmid/NA19239-illumina-fosmid.bam
+        format-filters: [DP < 4, AD > 0.3]
         preclean: true
         prep: true
         make-haploid: true
@@ -53,6 +55,17 @@ experiments:
         prep: true
         make-haploid: true
         remove-refcalls: true
+      - name: ifoscx
+        metadata:
+          caller: cortex
+          technology: illumina
+          stringency: lenient
+        align: /usr/local/projects/xprize/secondary/NA19239/illumina/fosmid/NA19239-illumina-fosmid.bam
+        file: /usr/local/projects/xprize/secondary/NA19239/illumina/fosmid/other/cortex/NA19239-illumina-fosmid-cortex.vcf
+        prep: true
+        remove-refcalls: true
+        annotate: true
+        make-haploid: true
       - name: sfos
         metadata:
           caller: gatk
@@ -65,25 +78,49 @@ experiments:
         prep: true
         preclean: true
         make-haploid: true
-      - name: sfospu
+      - name: sfosfb
         metadata:
-          caller: mpileup
+          caller: freebayes
           technology: solid
           stringency: lenient
-        file: /usr/local/projects/xprize/secondary/NA19239/solid/fosmid/snp/samtools/NA19239-solid-fosmid.pileup.vcf
         align: /usr/local/projects/xprize/secondary/NA19239/solid/fosmid/NA19239-solid-fosmid.bam
+        file: /usr/local/projects/xprize/secondary/NA19239/solid/fosmid/other/freebayes/NA19239-solid-fosmid-freebayes.vcf
         prep: true
-        preclean: true
-        make-haploid: true
-      - name: affy1
-        metadata:
-          caller: genotyping
-          technology: genotyping
-          stringency: strict
-        file: /usr/local/projects/xprize/primary/microarray/affy/vcf/NA19239_1.vcf
-        prep: true
-        prep-sort-pos: true
         remove-refcalls: true
+        annotate: true
+      - name: tfos
+        metadata:
+          caller: iontorrent
+          technology: iontorrent
+          stringency: strict
+        align: /usr/local/projects/xprize/secondary/NA19239/ion_torrent/fosmid/0234001CA_XPR1194_NA19239_B9_merged_import.bam
+        file:
+          - /usr/local/projects/xprize/secondary/NA19239/ion_torrent/fosmid/snp/TSVC_SNP_variants.vcf
+          - /usr/local/projects/xprize/secondary/NA19239/ion_torrent/fosmid/indel/TSVC_INDEL_variants.vcf
+        preclean: true
+        prep: true
+        remove-refcalls: true
+        annotate: true
+        make-haploid: true
+      # - name: sfospu
+      #   metadata:
+      #     caller: mpileup
+      #     technology: solid
+      #     stringency: lenient
+      #   file: /usr/local/projects/xprize/secondary/NA19239/solid/fosmid/snp/samtools/NA19239-solid-fosmid.pileup.vcf
+      #   align: /usr/local/projects/xprize/secondary/NA19239/solid/fosmid/NA19239-solid-fosmid.bam
+      #   prep: true
+      #   preclean: true
+      #   make-haploid: true
+      # - name: affy1
+      #   metadata:
+      #     caller: genotyping
+      #     technology: genotyping
+      #     stringency: strict
+      #   file: /usr/local/projects/xprize/primary/microarray/affy/vcf/NA19239_1.vcf
+      #   prep: true
+      #   prep-sort-pos: true
+      #   remove-refcalls: true
     finalize:
       - method: multiple
         target: allfos
@@ -92,9 +129,9 @@ experiments:
         params:
           support: allfos
           #annotations: [QD, HaplotypeScore, MQRankSum, ReadPosRankSum, FS, MQ, DP]
-          classifiers: [QUAL, DP, ReadPosEndDist]
+          classifiers: [QUAL, DP, ReadPosEndDist, gms_illumina, AD, PL]
           trusted:
             total: 0.65
             technology: 0.65
             caller: 0.65
-            stringency: 0.99
+            #stringency: 0.99

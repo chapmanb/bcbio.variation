@@ -24,7 +24,8 @@
 (defn get-likelihoods
   "Retrieve all likelihoods (PL) for genotype."
   [g & {:keys [no-convert]}]
-  (when (.hasLikelihoods g)
+  (when (and (.hasLikelihoods g)
+             (> (count (vec (.getAsVector (.getLikelihoods g)))) 1))
     (let [in-map (-> (.getLikelihoods g) (.getAsMap (nil? no-convert)))]
       (zipmap (map #(.name %) (keys in-map)) (vals in-map)))))
 
