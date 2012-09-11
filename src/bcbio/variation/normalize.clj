@@ -343,6 +343,7 @@
           (clean-header [x]
             (cond
              (.startsWith x "##ALT=Type=") (fix-bad-alt-header x)
+             (.startsWith x "##FORMAT=<ID=GL,Number=.,Type=String") ""
              (.startsWith x "#CHROM") (fix-sample-names x)
              :else x))
           (remove-gap [n xs]
