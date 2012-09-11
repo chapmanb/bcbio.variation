@@ -348,6 +348,15 @@
           (remove-gap [n xs]
             (assoc xs n
                    (string/replace (nth xs n) "-" "")))
+          (fix-duplicate-alts [xs]
+            (let [n 4
+                  alts (reduce (fn [coll x]
+                                 (if-not (contains? (set coll) x)
+                                   (conj coll x)
+                                   coll))
+                               [] (string/split (nth xs n) #","))]
+              (assoc xs n
+                     (string/join "," alts))))
           (is-5pad-n? [xs]
             (let [ref (nth xs 3)
                   alt (nth xs 4)]
@@ -368,6 +377,7 @@
               (->> (string/split line #"\t")
                    (remove-gap 3)
                    (remove-gap 4)
+                   (fix-duplicate-alts)
                    (fix-info-spaces)
                    remove-5pad-n
                    remove-nochange-alt
