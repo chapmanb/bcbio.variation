@@ -330,7 +330,10 @@
           (rename-samples [xs want]
             (let [idx (ffirst (filter (fn [[i x]] (.startsWith x want))
                                       (map-indexed vector xs)))]
-              (if idx (assoc (vec xs) idx want) xs)))
+              (cond
+               idx (assoc (vec xs) idx want)
+               (= 1 (count xs)) [want]
+               :else xs)))
           (fix-sample-names [x]
             (let [[stay-parts samples] (split-at 9 (string/split x #"\t"))
                   fix-samples (if (contains? (set samples) sample)
