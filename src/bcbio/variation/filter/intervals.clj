@@ -34,10 +34,13 @@
   (let [overlaps (intersect-by-contig start-intervals)]
     (if (empty? exclude-intervals)
       overlaps
-      (-> (GenomeLocSortedSet/createSetFromList loc-parser overlaps)
-          (.subtractRegions (doto (GenomeLocSortedSet. loc-parser)
-                              (#(doseq [x exclude-intervals] (.addRegion % x)))))
-          .toList))))
+      (let [clean-intervals (->> (group-by #(.getStart %) exclude-intervals)
+                                 vals
+                                 (map (fn [xs] (sort-by #(.size %) > xs)))
+                                 (map first))]
+        (-> (GenomeLocSortedSet/createSetFromList loc-parser overlaps)
+            (.subtractRegions (GenomeLocSortedSet/createSetFromList loc-parser clean-intervals))
+            .toList)))))
 
 (defn intersection-of-bed-files
   "Generate list of intervals that intersect in all provided BED files."
