@@ -25,10 +25,12 @@
                align-bam (str (fs/file data-dir "aligned-reads.bam"))
                region-bed (str (fs/file data-dir "aligned-reads-regions.bed"))
                exclude-bed (str (fs/file data-dir "aligned-reads-regions-exclude.bed"))
+               sorted-out (itx/add-file-part exclude-bed "sorted")
                region-multi-out (itx/add-file-part region-bed "multicombine")
                region-out (fs/glob (fs/file data-dir "aligned-reads-callable*"))
                ffilter-out (itx/add-file-part top-vcf "ffilter")]
-           (doseq [x (concat [top-out dip-out c-out cbin-out region-multi-out ffilter-out]
+           (doseq [x (concat [top-out dip-out c-out cbin-out region-multi-out ffilter-out
+                              sorted-out]
                              region-out)]
              (itx/remove-path x))
            ?form)))

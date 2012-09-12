@@ -35,7 +35,8 @@
     (if (empty? exclude-intervals)
       overlaps
       (-> (GenomeLocSortedSet/createSetFromList loc-parser overlaps)
-          (.subtractRegions (GenomeLocSortedSet/createSetFromList loc-parser exclude-intervals))
+          (.subtractRegions (doto (GenomeLocSortedSet. loc-parser)
+                              (#(doseq [x exclude-intervals] (.add % x)))))
           .toList))))
 
 (defn intersection-of-bed-files
