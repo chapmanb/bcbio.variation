@@ -5,7 +5,8 @@
   (:import [org.broadinstitute.sting.utils.interval IntervalUtils
             IntervalMergingRule IntervalSetRule]
            [org.broadinstitute.sting.utils GenomeLocParser
-            GenomeLocSortedSet])
+            GenomeLocSortedSet]
+           [org.broadinstitute.sting.utils.exceptions UserException$BadInput])
   (:use [clojure.java.io]
         [clojure.set :only [intersection]]
         [bcbio.align.ref :only [get-seq-dict]]
@@ -24,8 +25,9 @@
          intervals start-intervals]
     (if (empty? intervals)
       final
-      (recur (IntervalUtils/mergeListsBySetOperator final (first intervals)
-                                                    IntervalSetRule/INTERSECTION)
+      (recur (try (IntervalUtils/mergeListsBySetOperator final (first intervals)
+                                                         IntervalSetRule/INTERSECTION)
+                  (catch UserException$BadInput e []))
              (rest intervals)))))
 
 (defn- prep-intervals-by-contig
