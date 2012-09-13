@@ -1,27 +1,62 @@
 (ns bcbio.variation.index.gemini
   "Index and retrieve variant associated population genetic and disease data.
    Built on the Gemini framework: https://github.com/arq5x/gemini"
-  (:use [ordered.map :only [ordered-map]]
+  (:use [clojure.java.io]
+        [ordered.map :only [ordered-map]]
+        [bcbio.variation.api.shared :only [web-config]]
         [bcbio.variation.web.db :only [get-sqlite-db]])
   (:require [clojure.java.jdbc :as sql]
             [clojure.java.shell :as shell]
             [clojure.string :as string]
+            [fs.core :as fs]
             [bcbio.run.itx :as itx]))
 
-(defn gemini-installed? []
-  (let [info (try (shell/sh "gemini" "-h")
+;; ## Variant effects
+
+(defn- get-vep-cmd []
+  (let [vep-dir (get-in @web-config [:program :vep])
+        vep-file (when vep-dir (str (file (fs/expand-home vep-dir)
+                                          "variant_effect_predictor.pl")))]
+    (when (and vep-file (fs/exists? vep-file))
+      vep-file)))
+
+(defn run-vep
+  "Run Ensembl Variant Effects Predictor on input variant file.
+   Re-annotates the input file with CSQ field compatible with Gemini."
+  [in-file & {:keys [re-run?]}]
+  (when-let [vep-cmd (get-vep-cmd)]
+    (let [out-file (itx/add-file-part in-file "vep")]
+      (when (or (itx/needs-run? out-file) re-run?)
+        (itx/with-tx-file [tx-out out-file]
+          (shell/sh "perl" vep-cmd "-i" in-file "-o" tx-out "--vcf" "--cache"
+                    "--terms" "so" "--sift" "b" "--polyphen" "b" "--hgnc" "--numbers"
+                    "--fields" "Consequence,Codons,Amino_acids,Gene,HGNC,Feature,EXON,PolyPhen,SIFT")))
+      out-file)))
+
+;; ## Gemini
+
+(defn get-gemini-cmd []
+  (let [cmd (get-in @web-config [:program :gemini] "gemini")
+        info (try (shell/sh cmd "-h")
                   (catch java.io.IOException _
                     {:exit -1}))]
-    (zero? (:exit info))))
+    (when (zero? (:exit info))
+      cmd)))
 
 (defn index-variant-file
   "Pre-index a variant file with gemini"
-  [in-file ref-file & {:keys [re-index?]}]
-  (when (gemini-installed?)
+  [in-file _ & {:keys [re-index?]}]
+  (when-let [gemini-cmd (get-gemini-cmd)]
     (let [index-file (str (itx/file-root in-file) "-gemini.db")]
       (when (or (itx/needs-run? index-file) re-index?)
-        (itx/with-tx-file [tx-index index-file]
-          (shell/sh "gemini" "load" "-v" in-file tx-index)))
+        (let [vep-file (run-vep in-file :re-run? re-index?)]
+          (itx/with-tx-file [tx-index index-file]
+            (apply shell/sh
+                   (concat [gemini-cmd "load" "-v"]
+                           (if vep-file
+                             [vep-file "-t" "VEP"]
+                             [in-file])
+                           [tx-index])))))
       index-file)))
 
 (def ^{:doc "Gemini metrics to expose"}
@@ -30,13 +65,24 @@
                               :desc "1000 genomes allele frequency, all populations"}
                "gms_illumina" {:range [0.0 100.0]
                                :y-scale {:type :log}
-                               :desc "Genome Mappability Score with an Illumina error model"}))
+                               :desc "Genome Mappability Score with an Illumina error model"}
+               "sift_score" {:range [0.0 1.0]
+                             :desc " SIFT predictions for the most severely affected transcript"}
+               "polyphen_score" {:range [0.0 1.0]
+                                 :desc "Polyphen scores for the most severely affected transcript"}))
 
 (defn available-metrics
   "Retrieve metrics available from Gemini."
-  [_]
-  (when gemini-installed?
-    (map (fn [[k v]] (assoc v :id k)) gemini-metrics)))
+  [in-file]
+  (when-let [index-db (index-variant-file in-file nil)]
+    (sql/with-connection (get-sqlite-db index-db)
+      (letfn [(db-has-metric? [x]
+                (sql/with-query-results rows
+                  [(str "SELECT chrom, start FROM variants WHERE "
+                        (:id x) " IS NOT NULL LIMIT 1")]
+                  (seq rows)))]
+        (doall (filter db-has-metric?
+                       (map (fn [[k v]] (assoc v :id k)) gemini-metrics)))))))
 
 (defmulti finalize-gemini-attr
   "Provide additional post-processing of gemini supplied attributes."

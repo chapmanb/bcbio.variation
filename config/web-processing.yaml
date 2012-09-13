@@ -25,3 +25,7 @@ dir:
   html-dir: "public"
   cache: "tmp/cache"
   work: "tmp"
+
+program:
+  gemini: gemini
+  vep: ~/install/variant_effect_predictor

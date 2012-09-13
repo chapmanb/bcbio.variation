@@ -18,8 +18,9 @@
                vcf1 (str (fs/file data-dir "gatk-calls.vcf"))
                out-index (str (itx/file-root vcf1) "-metrics.db")
                gemini-index (str (itx/file-root vcf1) "-gemini.db")
+               vep-out (itx/add-file-part vcf1 "vep")
                sub-params {:subsample {:method :k-means :count 5}}]
-           (doseq [x [out-index gemini-index]]
+           (doseq [x [out-index gemini-index vep-out]]
              (itx/remove-path x))
            ?form
            )))
@@ -51,7 +52,8 @@
   (-> (im/get-raw-metrics vcf1 ref) first keys) => ["PL" "AD" "HaplotypeScore" "QD" "MQ" "DP" "QUAL" :id])
 
 (facts "Index and retrieve metrics using Gemini."
+  (set-config-from-file! web-yaml)
   (when-let [idx (gemini/index-variant-file vcf1 ref)]
     idx => gemini-index
-    (-> (gemini/get-raw-metrics vcf1 ref) first keys) => (contains [:id "gms_illumina" "aaf_1kg_all"]
+    (-> (gemini/get-raw-metrics vcf1 ref) first keys) => (contains [:id "sift_score"]
                                                                    :in-any-order)))
