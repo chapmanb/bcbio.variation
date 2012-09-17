@@ -47,17 +47,18 @@
   "Pre-index a variant file with gemini"
   [in-file _ & {:keys [re-index?]}]
   (when-let [gemini-cmd (get-gemini-cmd)]
-    (let [index-file (str (itx/file-root in-file) "-gemini.db")]
-      (when (or (itx/needs-run? index-file) re-index?)
-        (let [vep-file (run-vep in-file :re-run? re-index?)]
-          (itx/with-tx-file [tx-index index-file]
-            (apply shell/sh
-                   (concat [gemini-cmd "load" "-v"]
-                           (if vep-file
-                             [vep-file "-t" "VEP"]
-                             [in-file])
-                           [tx-index])))))
-      index-file)))
+    (when in-file
+      (let [index-file (str (itx/file-root in-file) "-gemini.db")]
+        (when (or (itx/needs-run? index-file) re-index?)
+          (let [vep-file (run-vep in-file :re-run? re-index?)]
+            (itx/with-tx-file [tx-index index-file]
+              (apply shell/sh
+                     (concat [gemini-cmd "load" "-v"]
+                             (if vep-file
+                               [vep-file "-t" "VEP"]
+                               [in-file])
+                             [tx-index])))))
+        index-file))))
 
 (def ^{:doc "Gemini metrics to expose"}
   gemini-metrics
