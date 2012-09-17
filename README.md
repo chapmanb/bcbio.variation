@@ -210,12 +210,12 @@ preparation and analysis:
   and GRCh37 for human samples, reorders chromosomes relative to the input file
   and adds run group information with a defined sample name:
 
-    lein variant-reorder your_file.bam /path/to/GRCh37.fa SampleName
+      $ lein variant-reorder your_file.bam /path/to/GRCh37.fa SampleName
     
 - Provide a summary CSV file of call information for a VCF file, including
   mappings back to an original set of pairwise analyses:
 
-    lein variant-utils callsummary variants.vcf original-combined-config.yaml
+      $ lein variant-utils callsummary variants.vcf original-combined-config.yaml
 
 ## Contributors
 
