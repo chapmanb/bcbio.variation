@@ -128,13 +128,14 @@
   (when-let [index-db (index-variant-file in-file ref-file)]
     (let [plot-metrics (filter (partial contains? gemini-metrics)
                                (or metrics (map :id (available-metrics in-file))))]
-      (sql/with-connection (get-sqlite-db index-db)
-        (sql/with-query-results rows
-          [(str "SELECT chrom, start, ref, " (string/join ", " plot-metrics)
-                " FROM variants WHERE filter is NULL ORDER BY chrom, start")]
-          (doall (map (fn [orig]
-                        (reduce (fn [coll x]
-                                  (assoc coll x (gemini-metric-from-row orig x)))
-                                {:id [(string/replace (:chrom orig) "chr" "") (inc (:start orig)) (:ref orig)]}
-                                plot-metrics))
-                      rows)))))))
+      (when (seq plot-metrics)
+        (sql/with-connection (get-sqlite-db index-db)
+          (sql/with-query-results rows
+            [(str "SELECT chrom, start, ref, " (string/join ", " plot-metrics)
+                  " FROM variants WHERE filter is NULL ORDER BY chrom, start")]
+            (doall (map (fn [orig]
+                          (reduce (fn [coll x]
+                                    (assoc coll x (gemini-metric-from-row orig x)))
+                                  {:id [(string/replace (:chrom orig) "chr" "") (inc (:start orig)) (:ref orig)]}
+                                  plot-metrics))
+                        rows))))))))
