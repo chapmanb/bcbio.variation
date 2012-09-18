@@ -156,7 +156,7 @@
                   align-bams (remove nil? (map :align [c1 c2]))]
               (when (and (:intervals exp) (seq align-bams))
                 (combine-multiple-intervals (:intervals exp) align-bams (:ref exp)
-                                            :out-dir out-dir))))
+                                            :out-dir out-dir :name (:sample exp)))))
           (discordant-name [x]
             (format "%s-discordant" (:name x)))
           (zipmap-ordered [xs1 xs2]
