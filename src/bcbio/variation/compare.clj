@@ -19,6 +19,7 @@
         [bcbio.variation.evaluate :only [calc-variant-eval-metrics]]
         [bcbio.variation.filter :only [variant-filter variant-format-filter
                                        pipeline-recalibration]]
+        [bcbio.variation.filter.intervals :only [combine-multiple-intervals]]
         [bcbio.variation.metrics :only [vcf-stats write-summary-table]]
         [bcbio.variation.multiple :only [prep-cmp-name-lookup pipeline-compare-multiple]]
         [bcbio.variation.phasing :only [is-haploid? compare-two-vcf-phased]]
@@ -151,12 +152,11 @@
   "Compare two standard VCF files based on the supplied configuration."
   [c1 c2 exp config]
   (letfn [(callable-intervals [exp c1 c2]
-            (let [out-dir (get-in config [:dir :prep] (get-in config [:dir :out]))]
-              (remove nil? (cons (:intervals exp)
-                                 (map #(when-not (nil? (:align %))
-                                         (get-callable-bed (:align %) (:ref exp)
-                                                           :out-dir out-dir))
-                                      [c1 c2])))))
+            (let [out-dir (get-in config [:dir :prep] (get-in config [:dir :out]))
+                  align-bams (remove nil? (map :align [c1 c2]))]
+              (when (and (:intervals exp) (seq align-bams))
+                (combine-multiple-intervals (:intervals exp) align-bams (:ref exp)
+                                            :out-dir out-dir))))
           (discordant-name [x]
             (format "%s-discordant" (:name x)))
           (zipmap-ordered [xs1 xs2]
