@@ -8,7 +8,6 @@
         [bcbio.variation.config]
         [bcbio.variation.evaluate :exclude [-main]]
         [bcbio.variation.filter]
-        [bcbio.variation.filter.trusted]
         [bcbio.variation.normalize]
         [bcbio.variation.phasing]
         [bcbio.variation.metrics]
@@ -187,25 +186,6 @@
 
 (facts "Choose a reference genome based on VCF contig"
   (pick-best-ref vcf1 [ref]) => ref)
-
-(let [config-file (str (fs/file "." "config" "method-comparison.yaml"))
-      config (load-config config-file)
-      union-file (str (fs/file (get-in config [:dir :prep]) "multiple"
-                               "Test1-multiall-fullcombine-gatk-annotated.vcf"))]
-  (facts "Prepare trusted variant file"
-    (with-open [vcf-iter (get-vcf-iterator union-file (-> config :experiments first :ref))]
-      (let [vc (first (parse-vcf vcf-iter))
-            calls (-> config :experiments first :calls)
-            data (variant-set-metadata vc calls)]
-        (-> data :total count) => 3
-        (-> data :technology) => #{"illumina" "cg"}
-        (is-trusted-variant? vc {:total 4} calls) => nil
-        (is-trusted-variant? vc {:total 3} calls) => true
-        (is-trusted-variant? vc {:technology 3} calls) => nil
-        (is-trusted-variant? vc {:technology 2} calls) => true
-        (is-trusted-variant? vc {:technology 0.99} calls) => true
-        (is-trusted-variant? vc {:total 4 :technology 3} calls) => nil 
-        (is-trusted-variant? vc {:total 4 :technology 2} calls) => true))))
 
 (facts "Load configuration files, normalizing input."
   (let [config-file (fs/file "." "config" "method-comparison.yaml")

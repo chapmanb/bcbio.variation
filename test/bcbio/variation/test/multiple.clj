@@ -3,9 +3,10 @@
   (:use [midje.sweet]
         [bcbio.variation.compare :only [variant-comparison-from-config]]
         [bcbio.variation.config :only [load-config]]
-        [bcbio.variation.filter.trusted :only [get-trusted-variants]]
+        [bcbio.variation.filter.trusted]
         [bcbio.variation.filter.train :only [extract-train-cases]]
-        [bcbio.variation.multiple])
+        [bcbio.variation.multiple]
+        [bcbio.variation.variantcontext :exclude [-main]])
   (:require [fs.core :as fs]
             [bcbio.run.itx :as itx]))
 
@@ -48,3 +49,18 @@
 
 (facts "Identify true/false positives/negatives for training"
   (extract-train-cases cmps) => nil)
+
+(facts "Prepare trusted variant file"
+  (with-open [vcf-iter (get-vcf-iterator union-file (-> config :experiments first :ref))]
+    (let [vc (first (parse-vcf vcf-iter))
+          calls (-> config :experiments first :calls)
+          data (variant-set-metadata vc calls)]
+      (-> data :total count) => 3
+      (-> data :technology) => #{"illumina" "cg"}
+      (is-trusted-variant? vc {:total 4} calls) => nil
+      (is-trusted-variant? vc {:total 3} calls) => true
+      (is-trusted-variant? vc {:technology 3} calls) => nil
+      (is-trusted-variant? vc {:technology 2} calls) => true
+      (is-trusted-variant? vc {:technology 0.99} calls) => true
+      (is-trusted-variant? vc {:total 4 :technology 3} calls) => nil 
+      (is-trusted-variant? vc {:total 4 :technology 2} calls) => true)))
