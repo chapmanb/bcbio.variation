@@ -22,9 +22,10 @@
                out-dir (str (fs/file (get-in config [:dir :prep]) "multiple"))
                union-file (str (fs/file (get-in config [:dir :prep]) "multiple"
                                         "Test1-multiall-fullcombine-gatk-annotated.vcf"))
+               train-dir (str (fs/file (get-in config [:dir :prep]) "train"))
                trusted-out (itx/add-file-part union-file "trusted")
                cmps (prep-variant-comparison out-dir config-file)]
-           (doseq [x [trusted-out]]
+           (doseq [x [trusted-out train-dir]]
              (itx/remove-path x))
            ?form)))
 
@@ -47,8 +48,16 @@
                         {:total 3 :technology 2}
                         (-> config :experiments first) config) => trusted-out)
 
+(defn- get-train-out
+  [dname base]
+  (str (fs/file dname (format "Test1-freebayes-potential-%s.vcf" base))))
+
 (facts "Identify true/false positives/negatives for training"
-  (extract-train-cases cmps) => nil)
+  (let [train-cfg {:target "freebayes"
+                   :cmps ["gatk" "cg"]}
+        exp (-> config :experiments first)]
+    (extract-train-cases cmps train-cfg exp config)) => {:fps (get-train-out train-dir "fps")
+                                                         :fns (get-train-out train-dir "fns")})
 
 (facts "Prepare trusted variant file"
   (with-open [vcf-iter (get-vcf-iterator union-file (-> config :experiments first :ref))]
