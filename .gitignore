@@ -34,6 +34,7 @@ test/data/*-*leftalign.vcf
 test/data/*-*samplefix.vcf
 test/data/*-*fullprep.vcf
 test/data/*-*nosv.vcf
+test/data/*-*vep.vcf
 test/data/*-classifier.bin
 test/data/*-sorted.bed
 test/data/*-multicombine.bed

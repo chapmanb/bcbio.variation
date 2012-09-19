@@ -12,7 +12,6 @@
         [bcbio.variation.normalize]
         [bcbio.variation.phasing]
         [bcbio.variation.metrics]
-        [bcbio.variation.multiple]
         [bcbio.variation.report]
         [bcbio.variation.recall :exclude [-main]]
         [bcbio.variation.variantcontext :exclude [-main]])
@@ -188,31 +187,6 @@
 
 (facts "Choose a reference genome based on VCF contig"
   (pick-best-ref vcf1 [ref]) => ref)
-
-(let [config-file (str (fs/file "." "config" "method-comparison.yaml"))
-      config (load-config config-file)
-      out-dir (str (fs/file (get-in config [:dir :prep]) "multiple"))
-      union-file (str (fs/file (get-in config [:dir :prep]) "multiple"
-                               "Test1-multiall-fullcombine-gatk-annotated.vcf"))
-      trusted-out (itx/add-file-part union-file "trusted")
-      cmps (variant-comparison-from-config config-file)]
-  (letfn [(get-out-files [x ext]
-            {:true-positives
-             (str (fs/file out-dir (format "Test1-multiall-fullcombine-Intersection%s.vcf" ext)))
-             :false-negatives
-             (str (fs/file out-dir (format "Test1-multiall-no%s-fullcombine-%s%s.vcf" x x ext)))
-             :false-positives
-             (str (fs/file out-dir (format "Test1-dis%s-fullcombine-Intersection-shared.vcf" x)))
-             :target-overlaps
-             (str (fs/file out-dir (format "Test1-multiall-fullcombine-%s%s.vcf" x ext)))})]
-    (against-background [(before :facts (vec (map itx/remove-path [out-dir trusted-out])))]
-      (facts "Handle multiple variant approach comparisons."
-        (multiple-overlap-analysis cmps config "cg") => (get-out-files "cg" "")
-        (multiple-overlap-analysis cmps config "gatk") => (get-out-files "gatk" "-annotated"))
-      (facts "Prepare trusted variant file"
-        (get-trusted-variants cmps "gatk"
-                              {:total 3 :technology 2}
-                              (-> config :experiments first) config) => trusted-out))))
 
 (let [config-file (str (fs/file "." "config" "method-comparison.yaml"))
       config (load-config config-file)
