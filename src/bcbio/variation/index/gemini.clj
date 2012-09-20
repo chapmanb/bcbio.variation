@@ -67,12 +67,14 @@
                "gms_illumina" {:range [0.0 100.0]
                                :y-scale {:type :log}
                                :desc "Genome Mappability Score with an Illumina error model"}
-               "sift_score" {:range [0.0 1.0]
+               "sift_score" {:range [0.0 0.1]
                              :y-scale {:type :log}
-                             :desc " SIFT predictions for the most severely affected transcript"}
-               "polyphen_score" {:range [0.0 1.0]
+                             :desc (str "SIFT amino acid effect predictions. "
+                                        "Smaller scores are more likely to be deleterious.")}
+               "polyphen_score" {:range [0.5 1.0]
                                  :y-scale {:type :log}
-                                 :desc "Polyphen scores for the most severely affected transcript"}))
+                                 :desc (str "Polyphen amino acid effect predictions. "
+                                            "Larger scores are more likely to be deleterious.")}))
 
 (defn available-metrics
   "Retrieve metrics available from Gemini."
