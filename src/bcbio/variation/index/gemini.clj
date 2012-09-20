@@ -68,8 +68,10 @@
                                :y-scale {:type :log}
                                :desc "Genome Mappability Score with an Illumina error model"}
                "sift_score" {:range [0.0 1.0]
+                             :y-scale {:type :log}
                              :desc " SIFT predictions for the most severely affected transcript"}
                "polyphen_score" {:range [0.0 1.0]
+                                 :y-scale {:type :log}
                                  :desc "Polyphen scores for the most severely affected transcript"}))
 
 (defn available-metrics
@@ -86,9 +88,18 @@
           (doall (filter db-has-metric? all-metrics))))
       all-metrics)))
 
+
 (defmulti finalize-gemini-attr
   "Provide additional post-processing of gemini supplied attributes."
   (fn [attr val] (keyword (string/lower-case attr))))
+
+(defmethod finalize-gemini-attr :sift_score
+  [_ val]
+  (if (nil? val) 1.0 val))
+
+(defmethod finalize-gemini-attr :polyphen_score
+  [_ val]
+  (if (nil? val) 0.0 val))
 
 (defmethod finalize-gemini-attr :gms_illumina
   [_ val]
