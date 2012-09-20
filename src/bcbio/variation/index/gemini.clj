@@ -75,15 +75,16 @@
 (defn available-metrics
   "Retrieve metrics available from Gemini."
   [in-file]
-  (when-let [index-db (index-variant-file in-file nil)]
-    (sql/with-connection (get-sqlite-db index-db)
-      (letfn [(db-has-metric? [x]
-                (sql/with-query-results rows
-                  [(str "SELECT chrom, start FROM variants WHERE "
-                        (:id x) " IS NOT NULL LIMIT 1")]
-                  (seq rows)))]
-        (doall (filter db-has-metric?
-                       (map (fn [[k v]] (assoc v :id k)) gemini-metrics)))))))
+  (let [all-metrics (map (fn [[k v]] (assoc v :id k)) gemini-metrics)]
+    (if-let [index-db (index-variant-file in-file nil)]
+      (sql/with-connection (get-sqlite-db index-db)
+        (letfn [(db-has-metric? [x]
+                  (sql/with-query-results rows
+                    [(str "SELECT chrom, start FROM variants WHERE "
+                          (:id x) " IS NOT NULL LIMIT 1")]
+                    (seq rows)))]
+          (doall (filter db-has-metric? all-metrics))))
+      all-metrics)))
 
 (defmulti finalize-gemini-attr
   "Provide additional post-processing of gemini supplied attributes."
