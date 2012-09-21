@@ -5,7 +5,43 @@
   (:use [clojure.java.io]
         [bcbio.variation.multiple :only [prep-cmp-name-lookup]])
   (:require [fs.core :as fs]
+            [bcbio.run.broad :as broad]
             [bcbio.run.itx :as itx]))
+
+(defn- select-concordant
+  "Retrieve output file of concordant calls between two sets of variant calls"
+  [fname1 fname2 ref out-file]
+  (let [args ["-R" ref
+              "--variant" fname1
+              "--concordance" fname2
+              "--out" :out-vcf]]
+    (broad/run-gatk "SelectVariants" args {:out-vcf out-file} {:out [:out-vcf]}))
+  out-file)
+
+(defn- prep-common
+  "Common infrastructure for generating training values"
+  [case-kw file-ext cases out-base ref-file]
+  (letfn [(get-discordant-by-kw [x]
+            (get-in x [:c-files (keyword (str (get x case-kw) "-discordant"))]))]
+    (let [out-file (str out-base file-ext)]
+      (when (itx/needs-run? out-file)
+        (apply select-concordant
+               (concat (map get-discordant-by-kw cases) [ref-file out-file])))
+      out-file)))
+
+(defn- prep-false-negatives
+  "Retrieve potential false negatives, discordant calls found in all of the
+   comparison cases but not in the target."
+  [cases out-base ref-file]
+  (prep-common :cmp "-potential-fns.vcf"
+               cases out-base ref-file))
+
+(defn- prep-false-positives
+  "Retrieve potential false positives, discordant calls from the target not
+   found in any of the comparison cases."
+  [cases out-base ref-file]
+  (prep-common :target "-potential-fps.vcf"
+               cases out-base ref-file))
 
 (defn- get-train-cases
   "Retrieve cases to use for preparing training sets from supplied inputs.
@@ -18,22 +54,6 @@
     (let [cmps (prep-cmp-name-lookup cmps-orig)]
       (map (partial get-train-case cmps (:target train-info)) (:cmps train-info)))))
 
-(defn- prep-false-negatives
-  "Retrieve potential false negatives, discordant calls found in all of the
-   comparison cases but not in the target."
-  [cases out-base]
-  (let [out-file (str out-base "-potential-fns.vcf")]
-    (when (itx/needs-run? out-file))
-    out-file))
-
-(defn- prep-false-positives
-  "Retrieve potential false positives, discordant calls from the target not
-   found in any of the comparison cases."
-  [cases out-base]
-  (let [out-file (str out-base "-potential-fps.vcf")]
-    (when (itx/needs-run? out-file))
-    out-file))
-
 (defn extract-train-cases
   "Prepare exploratory training cases based on specified inputs"
   [cmps train-info exp config]
@@ -42,5 +62,5 @@
         out-base (str (file out-dir (format "%s-%s" (:sample exp) (:target train-info))))]
     (when (not (fs/exists? out-dir))
       (fs/mkdirs out-dir))
-    {:fns (prep-false-negatives cases out-base)
-     :fps (prep-false-positives cases out-base)}))
+    {:fns (prep-false-negatives cases out-base (:ref exp))
+     :fps (prep-false-positives cases out-base (:ref exp))}))
