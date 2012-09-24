@@ -65,7 +65,7 @@
     (when-not (or (zero? pos) (nil? base))
       (-> (VariantContextBuilder. contig contig pos pos [(Allele/create base true)])
           (.attributes (reduce (fn [coll [tech score]]
-                                 (assoc coll (str "GMS_" tech) (:score score)))
+                                 (assoc coll (str "GMS_" tech) (format "%.1f" (:score score))))
                                {} (map vector techs scores)))
           (.make)))))
 
