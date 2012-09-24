@@ -4,6 +4,7 @@
         [bcbio.variation.compare :only [variant-comparison-from-config]]
         [bcbio.variation.config :only [load-config]]
         [bcbio.variation.filter.trusted]
+        [bcbio.variation.filter.specific]
         [bcbio.variation.filter.train :only [extract-train-cases]]
         [bcbio.variation.multiple]
         [bcbio.variation.variantcontext :exclude [-main]])
@@ -73,3 +74,11 @@
       (is-trusted-variant? vc {:technology 0.99} calls) => true
       (is-trusted-variant? vc {:total 4 :technology 3} calls) => nil 
       (is-trusted-variant? vc {:total 4 :technology 2} calls) => true)))
+
+(facts "Identify technology or caller specific variants from combined callsets"
+  (with-open [vcf-iter (get-vcf-iterator union-file (-> config :experiments first :ref))]
+    (let [vc (first (parse-vcf vcf-iter))
+          vc2 (first (drop 4 (parse-vcf vcf-iter)))
+          calls (-> config :experiments first :calls)]
+      (get-x-specific-designation vc calls) => {}
+      (get-x-specific-designation vc2 calls) => {:technology "illumina"})))
