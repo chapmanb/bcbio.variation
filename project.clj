@@ -76,7 +76,7 @@
             "variant-recall" ["run" "-m" "bcbio.variation.recall"]
             "variant-reorder" ["run" "-m" "bcbio.align.reorder"]
             "variant-utils" ["run" "-m" "bcbio.variation.utils.core"]
-            "variant-vctest" ["run" "-m" "bcbio.variation.variantcontext"]}
+            "variant-custom" ["run" "-m" "bcbio.variation.custom.core"]}
   :ring {:handler bcbio.variation.web.server/main-handler
          :init bcbio.variation.web.server/default-config}
   :cljsbuild {:builds

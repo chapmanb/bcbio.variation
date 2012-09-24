@@ -86,12 +86,14 @@
                              :codec codec)))
 
 (defn variants-in-region
- "Retrieve variants located in potentially multiple variant files"
- [retriever space start end]
- (letfn [(get-vcs-in-source [[source fname]]
-           (with-open [vcf-iter (.query source space start end)]
-             (doall (map #(assoc (from-vc %) :fname fname) (iterator-seq vcf-iter)))))]
-   (mapcat get-vcs-in-source (map vector (:sources retriever) (:fnames retriever)))))
+  "Retrieve variants located in potentially multiple variant files"
+  ([retriever vc]
+     (variants-in-region retriever (:chr vc) (:start vc) (:end vc)))
+  ([retriever space start end]
+     (letfn [(get-vcs-in-source [[source fname]]
+               (with-open [vcf-iter (.query source space start end)]
+                 (doall (map #(assoc (from-vc %) :fname fname) (iterator-seq vcf-iter)))))]
+       (mapcat get-vcs-in-source (map vector (:sources retriever) (:fnames retriever))))))
 
 (defn has-variants?
   "Look for matching variants present in any of the variant files."
