@@ -67,7 +67,7 @@
                       "--output_mode" "EMIT_ALL_SITES"
                       "-stand_call_conf" "0.0"
                       "-stand_emit_conf" "0.0"
-                      "--max_deletion_fraction" "-1.0"
+                      "--max_deletion_fraction" "2.0"
                       "--min_indel_count_for_genotyping" "3"
                       "--genotype_likelihoods_model" "BOTH"]
                      (if cores ["-nt" (str cores)] [])
