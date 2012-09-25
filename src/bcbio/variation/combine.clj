@@ -9,6 +9,7 @@
   (:import [org.broadinstitute.sting.utils.variantcontext 
             VariantContextBuilder])
   (:use [bcbio.variation.complex :only [normalize-variants]]
+        [bcbio.variation.filter.intervals :only [vcf-sample-name select-by-sample]]
         [bcbio.variation.haploid :only [diploid-calls-to-haploid]]
         [bcbio.variation.normalize :only [prep-vcf clean-problem-vcf]]
         [bcbio.variation.phasing :only [is-haploid?]]
@@ -118,37 +119,6 @@
         (and (not (nil? sample))
              (not (contains? (set samples) sample))))))
 
-(defn vcf-sample-name
-  "Retrieve the sample name in a provided VCF file, allowing for partial matches."
-  [sample in-vcf ref-file]
-  (letfn [(sample-match [x choices]
-            (let [do-match (filter #(when (.contains % x) %) choices)]
-              (when (= 1 (count do-match))
-                (first do-match))))]
-    (let [vcf-samples (-> in-vcf get-vcf-header .getGenotypeSamples set)]
-      (if (contains? vcf-samples sample)
-        sample
-        (sample-match sample vcf-samples)))))
-
-(defn select-by-sample
-  "Select only the sample of interest from input VCF files."
-  [sample in-file name ref & {:keys [out-dir intervals remove-refcalls ext]
-                              :or {remove-refcalls false}}]
-  (let [base-dir (if (nil? out-dir) (fs/parent in-file) out-dir)
-        file-info {:out-vcf (if ext (itx/add-file-part in-file ext out-dir)
-                                (str (fs/file base-dir
-                                              (format "%s-%s.vcf" sample name))))}
-        args (concat ["-R" ref
-                      "--sample_name" (vcf-sample-name sample in-file ref)
-                      "--variant" in-file
-                      "--unsafe" "ALL" ; "ALLOW_SEQ_DICT_INCOMPATIBILITY"
-                      "--out" :out-vcf]
-                     (if remove-refcalls ["--excludeNonVariants" "--excludeFiltered"] [])
-                     (broad/gatk-cl-intersect-intervals intervals ref))]
-    (if-not (fs/exists? base-dir)
-      (fs/mkdirs base-dir))
-    (broad/run-gatk "SelectVariants" args file-info {:out [:out-vcf]})
-    (:out-vcf file-info)))
 
 (defn- genome-safe-intervals
   "Check if interval BED files overlap with current analysis genome build.

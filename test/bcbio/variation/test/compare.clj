@@ -126,7 +126,7 @@
 
 (facts "Handle haplotype phasing specified in VCF output files."
   (with-open [pvcf-iter (get-vcf-iterator pvcf ref)]
-    (let [haps (parse-phased-haplotypes pvcf-iter)]
+    (let [haps (parse-phased-haplotypes pvcf-iter ref)]
       (count haps) => 5
       (count (first haps)) => 6
       (-> haps first first :start) => 9
@@ -136,7 +136,7 @@
 (facts "Compare phased calls to haploid reference genotypes."
   (with-open [ref-vcf-get (get-vcf-retriever ref ref-vcf)
               pvcf-iter (get-vcf-iterator pvcf ref)]
-    (let [cmps (score-phased-calls pvcf-iter ref-vcf-get)]
+    (let [cmps (score-phased-calls pvcf-iter ref-vcf-get ref)]
       (map :variant-type (first cmps)) => [:snp :snp :indel :indel :snp]
       (:comparison (ffirst cmps)) => :discordant
       (map :comparison (nth cmps 3)) => [:ref-concordant :phasing-error
@@ -147,7 +147,7 @@
 (facts "Compare two sets of haploid reference calls"
   (with-open [ref-vcf-get (get-vcf-retriever ref ref-vcf)
               ref2-vcf-iter (get-vcf-iterator ref2-vcf ref)]
-    (let [cmps (score-phased-calls ref2-vcf-iter ref-vcf-get)]
+    (let [cmps (score-phased-calls ref2-vcf-iter ref-vcf-get ref)]
       (count cmps) => 2
       (count (first cmps)) => 10
       (drop 6 (map :comparison (first cmps))) => [:ref-concordant :concordant

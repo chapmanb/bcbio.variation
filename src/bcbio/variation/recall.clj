@@ -14,8 +14,9 @@
         [ordered.set :only [ordered-set]]
         [bcbio.variation.callable :only [get-callable-checker is-callable?]]
         [bcbio.variation.combine :only [combine-variants multiple-samples?
-                                        select-by-sample fix-minimal-combined]]
+                                        fix-minimal-combined]]
         [bcbio.variation.config :only [load-config]]
+        [bcbio.variation.filter.intervals :only [select-by-sample]]
         [bcbio.variation.haploid :only [diploid-calls-to-haploid]]
         [bcbio.variation.normalize :only [fix-vcf-sample]]
         [bcbio.variation.phasing :only [is-haploid?]]

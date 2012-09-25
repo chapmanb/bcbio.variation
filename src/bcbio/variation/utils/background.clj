@@ -4,7 +4,8 @@
   provides a ready to use set of calls to batch with a single sample using 1000 genomes data."
   (:use [clojure.java.io]
         [bcbio.variation.config :only [load-config]]
-        [bcbio.variation.combine :only [select-by-sample combine-variants]]
+        [bcbio.variation.combine :only [combine-variants]]
+        [bcbio.variation.filter.intervals :only [select-by-sample]]
         [bcbio.variation.annotation :only [add-gatk-annotations]])
   (:require [clojure.java.shell :as shell]
             [clojure.string :as string]

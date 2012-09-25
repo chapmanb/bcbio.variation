@@ -43,7 +43,8 @@
   "Supply GATK commandline arguments for interval files, merging via intersection."
   [intervals ref-file & {:keys [vcf]}]
   (cond
-   (nil? intervals) (if vcf ["-L" vcf] [])
+   (or (nil? intervals)
+       (empty? intervals)) (if vcf ["-L" vcf] [])
    (coll? intervals) (concat (flatten (map #(list "-L" %)
                                            (map #(sort-bed-file % ref-file) intervals)))
                              ["--interval_set_rule" "INTERSECTION"])

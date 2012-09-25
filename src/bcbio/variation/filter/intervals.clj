@@ -10,8 +10,47 @@
   (:use [clojure.java.io]
         [clojure.set :only [intersection]]
         [bcbio.align.ref :only [get-seq-dict]]
-        [bcbio.variation.callable :only [get-callable-bed get-bed-iterator]])
-  (:require [bcbio.run.itx :as itx]))
+        [bcbio.variation.callable :only [get-callable-bed get-bed-iterator]]
+        [bcbio.variation.variantcontext :only [get-vcf-header]])
+  (:require [fs.core :as fs]
+            [bcbio.run.itx :as itx]
+            [bcbio.run.broad :as broad]))
+
+;; ## interval VCF subsetting by BED
+
+(defn vcf-sample-name
+  "Retrieve the sample name in a provided VCF file, allowing for partial matches."
+  [sample in-vcf ref-file]
+  (letfn [(sample-match [x choices]
+            (let [do-match (filter #(when (.contains % x) %) choices)]
+              (when (= 1 (count do-match))
+                (first do-match))))]
+    (let [vcf-samples (-> in-vcf get-vcf-header .getGenotypeSamples set)]
+      (if (contains? vcf-samples sample)
+        sample
+        (sample-match sample vcf-samples)))))
+
+(defn select-by-sample
+  "Select only the sample of interest from input VCF files."
+  [sample in-file name ref & {:keys [out-dir intervals remove-refcalls ext]
+                              :or {remove-refcalls false}}]
+  (let [base-dir (if (nil? out-dir) (fs/parent in-file) out-dir)
+        file-info {:out-vcf (if ext (itx/add-file-part in-file ext out-dir)
+                                (str (fs/file base-dir
+                                              (format "%s-%s.vcf" sample name))))}
+        args (concat ["-R" ref
+                      "--sample_name" (vcf-sample-name sample in-file ref)
+                      "--variant" in-file
+                      "--unsafe" "ALL" ; "ALLOW_SEQ_DICT_INCOMPATIBILITY"
+                      "--out" :out-vcf]
+                     (if remove-refcalls ["--excludeNonVariants" "--excludeFiltered"] [])
+                     (broad/gatk-cl-intersect-intervals intervals ref))]
+    (if-not (fs/exists? base-dir)
+      (fs/mkdirs base-dir))
+    (broad/run-gatk "SelectVariants" args file-info {:out [:out-vcf]})
+    (:out-vcf file-info)))
+
+;; ## BED manipulation
 
 (defn- bed-to-intervals
   [bed-file ref-file loc-parser]
@@ -88,3 +127,4 @@
                                   :exclude-intervals (:exclude-intervals exp)
                                   :name (:sample exp)
                                   :out-dir (get-in config [:dir :prep] (get-in config [:dir :out]))))))
+

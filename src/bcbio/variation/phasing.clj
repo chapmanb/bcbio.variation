@@ -15,7 +15,8 @@
            [org.broadinstitute.sting.utils GenomeLocParser GenomeLoc])
   (:use [bcbio.variation.callable :only [get-bed-source features-in-region
                                          limit-bed-intervals get-bed-iterator]]
-        [bcbio.variation.filter.intervals :only [intersection-of-bed-files]]
+        [bcbio.variation.filter.intervals :only [intersection-of-bed-files
+                                                 select-by-sample]]
         [bcbio.variation.structural :only [prep-itree get-itree-overlap
                                            remove-itree-vc get-itree-all]]
         [bcbio.variation.variantcontext :only [parse-vcf get-vcf-retriever get-vcf-iterator
@@ -55,8 +56,10 @@
   "Separate phased haplotypes provided in diploid input genome.
    We split at each phase break, returning a lazy list of variant
    contexts grouped into phases."
-  [vcf-iter & {:keys [bed-source]}]
-  (let [prev (atom nil)]
+  [vcf-iter ref-file & {:keys [intervals]}]
+  (let [prev (atom nil)
+        bed-source (when intervals
+                     (get-bed-source intervals ref-file))]
     (letfn [(split-at-phased [vc]
               (let [continue-phase (or (nil? @prev)
                                        (is-phased? vc @prev bed-source))]
@@ -233,7 +236,7 @@
    - Evaluate second region with standard scoring: expected to called
    - Collect expected variants in the intervening region between phased blocks,
      report those missing in the comparison input as errors."
-  [call-vcf-iter expect-get & {:keys [bed-source]}]
+  [call-vcf-iter expect-get ref-file & {:keys [intervals]}]
   (let [prev (atom nil)]
     (letfn [(get-intervene-expect [region1 region2]
               (let [vc1 (last region1)
@@ -263,9 +266,10 @@
                                   (score-phased-region expect-get region)))]
                 (reset! prev region)
                 out))]
-      (map score-phased-and-intervene (concat (parse-phased-haplotypes call-vcf-iter
-                                                                       :bed-source bed-source)
-                                              [[{:chr "finished_sentinel" :start 1}]])))))
+      (map score-phased-and-intervene
+           (concat (parse-phased-haplotypes call-vcf-iter ref-file
+                                            :intervals intervals)
+                   [[{:chr "finished_sentinel" :start 1}]])))))
 
 ;; ## Summarize phased comparisons
 
@@ -351,6 +355,14 @@
               x))]
     (map check-missing-discordant (flatten cmps))))
 
+(defn- get-compare-file
+  "Retrieve the comparison file, filtering by intervals if present."
+  [in-file cmp-name exp intervals]
+  (if (nil? intervals)
+    in-file
+    (select-by-sample (:sample exp) in-file nil (:ref exp)
+                      :intervals intervals :ext (str "cmp" cmp-name))))
+
 (defmethod compare-two-vcf-phased :grade
   [phased-calls exp config]
   {:pre [(= 1 (count (get phased-calls true)))
@@ -359,12 +371,12 @@
         call (first (get phased-calls false))
         call-intervals (when-let [f (get call :intervals (:intervals exp))]
                          (limit-bed-intervals f call exp config))]
-    (with-open [ref-retriever (get-vcf-retriever (:ref exp) (:file ref))
+    (with-open [ref-get (get-vcf-retriever (:ref exp)
+                                           (get-compare-file (:file ref) (:name call)
+                                                             exp call-intervals))
                 call-vcf-iter (get-vcf-iterator (:file call) (:ref exp))]
-      (let [compared-calls (score-phased-calls call-vcf-iter ref-retriever
-                                               :bed-source
-                                               (when call-intervals
-                                                 (get-bed-source call-intervals (:ref exp))))]
+      (let [compared-calls (score-phased-calls call-vcf-iter ref-get (:ref exp)
+                                               :intervals call-intervals)]
         {:c-files (write-concordance-output (convert-cmps-to-grade compared-calls)
                                             [:concordant :discordant
                                              :discordant-missing :phasing-error]
@@ -378,7 +390,7 @@
 (defn- convert-cmps-to-compare
   "Convert stream of variant context haploid comparison to standard,
   keyed by :concordant and :discordant-name keywords."
-  [name1 name2 cmps]
+  [cmps name1 name2]
   (letfn [(update-keyword [coll x]
             (let [ref-x (-> x
                             (assoc :vc (:ref-vc x))
@@ -406,16 +418,18 @@
         to-capture (concat [:concordant]
                            (map #(keyword (format "%s-discordant" (:name %)))
                                 [cmp1 cmp2]))
-        bed-s (when-let [f (get cmp2 :intervals (:intervals exp))]
-                (get-bed-source f (:ref exp)))]
-    (with-open [vcf1-retriever (get-vcf-retriever (:ref exp) (:file cmp1))
+        cmp-intervals (when-let [f (get cmp2 :intervals (:intervals exp))]
+                        (limit-bed-intervals f cmp2 exp config))]
+    (with-open [vcf1-get (get-vcf-retriever (:ref exp)
+                                            (get-compare-file (:file cmp1) (:name cmp2)
+                                                              exp cmp-intervals))
                 vcf2-iter (get-vcf-iterator (:file cmp2) (:ref exp))]
-      {:c-files (-> (convert-cmps-to-compare (:name cmp1) (:name cmp2)
-                                             (score-phased-calls vcf2-iter vcf1-retriever
-                                                                 :bed-source bed-s))
+      {:c-files (-> (score-phased-calls vcf2-iter vcf1-get
+                                        (:ref exp) :intervals cmp-intervals)
+                    (convert-cmps-to-compare (:name cmp1) (:name cmp2))
                     (write-concordance-output to-capture (:sample exp) cmp1 cmp2
                                               (get-in config [:dir :out]) (:ref exp)))
-         :c1 cmp1 :c2 cmp2 :sample (:sample exp) :exp exp :dir (:dir config)})))
+       :c1 cmp1 :c2 cmp2 :sample (:sample exp) :exp exp :dir (:dir config)})))
 
 ;; ## Utility functions
 
