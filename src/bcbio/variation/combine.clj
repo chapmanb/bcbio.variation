@@ -124,8 +124,8 @@
   "Check if interval BED files overlap with current analysis genome build.
   This is useful when an input VCF is from an alternate genome and needs
   conversion. In this case we shouldn't yet be using interval selection."
-  [intervals ref exp]
-  (if (or (nil? ref) (= ref (:ref exp)))
+  [intervals ref-file exp]
+  (if (or (nil? ref-file) (= ref-file (:ref exp)))
     intervals
     []))
 
@@ -138,10 +138,10 @@
    The approach is to select a single sample and remove refcalls if we have
    a multiple sample file, so the sample name will be correct."
   [in-file call exp intervals out-dir out-fname]
-  (letfn [(run-sample-select [in-file ref ext]
+  (letfn [(run-sample-select [in-file ref-file ext]
             (select-by-sample (:sample exp) in-file (str (:name call) ext)
-                              ref :out-dir out-dir
-                              :intervals (genome-safe-intervals intervals ref exp)
+                              ref-file :out-dir out-dir
+                              :intervals (genome-safe-intervals intervals ref-file exp)
                               :remove-refcalls (get call :remove-refcalls false)))]
     (let [sample-file (if (multiple-samples? in-file)
                         (run-sample-select in-file (get call :ref (:ref exp)) "")

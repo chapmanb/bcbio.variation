@@ -46,8 +46,8 @@
   "Variant comparison producing 3 files: concordant and both directions discordant"
   [sample call1 call2 ref & {:keys [out-dir intervals]}]
   (let [base-dir (if (nil? out-dir) (fs/parent (:file call1)) out-dir)
-        ready-intervals (remove nil? (flatten (concat intervals (:intervals call1)
-                                                      (:intervals call2))))]
+        ready-intervals (remove nil? (flatten [intervals (:intervals call1)
+                                               (:intervals call2)]))]
     (if-not (fs/exists? base-dir)
       (fs/mkdirs base-dir))
     (doall

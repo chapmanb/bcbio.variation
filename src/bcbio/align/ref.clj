@@ -6,6 +6,7 @@
   (:use [clojure.java.io]
         [ordered.map :only [ordered-map]])
   (:require [clojure.string :as string]
+            [fs.core :as fs]
             [bcbio.run.itx :as itx]))
 
 (defn create-ref-dict
@@ -65,7 +66,8 @@
                   (vec (cons (get contig-map (first sort-vals))
                              (rest sort-vals)))))))]
     (let [out-file (itx/add-file-part bed-file "sorted")]
-      (when (itx/needs-run? out-file)
+      (when (or (itx/needs-run? out-file)
+                (> (fs/mod-time bed-file) (fs/mod-time out-file)))
         (with-open [rdr (reader bed-file)
                     wtr (writer out-file)]
           (doseq [[_ line] (sort-by (ref-sort-fn ref-file)
