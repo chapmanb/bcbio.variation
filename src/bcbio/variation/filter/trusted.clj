@@ -70,12 +70,17 @@
                      (calc-md-counts use-calls))
             params))))
 
+(defn get-comparison-fullcombine
+  "Retrieve the all variant fullcombine VCF for a set of comparisons."
+  [cmps support config]
+  (:target-overlaps
+   (get-support-vcfs cmps (if (coll? support) (first support) support)
+                     config :remove-mods? true)))
+
 (defn get-trusted-variants
   "Retrieve VCF file of trusted variants based on specific parameters."
   [cmps support params exp config]
-  (when-let [base-vcf (:target-overlaps
-                       (get-support-vcfs cmps (if (coll? support) (first support) support)
-                                         config :remove-mods? true))]
+  (when-let [base-vcf (get-comparison-fullcombine cmps support config)]
     (let [out-file (itx/add-file-part base-vcf "trusted")]
       (when (itx/needs-run? out-file)
         (with-open [base-vcf-iter (get-vcf-iterator base-vcf (:ref exp))]

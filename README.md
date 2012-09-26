@@ -171,6 +171,7 @@ tag. Available methods are:
               annotations:  [QD, HaplotypeScore, MQRankSum, ReadPosRankSum]
               lenient: false
               classifiers: [AD, DP, QUAL]
+              xspecific: true
               trusted:
                 total: 0.75
                 technology: 0.65
@@ -186,6 +187,8 @@ The options for filtering are:
   - `trusted` -- Metadata annotation values that specify trusted variants not
    subjected to filtering. The example retains variants present in more than 75%
    of calls or 65% of different technologies.
+  - `xspecific` -- Identify and filter calls specific to a technology or calling
+    method, when combining multiple callers and technologies.
 
   You can specify the background to use for training with `support`. There are
   two options:

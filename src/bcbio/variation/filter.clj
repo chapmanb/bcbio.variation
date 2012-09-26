@@ -4,6 +4,7 @@
             VariantContextBuilder])
   (:use [clojure.string :only [split]]
         [bcbio.variation.filter.classify :only [pipeline-classify-filter get-vc-attr]]
+        [bcbio.variation.filter.specific :only [get-x-specific-variants]]
         [bcbio.variation.filter.trusted :only [get-support-vcfs get-trusted-variants]]
         [bcbio.variation.metrics :only [to-float]]
         [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template
@@ -154,10 +155,13 @@
               (let [in-vcf (remove-cur-filters (-> target fkey :file) (:ref exp))
                     support (get params :support (:target finalizer))
                     train-info (get-train-info cmps-by-name support config)
-                    trusted-info {:name "trusted"
-                                  :file (when-let [trusted (:trusted params)]
-                                          (get-trusted-variants cmps-by-name support trusted
-                                                                exp config))}]
+                    trusted-info [{:name "trusted"
+                                   :file (when-let [trusted (:trusted params)]
+                                           (get-trusted-variants cmps-by-name support trusted
+                                                                 exp config))}
+                                  {:name "xspecific"
+                                   :file (when (:xspecific params)
+                                           (get-x-specific-variants cmps-by-name support exp config))}]]
                 (-> target
                     (assoc-in [fkey :file]
                               (-> in-vcf
@@ -171,7 +175,7 @@
                                       %))
                                   (#(if-not (:classifiers params)
                                       %
-                                      (pipeline-classify-filter % (cons trusted-info train-info)
+                                      (pipeline-classify-filter % (concat trusted-info train-info)
                                                                 (get target fkey)
                                                                 exp params config)))))
                     (#(assoc-in % [fkey :name] (format "%s-%s" (get-in % [fkey :name]) "recal")))

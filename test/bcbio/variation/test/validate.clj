@@ -66,7 +66,7 @@
   (variant-format-filter top-vcf ["DP < 10"] ref) => ffilter-out)
 
 (facts "Final filtration of variants using classifier"
-  (filter-vcf-w-classifier top-vcf top-vcf c-neg-vcf nil ref
+  (filter-vcf-w-classifier top-vcf top-vcf c-neg-vcf {} ref
                            {:classifiers ["AD" "QUAL" "DP" "PL"]}) => c-out)
 
 (facts "Prepare combined interval lists based on filtering criteria"

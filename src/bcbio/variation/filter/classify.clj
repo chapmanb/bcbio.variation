@@ -246,9 +246,24 @@
       (VCFHeader. (apply ordered-set (concat (.getMetaDataInInputOrder header) new))
                   (.getGenotypeSamples header)))))
 
+(defn- vc-passes-w-meta?
+  "Check if a variant passes, including external metadata annotations.
+   - trusted: pass variants that overlap in the trusted set
+   - xspecific: exclude variants specific to a technology or caller
+   - otherwise check the variant filtration score, passing those with high scores"
+  [vc score meta-getters config]
+  (letfn [(meta-has-variants? [kw]
+            (has-variants? (get meta-getters kw)
+                           (:chr vc) (:start vc) (:end vc)
+                           (:ref-allele vc) (:alt-alleles vc)))]
+    (cond
+     (meta-has-variants? :xspecific) false
+     (meta-has-variants? :trusted) true
+     :else (> score (get config :min-cscore 0.5)))))
+
 (defn- filter-vc
   "Update a variant context with filter information from classifier."
-  [classifiers normalizer trusted-get config vc]
+  [classifiers normalizer meta-getters config vc]
   (let [attrs (vec (:classifiers config))
         score (-> (make-dataset "ds" (conj attrs :c)
                                  [(get-vc-inputs attrs normalizer -1 vc)]
@@ -257,10 +272,7 @@
                   (#(classifier-classify (get classifiers (get-classifier-type vc)) %)))]
     (-> (VariantContextBuilder. (:vc vc))
         (.attributes (assoc (:attributes vc) "CSCORE" score))
-        (.filters (when (and (not (has-variants? trusted-get
-                                                 (:chr vc) (:start vc) (:end vc)
-                                                 (:ref-allele vc) (:alt-alleles vc)))
-                             (< score (get config :min-cscore 0.5)))
+        (.filters (when-not (vc-passes-w-meta? vc score meta-getters config)
                     #{"CScoreFilter"}))
         .make)))
 
@@ -283,7 +295,7 @@
 
 (defn filter-vcf-w-classifier
   "Filter an input VCF file using a trained classifier on true/false variants."
-  [base-vcf orig-true-vcf orig-false-vcf trusted-vcf ref config & {:keys [train-w-base?]}]
+  [base-vcf orig-true-vcf orig-false-vcf meta-files ref config & {:keys [train-w-base?]}]
   (let [out-file (itx/add-file-part base-vcf "cfilter")
         true-vcf (if train-w-base?
                    (get-target-variants base-vcf orig-true-vcf ref "tps")
@@ -297,9 +309,12 @@
     (when (itx/needs-run? out-file)
       (println "Filter VCF with" (str cs))
       (with-open [vcf-iter (get-vcf-iterator base-vcf ref)
-                  trusted-get (get-vcf-retriever ref trusted-vcf)]
+                  trusted-get (get-vcf-retriever ref (:trusted meta-files))
+                  xspecific-get (get-vcf-retriever ref (:xspecific meta-files))]
         (write-vcf-w-template base-vcf {:out out-file}
-                              (map (partial filter-vc cs normalizer trusted-get config)
+                              (map (partial filter-vc cs normalizer
+                                            {:trusted trusted-get :xspecific xspecific-get}
+                                            config)
                                    (parse-vcf vcf-iter))
                               ref :header-update-fn (add-cfilter-header (:classifiers config)))))
     out-file))
@@ -314,6 +329,7 @@
     (pipeline-combine-intervals exp config)
     (filter-vcf-w-classifier in-vcf (get-train-vcf "concordant")
                              (get-train-vcf "discordant")
-                             (get-train-vcf "trusted")
+                             {:trusted (get-train-vcf "trusted")
+                              :xspecific (get-train-vcf "xspecific")}
                              (:ref exp) params
                              :train-w-base? (get call :recall false))))
