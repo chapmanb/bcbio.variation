@@ -45,15 +45,17 @@
 (facts "Convert diploid calls into haploid reference variants."
   (diploid-calls-to-haploid dip-vcf ref) => dip-out)
 
+
 (facts "Generalized attribute retrieval from variant contexts"
   (with-open [vcf-iter (get-vcf-iterator top-vcf ref)]
     (let [vcf-iter (parse-vcf vcf-iter)
           attrs ["AD" "QUAL" "DP"]
           xtra-attrs (conj attrs "gms_illumina")
           config {:normalize "minmax"}
-          normalizer (get-vc-attrs-normalized attrs top-vcf ref config top-vcf)]
+          normalizer (get-vc-attrs-normalized attrs top-vcf ref config top-vcf)
+          ctype {:variant-type :snp :repetitive false}]
       (first (#'bcbio.variation.filter.classify/get-train-inputs
-              1 top-vcf :snp xtra-attrs normalizer ref)) => (contains [0.0 (roughly 0.621) 1.0 1]
+              1 top-vcf ctype xtra-attrs normalizer ref)) => (contains [0.0 (roughly 0.621) 1.0 1]
                                                                       :in-any-order :gaps-ok)
       (-> (get-vc-attr-ranges attrs top-vcf ref {}) (get "DP")) => [193.5 250.0]
       (-> (get-vc-attr-ranges attrs fb-vcf ref {}) (get "AD")) => (just [0.0

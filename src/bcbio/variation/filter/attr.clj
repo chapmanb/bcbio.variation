@@ -156,7 +156,7 @@
     (fn [vc]
       (into {} (get-vc-attrs vc attrs retrievers)))))
 
-(defn get-vc-attr-retriever
+(defn prep-vc-attr-retriever
   "Provide easy lookup of attributes from multiple input sources"
   [in-file ref-file]
   (let [retrievers (get-external-retrievers in-file ref-file)]

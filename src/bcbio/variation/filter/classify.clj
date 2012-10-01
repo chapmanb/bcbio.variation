@@ -4,11 +4,12 @@
            [org.broadinstitute.sting.utils.codecs.vcf VCFHeader VCFInfoHeaderLine
             VCFHeaderLineType VCFFilterHeaderLine])
   (:use [ordered.set :only [ordered-set]]
+        [clojure.math.combinatorics :only [cartesian-product]]
         [clj-ml.utils :only [serialize-to-file deserialize-from-file]]
         [clj-ml.data :only [make-dataset dataset-set-class make-instance]]
         [clj-ml.classifiers :only [make-classifier classifier-train
                                    classifier-evaluate classifier-classify]]
-        [bcbio.variation.filter.attr :only [get-vc-attrs-normalized]]
+        [bcbio.variation.filter.attr :only [get-vc-attrs-normalized prep-vc-attr-retriever]]
         [bcbio.variation.filter.intervals :only [pipeline-combine-intervals]]
         [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template
                                                get-vcf-iterator has-variants?
@@ -19,16 +20,29 @@
 
 ;; ## Split variants for classification
 
-(def ^{:private true
-       :doc "Available specialized classifier groups."}
-  classifier-types [:snp :complex])
+(defn- classifier-types
+  "Define splitting of classifiers based on variant characteristics."
+  []
+  (let [variant-types [:snp :complex]
+        repeats [true false]]
+    (map (fn [[vtype rpt]] {:variant-type vtype
+                            :repetitive rpt})
+         (cartesian-product variant-types repeats))))
+
+(defn- ctype-to-str
+  "Convert a classifier types into a string name for output files."
+  [x]
+  (str (name (:variant-type x))
+       (if (:repetitive x) "rpt" "std")))
 
 (defn- get-classifier-type
   "Map variant types to specialized classifiers."
-  [vc]
-  (case (:type vc)
-    "SNP" :snp
-    :complex))
+  [vc attr-get]
+  (let [attrs (attr-get ["rmsk"] vc)]
+    {:variant-type (case (:type vc)
+                     "SNP" :snp
+                     :complex)
+     :repetitive (not (nil? (get attrs "rmsk")))}))
 
 ;; ## Linear classifier
 
@@ -40,40 +54,40 @@
 (defn- get-train-inputs
   "Retrieve normalized training inputs from VCF file."
   [group in-vcf ctype attrs normalizer ref]
-  (with-open [vcf-iter (get-vcf-iterator in-vcf ref)]
-    (->> (parse-vcf vcf-iter)
-         (filter #(= ctype (get-classifier-type %)))
-         (map (partial get-vc-inputs attrs normalizer group))
-         doall)))
+  (let [attr-get (prep-vc-attr-retriever in-vcf ref)]
+    (with-open [vcf-iter (get-vcf-iterator in-vcf ref)]
+      (->> (parse-vcf vcf-iter)
+           (filter #(= ctype (get-classifier-type % attr-get)))
+           (map (partial get-vc-inputs attrs normalizer group))
+           doall))))
 
 (defn- train-vcf-classifier
   "Do the work of training a variant classifier."
   [ctype attrs base-vcf true-vcf false-vcf ref config]
   (let [normalizer (partial get-vc-attrs-normalized attrs base-vcf ref config)
-        ds (make-dataset "ds" (conj (vec attrs) {:c [:a :b]})
-                         (concat (get-train-inputs :a true-vcf ctype attrs
-                                                   (normalizer true-vcf)
-                                                   ref)
-                                 (get-train-inputs :b false-vcf ctype attrs
-                                                   (normalizer false-vcf)
-                                                   ref))
-                      {:class :c})
-        c (classifier-train (make-classifier :support-vector-machine :smo) ds)]
-    ;(println "Evaluate" (classifier-evaluate c :dataset ds ds))
-    c))
+        inputs (concat (get-train-inputs :a true-vcf ctype attrs
+                                         (normalizer true-vcf)
+                                         ref)
+                       (get-train-inputs :b false-vcf ctype attrs
+                                         (normalizer false-vcf)
+                                         ref))]
+    (when (seq inputs)
+      (->> (make-dataset "ds" (conj (vec attrs) {:c [:a :b]}) inputs {:class :c})
+           (classifier-train (make-classifier :support-vector-machine :smo))))))
 
 (defn- build-vcf-classifiers
   "Provide a variant classifier based on provided attributes and true/false examples."
   [attrs base-vcf true-vcf false-vcf ref config]
   (letfn [(build-vcf-classifier [ctype]
-            (let [out-file (format "%s-%s-classifier.bin" (itx/file-root base-vcf) (name ctype))]
+            (let [out-file (format "%s-%s-classifier.bin" (itx/file-root base-vcf) (ctype-to-str ctype))]
               (if-not (itx/needs-run? out-file)
                 (deserialize-from-file out-file)
-                (let [classifier (train-vcf-classifier ctype attrs base-vcf true-vcf false-vcf
-                                                       ref config)]
+                (when-let [classifier (train-vcf-classifier ctype attrs base-vcf true-vcf false-vcf
+                                                            ref config)]
                   (serialize-to-file classifier out-file)
                   classifier))))]
-    (zipmap classifier-types (map build-vcf-classifier classifier-types))))
+    (let [ctypes (classifier-types)]
+      (zipmap ctypes (map build-vcf-classifier ctypes)))))
 
 (defn- add-cfilter-header
   "Add details on the filtering to the VCF file header."
@@ -103,13 +117,14 @@
 
 (defn- filter-vc
   "Update a variant context with filter information from classifier."
-  [classifiers normalizer meta-getters config vc]
+  [classifiers normalizer attr-get meta-getters config vc]
   (let [attrs (vec (:classifiers config))
+        c (get classifiers (get-classifier-type vc attr-get))
         score (-> (make-dataset "ds" (conj attrs :c)
                                  [(get-vc-inputs attrs normalizer -1 vc)]
                                  {:class :c})
                   (make-instance (assoc (normalizer vc) :c -1))
-                  (#(classifier-classify (get classifiers (get-classifier-type vc)) %)))]
+                  (#(classifier-classify c %)))]
     (-> (VariantContextBuilder. (:vc vc))
         (.attributes (assoc (:attributes vc) "CSCORE" score))
         (.filters (when-not (vc-passes-w-meta? vc score meta-getters config)
@@ -145,14 +160,15 @@
                     orig-false-vcf)
         cs (build-vcf-classifiers (:classifiers config) base-vcf
                                   true-vcf false-vcf ref config)
-        normalizer (get-vc-attrs-normalized (:classifiers config) base-vcf ref config base-vcf)]
+        normalizer (get-vc-attrs-normalized (:classifiers config) base-vcf ref config base-vcf)
+        attr-get (prep-vc-attr-retriever base-vcf ref)]
     (when (itx/needs-run? out-file)
       (println "Filter VCF with" (str cs))
       (with-open [vcf-iter (get-vcf-iterator base-vcf ref)
                   trusted-get (get-vcf-retriever ref (:trusted meta-files))
                   xspecific-get (get-vcf-retriever ref (:xspecific meta-files))]
         (write-vcf-w-template base-vcf {:out out-file}
-                              (map (partial filter-vc cs normalizer
+                              (map (partial filter-vc cs normalizer attr-get
                                             {:trusted trusted-get :xspecific xspecific-get}
                                             config)
                                    (parse-vcf vcf-iter))

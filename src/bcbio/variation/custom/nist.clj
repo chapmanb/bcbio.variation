@@ -1,6 +1,6 @@
 (ns bcbio.variation.custom.nist
   "Explore variant calling from fosmid data against NIST whole genome datasets"
-  (:use [bcbio.variation.filter.attr :only [get-vc-attr-retriever]])
+  (:use [bcbio.variation.filter.attr :only [prep-vc-attr-retriever]])
   (:require [clojure.string :as string]
             [incanter.stats :as istats]
             [bcbio.variation.variantcontext :as gvc]))
@@ -23,7 +23,7 @@
 (defn- collect-stats-for-discordant
   "Provide high level statistics on discordant calls."
   [fosmid-file nist-file ref-file]
-  (let [attr-get (get-vc-attr-retriever fosmid-file ref-file)]
+  (let [attr-get (prep-vc-attr-retriever fosmid-file ref-file)]
     (with-open [vrn-iter (gvc/get-vcf-iterator fosmid-file ref-file)
                 nist-retriever (gvc/get-vcf-retriever ref-file nist-file)]
       (reduce (fn [coll vc]

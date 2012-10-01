@@ -131,15 +131,15 @@
 (defn vc-attr-retriever
   "Retrieve metrics by name from a gemini index for provided VariantContexts."
   [in-file ref-file]
-  (if-let [index-db (index-variant-file in-file ref-file)]
-    (sql/with-connection (get-sqlite-db index-db)
-      (fn [vc attr]
-        (sql/with-query-results rows
-          [(str "SELECT " (name attr)
-                " FROM variants WHERE chrom = ? AND start = ? and ref = ?")
-           (str "chr" (:chr vc)) (dec (:start vc)) (.getBaseString (:ref-allele vc))]
-          (gemini-metric-from-row (first rows) attr))))
-    (fn [vc attr] nil)))
+  (let [index-db (index-variant-file in-file ref-file)]
+    (fn [vc attr]
+      (when index-db
+        (sql/with-connection (get-sqlite-db index-db)
+          (sql/with-query-results rows
+            [(str "SELECT " (name attr)
+                  " FROM variants WHERE chrom = ? AND start = ? and ref = ?")
+             (str "chr" (:chr vc)) (dec (:start vc)) (.getBaseString (:ref-allele vc))]
+            (gemini-metric-from-row (first rows) attr)))))))
 
 (defn get-raw-metrics
   "Retrieve table of Gemini metrics keyed on variant names."
