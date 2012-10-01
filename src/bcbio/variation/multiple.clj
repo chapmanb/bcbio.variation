@@ -101,24 +101,26 @@
 
 (defmulti gen-target-fps
   "Generate false positives, dispatching differently when the target is from recalling."
-  (fn [_ _ _ _ is-recalled? _ _]
-    (if is-recalled? :recall :default)))
+  (fn [_ _ _ _ call _ _]
+    (if (get call :recall false) :recall :default)))
 
 (defmethod gen-target-fps :recall
   ^{:doc "False positive generation for combine call sets resulting from recalling.
-          Report calls found in only a single original set"}
-  [target-cmps target-name _ target-overlap-vcf is-recalled? ref out-dir]
+          Report calls with low support across inputs callsets."}
+  [target-cmps target-name _ target-overlap-vcf call ref out-dir]
   (let [calls (vec (set (mapcat (juxt :c1 :c2) (vals target-cmps))))
-        out-file (itx/add-file-part target-overlap-vcf "singles" out-dir)]
-    (letfn [(is-single-fp? [vc]
+        out-file (itx/add-file-part target-overlap-vcf "lowcounts" out-dir)
+        freq (get call :fp-freq 0.25)
+        thresh (Math/ceil (* freq (dec (count calls))))]
+    (letfn [(is-lowcount-fp? [vc]
               (-> (get-vc-set-calls vc calls)
                   (disj target-name)
                   count
-                  (= 1)))]
+                  (<= thresh)))]
       (when (itx/needs-run? out-file)
         (with-open [in-iter (get-vcf-iterator target-overlap-vcf ref)]
           (write-vcf-w-template target-overlap-vcf {:out out-file}
-                                (map :vc (filter is-single-fp? (parse-vcf in-iter)))
+                                (map :vc (filter is-lowcount-fp? (parse-vcf in-iter)))
                                 ref))))
     out-file))
 
@@ -177,7 +179,7 @@
      :false-positives (gen-target-fps (remove #(not-target? target-name (first %))
                                               cmps-by-name)
                                       target-name (:union notarget-concordant)
-                                      target-overlap-vcf (:recall target-call)
+                                      target-overlap-vcf target-call
                                       ref out-dir)}))
 
 (defn multiple-overlap-analysis
