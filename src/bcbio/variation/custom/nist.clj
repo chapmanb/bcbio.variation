@@ -1,6 +1,6 @@
 (ns bcbio.variation.custom.nist
   "Explore variant calling from fosmid data against NIST whole genome datasets"
-  (:use [bcbio.variation.filter.classify :only [get-vc-attr-retriever]])
+  (:use [bcbio.variation.filter.attr :only [get-vc-attr-retriever]])
   (:require [clojure.string :as string]
             [incanter.stats :as istats]
             [bcbio.variation.variantcontext :as gvc]))

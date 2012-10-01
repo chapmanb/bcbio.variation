@@ -3,7 +3,8 @@
   (:import [org.broadinstitute.sting.utils.variantcontext
             VariantContextBuilder])
   (:use [clojure.string :only [split]]
-        [bcbio.variation.filter.classify :only [pipeline-classify-filter get-vc-attr]]
+        [bcbio.variation.filter.attr :only [get-vc-attr]]
+        [bcbio.variation.filter.classify :only [pipeline-classify-filter]]
         [bcbio.variation.filter.specific :only [get-x-specific-variants]]
         [bcbio.variation.filter.trusted :only [get-support-vcfs get-trusted-variants]]
         [bcbio.variation.metrics :only [to-float]]

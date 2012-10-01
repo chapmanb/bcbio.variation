@@ -2,7 +2,7 @@
   "Pre-index a variant file for quick retrieval of associated metrics."
   (:use [ordered.map :only [ordered-map]]
         [bcbio.variation.metrics :only [passes-filter?]]
-        [bcbio.variation.filter.classify :only [get-vc-attrs]]
+        [bcbio.variation.filter.attr :only [get-vc-attrs]]
         [bcbio.variation.index.subsample :only [subsample-by-cluster]]
         [bcbio.variation.variantcontext :only [get-vcf-header get-vcf-iterator parse-vcf]]
         [bcbio.variation.web.db :only [get-sqlite-db]])

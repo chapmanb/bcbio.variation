@@ -2,6 +2,7 @@
   "Final variant filtration and preparation for validation."
   (:use [midje.sweet]
         [bcbio.variation.haploid :exclude [-main]]
+        [bcbio.variation.filter.attr]
         [bcbio.variation.filter.classify]
         [bcbio.variation.filter.intervals]
         [bcbio.variation.filter]
