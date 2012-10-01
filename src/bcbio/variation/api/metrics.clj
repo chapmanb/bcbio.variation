@@ -9,6 +9,8 @@
 
 ;; ## Helper functions
 
+(declare available-metrics)
+
 (defn- get-histogram-bins
   [items n bin-min bin-max]
   "Retrieve values binned into a histogram using JFree Chart."
@@ -32,8 +34,8 @@
 (defn- get-metric-range
   "Retrieve the configured range of a metric"
   [metric]
-  (-> (apply merge (map (partial into {}) [im/expose-metrics gemini/gemini-metrics]))
-      (get metric)
+  (-> (filter #(= (:id %) metric) (available-metrics nil))
+      first
       :range))
 
 (defn- prepare-plot-metrics

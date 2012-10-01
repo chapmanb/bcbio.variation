@@ -24,10 +24,11 @@
 
 (defmulti get-vc-attr
   "Generalized retrieval of attributes from variant with a single genotype."
-  (fn [vc attr retrievers]
-    (if (contains? gemini/gemini-metrics attr)
-      :gemini
-      attr)))
+  (let [gemini-ids (set (map :id (gemini/available-metrics nil :include-noviz? true)))]
+    (fn [vc attr retrievers]
+      (if (contains? gemini-ids attr)
+        :gemini
+        attr))))
 
 (defmethod get-vc-attr "AD"
   ^{:doc "AD: Allelic depth for ref and alt alleles. Converted to percent
@@ -102,11 +103,7 @@
   ^{:doc "Retrieve attribute information from associated Gemini index."}
   [vc attr retrievers]
   (when-let [getter (:gemini retrievers)]
-    (let [x (getter vc attr)]
-      (if-not (nil? x) x
-              (cond
-               (.startsWith attr "gms") 100.0
-               :else nil)))))
+    (getter vc attr)))
 
 (defmethod get-vc-attr :default
   [vc attr _]

@@ -60,7 +60,8 @@
                              [tx-index])))))
         index-file))))
 
-(def ^{:doc "Gemini metrics to expose"}
+(def ^{:doc "Gemini metrics to expose for query and visualization."
+       :private true}
   gemini-metrics
   (ordered-map "aaf_1kg_all" {:range [0.0 1.0]
                               :desc "1000 genomes allele frequency, all populations"}
@@ -74,12 +75,15 @@
                "polyphen_score" {:range [0.5 1.0]
                                  :y-scale {:type :log}
                                  :desc (str "Polyphen amino acid effect predictions. "
-                                            "Larger scores are more likely to be deleterious.")}))
+                                            "Larger scores are more likely to be deleterious.")}
+               "rmsk" {:viz false}))
 
 (defn available-metrics
   "Retrieve metrics available from Gemini."
-  [in-file]
-  (let [all-metrics (map (fn [[k v]] (assoc v :id k)) gemini-metrics)]
+  [in-file & {:keys [include-noviz?]}]
+  (let [all-metrics (->> gemini-metrics
+                         (map (fn [[k v]] (assoc v :id k)))
+                         (filter #(or include-noviz? (get % :viz true))))]
     (if-let [index-db (index-variant-file in-file nil)]
       (sql/with-connection (get-sqlite-db index-db)
         (letfn [(db-has-metric? [x]
@@ -127,15 +131,15 @@
 (defn vc-attr-retriever
   "Retrieve metrics by name from a gemini index for provided VariantContexts."
   [in-file ref-file]
-  (let [index-db (index-variant-file in-file ref-file)]
-    (fn [vc attr]
-      (when index-db
-        (sql/with-connection (get-sqlite-db index-db)
-          (sql/with-query-results rows
-            [(str "SELECT " (name attr)
-                  " FROM variants WHERE chrom = ? AND start = ? and ref = ?")
-             (str "chr" (:chr vc)) (dec (:start vc)) (.getBaseString (:ref-allele vc))]
-            (gemini-metric-from-row (first rows) attr)))))))
+  (if-let [index-db (index-variant-file in-file ref-file)]
+    (sql/with-connection (get-sqlite-db index-db)
+      (fn [vc attr]
+        (sql/with-query-results rows
+          [(str "SELECT " (name attr)
+                " FROM variants WHERE chrom = ? AND start = ? and ref = ?")
+           (str "chr" (:chr vc)) (dec (:start vc)) (.getBaseString (:ref-allele vc))]
+          (gemini-metric-from-row (first rows) attr))))
+    (fn [vc attr] nil)))
 
 (defn get-raw-metrics
   "Retrieve table of Gemini metrics keyed on variant names."
