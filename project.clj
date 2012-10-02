@@ -40,6 +40,7 @@
                                                   org.codehaus.jackson/jackson-core-asl]]
                  [org.clojure/java.jdbc "0.2.2"]
                  [org.xerial/sqlite-jdbc "3.7.2"]
+                 [c3p0/c3p0 "0.9.1.2"]
                  [compojure "1.1.3"]
                  [ring/ring-core "1.1.5"]
                  [ring/ring-jetty-adapter "1.1.5"]

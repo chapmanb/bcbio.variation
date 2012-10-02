@@ -1,5 +1,6 @@
 (ns bcbio.variation.web.db
   "Provide basic persistence of user files and processes in local DB."
+  (:import [com.mchange.v2.c3p0 ComboPooledDataSource])
   (:require [clojure.string :as string]
             [clojure.java.jdbc :as sql]
             [fs.core :as fs]))
@@ -11,6 +12,13 @@
     :subprotocol "sqlite"
     :subname fname}
    opts))
+
+(defn get-sqlite-db-pool [fname]
+  (let [spec (get-sqlite-db fname)]
+    {:datasource (doto (ComboPooledDataSource.)
+                   (.setDriverClass (:classname spec))
+                   (.setJdbcUrl (str "jdbc:" (:subprotocol spec) ":"
+                                     (:subname spec))))}))
 
 (defn- create-user-tables []
   (sql/create-table :analysis

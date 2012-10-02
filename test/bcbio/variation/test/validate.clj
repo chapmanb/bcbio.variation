@@ -45,7 +45,6 @@
 (facts "Convert diploid calls into haploid reference variants."
   (diploid-calls-to-haploid dip-vcf ref) => dip-out)
 
-
 (facts "Generalized attribute retrieval from variant contexts"
   (with-open [vcf-iter (get-vcf-iterator top-vcf ref)]
     (let [vcf-iter (parse-vcf vcf-iter)

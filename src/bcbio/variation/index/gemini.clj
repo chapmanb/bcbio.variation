@@ -4,7 +4,7 @@
   (:use [clojure.java.io]
         [ordered.map :only [ordered-map]]
         [bcbio.variation.api.shared :only [web-config]]
-        [bcbio.variation.web.db :only [get-sqlite-db]])
+        [bcbio.variation.web.db :only [get-sqlite-db get-sqlite-db-pool]])
   (:require [clojure.java.jdbc :as sql]
             [clojure.java.shell :as shell]
             [clojure.string :as string]
@@ -131,15 +131,16 @@
 (defn vc-attr-retriever
   "Retrieve metrics by name from a gemini index for provided VariantContexts."
   [in-file ref-file]
-  (let [index-db (index-variant-file in-file ref-file)]
-    (fn [vc attr]
-      (when index-db
-        (sql/with-connection (get-sqlite-db index-db)
+  (if-let [index-db (index-variant-file in-file ref-file)]
+    (let [pool (get-sqlite-db-pool index-db)]
+      (fn [vc attr]
+        (sql/with-connection pool
           (sql/with-query-results rows
             [(str "SELECT " (name attr)
                   " FROM variants WHERE chrom = ? AND start = ? and ref = ?")
              (str "chr" (:chr vc)) (dec (:start vc)) (.getBaseString (:ref-allele vc))]
-            (gemini-metric-from-row (first rows) attr)))))))
+            (gemini-metric-from-row (first rows) attr)))))
+    (fn [vc attr] nil)))
 
 (defn get-raw-metrics
   "Retrieve table of Gemini metrics keyed on variant names."
