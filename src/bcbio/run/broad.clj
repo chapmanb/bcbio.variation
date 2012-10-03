@@ -17,7 +17,9 @@
     (create-ref-dict ref-file)))
 
 (defn run-gatk
-  "Run a GATK commandline in an idempotent file-safe transaction."
+  "Run a GATK commandline in an idempotent file-safe transaction.
+   Contains a workaround to not die on errors while generating GATKReports,
+   which occur when calling this externally as a library function."
   [program args file-info map-info]
   (when (itx/needs-run? (map #(% file-info) (get map-info :out [])))
     (create-ref-dict-gatk args)
@@ -25,10 +27,14 @@
                            (when-not (contains? (set args) "--unsafe")
                              ["--unsafe" "LENIENT_VCF_PROCESSING"]))]
       (itx/with-tx-files [tx-file-info file-info (get map-info :out []) [".idx"]]
-        (CommandLineGATK/start (CommandLineGATK.)
-                               (into-array (map str (itx/subs-kw-files
-                                                     (concat std-args args)
-                                                     tx-file-info))))))))
+        (try
+          (CommandLineGATK/start (CommandLineGATK.)
+                                 (into-array (map str (itx/subs-kw-files
+                                                       (concat std-args args)
+                                                       tx-file-info))))
+          (catch java.lang.VerifyError e
+            (when-not (.contains (.getMessage e) "GATKRunReport")
+              (throw e))))))))
 
 (defn index-bam
   "Generate BAM index, skipping if already present."
