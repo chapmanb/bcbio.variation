@@ -7,7 +7,8 @@
   http://www.biomedcentral.com/1471-2105/13/8/abstract
   "
   (:import [org.broadinstitute.sting.gatk.walkers.annotator.interfaces.InfoFieldAnnotation]
-           [org.broadinstitute.sting.utils.codecs.vcf VCFInfoHeaderLine VCFHeaderLineType])
+           [org.broadinstitute.sting.utils.codecs.vcf VCFInfoHeaderLine VCFHeaderLineType]
+           [org.broadinstitute.sting.utils BaseUtils])
   (:require [incanter.stats :as istats])
   (:gen-class
    :name bcbio.variation.annotate.nbq.MeanNeighboringBaseQuality
@@ -30,19 +31,38 @@
 
     - Get a pileup for each sample context.
     - Use pileup to retrieve reads and current offsets.
+    - Filter reads to those that match an alternative base
     - Get quality from reads and pull out qualities in surrounding region
     - Calculate mean and return."
-  [_ _ _ _ contexts _]
-  (letfn [(neighbor-qualities [[offset read]]
-            (let [quals (-> read .getBaseQualities vec)]
-              (map #(nth quals % nil) (range (- offset flank-bp) (+ offset flank-bp)))))
-          (pileup-qualities [pileup]
-            (map neighbor-qualities (map vector (.getOffsets pileup) (.getReads pileup))))]
-    {"NBQ" (->> contexts
-                vals
-                (map #(.getBasePileup %))
-                (map pileup-qualities)
-                flatten
-                (remove nil?)
-                istats/mean
-                (format "%.2f"))}))
+  [_ _ _ _ contexts vc]
+  (letfn [(orient-reads [[offset read]]
+            (if (.getReadNegativeStrandFlag read)
+              {:offset offset
+               :bases (BaseUtils/simpleReverseComplement (.getReadBases read))
+               :quals (-> read .getBaseQualities vec reverse)}
+              {:offset offset
+               :bases (.getReadString read)
+               :quals (-> read .getBaseQualities vec)}))
+          (neighbor-qualities [{:keys [offset quals]}]
+            (map #(nth quals % nil) (range (- offset flank-bp) (+ offset flank-bp))))
+          (supports-alt? [alt-bases {:keys [offset bases]}]
+            (let [base (char (nth bases offset))]
+              (contains? alt-bases base)))
+          (pileup-qualities [alt-bases pileup]
+            (->> (map vector (.getOffsets pileup) (.getReads pileup))
+                 (map orient-reads)
+                 (filter (partial supports-alt? alt-bases))
+                 (map neighbor-qualities)))]
+    (let [alt-bases (->> (.getAlternateAlleles vc)
+                              (map #(.getBaseString %))
+                              (map first)
+                              set)]
+      (when (seq alt-bases)
+        {"NBQ" (->> contexts
+                    vals
+                    (map #(.getBasePileup %))
+                    (map (partial pileup-qualities alt-bases))
+                    flatten
+                    (remove nil?)
+                    istats/mean
+                    (format "%.2f"))}))))
