@@ -49,7 +49,8 @@
 
 (facts "Index file for rapid retrieval of variants."
   (im/index-variant-file vcf1 ref) => out-index
-  (-> (im/get-raw-metrics vcf1 ref) first keys) => ["PL" "AD" "HaplotypeScore" "QD" "MQ" "DP" "QUAL" :id])
+  (-> (im/get-raw-metrics vcf1 ref) first keys) => ["PL" "AD" "HaplotypeScore" "FS"
+                                                    "QD" "MQ" "DP" "QUAL" :id])
 
 (facts "Index and retrieve metrics using Gemini."
   (set-config-from-file! web-yaml)
