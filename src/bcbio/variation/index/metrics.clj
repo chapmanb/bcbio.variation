@@ -22,6 +22,7 @@
                "QD" {:range [0.0 50.0]
                      :desc "Variant confidence by depth"}
                "FS" {:range [0.0 100.0]
+                     :y-scale {:type :log}
                      :desc "Phred-scaled p-value using Fisher's exact test to detect strand bias"}
                "HaplotypeScore" {:range [0.0 50.0]
                                  :desc "Consistency of the site with at most two segregating haplotypes"}
