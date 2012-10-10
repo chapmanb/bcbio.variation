@@ -53,7 +53,7 @@
                              (subs remote-name 1)
                              remote-name)}))
           (download-gs [rclient file-info out-file]
-            (gs/download (:client rclient) (:dirname file-info)
+            (gs/download (:conn rclient) (:dirname file-info)
                          (:fname file-info) out-file))]
     (download-to-local fname rclient fileinfo-gs download-gs)))
 
@@ -69,7 +69,7 @@
               {:local-stub (str (file (:username rclient) history-id (:name ds)))
                :ds ds}))
           (download-galaxy [rclient file-info out-file]
-            (galaxy/download-dataset (:client rclient) (:ds file-info) out-file))]
+            (galaxy/download-dataset (:conn rclient) (:ds file-info) out-file))]
     (download-to-local fname rclient download-galaxy)))
 
 (defmethod get-file :default
@@ -89,7 +89,7 @@
   ^{:doc "Retrieve available directories from GenomeSpace under the parent directory."}
   [rclient dirname]
   (map (fn [x] {:id x :name x})
-       (gs/list-dirs (:client rclient) dirname)))
+       (gs/list-dirs (:conn rclient) dirname)))
 
 (defmethod list-dirs :galaxy
   ^{:doc "Retrieve available histories from Galaxy connection."}
@@ -113,8 +113,8 @@
            :filename (:name finfo)
            :size (:size finfo)
            :created-on (:date finfo)})
-        (gs/list-files rclient (:id rdir) (name ftype)))
-   (mapcat #(list-files rclient % ftype) (gs/list-dirs (:client rclient) (:id rdir)))))
+        (gs/list-files (:conn rclient) (:id rdir) (name ftype)))
+   (mapcat #(list-files rclient % ftype) (list-dirs rclient (:id rdir)))))
 
 (defmethod list-files :galaxy
   ^{:doc "List available files from a Galaxy history."}
@@ -126,7 +126,7 @@
           :filename (:name ds)
           :size (:file-size ds)
           :created-on nil})
-       (galaxy/get-datasets-by-type (:client rclient) ftype :history-id (:id history))))
+       (galaxy/get-datasets-by-type (:conn rclient) ftype :history-id (:id history))))
 
 (defmethod list-files :default
   ^{:doc "Retrieval of pre-downloaded files in our local cache."}
@@ -142,10 +142,10 @@
 (defmethod put-file :gs
   ^{:doc "Push file to GenomeSpace in the specified upload directory."}
   [rclient remote-dir local-file _]
-  (gs/upload (:client rclient) remote-dir local-file))
+  (gs/upload (:conn rclient) remote-dir local-file))
 
 (defmethod put-file :galaxy
   ^{:doc "Push file to the specified Galaxy history, using a remotely available URL."}
   [rclient history-id provide-url params]
-  (galaxy/upload-to-history (:client rclient) provide-url (:dbkey params)
+  (galaxy/upload-to-history (:conn rclient) provide-url (:dbkey params)
                             (:file-type params) :history-id history-id))

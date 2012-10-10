@@ -10,7 +10,8 @@
             [fs.core :as fs]
             [bcbio.run.itx :as itx]
             [bcbio.variation.index.metrics :as metrics]
-            [bcbio.variation.index.gemini :as gemini]))
+            [bcbio.variation.index.gemini :as gemini]
+            [bcbio.variation.remote.core :as remote]))
 
 (declare pre-retrieve-gs)
 (defn get-gs-client

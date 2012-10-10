@@ -7,7 +7,6 @@
         [ring.middleware file file-info keyword-params
          multipart-params nested-params params session]
         [ring.util.response]
-        [bcbio.variation.api.file :only [get-files]]
         [bcbio.variation.config :only [get-log-status]]
         [bcbio.variation.web.db :only [prepare-web-db get-analyses]]
         [bcbio.variation.web.rpc :only [wrap-rpc-session]]
@@ -17,28 +16,22 @@
             [compojure.route :as route]
             [clj-yaml.core :as yaml]
             [fs.core :as fs]
-            [clj-genomespace.core :as gs]
+            [bcbio.variation.remote.core :as remote]
             [bcbio.variation.web.process :as web-process]))
 
-(defn- cur-gs-client [session]
-  (when-let [gs-client (:gs-client session)]
-    (when (gs/logged-in? gs-client)
-      gs-client)))
-
-(defremote login [{:keys [username password]} session]
-  (when-let [gs-client (gs/get-client username :password password)]
-    {:result username
-     :session (-> session
-                  (assoc :username username)
-                  (assoc :gs-client gs-client))}))
+(defremote login [creds session]
+  (let [rclient (remote/get-client (assoc creds :type :gs))]
+    (when (:conn rclient)
+      {:result (:username rclient)
+       :session (-> session
+                    (assoc :rclient rclient))})))
 
 (defremote logout [session]
   {:result nil
-   :session (-> session (dissoc :username) (dissoc :gs-client))})
+   :session (dissoc session :rclient)})
 
 (defn- get-username* [session]
-  (when (cur-gs-client session)
-    (:username session)))
+  (get-in session [:rclient :username]))
 
 (defremote get-username [session]
   (get-username* session))
@@ -48,21 +41,20 @@
                 :text (format "%s (%s)" (:sample x) (:description x))})
        (:ref @web-config)))
 
-(defn- prep-gs-path [x]
-  {:full x
-   :name (last (string/split x #"/"))})
+(defn- prep-display-path [x]
+  {:full (:id x)
+   :name (last (string/split (:name x) #"/"))})
 
 (defremote list-external-dirs [session]
-  (if-let [gs-client (cur-gs-client session)]
-    (map prep-gs-path (gs/list-dirs gs-client "."))
+  (if-let [rclient (:rclient session)]
+    (map prep-display-path (remote/list-dirs rclient "."))
     []))
 
 (defremote list-external-files [dir ftype session]
-  (if-let [gs-client (cur-gs-client session)]
-    (map (fn [x] {:full (str (:folder x) "/" (:filename x))
+  (if-let [rclient (:rclient session)]
+    (map (fn [x] {:full (:id x)
                   :name (:filename x)})
-         (get-files ftype {:client gs-client} :dirnames [dir]
-                    :use-cache? false))
+         (remote/list-files rclient {:id dir} ftype))
     []))
 
 (defremote get-status [run-id session]
@@ -91,9 +83,7 @@
         (let [{:keys [work-info out-html]} (web-process/prep-scoring params)
               new-work-info (assoc (:work-info session)
                               (:id work-info) work-info)]
-          (future (web-process/run-scoring work-info params
-                                           (get-username* session)
-                                           (cur-gs-client session)))
+          (future (web-process/run-scoring work-info params (:rclient session)))
           (-> (response out-html)
               (assoc :session
                 (assoc session :work-info new-work-info)))))

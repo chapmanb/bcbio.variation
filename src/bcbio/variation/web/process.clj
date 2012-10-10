@@ -15,9 +15,8 @@
             [hiccup.core :as hiccup]
             [net.cgrand.enlive-html :as html]
             [ring.middleware.anti-forgery :as anti-forgery]
-            [clj-genomespace.core :as gs]
-            [bcbio.variation.web.db :as db]
-            [bcbio.variation.api.file :as file-api]))
+            [bcbio.variation.remote.core :as remote]
+            [bcbio.variation.web.db :as db]))
 
 ;; ## Run scoring based on inputs from web or API
 
@@ -145,7 +144,7 @@
 
 (defn upload-results
   "Upload output files to GenomeSpace."
-  [gs-client work-info comparison]
+  [rclient work-info comparison]
   (let [out-files (map #(get-in comparison [:c-files %])
                        [:concordant :discordant :discordant-missing :phasing-error])
         summary-file (str (fs/file (:dir work-info)
@@ -156,8 +155,10 @@
                                     (prep-scoring-table (:metrics comparison)
                                                         (get-in comparison [:summary :sv])))
                        "\n")))
-    (file-api/put-files (cons summary-file out-files) (:gs-variant-file work-info)
-                        "xprize" {:client gs-client} :pre-fetch? false)))
+    (let [subdir "xprize"
+          gs-dir (str (fs/file (fs/parent (last (string/split (:gs-variant-file) #":" 2))) subdir))]
+      (doseq [x (cons summary-file out-files)]
+        (remote/put-file rclient gs-dir x {})))))
 
 (defn- prepare-final-files
   "Merge standard and structural variant outputs into final set of upload files."
@@ -176,19 +177,19 @@
 
 (defn run-scoring-analysis
   "Run scoring analysis from provided work information."
-  [work-info gs-client]
+  [work-info rclient]
   (let [process-config (create-work-config work-info @web-config)
         comparisons (first (variant-comparison-from-config process-config))]
     (prepare-final-files comparisons)
-    (when-not (or (nil? gs-client) (nil? (:gs-variant-file work-info)))
-      (upload-results gs-client work-info comparisons))
+    (when-not (or (nil? (:conn rclient)) (nil? (:gs-variant-file work-info)))
+      (upload-results rclient work-info comparisons))
     (spit (file (:dir work-info) "scoring-summary.html")
           (html-scoring-summary comparisons (:id work-info)))
     comparisons))
 
 (defmulti get-input-files
   "Prepare working directory, downloading input files."
-  (fn [work-info params gs-client]
+  (fn [work-info params _]
     (let [gs-info (:gs-variant-file params)]
       (if (or (nil? gs-info) (empty? gs-info)) :upload :gs))))
 
@@ -204,25 +205,17 @@
                   [:variant-file :region-file]))))
 
 (defmethod get-input-files :gs
-  [work-info params gs-client]
-  (letfn [(gs-do-download [gs-file tmp-dir]
-            (let [local-file (fs/file tmp-dir (fs/base-name gs-file))]
-              (when-not (fs/exists? local-file)
-                (gs/download gs-client
-                             (str (fs/parent gs-file))
-                             (str (fs/base-name gs-file))
-                             tmp-dir))
-              local-file))
-          (gs-download [tmp-dir params kw]
+  [work-info params rclient]
+  (letfn [(gs-download [tmp-dir params kw]
             (let [gs-file (get params (keyword (str "gs-" (name kw))))]
               [kw (when-not (or (nil? gs-file) (empty? gs-file))
-                    (gs-do-download gs-file tmp-dir))]))]
+                    (remote/get-file gs-file rclient))]))]
     (into {} (map (partial gs-download (:dir work-info) params)
                   [:variant-file :region-file]))))
 
 (defn run-scoring
   "Download form-supplied input files and start scoring analysis."
-  [orig-work-info params username gs-client]
+  [orig-work-info params rclient]
   (letfn [(add-gs-info [work-info params]
             (let [remote-fname (:gs-variant-file params)]
               (if-not (or (nil? remote-fname) (empty? remote-fname))
@@ -231,9 +224,9 @@
     (let [work-info (-> orig-work-info
                         (add-gs-info params)
                         (assoc :in-files (get-input-files orig-work-info params
-                                                          gs-client)))
-          comparisons (run-scoring-analysis work-info gs-client)]
-      (when username
+                                                          rclient)))
+          comparisons (run-scoring-analysis work-info rclient)]
+      (when-let [username (:username rclient)]
         (db/add-analysis {:username username :files (:c-files comparisons)
                           :analysis_id (:id work-info)
                           :description (format "%s: %s" (:comparison-genome work-info)
