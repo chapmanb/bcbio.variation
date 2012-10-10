@@ -131,3 +131,21 @@
 (defmethod list-files :default
   ^{:doc "Retrieval of pre-downloaded files in our local cache."}
   [_ dir-info ftype])
+
+;; ## Upload
+
+(defmulti put-file
+  "Upload a file to a remote repository."
+  (fn [rclient & args]
+    (:type rclient)))
+
+(defmethod put-file :gs
+  ^{:doc "Push file to GenomeSpace in the specified upload directory."}
+  [rclient remote-dir local-file _]
+  (gs/upload (:client rclient) remote-dir local-file))
+
+(defmethod put-file :galaxy
+  ^{:doc "Push file to the specified Galaxy history, using a remotely available URL."}
+  [rclient history-id provide-url params]
+  (galaxy/upload-to-history (:client rclient) provide-url (:dbkey params)
+                            (:file-type params) :history-id history-id))
