@@ -44,8 +44,8 @@
 
 (facts "Retrieve locally cached files from GenomeSpace."
   (set-config-from-file! web-yaml)
-  (first (get-files :vcf {:client nil})) => #(or (nil? %)
-                                                 (contains? % :id)))
+  (first (list-files-w-cache {:username "tester"} :vcf)) => #(or (nil? %)
+                                                                 (contains? % :id)))
 
 (facts "Index file for rapid retrieval of variants."
   (im/index-variant-file vcf1 ref) => out-index

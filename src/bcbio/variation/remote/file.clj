@@ -104,17 +104,18 @@
 (defmethod list-files :gs
   ^{:doc "List available files in GenomeSpace directory by type."}
   [rclient rdir ftype]
-  (concat
-   (map (fn [finfo]
-          {:id (str "gs:" (:dirname finfo) "/" (:name finfo))
-           :tags (remove nil?
-                         [(first (drop 3 (string/split (:dirname finfo) #"/" 4)))])
-           :folder (:dirname finfo)
-           :filename (:name finfo)
-           :size (:size finfo)
-           :created-on (:date finfo)})
-        (gs/list-files (:conn rclient) (:id rdir) (name ftype)))
-   (mapcat #(list-files rclient % ftype) (list-dirs rclient (:id rdir)))))
+  (let [remote-dir (or (:id rdir) ".")]
+    (concat
+     (map (fn [finfo]
+            {:id (str "gs:" (:dirname finfo) "/" (:name finfo))
+             :tags (remove nil?
+                           [(first (drop 3 (string/split (:dirname finfo) #"/" 4)))])
+             :folder (:dirname finfo)
+             :filename (:name finfo)
+             :size (:size finfo)
+             :created-on (:date finfo)})
+          (gs/list-files (:conn rclient) remote-dir (name ftype))
+          (mapcat #(list-files rclient % ftype) (list-dirs rclient remote-dir))))))
 
 (defmethod list-files :galaxy
   ^{:doc "List available files from a Galaxy history."}

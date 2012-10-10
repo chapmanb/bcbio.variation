@@ -1,11 +1,11 @@
 (ns bcbio.variation.api.metrics
   "Provide high level API for accessing variant associated metrics."
   (:import [org.jfree.data.statistics HistogramDataset HistogramType])
-  (:use [bcbio.variation.api.file :only [retrieve-file]]
-        [bcbio.variation.api.shared :only [web-config]]
+  (:use [bcbio.variation.api.shared :only [web-config]]
         [bcbio.variation.variantcontext :only [get-vcf-iterator parse-vcf]])
   (:require [bcbio.variation.index.metrics :as im]
-            [bcbio.variation.index.gemini :as gemini]))
+            [bcbio.variation.index.gemini :as gemini]
+            [bcbio.variation.remote.core :as remote]))
 
 ;; ## Helper functions
 
@@ -72,15 +72,15 @@
 ;; ## API functions
 
 (defn available-metrics
-  [file-id & {:keys [creds]}]
-  (let [vcf-file (when file-id (retrieve-file file-id creds))]
+  [file-id & {:keys [rclient]}]
+  (let [vcf-file (when file-id (remote/get-file file-id rclient))]
     (concat (im/available-metrics vcf-file)
             (gemini/available-metrics vcf-file))))
 
 (defn plot-ready-metrics
   "Provide metrics for a VCF file ready for plotting and visualization."
-  [in-vcf-file & {:keys [metrics creds]}]
-  (let [vcf-file (retrieve-file in-vcf-file creds)
+  [in-vcf-file & {:keys [metrics rclient]}]
+  (let [vcf-file (remote/get-file in-vcf-file rclient)
         ref-file (-> @web-config :ref first :genome)
         plot-metrics (or metrics (available-metrics vcf-file))
         raw-metrics (clean-raw-metrics
@@ -93,7 +93,7 @@
 
 (defn get-raw-metrics
   "Retrieve raw metrics values from input VCF."
-  [variant-id & {:keys [metrics creds use-subsample?]}]
-  (let [vcf-file (retrieve-file variant-id creds)
+  [variant-id & {:keys [metrics rclient use-subsample?]}]
+  (let [vcf-file (remote/get-file variant-id rclient)
         ref-file (-> @web-config :ref first :genome)]
     (combined-raw-metrics vcf-file ref-file metrics use-subsample?)))
