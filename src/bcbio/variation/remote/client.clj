@@ -1,9 +1,10 @@
 (ns bcbio.variation.remote.client
   "Establish a connection with a remote service for file management."
+  (:use [clojure.java.io])
   (:require [blend.galaxy.core :as galaxy]
             [clj-genomespace.core :as gs]))
 
-(defrecord RemoteClient [type conn username])
+(defrecord RemoteClient [type conn username server])
 
 (defmulti get-client
   "Retrieve a remote client using authentication credentials
@@ -24,8 +25,9 @@
                                                     (throw e))))
                    :else nil)
         username (when gs-client
-                   (gs/get-username gs-client))]
-    (RemoteClient. :gs gs-client username)))
+                   (gs/get-username gs-client))
+        server "www.genomespace.org"]
+    (RemoteClient. :gs gs-client username server)))
 
 (defmethod get-client :galaxy
   ^{:doc "Retrieve a Galaxy client connection."}
@@ -40,5 +42,6 @@
                          (when-not allow-offline?
                            (throw e))))
         username (when user-info
-                   (get user-info :username (:email user-info)))]
-    (RemoteClient. :galaxy (when user-info galaxy-client) username)))
+                   (get user-info :username (:email user-info)))
+        server (.getHost (as-url url))]
+    (RemoteClient. :galaxy (when user-info galaxy-client) username server)))

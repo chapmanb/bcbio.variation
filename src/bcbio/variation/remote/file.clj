@@ -8,6 +8,8 @@
             [clj-genomespace.core :as gs]
             [bcbio.run.itx :as itx]))
 
+;; ## Download
+
 (def ^{:doc "Provide list of files currently under download."
        :private true}
   download-queue (atom #{}))
@@ -16,24 +18,21 @@
   "Generalized remote download to local cache directory.
    download-fn takes the client, remote name and local name, and
    handles the download step for a specific remote service."
-  [fname rclient download-fn]
+  [fname rclient to-fileinfo-fn download-fn]
   (let [cache-dir (get-in @web-config [:dir :cache])
-        remote-name (second (string/split fname #":" 2))
-        local-file (str (file cache-dir (if (.startsWith remote-name "/")
-                                          (subs remote-name 1)
-                                          remote-name)))
+        finfo (to-fileinfo-fn rclient fname)
+        local-file (str (file cache-dir (:server rclient) (:local-stub finfo)))
         local-dir (str (fs/parent local-file))]
     (when-not (fs/exists? local-file)
       (when-not (fs/exists? local-dir)
         (fs/mkdirs local-dir))
-      (let [out-file (str (file local-dir (fs/base-name remote-name)))]
-        (when-not (contains? @download-queue out-file)
-          (itx/with-tx-file [out-file-tx out-file]
-            (swap! download-queue conj out-file)
-            (try
-              (download-fn rclient remote-name out-file-tx)
-              (finally
-               (swap! download-queue disj out-file)))))))
+      (when-not (contains? @download-queue local-file)
+        (itx/with-tx-file [out-file-tx local-file]
+          (swap! download-queue conj local-file)
+          (try
+            (download-fn rclient finfo out-file-tx)
+            (finally
+             (swap! download-queue disj local-file))))))
     local-file))
 
 (defmulti get-file
@@ -46,19 +45,89 @@
 (defmethod get-file :gs
   ^{:doc "Retrieve a file from GenomeSpace to the local cache"}
   [fname rclient]
-  (letfn [(download-gs [rclient remote-name out-file]
-            (gs/download (:client rclient) (str (fs/parent remote-name))
-                         (fs/base-name remote-name) out-file))]
-    (download-to-local fname rclient download-gs)))
+  (letfn [(fileinfo-gs [file-id]
+            (let [remote-name (second (string/split file-id #":" 2))]
+              {:dirname (str (fs/parent remote-name))
+               :fname (fs/base-name remote-name)
+               :local-stub (if (.startsWith remote-name "/")
+                             (subs remote-name 1)
+                             remote-name)}))
+          (download-gs [rclient file-info out-file]
+            (gs/download (:client rclient) (:dirname file-info)
+                         (:fname file-info) out-file))]
+    (download-to-local fname rclient fileinfo-gs download-gs)))
 
 (defmethod get-file :galaxy
   ^{:doc "Retrieve a file from Galaxy to the local cache"}
   [fname rclient]
-  (letfn [(download-galaxy [rclient remote-name out-file]
-            (let [[_ history-id fname] (string/split remote-name #"/")]))]
+  (letfn [(fileinfo-gs [file-id]
+            (let [[history-id ds-id] (-> file-id
+                                         (string/split #":" 2)
+                                         second
+                                         (string/split #"/"))
+                  ds (galaxy/get-dataset-by-id history-id ds-id)]
+              {:local-stub (str (file (:username rclient) history-id (:name ds)))
+               :ds ds}))
+          (download-galaxy [rclient file-info out-file]
+            (galaxy/download-dataset (:client rclient) (:ds file-info) out-file))]
     (download-to-local fname rclient download-galaxy)))
 
 (defmethod get-file :default
   ^{:doc "Get local file: no-op, just return the file."}
   [fname _]
   fname)
+
+;; ## List
+
+(defmulti list-dirs
+  "List directories available on the remote server. Returns map of directory
+   :id and display :name."
+  (fn [rclient & args]
+    (:type rclient)))
+
+(defmethod list-dirs :gs
+  ^{:doc "Retrieve available directories from GenomeSpace under the parent directory."}
+  [rclient dirname]
+  (map (fn [x] {:id x :name x})
+       (gs/list-dirs (:client rclient) dirname)))
+
+(defmethod list-dirs :galaxy
+  ^{:doc "Retrieve available histories from Galaxy connection."}
+  [rclient _]
+  (galaxy/list-histories rclient))
+
+(defmulti list-files
+  "List files in a remote directory of a specified type."
+  (fn [rclient & args]
+    (:type rclient)))
+
+(defmethod list-files :gs
+  ^{:doc "List available files in GenomeSpace directory by type."}
+  [rclient rdir ftype]
+  (concat
+   (map (fn [finfo]
+          {:id (str "gs:" (:dirname finfo) "/" (:name finfo))
+           :tags (remove nil?
+                         [(first (drop 3 (string/split (:dirname finfo) #"/" 4)))])
+           :folder (:dirname finfo)
+           :filename (:name finfo)
+           :size (:size finfo)
+           :created-on (:date finfo)})
+        (gs/list-files rclient (:id rdir) (name ftype)))
+   (mapcat #(list-files rclient % ftype) (gs/list-dirs (:client rclient) (:id rdir)))))
+
+(defmethod list-files :galaxy
+  ^{:doc "List available files from a Galaxy history."}
+  [rclient history ftype]
+  (map (fn [ds]
+         {:id (str "galaxy:" (:id history) (:id ds))
+          :tags [(:name history)]
+          :folder (:name history)
+          :filename (:name ds)
+          :size (:file-size ds)
+          :created-on nil})
+       (galaxy/get-datasets-by-type (:client rclient) ftype :history-id (:id history))))
+
+(defmethod list-files :default
+  ^{:doc "Retrieval of pre-downloaded files in our local cache."}
+  [_ dir-info ftype])
