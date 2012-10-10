@@ -156,7 +156,7 @@
                                                         (get-in comparison [:summary :sv])))
                        "\n")))
     (let [subdir "xprize"
-          gs-dir (str (fs/file (fs/parent (last (string/split (:gs-variant-file) #":" 2))) subdir))]
+          gs-dir (str (fs/file (fs/parent (last (string/split (:gs-variant-file work-info) #":" 2))) subdir))]
       (doseq [x (cons summary-file out-files)]
         (remote/put-file rclient gs-dir x {})))))
 
@@ -209,7 +209,7 @@
   (letfn [(gs-download [tmp-dir params kw]
             (let [gs-file (get params (keyword (str "gs-" (name kw))))]
               [kw (when-not (or (nil? gs-file) (empty? gs-file))
-                    (remote/get-file gs-file rclient))]))]
+                    (remote/get-file gs-file rclient :out-dir tmp-dir))]))]
     (into {} (map (partial gs-download (:dir work-info) params)
                   [:variant-file :region-file]))))
 
@@ -238,9 +238,9 @@
   "Prep directory for scoring analysis."
   [params]
   (letfn [(prep-tmp-dir []
-            (let [tmp-dir (get-in @web-config [:dir :work])
+            (let [tmp-dir (file (get-in @web-config [:dir :work]) "score")
                   work-id (str (java.util.UUID/randomUUID))
-                  cur-dir (fs/file tmp-dir work-id)]
+                  cur-dir (file tmp-dir work-id)]
               (fs/mkdirs cur-dir)
               {:id work-id :dir (str cur-dir)
                :comparison-genome (:comparison-genome params)}))]

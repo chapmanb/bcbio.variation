@@ -18,9 +18,9 @@
   "Generalized remote download to local cache directory.
    download-fn takes the client, remote name and local name, and
    handles the download step for a specific remote service."
-  [fname rclient to-fileinfo-fn download-fn]
-  (let [cache-dir (get-in @web-config [:dir :cache])
-        finfo (to-fileinfo-fn rclient fname)
+  [fname rclient to-fileinfo-fn download-fn & {:keys [out-dir]}]
+  (let [cache-dir (or out-dir (get-in @web-config [:dir :cache]))
+        finfo (to-fileinfo-fn fname)
         local-file (str (file cache-dir (:server rclient) (:local-stub finfo)))
         local-dir (str (fs/parent local-file))]
     (when-not (fs/exists? local-file)
@@ -37,14 +37,14 @@
 
 (defmulti get-file
   "Retrieve files by name, transparently handling remote files."
-  (fn [fname _]
+  (fn [fname & args]
     (let [parts (string/split fname #":" 2)]
       (when (= 2 (count parts))
         (keyword (first parts))))))
 
 (defmethod get-file :gs
   ^{:doc "Retrieve a file from GenomeSpace to the local cache"}
-  [fname rclient]
+  [fname rclient & {:keys [out-dir]}]
   (letfn [(fileinfo-gs [file-id]
             (let [remote-name (second (string/split file-id #":" 2))]
               {:dirname (str (fs/parent remote-name))
@@ -55,12 +55,12 @@
           (download-gs [rclient file-info out-file]
             (gs/download (:conn rclient) (:dirname file-info)
                          (:fname file-info) out-file))]
-    (download-to-local fname rclient fileinfo-gs download-gs)))
+    (download-to-local fname rclient fileinfo-gs download-gs :out-dir out-dir)))
 
 (defmethod get-file :galaxy
   ^{:doc "Retrieve a file from Galaxy to the local cache"}
-  [fname rclient]
-  (letfn [(fileinfo-gs [file-id]
+  [fname rclient & {:keys [out-dir]}]
+  (letfn [(fileinfo-galaxy [file-id]
             (let [[history-id ds-id] (-> file-id
                                          (string/split #":" 2)
                                          second
@@ -70,7 +70,7 @@
                :ds ds}))
           (download-galaxy [rclient file-info out-file]
             (galaxy/download-dataset (:conn rclient) (:ds file-info) out-file))]
-    (download-to-local fname rclient download-galaxy)))
+    (download-to-local fname rclient fileinfo-galaxy download-galaxy :out-dir out-dir)))
 
 (defmethod get-file :default
   ^{:doc "Get local file: no-op, just return the file."}
