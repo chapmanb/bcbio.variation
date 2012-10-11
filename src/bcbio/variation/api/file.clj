@@ -19,18 +19,19 @@
   [rclient ftype]
    (let [dirnames (cons "." (remove #(.contains % (:username rclient))
                                     (get-in @web-config [:remote :public])))
-         file-info (mapcat #(remote/list-files rclient % ftype) dirnames)]
+         file-info (mapcat #(remote/list-files rclient {:id %} ftype) dirnames)]
      (swap! remote-file-cache assoc [(:username rclient) ftype] file-info)
      file-info))
 
 (defn list-files-w-cache
   "Retrieve file information for files of the specified type, with caching."
   [rclient ftype]
-  (if-let [cache-info (get @remote-file-cache [(:username rclient) ftype])]
-    (do
-      (future (update-user-files rclient ftype))
-      cache-info)
-    (update-user-files rclient ftype)))
+  (let [cache-info (get @remote-file-cache [(:username rclient) ftype])]
+    (if (seq cache-info)
+      (do
+        (future (update-user-files rclient ftype))
+        cache-info)
+      (update-user-files rclient ftype))))
 
 ;; ## Pre-fetching of data for front end interactivity
 
@@ -76,7 +77,7 @@
                    (swap! index-queue disj k))))))]
     (let [ref-file (:genome (first (:ref @web-config)))]
       (doall (map #(do-pre-index % ref-file)
-                  (remote/list-files rclient nil :vcf))))))
+                  (list-files-w-cache rclient :vcf))))))
 
 (defn pre-fetch-remotes
   "Retrieve and pre-index files for analysis from the remote client."

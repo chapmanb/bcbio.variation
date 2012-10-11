@@ -114,8 +114,8 @@
              :filename (:name finfo)
              :size (:size finfo)
              :created-on (:date finfo)})
-          (gs/list-files (:conn rclient) remote-dir (name ftype))
-          (mapcat #(list-files rclient % ftype) (list-dirs rclient remote-dir))))))
+          (gs/list-files (:conn rclient) remote-dir (name ftype)))
+     (mapcat #(list-files rclient % ftype) (list-dirs rclient remote-dir)))))
 
 (defmethod list-files :galaxy
   ^{:doc "List available files from a Galaxy history."}
