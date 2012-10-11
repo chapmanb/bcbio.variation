@@ -20,7 +20,8 @@
   (case (:type rclient)
     :gs (cons "." (remove #(.contains % (:username rclient))
                           (get-in @web-config [:remote :public])))
-    :galaxy [nil]))
+    :galaxy [nil]
+    []))
 
 (defn- update-user-files
   "Update file cache for our current user and filetype"
