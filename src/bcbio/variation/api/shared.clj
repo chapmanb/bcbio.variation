@@ -1,6 +1,7 @@
 (ns bcbio.variation.api.shared
   "Shared functionality useful across multiple API calls."
   (:use [clojure.java.io]
+        [bcbio.variation.remote.client :only [gs-default-server]]
         [bcbio.variation.web.db :only [prepare-web-db]])
   (:require [clojure.string :as string]
             [clj-yaml.core :as yaml]))
@@ -17,6 +18,7 @@
     (letfn [(maybe-fix-biodata [x]
               (if (.startsWith x "biodata:")
                 (str (get-in config [:dir :cache])
+                     "/" gs-default-server
                      (get-in config [:remote :biodata])
                      (string/replace-first x "biodata:" ""))
                 x))

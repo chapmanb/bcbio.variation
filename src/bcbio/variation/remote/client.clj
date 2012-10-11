@@ -18,6 +18,8 @@
   [url]
   (string/replace (.getHost (as-url url)) "." "_"))
 
+(def gs-default-server (url->dir "http://www.genomespace.org/"))
+
 (defmethod get-client :gs
   ^{:doc "Retrieve a GenomeSpace client connection"}
   [creds]
@@ -30,9 +32,8 @@
                                                     (throw e))))
                    :else nil)
         username (when gs-client
-                   (gs/get-username gs-client))
-        server (url->dir "http://www.genomespace.org/")]
-    (RemoteClient. :gs gs-client username server)))
+                   (gs/get-username gs-client))]
+    (RemoteClient. :gs gs-client username gs-default-server)))
 
 (defmethod get-client :galaxy
   ^{:doc "Retrieve a Galaxy client connection."}
