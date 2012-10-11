@@ -47,6 +47,6 @@
                          (when-not allow-offline?
                            (throw e))))
         username (when user-info
-                   (get user-info :username (:email user-info)))
+                   (or (:username user-info) (:email user-info)))
         server (url->dir url)]
     (RemoteClient. :galaxy (when user-info galaxy-client) username server)))

@@ -65,7 +65,7 @@
                                          (string/split #":" 2)
                                          second
                                          (string/split #"/"))
-                  ds (galaxy/get-dataset-by-id history-id ds-id)]
+                  ds (galaxy/get-dataset-by-id (:conn rclient) history-id ds-id)]
               {:local-stub (str (file (:username rclient) history-id (:name ds)))
                :ds ds}))
           (download-galaxy [rclient file-info out-file]
@@ -121,7 +121,7 @@
   ^{:doc "List available files from a Galaxy history."}
   [rclient history ftype]
   (map (fn [ds]
-         {:id (str "galaxy:" (:id history) (:id ds))
+         {:id (str "galaxy:" (:history-id ds) "/" (:id ds))
           :tags [(:name history)]
           :folder (:name history)
           :filename (:name ds)

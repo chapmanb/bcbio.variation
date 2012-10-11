@@ -14,11 +14,18 @@
 
 ;; ## File retrieval, with caching
 
+(defn- get-default-public
+  "Retrieve default + public directories for specific remote instances."
+  [rclient]
+  (case (:type rclient)
+    :gs (cons "." (remove #(.contains % (:username rclient))
+                          (get-in @web-config [:remote :public])))
+    :galaxy [nil]))
+
 (defn- update-user-files
   "Update file cache for our current user and filetype"
   [rclient ftype]
-   (let [dirnames (cons "." (remove #(.contains % (:username rclient))
-                                    (get-in @web-config [:remote :public])))
+   (let [dirnames (get-default-public rclient)
          file-info (mapcat #(remote/list-files rclient {:id %} ftype) dirnames)]
      (swap! remote-file-cache assoc [(:username rclient) ftype] file-info)
      file-info))
