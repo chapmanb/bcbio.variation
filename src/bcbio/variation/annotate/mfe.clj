@@ -22,9 +22,16 @@
                                     "secondary structure +/- %sbp around variant")
                                flank-bp))])
 
+(defn- safe-min-free-energy
+  [seq]
+  (try
+    (min-free-energy seq)
+    (catch java.lang.ArrayIndexOutOfBoundsException e
+      0.0)))
+
 (defn -annotate
   "Retrieve flanking region surrounding variant and calculate MFE."
   [_ _ _ ref _ _]
   {"MFE" (->> (get-flank-seq ref flank-bp)
-              min-free-energy
+              safe-min-free-energy
               (format "%.2f"))})

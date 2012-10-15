@@ -1,4 +1,4 @@
-(defproject bcbio.variation "0.0.2"
+(defproject bcbio.variation "0.0.3-SNAPSHOT"
   :description "Clojure API for variation data, built on GATK"
   :dependencies [[org.clojure/clojure "1.4.0"]
                  [org.clojure/math.combinatorics "0.0.2" :exclusions [org.clojure/clojure]]
