@@ -1,4 +1,4 @@
-(defproject bcbio.variation "0.0.1-SNAPSHOT"
+(defproject bcbio.variation "0.0.1"
   :description "Clojure API for variation data, built on GATK"
   :dependencies [[org.clojure/clojure "1.4.0"]
                  [org.clojure/math.combinatorics "0.0.2" :exclusions [org.clojure/clojure]]
@@ -20,8 +20,8 @@
                  [org.biojava/biojava3-core "3.0.4"]
                  [org.biojava/biojava3-alignment "3.0.4"]
                  [org.clojars.chapmanb/circdesigna "0.0.2"]
-                 [clj-genomespace "0.1.3-SNAPSHOT"]
-                 [clj-blend "0.1.0-SNAPSHOT"]
+                 [clj-genomespace "0.1.3"]
+                 [clj-blend "0.1.0"]
                  [incanter/incanter-core "1.3.0" :exclusions [org.clojure/clojure]]
                  [incanter/incanter-charts "1.3.0" :exclusions [org.clojure/clojure]]
                  [nz.ac.waikato.cms.weka/weka-stable "3.6.6"]
