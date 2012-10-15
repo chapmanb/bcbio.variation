@@ -19,6 +19,7 @@
                  ;;
                  [org.biojava/biojava3-core "3.0.4"]
                  [org.biojava/biojava3-alignment "3.0.4"]
+                 [org.clojars.chapmanb/circdesigna "0.0.2"]
                  [clj-genomespace "0.1.3-SNAPSHOT"]
                  [clj-blend "0.1.0-SNAPSHOT"]
                  [incanter/incanter-core "1.3.0" :exclusions [org.clojure/clojure]]
@@ -69,7 +70,7 @@
   ;:jvm-opts ["-Xmx4g"]
   :omit-source false
   :aot [bcbio.variation.vcfwalker bcbio.variation.core bcbio.variation.annotate.nbq
-        bcbio.variation.annotate.entropy]
+        bcbio.variation.annotate.entropy bcbio.variation.annotate.mfe]
   :main bcbio.variation.core
   :aliases {"variant-compare" ["run" "-m" "bcbio.variation.compare"]
             "variant-web" ["run" "-m" "bcbio.variation.web.server"]

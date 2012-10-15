@@ -14,7 +14,7 @@
    "ReadPosRankSumTest" "RMSMappingQuality"
    "DepthPerAlleleBySample" "AlleleBalanceConfidenceInterval"
    "MostProbableGenotype" "ReadMeanLen" "ReadMeanPos"
-   "ReadPosEndDist"])
+   "ReadPosEndDist" "MinFreeEnergy" "ShannonEntropy"])
 
 (defn add-gatk-annotations
   "Add GATK annotation metrics to variant calls."
