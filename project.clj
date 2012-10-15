@@ -68,7 +68,8 @@
   :jvm-opts ["-Dorg.eclipse.jetty.util.log.class=org.eclipse.jetty.util.log.StdErrLog"]
   ;:jvm-opts ["-Xmx4g"]
   :omit-source false
-  :aot [bcbio.variation.vcfwalker bcbio.variation.core bcbio.variation.annotate.nbq]
+  :aot [bcbio.variation.vcfwalker bcbio.variation.core bcbio.variation.annotate.nbq
+        bcbio.variation.annotate.entropy]
   :main bcbio.variation.core
   :aliases {"variant-compare" ["run" "-m" "bcbio.variation.compare"]
             "variant-web" ["run" "-m" "bcbio.variation.web.server"]

@@ -1,5 +1,6 @@
 (ns bcbio.variation.test.utils
   (:use [midje.sweet]
+        [bcbio.variation.annotate.entropy]
         [bcbio.variation.normalize :only [prep-vcf]]
         [bcbio.variation.utils.cgmetrics]
         [bcbio.variation.utils.summarize :only [vcf-to-table-config]])
@@ -27,3 +28,11 @@
 (facts "Summarize variant files, providing tabular output of metrics"
   (let [config-file (str (fs/file config-dir "vcf-summarize.yaml"))]
     (vcf-to-table-config config-file) => [out-sum-var]))
+
+;.;. Excellence is not an act but a habit. -- Aristotle
+(facts "Calculate sequence entropy, identifying low-complexity regions."
+  (seq-entropy "TTTTTTTTTTTTTTTTTTTT") => 0.0
+  (seq-entropy "TAGTAGTAGTAGTAGTAGTA") => (roughly 1.5810)
+  (seq-entropy "ACACACACATATATATATAT") => (roughly 1.9784)
+  (seq-entropy "ATATGTACACACACACACACATATATATATATTTATATAT") => (roughly 2.3988)
+  (seq-entropy "TCTTTTTCATCTCTGAAAACAGTGAGAAAATCCTATGCAT") => (roughly 3.5576))
