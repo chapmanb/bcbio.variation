@@ -16,9 +16,9 @@
             [bcbio.run.itx :as itx]))
 
 (def ^{:private true
-       :doc "Minimum indel size for exact comparisons.
+       :doc "Default maximum indel size for exact comparisons.
              Based on assessment by Gavin Oliver: http://f1000r.es/MsY1QZ"}
-  min-indel 30)
+  max-indel 30)
 
 ;; ## Interval tree lookup
 
@@ -98,7 +98,7 @@
                    (.contains allele "]")) :BND)))]
     (cond
      (and (= "INDEL" (:type vc))
-          (> (max-allele-size vc) (get params :min-indel min-indel))) (indel-type vc)
+          (> (max-allele-size vc) (or (:max-indel params) max-indel))) (indel-type vc)
      (= "SYMBOLIC" (:type vc)) (alt-sv-type vc)
      :else nil)))
 
@@ -289,6 +289,16 @@
        (interleave (repeat kwd))
        (partition 2)))
 
+(defn write-non-svs
+  "Write output file containing only non-structural variants"
+  [in-file ref params]
+  (let [out-file (itx/add-file-part in-file "nosv")]
+    (with-open [vcf-iter (get-vcf-iterator in-file ref)]
+    (write-vcf-w-template in-file {:out out-file}
+                          (find-non-svs :out vcf-iter params)
+                          ref))
+    out-file))
+
 (defn compare-sv
   "Compare structural variants, producing concordant and discordant outputs"
   [sample c1 c2 ref & {:keys [out-dir interval-file params]
@@ -325,8 +335,9 @@
   [c1 c2 exp config]
   (let [out-dir (get-in config [:dir :prep] (get-in config [:dir :out]))
         intervals (get c1 :intervals (get c2 :intervals (:intervals exp)))
-        params (get exp :params {:min-indel min-indel
-                                 :default-cis [[200 10] [500 100] [1000 200] [1e6 500]]})
+        default-params {:max-indel max-indel
+                        :default-cis [[200 10] [500 100] [1000 200] [1e6 500]]}
+        params (merge default-params (:params exp))
         out-files (compare-sv (:sample exp) c1 c2 (:ref exp) :out-dir out-dir
                               :interval-file intervals :params params)]
     [(assoc c1 :file (:nosv1 out-files))

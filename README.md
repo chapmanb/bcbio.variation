@@ -62,7 +62,8 @@ To produce a stable, decomposed variant file for comparison run:
     
 This will also handle re-ordering variants to match the reference file ordering,
 essential for feeding into tools like GATK, and remapping hg19 to GRCh37
-chromosome names.
+chromosome names. To additionally filter outputs by indel size, pass an argument
+specifying the maximum indel size to include: `--max-indel 30`.
 
 ### Web interface
 
@@ -101,6 +102,9 @@ provide example starting points and details on available options are below:
        align: Alignments for all calls in BAM format (optional).
        summary-level: Amount of summary information to provide,
                       [full,quick] (default:full)
+       params: # Processing parameters associated with this experiment
+         max-indel: Maximum indel size to include in non-structural variant
+                    comparisons (default: 30)
        approach: Type of comparison to do [compare,grade]. Default compare.
        calls: # two or more calls to compare
          - name: Name of call type

@@ -278,4 +278,4 @@
 
 (defn -main [config-file]
   (variant-comparison-from-config config-file)
-  nil)
+  (System/exit 0))

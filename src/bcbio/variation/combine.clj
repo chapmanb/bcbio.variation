@@ -8,11 +8,13 @@
       c. Walk through each no-call and set as reference if callable"
   (:import [org.broadinstitute.sting.utils.variantcontext 
             VariantContextBuilder])
-  (:use [bcbio.variation.complex :only [normalize-variants]]
+  (:use [clojure.tools.cli :only [cli]]
+        [bcbio.variation.complex :only [normalize-variants]]
         [bcbio.variation.filter.intervals :only [vcf-sample-name select-by-sample]]
         [bcbio.variation.haploid :only [diploid-calls-to-haploid]]
         [bcbio.variation.normalize :only [prep-vcf clean-problem-vcf]]
         [bcbio.variation.phasing :only [is-haploid?]]
+        [bcbio.variation.structural :only [write-non-svs]]
         [bcbio.variation.variantcontext :only [get-vcf-header write-vcf-w-template
                                                get-vcf-iterator parse-vcf
                                                get-vcf-retriever variants-in-region]])
@@ -199,19 +201,28 @@
 
 (defn full-prep-vcf
   "Provide convenient entry to fully normalize a variant file for comparisons."
-  [vcf-file ref-file]
+  [vcf-file ref-file & {:keys [max-indel]}]
   (let [out-file (itx/add-file-part vcf-file "fullprep")]
     (when (itx/needs-run? out-file)
       (let [out-dir (str (fs/file (fs/parent vcf-file) "tmpprep"))
-            out-info (gatk-normalize {:name "fullprep" :file vcf-file :preclean true
-                                      :prep true :normalize true :prep-sv-genotype true}
-                                     {:sample (-> vcf-file get-vcf-header .getGenotypeSamples first)
-                                      :ref ref-file}
-                                     [] out-dir
-                                     (fn [_ x] (println x)))]
-        (fs/rename (:file out-info) out-file)
+            call {:name "fullprep" :file vcf-file :preclean true
+                  :prep true :normalize true :prep-sv-genotype true}
+            exp {:sample (-> vcf-file get-vcf-header .getGenotypeSamples first)
+                 :ref ref-file :params {:max-indel max-indel}}
+            out-info (gatk-normalize call exp [] out-dir
+                                     (fn [_ x] (println x)))
+            nosv-file (if max-indel
+                        (write-non-svs (:file out-info) (:ref exp) (:params exp))
+                        (:file out-info))]
+        (fs/rename nosv-file out-file)
         (fs/delete-dir out-dir)))
     out-file))
 
-(defn -main [vcf-file ref-file]
-  (full-prep-vcf vcf-file ref-file))
+(defn -main [& args]
+  (let [[options [vcf-file ref-file] _]
+        (cli args
+             ["-i" "--max-indel" "Maximum indel size to include" :default nil
+              :parse-fn #(Integer. %)])
+        out-file (full-prep-vcf vcf-file ref-file :max-indel (:max-indel options))]
+    (println out-file)
+    (System/exit 0)))

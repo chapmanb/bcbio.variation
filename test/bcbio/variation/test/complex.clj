@@ -36,7 +36,7 @@
                nomnp-out (itx/add-file-part mnp-vcf "nomnp")
                fullprep-out (itx/add-file-part mnp-vcf "fullprep")
                headerfix-out (itx/add-file-part mnp-vcf "samplefix")
-               params {:min-indel 100}]
+               params {:max-indel 100}]
            (doseq [x (concat [nomnp-out indel-out cindel-out headerfix-out fullprep-out]
                              (vals sv-out) (vals sv-out2))]
              (itx/remove-path x))
@@ -71,7 +71,7 @@
 
 (facts "Combine indels from different calling methodologies that overlap."
   (-> (compare-sv "Test" {:name "svindfb" :file indel-vcf1} {:name "svindgatk" :file indel-vcf2}
-                  ref :params {:min-indel 2 :default-cis [[100 10]]})
+                  ref :params {:max-indel 2 :default-cis [[100 10]]})
       :sv-concordant
       (get-vcf-iterator ref)
       parse-vcf
