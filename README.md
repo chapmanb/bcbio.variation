@@ -20,12 +20,13 @@ for variant file comparison.
 [6]: http://bcbio.wordpress.com/2012/03/04/extending-the-gatk-for-custom-variant-comparisons-using-clojure/
 [p1]: http://chapmanb.github.com/bcbio.variation/presentations/variation_bosc_2012/variation_chapman.pdf
 
-## Usage
+## Obtaining
 
-### Setup
+### Latest source
 
-Requires Java 1.6 or better and [Leiningen][u1]. We use the 2.x version of
-Leiningen, so be sure to get the preview release:
+The latest version is available directly from GitHub. It requires Java 1.6 or
+better and [Leiningen][u1]. We use the 2.x version of Leiningen, so be sure to
+get the preview release:
 
     $ wget https://raw.github.com/technomancy/leiningen/preview/bin/lein
     $ chmod 755 lein && sudo mv lein /usr/local/bin
@@ -33,6 +34,28 @@ Leiningen, so be sure to get the preview release:
 Then use Leiningen to install all dependencies:
 
     $ lein deps
+
+### Download
+
+You can download a release jar from [the GitHub download page][dl] and run
+directly from the command line:
+
+    $ java -jar bcbio.variation-VERSION-standalone.jar [arguments]
+    
+The jar contains a full GATK commandline with additional walkers, as well as
+custom command line programs. See the usage section below for supported
+arguments.
+
+[dl]: https://github.com/chapmanb/bcbio.variation/downloads
+    
+### As a library
+
+To use as a library from Leiningen or Maven, follow the instructions on the
+[clojars page][clojars].
+ 
+[clojars]: https://clojars.org/bcbio.variation
+
+## Usage
 
 ### Generate summary of concordance between variant calls
 
