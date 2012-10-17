@@ -1,5 +1,6 @@
-(defproject bcbio.variation "0.0.3"
-  :description "Clojure API for variation data, built on GATK"
+(defproject bcbio.variation "0.0.4-SNAPSHOT"
+  :description "Toolkit to analyze genomic variation data, built on the GATK with Clojure"
+  :license {:name "MIT" :url "http://www.opensource.org/licenses/mit-license.html"}
   :dependencies [[org.clojure/clojure "1.4.0"]
                  [org.clojure/math.combinatorics "0.0.2" :exclusions [org.clojure/clojure]]
                  [org.clojure/data.csv "0.1.2" :exclusions [org.clojure/clojure]]

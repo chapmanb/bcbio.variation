@@ -24,15 +24,21 @@
                "FS" {:range [0.0 100.0]
                      :y-scale {:type :log}
                      :desc "Phred-scaled p-value using Fisher's exact test to detect strand bias"}
-               "HaplotypeScore" {:range [0.0 50.0]
-                                 :desc "Consistency of the site with at most two segregating haplotypes"}
                "ReadPosEndDist" {:range [0.0 50.0]
                                  :desc "Mean distance from either end of read"}
+               "MFE" {:range [-10.0 0.0]
+                      :desc (str "Minimum Free Energy of secondary structure near variant. "
+                                 "Larger negative values are more problematic.")}
+               "Entropy" {:range [1.0 4.0]
+                          :desc (str "Shannon entropy of variant flanking regions. "
+                                     "Low values indicate repetitive sequence.")}
                "AD" {:range [0.0 1.0]
                      :y-scale {:type :log}
                      :desc "Deviation from expected allele balance for ref/alt alleles"}
                "PL" {:range [-250.0 0]
-                     :desc "Normalized, phred-scaled likelihoods for alternative genotype"}))
+                     :desc "Normalized, phred-scaled likelihoods for alternative genotype"}
+               "HaplotypeScore" {:range [0.0 50.0]
+                                 :desc "Consistency of the site with at most two segregating haplotypes"}))
 
 (def ^{:doc "Default metrics that are always available." :private true}
   default-metrics
