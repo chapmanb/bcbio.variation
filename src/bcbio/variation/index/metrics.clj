@@ -27,6 +27,7 @@
                "ReadPosEndDist" {:range [0.0 50.0]
                                  :desc "Mean distance from either end of read"}
                "MFE" {:range [-10.0 0.0]
+                      :y-scale {:type :log}
                       :desc (str "Minimum Free Energy of secondary structure near variant. "
                                  "Larger negative values are more problematic.")}
                "Entropy" {:range [1.0 4.0]
