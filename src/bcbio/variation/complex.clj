@@ -330,7 +330,7 @@
                        (union (set (remove #(< % (- (:start vc) prev-check))
                                            (get coll (:chr vc) #{})))
                               (set (range (:start vc)
-                                          (+ (:start vc) (apply max (map count (get-vc-alleles vc))))))))
+                                          (+ (:start vc) (-> (get-vc-alleles vc) first count))))))
                 coll)))
           (process-vc [vc blockers]
             (if (overlaps-previous-mnp? vc blockers)
