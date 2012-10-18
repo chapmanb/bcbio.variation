@@ -204,18 +204,17 @@
   [vcf-file ref-file & {:keys [max-indel]}]
   (let [out-file (itx/add-file-part vcf-file "fullprep")]
     (when (itx/needs-run? out-file)
-      (let [out-dir (str (fs/file (fs/parent vcf-file) "tmpprep"))
-            call {:name "fullprep" :file vcf-file :preclean true
-                  :prep true :normalize true :prep-sv-genotype true}
-            exp {:sample (-> vcf-file get-vcf-header .getGenotypeSamples first)
-                 :ref ref-file :params {:max-indel max-indel}}
-            out-info (gatk-normalize call exp [] out-dir
-                                     (fn [_ x] (println x)))
-            nosv-file (if max-indel
-                        (write-non-svs (:file out-info) (:ref exp) (:params exp))
-                        (:file out-info))]
-        (fs/rename nosv-file out-file)
-        (fs/delete-dir out-dir)))
+      (itx/with-temp-dir [out-dir (fs/parent vcf-file)]
+        (let [call {:name "fullprep" :file vcf-file :preclean true
+                    :prep true :normalize true :prep-sv-genotype true}
+              exp {:sample (-> vcf-file get-vcf-header .getGenotypeSamples first)
+                   :ref ref-file :params {:max-indel max-indel}}
+              out-info (gatk-normalize call exp [] out-dir
+                                       (fn [_ x] (println x)))
+              nosv-file (if max-indel
+                          (write-non-svs (:file out-info) (:ref exp) (:params exp))
+                          (:file out-info))]
+          (fs/rename nosv-file out-file))))
     out-file))
 
 (defn -main [& args]
