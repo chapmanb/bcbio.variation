@@ -96,6 +96,13 @@
                                                   (starts-an-indel? alleles %))
                                              (range i (count (first alleles)))))
                            i))})
+          (ref-and-alt-alleles [cur-alleles]
+            (let [refa (first cur-alleles)
+                  alts (map (fn [x]
+                              (if (= (.getBaseString x) (.getBaseString refa))
+                                refa x))
+                            (rest cur-alleles))]
+              {:ref refa :alts alts}))
           (extract-variants [alleles pos]
             (let [{:keys [start end]} (extend-indels alleles pos)
                   str-alleles (map #(-> (str (if (has-nopad-five-indel? alleles start) prev-pad "")
@@ -103,16 +110,18 @@
                                         (string/replace "-" ""))
                                    alleles)
                   cur-alleles (map-indexed (fn [i x] (Allele/create x (= 0 i)))
-                                           (into (ordered-set) str-alleles))
+                                           str-alleles)
                   size (let [base (.length (first cur-alleles))]
                          (if (some empty? str-alleles) base (dec base)))
-                  w-gap-start (-> (first alleles) (subs 0 start) (string/replace "-" "") count)]
+                  w-gap-start (-> (first alleles) (subs 0 start) (string/replace "-" "") count)
+                  ready-alleles (ref-and-alt-alleles cur-alleles)]
               {:offset (+ w-gap-start (if (has-nopad-five-indel? alleles start) -1 0))
                :end (+ w-gap-start size)
                :next-start end
                :size size
-               :ref-allele (first cur-alleles)
-               :alleles (rest cur-alleles)}))]
+               :orig-alleles alleles
+               :ref-allele (:ref ready-alleles)
+               :alleles (:alts ready-alleles)}))]
     (remove nil?
             (loop [i 0 final []]
               (cond
@@ -122,36 +131,46 @@
                  (recur (:next-start next-var) (conj final next-var)))
                :else (recur (inc i) final))))))
 
-(defn genotype-w-alleles
- "Retrieve a new genotype with the given alleles.
-   Creates a single genotype from the VariantContext, copying the existing
+(defn- genotype-w-alleles
+  "Retrieve a new set of genotypes with the given alleles.
+   Update genotypes from the VariantContext, copying the existing
    genotype and substituting in the provided alleles and phasing information."
-  [vc alleles is-phased]
-  (let [genotype (first (.getGenotypes vc))]
-    (doto (-> vc .getGenotypes GenotypesContext/copy)
-      (.replace
-       (-> (GenotypeBuilder. genotype)
-           (.alleles alleles)
-           (.phased is-phased)
-           .make)))))
+  [vc alleles orig-alleles is-phased]
+  (letfn [(get-new-allele [new-alleles orig-alleles]
+            (let [old-map (into {} (map-indexed
+                                    (fn [i x]
+                                      [(string/replace x "-" "") i])
+                                    orig-alleles))]
+              (fn [old-allele]
+                (nth new-alleles (get old-map (.getBaseString old-allele))))))
+          (add-new-genotype [allele-mapper context genotype]
+            (doto context
+              (.replace (-> (GenotypeBuilder. genotype)
+                            (.alleles (map allele-mapper (.getAlleles genotype)))
+                            (.phased (or (.isPhased genotype) is-phased))
+                            .make))))]
+    (reduce (partial add-new-genotype (get-new-allele alleles orig-alleles))
+            (-> vc .getGenotypes GenotypesContext/copy)
+            (.getGenotypes vc))))
 
 (defn- new-split-vc
   "Create a new VariantContext as a subset of an existing variant.
    `allele-info` specifies the location size and alleles for the new variant:
    `{:offset :size :ref-allele :alleles}`"
   [vc i allele-info]
-  (let [pos (+ (:offset allele-info) (.getStart vc))]
+  (let [pos (+ (:offset allele-info) (.getStart vc))
+        all-alleles (cons (:ref-allele allele-info) (:alleles allele-info))]
     (-> (VariantContextBuilder. vc)
         (.start pos)
         (.stop (+ pos (get allele-info :size 0)))
-        (.genotypes (genotype-w-alleles vc (:alleles allele-info) (> i 0)))
-        (.alleles (set (cons (:ref-allele allele-info) (:alleles allele-info))))
+        (.genotypes (genotype-w-alleles vc all-alleles (:orig-alleles allele-info)
+                                        (> i 0)))
+        (.alleles (set all-alleles))
         (.make))))
 
 (defn- split-mnp
   "Split a MNP into individual alleles"
   [vc]
-  {:pre [(= 1 (:num-samples vc))]}
   (let [alleles (split-alleles vc (get-vc-alleles vc))]
     (map (fn [[i x]] (new-split-vc (:vc vc) i x)) (map-indexed vector alleles))))
 
@@ -265,7 +284,6 @@
 (defn- split-complex-indel
   "Split complex indels into individual variant components."
   [vc ref]
-  {:pre [(= 1 (:num-samples vc))]}
   (let [prev-pad (or (extract-sequence ref (:chr vc) (dec (:start vc)) (dec (:start vc))) "N")
         alleles (split-alleles vc (->> (conj (get-vc-alleles vc)
                                              (extract-sequence ref (:chr vc) (:start vc) (:end vc)))
@@ -287,7 +305,6 @@
   Checks both called alleles and potential alleles for extra 5' padding
   removing this if not needed to distinguish any potential alleles."
   [vc]
-  {:pre [(= 1 (:num-samples vc))]}
   (letfn [(strip-indel [vc i alleles]
             (let [start-pos (- i 1)
                   ref-allele (subs (first alleles) start-pos)
@@ -304,7 +321,7 @@
                                      (range (apply max (map count str-alleles)))))]
               [str-alleles first-var-i]))]
     (let [[orig-alleles first-var-i] (variant-allele-pos (cons (:ref-allele vc)
-                                                               (-> vc :genotypes first :alleles)))
+                                                               (:alt-alleles vc)))
           [_ nocall-i] (variant-allele-pos (cons (:ref-allele vc) (:alt-alleles vc)))]
       (if (or (nil? first-var-i) (<= first-var-i 1)
               (nil? nocall-i) (<= nocall-i 1))

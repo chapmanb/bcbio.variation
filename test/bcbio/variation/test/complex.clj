@@ -17,6 +17,8 @@
                target-bed (str (fs/file data-dir "target-regions.bed"))
                sv-vcf1 (str (fs/file data-dir "sv-1000g.vcf"))
                sv-vcf2 (str (fs/file data-dir "sv-illumina.vcf"))
+               multi-vcf (str (fs/file data-dir "1000genome-multi.vcf"))
+               multi-out (itx/add-file-part multi-vcf "nomnp")
                sv-out {:sv-concordant
                        (str (fs/file data-dir "Test-sv1000g-svIll-svconcordance.vcf"))
                        :sv-sv1000g-discordant
@@ -37,7 +39,8 @@
                fullprep-out (itx/add-file-part mnp-vcf "fullprep")
                headerfix-out (itx/add-file-part mnp-vcf "samplefix")
                params {:max-indel 100}]
-           (doseq [x (concat [nomnp-out indel-out cindel-out headerfix-out fullprep-out]
+           (doseq [x (concat [nomnp-out indel-out cindel-out headerfix-out fullprep-out
+                              multi-out]
                              (vals sv-out) (vals sv-out2))]
              (itx/remove-path x))
            ?form)))
@@ -82,3 +85,6 @@
 
 (facts "Fix VCF header problems"
   (fix-vcf-sample mnp-vcf "Test1" ref) => headerfix-out)
+
+(facts "Handle preparation of multi-sample input files"
+  (normalize-variants multi-vcf ref) => multi-out)
