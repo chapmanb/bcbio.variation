@@ -5,7 +5,7 @@
   of the format and interpretation:
   http://gatk.vanillaforums.com/discussion/36/understanding-unifiedgenotypers-vcf-files/p1"
   (:import [org.broadinstitute.sting.utils.variantcontext 
-            VariantContextBuilder GenotypesContext GenotypeBuilder])
+            VariantContextBuilder GenotypesContext GenotypeBuilder Allele])
   (:use [clojure.java.io]
         [bcbio.variation.variantcontext :only [parse-vcf get-vcf-iterator write-vcf-w-template]])
   (:require [clojure.string :as string]
@@ -32,37 +32,45 @@
 (defn- get-haploid-genotype
   "Retrieve updated genotype with haploid allele."
   [vc]
-  (let [g (-> vc :genotypes first)]
-    (letfn [(maybe-variant-haploid [g vc]
-              (when-let [variant-prob (get (get-likelihoods g) "HOM_VAR")]
-                (when (> variant-prob (get-haploid-thresh vc))
-                  (first (filter #(and (.isNonReference %) (.isCalled %))
-                                   (.getAlleles g))))))
-            (extract-mixed-allele [alleles]
-              (let [ready (remove #(.isNoCall %) alleles)]
-                (when (= 1 (count ready))
-                  (first ready))))
-            (get-haploid-allele [g vc]
-              (case (:type g)
-                "HOM_VAR" (first (:alleles g))
-                "MIXED" (extract-mixed-allele (:alleles g))
-                "HET" (maybe-variant-haploid (:genotype g) vc)
-                nil))]
-      (when-let [allele (get-haploid-allele g vc)]
-        (doto (-> vc :vc .getGenotypes GenotypesContext/copy)
-          (.replace (-> (GenotypeBuilder. (:genotype g))
-                        (.alleles [allele])
-                        .make)))))))
+  (letfn [(maybe-variant-haploid [g vc]
+            (when-let [variant-prob (get (get-likelihoods g) "HOM_VAR")]
+              (when (> variant-prob (get-haploid-thresh vc))
+                (first (filter #(and (.isNonReference %) (.isCalled %))
+                               (.getAlleles g))))))
+          (extract-mixed-allele [alleles]
+            (let [ready (remove #(.isNoCall %) alleles)]
+              (when (= 1 (count ready))
+                (first ready))))
+          (get-haploid-allele [g vc]
+            (case (:type g)
+              "HOM_VAR" (first (:alleles g))
+              "MIXED" (extract-mixed-allele (:alleles g))
+              "HET" (maybe-variant-haploid (:genotype g) vc)
+              nil))
+          (add-haploid-genotype [context g]
+            (let [allele (or (get-haploid-allele g vc) Allele/NO_CALL)]
+              (doto context
+                (.replace (-> (GenotypeBuilder. (:genotype g))
+                              (.alleles [allele])
+                              .make)))))]
+    (reduce add-haploid-genotype
+            (-> vc :vc .getGenotypes GenotypesContext/copy)
+            (:genotypes vc))))
+
+(defn- has-called-allele?
+  "Check for at least one called Allele in a list of Genotypes."
+  [genotypes]
+  (not-every? #(.isNoCall %) (mapcat #(.getAlleles %) genotypes)))
 
 (defn- convert-to-haploid
   "Convert diploid allele to haploid variant."
   [vc]
-  {:pre (= 1 (:num-samples vc))}
-  (if-let [genotype (get-haploid-genotype vc)]
-    [:haploid (-> (VariantContextBuilder. (:vc vc))
-                  (.genotypes genotype)
-                  (.make))]
-    [:unchanged (:vc vc)]))
+  (let [new-genotype (get-haploid-genotype vc)]
+    (if (has-called-allele? new-genotype)
+      [:haploid (-> (VariantContextBuilder. (:vc vc))
+                    (.genotypes new-genotype)
+                    (.make))]
+      [:unchanged (:vc vc)])))
 
 (defn diploid-calls-to-haploid
   "Convert set of diploid GATK calls on a haploid genome based on likelihoods."
