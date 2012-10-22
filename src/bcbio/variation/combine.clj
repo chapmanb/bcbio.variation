@@ -162,6 +162,13 @@
                        hap-file)]
       noref-file)))
 
+(defn- get-out-basename
+  [exp call in-files]
+  (let [sample-name (or (:sample exp)
+                        (-> in-files first get-vcf-header .getGenotypeSamples first
+                            (str "multi")))]
+    (format "%s-%s.vcf" sample-name (:name call))))
+
 (defn gatk-normalize
   "Prepare call information for VCF comparisons by normalizing through GATK.
   Handles:
@@ -179,8 +186,8 @@
                                 :intervals (genome-safe-intervals intervals ref exp)
                                 :check-ploidy? false
                                 :unsafe true)))]
-    (let [out-fname (format "%s-%s.vcf" (:sample exp) (:name call))
-          in-files (if (coll? (:file call)) (:file call) [(:file call)])
+    (let [in-files (if (coll? (:file call)) (:file call) [(:file call)])
+          out-fname (get-out-basename exp call in-files)
           _ (transition :clean (str "Cleaning input VCF: " (:name call)))
           clean-files (vec (map #(if-not (:preclean call) %
                                          (clean-problem-vcf % (:sample exp) :out-dir out-dir))

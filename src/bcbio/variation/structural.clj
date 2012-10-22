@@ -301,10 +301,11 @@
 
 (defn compare-sv
   "Compare structural variants, producing concordant and discordant outputs"
-  [sample c1 c2 ref & {:keys [out-dir interval-file params]
-                       :or {params {}}}]
+  [c1 c2 ref & {:keys [out-dir interval-file params]
+                :or {params {}}}]
   (let [base-out (str (fs/file (if (nil? out-dir) (fs/parent (:file c1)) out-dir)
-                               (str sample "-%s-%s-%s.vcf")))
+                               (str (-> c1 :file fs/base-name (string/split #"-") first)
+                                     "-%s-%s-%s.vcf")))
         disc-kwds {:1 (keyword (str "sv-" (:name c1) "-discordant"))
                    :2 (keyword (str "sv-" (:name c2) "-discordant"))}
         out-files (ordered-map
@@ -338,7 +339,7 @@
         default-params {:max-indel max-indel
                         :default-cis [[200 10] [500 100] [1000 200] [1e6 500]]}
         params (merge default-params (:params exp))
-        out-files (compare-sv (:sample exp) c1 c2 (:ref exp) :out-dir out-dir
+        out-files (compare-sv c1 c2 (:ref exp) :out-dir out-dir
                               :interval-file intervals :params params)]
     [(assoc c1 :file (:nosv1 out-files))
      (assoc c2 :file (:nosv2 out-files))

@@ -20,15 +20,15 @@
                multi-vcf (str (fs/file data-dir "1000genome-multi.vcf"))
                multi-out (itx/add-file-part multi-vcf "nomnp")
                sv-out {:sv-concordant
-                       (str (fs/file data-dir "Test-sv1000g-svIll-svconcordance.vcf"))
+                       (str (fs/file data-dir "sv-sv1000g-svIll-svconcordance.vcf"))
                        :sv-sv1000g-discordant
-                       (str (fs/file data-dir "Test-sv1000g-svIll-svdiscordance.vcf"))
+                       (str (fs/file data-dir "sv-sv1000g-svIll-svdiscordance.vcf"))
                        :sv-svIll-discordant
-                       (str (fs/file data-dir "Test-svIll-sv1000g-svdiscordance.vcf"))}
+                       (str (fs/file data-dir "sv-svIll-sv1000g-svdiscordance.vcf"))}
                sv-out2
-               {:sv-concordant (str (fs/file data-dir "Test-sv1-sv2-svconcordance.vcf"))
-                :sv-sv1-discordant (str (fs/file data-dir "Test-sv1-sv2-svdiscordance.vcf"))
-                :sv-sv2-discordant (str (fs/file data-dir "Test-sv2-sv1-svdiscordance.vcf"))}
+               {:sv-concordant (str (fs/file data-dir "sv-sv1-sv2-svconcordance.vcf"))
+                :sv-sv1-discordant (str (fs/file data-dir "sv-sv1-sv2-svdiscordance.vcf"))
+                :sv-sv2-discordant (str (fs/file data-dir "sv-sv2-sv1-svdiscordance.vcf"))}
                mnp-vcf (str (fs/file data-dir "freebayes-calls-indels.vcf"))
                cindel-vcf (str (fs/file data-dir "freebayes-calls-complexindels.vcf"))
                cindel-out (itx/add-file-part cindel-vcf "nomnp")
@@ -67,13 +67,13 @@
       [:DUP :BND :BND :INS :CNV :DEL :INV])))
 
 (facts "Compare structural variation calls from two inputs."
-  (compare-sv "Test" {:name "sv1000g" :file sv-vcf1}
+  (compare-sv {:name "sv1000g" :file sv-vcf1}
               {:name "svIll" :file sv-vcf2} ref) => (contains sv-out)
-  (compare-sv "Test" {:name "sv1" :file sv-vcf1}
+  (compare-sv {:name "sv1" :file sv-vcf1}
               {:name "sv2" :file sv-vcf1} ref) => (contains sv-out2))
 
 (facts "Combine indels from different calling methodologies that overlap."
-  (-> (compare-sv "Test" {:name "svindfb" :file indel-vcf1} {:name "svindgatk" :file indel-vcf2}
+  (-> (compare-sv {:name "svindfb" :file indel-vcf1} {:name "svindgatk" :file indel-vcf2}
                   ref :params {:max-indel 2 :default-cis [[100 10]]})
       :sv-concordant
       (get-vcf-iterator ref)
