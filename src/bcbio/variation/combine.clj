@@ -145,7 +145,7 @@
                               ref-file :out-dir out-dir
                               :intervals (genome-safe-intervals intervals ref-file exp)
                               :remove-refcalls (get call :remove-refcalls false)))]
-    (let [sample-file (if (multiple-samples? in-file)
+    (let [sample-file (if (and (multiple-samples? in-file) (:sample exp))
                         (run-sample-select in-file (get call :ref (:ref exp)) "")
                         in-file)
           prep-file (if (true? (:prep call))

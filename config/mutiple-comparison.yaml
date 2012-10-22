@@ -1,0 +1,15 @@
+---
+dir:
+  out: test/data/multi
+  prep: test/data/multi/prep
+experiments:
+  - ref: test/data/GRCh37.fa
+    calls:
+      - name: c1
+        metadata:
+          caller: c1
+        file: test/data/1000genome-multi.vcf
+      - name: c2
+        metadata:
+          caller: c2
+        file: test/data/1000genome-multi-cmp.vcf
