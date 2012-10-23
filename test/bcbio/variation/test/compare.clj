@@ -8,7 +8,6 @@
         [bcbio.variation.config]
         [bcbio.variation.evaluate :exclude [-main]]
         [bcbio.variation.filter]
-        [bcbio.variation.multisample :only [multiple-samples?]]
         [bcbio.variation.normalize]
         [bcbio.variation.phasing]
         [bcbio.variation.metrics]
@@ -178,8 +177,6 @@
       out-prevcf (itx/add-file-part prevcf "preclean")]
   (against-background [(before :facts (vec (map itx/remove-path [out-vcf out-prevcf
                                                              (str vcf ".idx")])))]
-    (facts "Check for multiple samples in a VCF file"
-      (multiple-samples? vcf) => false)
     (facts "Normalize variant representation of chromosomes, order, genotypes and samples."
       (prep-vcf vcf ref "Test1" :config {:prep-sort-pos true}) => out-vcf)
     (facts "Pre-cleaning of problematic VCF input files"

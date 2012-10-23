@@ -37,6 +37,7 @@
    :sample-name (.getSampleName g)
    :qual (.getPhredScaledQual g)
    :type (-> g .getType .name)
+   :phased? (.isPhased g)
    :attributes (merge {"DP" (.getDP g) "AD" (vec (.getAD g))
                        "GQ" (.getGQ g) "PL" (vec (.getPL g))}
                       (into {} (.getExtendedAttributes g)))
@@ -174,7 +175,9 @@
                                   (header-update-fn key tmpl-header)
                                   tmpl-header)))
         (doseq [[fkey item] (map convert-to-output vc-iter)]
-          (.add (get writer-map fkey) item))
+          (let [ready-vc (if (contains? item :vc) (:vc item) item)]
+            (when-not (nil? ready-vc)
+              (.add (get writer-map fkey) ready-vc))))
         (doseq [x (vals writer-map)]
           (.close x))))))
 

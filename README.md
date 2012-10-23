@@ -128,6 +128,9 @@ provide example starting points and details on available options are below:
        params: # Processing parameters associated with this experiment
          max-indel: Maximum indel size to include in non-structural variant
                     comparisons (default: 30)
+         multiple-thresh: Threshold for percentage of comparisons to match
+                          to consider two multiple sample variants the same.
+                          (default: 1.0)
        approach: Type of comparison to do [compare,grade]. Default compare.
        calls: # two or more calls to compare
          - name: Name of call type

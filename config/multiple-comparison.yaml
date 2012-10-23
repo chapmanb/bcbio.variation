@@ -4,6 +4,8 @@ dir:
   prep: test/data/multi/prep
 experiments:
   - ref: test/data/GRCh37.fa
+    params:
+      multiple-thresh: 0.75
     calls:
       - name: c1
         metadata:
