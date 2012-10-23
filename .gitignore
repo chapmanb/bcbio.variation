@@ -35,6 +35,7 @@ test/data/*-*samplefix.vcf
 test/data/*-*fullprep.vcf
 test/data/*-*nosv.vcf
 test/data/*-*vep.vcf
+test/data/*-*worknomnp.vcf
 test/data/*-classifier.bin
 test/data/*-sorted.bed
 test/data/*-multicombine.bed
@@ -45,6 +46,7 @@ test/data/method-comparison-summary*
 test/data/prep/
 test/data/grading/
 test/data/method/
+test/data/multi/
 test/data/fosmid/
 test/data/web-test/
 test/data/single/

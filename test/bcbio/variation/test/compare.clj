@@ -8,6 +8,7 @@
         [bcbio.variation.config]
         [bcbio.variation.evaluate :exclude [-main]]
         [bcbio.variation.filter]
+        [bcbio.variation.multisample :only [multiple-samples?]]
         [bcbio.variation.normalize]
         [bcbio.variation.phasing]
         [bcbio.variation.metrics]

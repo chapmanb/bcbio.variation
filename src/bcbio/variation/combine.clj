@@ -12,6 +12,7 @@
         [bcbio.variation.complex :only [normalize-variants]]
         [bcbio.variation.filter.intervals :only [vcf-sample-name select-by-sample]]
         [bcbio.variation.haploid :only [diploid-calls-to-haploid]]
+        [bcbio.variation.multisample :only [get-out-basename multiple-samples?]]
         [bcbio.variation.normalize :only [prep-vcf clean-problem-vcf]]
         [bcbio.variation.phasing :only [is-haploid?]]
         [bcbio.variation.structural :only [write-non-svs]]
@@ -113,15 +114,6 @@
                               ref)))
     out-file))
 
-(defn multiple-samples?
-  "Check if the input VCF file has multiple genotyped samples."
-  [in-file & {:keys [sample]}]
-  (let [samples (-> in-file get-vcf-header .getGenotypeSamples)]
-    (or (> (count samples) 1)
-        (and (not (nil? sample))
-             (not (contains? (set samples) sample))))))
-
-
 (defn- genome-safe-intervals
   "Check if interval BED files overlap with current analysis genome build.
   This is useful when an input VCF is from an alternate genome and needs
@@ -162,13 +154,6 @@
                        hap-file)]
       noref-file)))
 
-(defn- get-out-basename
-  [exp call in-files]
-  (let [sample-name (or (:sample exp)
-                        (-> in-files first get-vcf-header .getGenotypeSamples first
-                            (str "multi")))]
-    (format "%s-%s.vcf" sample-name (:name call))))
-
 (defn gatk-normalize
   "Prepare call information for VCF comparisons by normalizing through GATK.
   Handles:
@@ -187,7 +172,7 @@
                                 :check-ploidy? false
                                 :unsafe true)))]
     (let [in-files (if (coll? (:file call)) (:file call) [(:file call)])
-          out-fname (get-out-basename exp call in-files)
+          out-fname (str (get-out-basename exp call in-files) ".vcf")
           _ (transition :clean (str "Cleaning input VCF: " (:name call)))
           clean-files (vec (map #(if-not (:preclean call) %
                                          (clean-problem-vcf % (:sample exp) :out-dir out-dir))

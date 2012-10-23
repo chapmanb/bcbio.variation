@@ -13,11 +13,11 @@
         [ordered.map :only [ordered-map]]
         [ordered.set :only [ordered-set]]
         [bcbio.variation.callable :only [get-callable-checker is-callable?]]
-        [bcbio.variation.combine :only [combine-variants multiple-samples?
-                                        fix-minimal-combined]]
+        [bcbio.variation.combine :only [combine-variants fix-minimal-combined]]
         [bcbio.variation.config :only [load-config]]
         [bcbio.variation.filter.intervals :only [select-by-sample]]
         [bcbio.variation.haploid :only [diploid-calls-to-haploid]]
+        [bcbio.variation.multisample :only [multiple-samples?]]
         [bcbio.variation.normalize :only [fix-vcf-sample]]
         [bcbio.variation.phasing :only [is-haploid?]]
         [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template get-vcf-iterator
