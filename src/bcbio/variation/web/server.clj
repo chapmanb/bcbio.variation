@@ -17,6 +17,7 @@
             [clj-yaml.core :as yaml]
             [fs.core :as fs]
             [bcbio.variation.remote.core :as remote]
+            [bcbio.variation.web.dataset :as dataset]
             [bcbio.variation.web.process :as web-process]))
 
 (defremote login [creds session]
@@ -87,6 +88,8 @@
           (-> (response out-html)
               (assoc :session
                 (assoc session :work-info new-work-info)))))
+  (GET "/dataset/:dsid" [dsid :as {remote-addr :remote-addr}]
+       (dataset/retrieve dsid remote-addr))
   (GET "/scorefile/:runid/:name" [runid name :as {session :session}]
        (-> (response (web-process/get-variant-file runid name (get-username* session)
                                                    (get (:work-info session) runid)))
