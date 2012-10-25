@@ -93,9 +93,9 @@
                 (assoc session :work-info new-work-info)))))
   (GET "/dataset/:dsid" [dsid :as {remote-addr :remote-addr}]
        (dataset/retrieve dsid remote-addr))
-  (GET "/scorefile/:runid/:name" [runid name :as {session :session}]
-       (-> (response (web-process/get-variant-file runid name (get-username* session)
-                                                   (get (:work-info session) runid)))
+  (GET "/dataset/:runid/:name" [runid name :as {session :session}]
+       (-> (response (dataset/get-variant-file runid name (get-username* session)
+                                               (get (:work-info session) runid)))
            (content-type "text/plain")))
   (GET "/" req (response (web-process/html-submit-page)))
   (route/files "/" {:root "public" :allow-symlinks? true})

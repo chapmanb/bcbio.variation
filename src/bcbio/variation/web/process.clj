@@ -8,8 +8,7 @@
         [bcbio.variation.normalize :only [pick-best-ref]]
         [bcbio.variation.report :only [prep-scoring-table]]
         [bcbio.variation.api.shared :only [web-config]])
-  (:require [clojure.string :as string]
-            [clj-yaml.core :as yaml]
+  (:require [clj-yaml.core :as yaml]
             [doric.core :as doric]
             [fs.core :as fs]
             [hiccup.core :as hiccup]
@@ -100,7 +99,7 @@
                       ["discordant" "Discordant variants"]
                       ["discordant-missing" "Missing variants"]
                       ["phasing" "Variants with phasing errors"]]]
-       [:li [:a {:href (format "/scorefile/%s/%s" run-id key)} txt]])]]))
+       [:li [:a {:href (format "/dataset/%s/%s" run-id key)} txt]])]]))
 
 (defn scoring-html
   "Update main page HTML with content for scoring."
@@ -249,37 +248,3 @@
     (let [work-info (prep-tmp-dir)]
       {:work-info work-info
        :out-html (scoring-html (:id work-info))})))
-
-;; ## File retrieval from processing
-
-(defn- get-run-info
-  "Retrieve run information from stored database or current work-info."
-  [run-id username session-work-info]
-  (if (nil? username)
-    [(:comparison-genome session-work-info) (:dir session-work-info)]
-    (let [work-info (->> (db/get-analyses username :scoring (:db @web-config))
-                         (filter #(= run-id (:analysis_id %)))
-                         first)
-          sample-name (when-not (nil? work-info)
-                        (first (string/split (:description work-info) #":")))]
-      [sample-name (:location work-info)])))
-
-(defn get-variant-file
-  "Retrieve processed output file for web display."
-  [run-id name username work-info]
-  (letfn [(sample-file [sample-name ext]
-            (let [base-name "contestant-reference"]
-              (format "%s-%s-%s" sample-name base-name ext)))]
-    (let [[sample-name base-dir] (get-run-info run-id username work-info)
-          file-map {"concordant" (sample-file sample-name "concordant.vcf")
-                    "discordant" (sample-file sample-name "discordant.vcf")
-                    "discordant-missing" (sample-file sample-name "discordant-missing.vcf")
-                    "phasing" (sample-file sample-name "phasing-error.vcf")}
-          work-dir (when-not (nil? base-dir) (fs/file base-dir "grading"))
-          name (get file-map name)
-          fname (if-not (or (nil? work-dir)
-                            (nil? name)) (str (fs/file work-dir name)))]
-
-      (if (and (not (nil? fname)) (fs/exists? fname))
-        (slurp fname)
-        "Variant file not found"))))
