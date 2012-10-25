@@ -17,6 +17,7 @@
             [clj-yaml.core :as yaml]
             [fs.core :as fs]
             [bcbio.variation.remote.core :as remote]
+            [bcbio.variation.api.run :as run]
             [bcbio.variation.web.dataset :as dataset]
             [bcbio.variation.web.process :as web-process]))
 
@@ -82,13 +83,15 @@
        (response (web-process/analyses-html (get-username* session))))
   (POST "/score" [:as {params :params session :session
                        server-name :server-name server-port :server-port}]
-        (let [{:keys [work-info out-html]} (web-process/prep-scoring params)
+        (let [whost-params (assoc params :host-info
+                                  {:server server-name :port server-port
+                                   :ds-path "dataset"})
+              {:keys [work-info runner]} (run/do-analysis :xprize whost-params
+                                                          (:rclient session))
               new-work-info (assoc (:work-info session)
                               (:id work-info) work-info)]
-          (future (web-process/run-scoring work-info params (:rclient session)
-                                           {:server server-name :port server-port
-                                            :ds-path "dataset"}))
-          (-> (response out-html)
+          (future (web-process/run-scoring work-info runner (:rclient session)))
+          (-> (response (web-process/scoring-html (:id work-info)))
               (assoc :session
                 (assoc session :work-info new-work-info)))))
   (GET "/dataset/:dsid" [dsid :as {remote-addr :remote-addr}]

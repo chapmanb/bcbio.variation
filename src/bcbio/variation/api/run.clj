@@ -5,7 +5,8 @@
   (:require [clojure.string :as string]
             [fs.core :as fs]
             [bcbio.variation.api.file :as file-api]
-            [bcbio.variation.remote.core :as remote]))
+            [bcbio.variation.remote.core :as remote]
+            [bcbio.variation.workflow.xprize :as xprize]))
 
 (defmulti do-analysis
   "Run analysis on provided inputs, dispatching on analysis type"
@@ -36,12 +37,39 @@
     ;(remote/list-files rclient remote-dir :vcf)
     ))
 
-(defmethod do-analysis :score
-  ^{:doc "Run comparison and scoring analysis on provided input files.
+(defn- prep-xprize-files
+  "Prepare X prize input files, potentially pulling from remote directories."
+  [work-info rclient]
+  (reduce (fn [coll kw]
+            (assoc coll kw (remote/get-file (get work-info kw) rclient :out-dir (:dir work-info))))
+          work-info [:variant-file :region-file]))
+
+(defn- upload-xprize-files
+  "Upload X Prize results files back to remote directories."
+  [{:keys [work-info comparison]} rclient host-info]
+  (when-not (nil? (:conn rclient))
+    (doseq [x (map #(get-in comparison [:c-files %])
+                   [:concordant :discordant :discordant-missing :phasing-error :summary])]
+      (remote/put-file rclient x {:dbkey "hg_g1k_v37"
+                                  :file-type "hg19"
+                                  :input-file (:gs-variant-file work-info)
+                                  :host-info host-info
+                                  :tag "xprize"})))
+   comparison)
+
+(defmethod do-analysis :xprize
+  ^{:doc "Run X Prize comparison and scoring analysis on provided input files.
           params:
-            - gs-variant-file: Input variant file, from GenomeSpace
-            - gs-region-file: Optional BED file of regions to score on. From GenomeSpace.
+            - variant-file: Input variant file, in VCF format, to compare.
+            - region-file: Optional BED file of regions to score on.
             - comparison-genome: Name of genome to compare against. Used
-              to look up comparison details in configuration file."}
-  [_ params rclient]
-  (println params))
+              to look up comparison details in configuration file.
+            - host-info: Host information for providing callbacks to a local server."}
+  [atype params rclient]
+  (let [work-info (xprize/prep-scoring params @web-config)]
+    {:runner (future (-> work-info
+                         (prep-xprize-files rclient)
+                         (xprize/run-scoring-analysis rclient
+                                                      (:host-info params) @web-config)
+                         (upload-xprize-files rclient (:host-info params))))
+     :work-info work-info}))

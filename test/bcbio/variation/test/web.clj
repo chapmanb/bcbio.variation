@@ -2,7 +2,7 @@
   "Test code supporting a web-based interface for running scoring."
   (:use [clojure.java.io]
         [midje.sweet]
-        [bcbio.variation.web.process])
+        [bcbio.variation.workflow.xprize])
   (:require [fs.core :as fs]
             [clj-yaml.core :as yaml]
             [bcbio.run.itx :as itx]))
