@@ -17,22 +17,24 @@
             - filename: The file to process
             - metrics: A map of filters, with metrics names as keys
               and [min max] as values. Long term we could dispatch on
-              different value types for categorical data."}
+              different value types for categorical data.
+           TODO: Should return pointer to uploaded files."}
   [atype params rclient]
   (let [ref-file (-> @web-config :ref first :genome)
         in-file (remote/get-file (:filename params) rclient)
         filter-file (variant-filter in-file
                                     (jexl-filters-from-map (:metrics params))
                                     ref-file)
-        local-out-dir (fs/file (fs/parent in-file) (name atype))
-        remote-dir (str (fs/file (fs/parent (last (string/split (:filename params) #":" 2)))
-                              (name atype)))]
-    (remote/put-file rclient remote-dir filter-file {})
+        local-out-dir (fs/file (fs/parent in-file) (name atype))]
+    (remote/put-file rclient filter-file {:input-file (:filename params)
+                                          :tag (name atype)
+                                          :file-type :vcf})
     (when-not (fs/exists? local-out-dir)
       (fs/mkdirs local-out-dir))
     (doseq [ext ["" ".idx"]]
       (fs/rename (str filter-file ext) (str (fs/file local-out-dir (fs/base-name filter-file)) ext)))
-    (remote/list-files rclient remote-dir :vcf)))
+    ;(remote/list-files rclient remote-dir :vcf)
+    ))
 
 (defmethod do-analysis :score
   ^{:doc "Run comparison and scoring analysis on provided input files.
