@@ -16,7 +16,6 @@
             [net.cgrand.enlive-html :as html]
             [ring.middleware.anti-forgery :as anti-forgery]
             [bcbio.variation.remote.core :as remote]
-            [bcbio.variation.web.dataset :as dataset]
             [bcbio.variation.web.db :as db]))
 
 ;; ## Run scoring based on inputs from web or API
@@ -156,11 +155,12 @@
                                     (prep-scoring-table (:metrics comparison)
                                                         (get-in comparison [:summary :sv])))
                        "\n")))
-    (let [subdir "xprize"
-          gs-dir (str (fs/file (fs/parent (last (string/split (:gs-variant-file work-info) #":" 2))) subdir))]
-      (doseq [x (cons summary-file out-files)]
-        (remote/put-file rclient gs-dir x {:dbkey "hg_g1k_v37"
-                                           :file-type "hg19"})))))
+    (doseq [x (cons summary-file out-files)]
+      (remote/put-file rclient x {:dbkey "hg_g1k_v37"
+                                  :file-type "hg19"
+                                  :input-file (:gs-variant-file work-info)
+                                  :host-info host-info
+                                  :tag "xprize"}))))
 
 (defn- prepare-final-files
   "Merge standard and structural variant outputs into final set of upload files."

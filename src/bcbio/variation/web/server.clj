@@ -86,7 +86,7 @@
               new-work-info (assoc (:work-info session)
                               (:id work-info) work-info)]
           (future (web-process/run-scoring work-info params (:rclient session)
-                                           {:name server-name :port server-port
+                                           {:server server-name :port server-port
                                             :ds-path "dataset"}))
           (-> (response out-html)
               (assoc :session

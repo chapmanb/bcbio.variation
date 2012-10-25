@@ -6,7 +6,8 @@
             [fs.core :as fs]
             [blend.galaxy.core :as galaxy]
             [clj-genomespace.core :as gs]
-            [bcbio.run.itx :as itx]))
+            [bcbio.run.itx :as itx]
+            [bcbio.variation.web.dataset :as dataset]))
 
 ;; ## Download
 
@@ -142,11 +143,16 @@
 
 (defmethod put-file :gs
   ^{:doc "Push file to GenomeSpace in the specified upload directory."}
-  [rclient remote-dir local-file _]
-  (gs/upload (:conn rclient) remote-dir local-file))
+  [rclient local-file params]
+  (let [remote-dir (str (fs/file (fs/parent (last (string/split (:input-file params) #":" 2)))
+                                 (:tag params)))]
+    (gs/upload (:conn rclient) remote-dir local-file)))
 
 (defmethod put-file :galaxy
-  ^{:doc "Push file to the specified Galaxy history, using a remotely available URL."}
-  [rclient history-id provide-url params]
-  (galaxy/upload-to-history (:conn rclient) provide-url (:dbkey params)
-                            (:file-type params) :history-id history-id))
+  ^{:doc "Push file to the current Galaxy history, using a remotely available URL."}
+  [rclient local-file params]
+  (let [host-info (:host-info params)
+        provide-url (dataset/expose-w-url local-file (:server rclient) (:server host-info)
+                                          (:port host-info) (:ds-path host-info))]
+    (galaxy/upload-to-history (:conn rclient) provide-url (:dbkey params)
+                              (:file-type params))))
