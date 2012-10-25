@@ -80,11 +80,14 @@
 (defroutes main-routes
   (GET "/analyses" [:as {session :session}]
        (response (web-process/analyses-html (get-username* session))))
-  (POST "/score" [:as {params :params session :session}]
+  (POST "/score" [:as {params :params session :session
+                       server-name :server-name server-port :server-port}]
         (let [{:keys [work-info out-html]} (web-process/prep-scoring params)
               new-work-info (assoc (:work-info session)
                               (:id work-info) work-info)]
-          (future (web-process/run-scoring work-info params (:rclient session)))
+          (future (web-process/run-scoring work-info params (:rclient session)
+                                           {:name server-name :port server-port
+                                            :ds-path "dataset"}))
           (-> (response out-html)
               (assoc :session
                 (assoc session :work-info new-work-info)))))

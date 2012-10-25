@@ -16,6 +16,7 @@
             [net.cgrand.enlive-html :as html]
             [ring.middleware.anti-forgery :as anti-forgery]
             [bcbio.variation.remote.core :as remote]
+            [bcbio.variation.web.dataset :as dataset]
             [bcbio.variation.web.db :as db]))
 
 ;; ## Run scoring based on inputs from web or API
@@ -143,8 +144,8 @@
        [:script "bcbio.variation.analyses.display_analyses()"]]))))
 
 (defn upload-results
-  "Upload output files to GenomeSpace."
-  [rclient work-info comparison]
+  "Upload output files to remote server."
+  [rclient work-info comparison host-info]
   (let [out-files (map #(get-in comparison [:c-files %])
                        [:concordant :discordant :discordant-missing :phasing-error])
         summary-file (str (fs/file (:dir work-info)
@@ -158,7 +159,8 @@
     (let [subdir "xprize"
           gs-dir (str (fs/file (fs/parent (last (string/split (:gs-variant-file work-info) #":" 2))) subdir))]
       (doseq [x (cons summary-file out-files)]
-        (remote/put-file rclient gs-dir x {})))))
+        (remote/put-file rclient gs-dir x {:dbkey "hg_g1k_v37"
+                                           :file-type "hg19"})))))
 
 (defn- prepare-final-files
   "Merge standard and structural variant outputs into final set of upload files."
@@ -177,12 +179,12 @@
 
 (defn run-scoring-analysis
   "Run scoring analysis from provided work information."
-  [work-info rclient]
+  [work-info rclient host-info]
   (let [process-config (create-work-config work-info @web-config)
         comparisons (first (variant-comparison-from-config process-config))]
     (prepare-final-files comparisons)
     (when-not (or (nil? (:conn rclient)) (nil? (:gs-variant-file work-info)))
-      (upload-results rclient work-info comparisons))
+      (upload-results rclient work-info comparisons host-info))
     (spit (file (:dir work-info) "scoring-summary.html")
           (html-scoring-summary comparisons (:id work-info)))
     comparisons))
@@ -215,7 +217,7 @@
 
 (defn run-scoring
   "Download form-supplied input files and start scoring analysis."
-  [orig-work-info params rclient]
+  [orig-work-info params rclient host-info]
   (letfn [(add-gs-info [work-info params]
             (let [remote-fname (:gs-variant-file params)]
               (if-not (or (nil? remote-fname) (empty? remote-fname))
@@ -225,7 +227,7 @@
                         (add-gs-info params)
                         (assoc :in-files (get-input-files orig-work-info params
                                                           rclient)))
-          comparisons (run-scoring-analysis work-info rclient)]
+          comparisons (run-scoring-analysis work-info rclient host-info)]
       (when-let [username (:username rclient)]
         (db/add-analysis {:username username :files (:c-files comparisons)
                           :analysis_id (:id work-info)
