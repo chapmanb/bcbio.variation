@@ -58,14 +58,19 @@
                          (:fname file-info) out-file))]
     (download-to-local fname rclient fileinfo-gs download-gs :out-dir out-dir)))
 
+(defn- split-galaxy-id
+  [file-id]
+  (when file-id
+    (-> file-id
+        (string/split #":" 2)
+        second
+        (string/split #"/"))))
+
 (defmethod get-file :galaxy
   ^{:doc "Retrieve a file from Galaxy to the local cache"}
   [fname rclient & {:keys [out-dir]}]
   (letfn [(fileinfo-galaxy [file-id]
-            (let [[history-id ds-id] (-> file-id
-                                         (string/split #":" 2)
-                                         second
-                                         (string/split #"/"))
+            (let [[history-id ds-id] (split-galaxy-id file-id)
                   ds (galaxy/get-dataset-by-id (:conn rclient) history-id ds-id)]
               {:local-stub (str (file (:username rclient) history-id (:name ds)))
                :ds ds}))
@@ -120,15 +125,17 @@
 
 (defmethod list-files :galaxy
   ^{:doc "List available files from a Galaxy history."}
-  [rclient history ftype]
-  (map (fn [ds]
-         {:id (str "galaxy:" (:history-id ds) "/" (:id ds))
-          :tags [(:name history)]
-          :folder (:name history)
-          :filename (:name ds)
-          :size (:file-size ds)
-          :created-on nil})
-       (galaxy/get-datasets-by-type (:conn rclient) ftype :history-id (:id history))))
+  [rclient hid ftype]
+  (let [history-id (or (:id hid) hid)
+        history-name (or (:name hid) "")]
+    (map (fn [ds]
+           {:id (str "galaxy:" (:history-id ds) "/" (:id ds))
+            :tags [history-name]
+            :folder history-name
+            :filename (:name ds)
+            :size (:file-size ds)
+            :created-on nil})
+         (galaxy/get-datasets-by-type (:conn rclient) ftype :history-id history-id))))
 
 (defmethod list-files :default
   ^{:doc "Retrieval of pre-downloaded files in our local cache."}
@@ -146,13 +153,16 @@
   [rclient local-file params]
   (let [remote-dir (str (fs/file (fs/parent (last (string/split (:input-file params) #":" 2)))
                                  (:tag params)))]
-    (gs/upload (:conn rclient) remote-dir local-file)))
+    (gs/upload (:conn rclient) remote-dir local-file)
+    remote-dir))
 
 (defmethod put-file :galaxy
   ^{:doc "Push file to the current Galaxy history, using a remotely available URL."}
   [rclient local-file params]
   (let [host-info (:host-info params)
+        history-id (first (split-galaxy-id (:input-file params)))
         provide-url (dataset/expose-w-url local-file (:server rclient) (:server host-info)
                                           (:port host-info) (:ds-path host-info))]
     (galaxy/upload-to-history (:conn rclient) provide-url (:dbkey params)
-                              (:file-type params))))
+                              (:file-type params)
+                              :history-id history-id)))
