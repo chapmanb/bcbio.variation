@@ -24,10 +24,15 @@
 (defn jexl-filters-from-map
   "Convert a map of metrics names and ranges into JEXL filter expressions"
   [filter-map]
-  (letfn [(to-jexl [[metric [min max]]]
-            (format "%s < %.1f || %s > %.1f"
-                    (name metric) (to-float min)
-                    (name metric) (to-float max)))]
+  (letfn [(infinity-flag? [x]
+            (and (string? x)
+                 (.contains x "Infinity")))
+          (to-jexl [[metric [orig-min orig-max]]]
+            (let [min (if (infinity-flag? orig-min) (- Integer/MAX_VALUE) orig-min)
+                  max (if (infinity-flag? orig-max) Integer/MAX_VALUE orig-max)]
+              (format "%s < %.1f || %s > %.1f"
+                      (name metric) (to-float min)
+                      (name metric) (to-float max))))]
     (map to-jexl filter-map)))
 
 (defn variant-filter

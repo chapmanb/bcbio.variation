@@ -20,7 +20,9 @@
   [fname remote-url]
   {:pre [(fs/exists? fname)]}
   (let [dsid (str (UUID/randomUUID))
-        remote-host (.getHost (URL. remote-url))
+        remote-host (.getHost (URL. (if (.startsWith remote-url "http")
+                                      remote-url
+                                      (str "http://" remote-url))))
         expected-remote (set (map #(.getHostAddress %) (InetAddress/getAllByName remote-host)))]
     (swap! exposed-datasets assoc dsid {:fname fname :expected-remote expected-remote})
     dsid))
@@ -34,7 +36,7 @@
 (defn retrieve
   "Retrieve a dataset via identifier, checking remote host for permissions match."
   [dsid remote-addr]
-  (when-let [{:keys [fname expected-remote]} (get exposed-datasets dsid)]
+  (when-let [{:keys [fname expected-remote]} (get @exposed-datasets dsid)]
     (when (contains? expected-remote remote-addr)
       (swap! exposed-datasets dissoc dsid)
       {:status 200

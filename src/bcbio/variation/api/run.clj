@@ -21,15 +21,18 @@
         filter-file (variant-filter in-file
                                     (jexl-filters-from-map (:metrics params))
                                     ref-file)
-        local-out-dir (fs/file (fs/parent in-file) (name atype))
-        remote-dir (remote/put-file rclient filter-file {:input-file (:filename params)
-                                                         :tag (name atype)
-                                                         :file-type :vcf})]
+        local-out-dir (fs/file (fs/parent in-file) (name atype))]
     (when-not (fs/exists? local-out-dir)
       (fs/mkdirs local-out-dir))
     (doseq [ext ["" ".idx"]]
       (fs/rename (str filter-file ext) (str (fs/file local-out-dir (fs/base-name filter-file)) ext)))
-    (remote/list-files rclient remote-dir :vcf)))
+    (let [remote-dir (remote/put-file rclient
+                                      (str (fs/file local-out-dir (fs/base-name filter-file)))
+                                      {:input-file (:filename params)
+                                       :host-info (:host-info params)
+                                       :tag (name atype)
+                                       :file-type :vcf})]
+      (remote/list-files rclient remote-dir :vcf))))
 
 (defmethod do-analysis :filter
   ^{:doc "Filter an input file according to specified metrics.

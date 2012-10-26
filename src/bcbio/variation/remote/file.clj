@@ -100,7 +100,7 @@
 (defmethod list-dirs :galaxy
   ^{:doc "Retrieve available histories from Galaxy connection."}
   [rclient _]
-  (galaxy/list-histories rclient))
+  (galaxy/list-histories (:conn rclient)))
 
 (defmulti list-files
   "List files in a remote directory of a specified type."
@@ -126,7 +126,7 @@
 (defmethod list-files :galaxy
   ^{:doc "List available files from a Galaxy history."}
   [rclient hid ftype]
-  (let [history-id (or (:id hid) hid)
+  (let [history-id (if (contains? hid :id) (:id hid) hid)
         history-name (or (:name hid) "")]
     (map (fn [ds]
            {:id (str "galaxy:" (:history-id ds) "/" (:id ds))
@@ -163,6 +163,8 @@
         history-id (first (split-galaxy-id (:input-file params)))
         provide-url (dataset/expose-w-url local-file (:server rclient) (:server host-info)
                                           (:port host-info) (:ds-path host-info))]
-    (galaxy/upload-to-history (:conn rclient) provide-url (:dbkey params)
+    (println provide-url history-id params)
+    (galaxy/upload-to-history (:conn rclient) provide-url
+                              (get params :dbkey "hg_g1k_v37")
                               (:file-type params)
                               :history-id history-id)))
