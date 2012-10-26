@@ -40,9 +40,14 @@
 (defn- prep-xprize-files
   "Prepare X prize input files, potentially pulling from remote directories."
   [work-info rclient]
-  (reduce (fn [coll kw]
-            (assoc coll kw (remote/get-file (get work-info kw) rclient :out-dir (:dir work-info))))
-          work-info [:variant-file :region-file]))
+  (letfn [(get-remote-files [work-info]
+            (reduce (fn [coll kw]
+                      (assoc coll kw (remote/get-file (get coll kw) rclient
+                                                      :out-dir (:dir work-info))))
+                    work-info [:variant-file :region-file]))]
+    (-> work-info
+        (assoc :orig-variant-file (:variant-file work-info))
+        get-remote-files)))
 
 (defn- upload-xprize-files
   "Upload X Prize results files back to remote directories."
@@ -52,7 +57,7 @@
                    [:concordant :discordant :discordant-missing :phasing-error :summary])]
       (remote/put-file rclient x {:dbkey "hg_g1k_v37"
                                   :file-type "hg19"
-                                  :input-file (:gs-variant-file work-info)
+                                  :input-file (:orig-variant-file work-info)
                                   :host-info host-info
                                   :tag "xprize"})))
    comparison)

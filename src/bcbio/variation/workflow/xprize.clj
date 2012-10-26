@@ -125,5 +125,6 @@
         work-id (str (UUID/randomUUID))
         cur-dir (file tmp-dir work-id)]
     (fs/mkdirs cur-dir)
-    {:id work-id :dir (str cur-dir)
-     :comparison-genome (:comparison-genome params)}))
+    (-> params
+        (assoc :id work-id)
+        (assoc :dir (str cur-dir)))))

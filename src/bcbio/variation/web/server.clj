@@ -78,22 +78,40 @@
       (when (fs/exists? summary-file)
         (slurp summary-file)))))
 
+(defn- update-form-remotes
+  "Update form information to identify items for remote download."
+  [params]
+  (letfn [(form-has? [kw]
+            (let [item (get params kw)]
+              (and (not (nil? item))
+                   (not (empty? item)))))]
+    (cond
+     (form-has? :gs-variant-file) (-> params
+                                      (assoc :variant-file (:gs-variant-file params))
+                                      (assoc :region-file (:gs-region-file params))))))
+
+(defn- run-web-scoring
+  "Run scoring, handling input parameters and updating session information."
+  [params session host-info]
+  (let [ready-params (-> params
+                         (assoc :host-info host-info)
+                         update-form-remotes)
+        {:keys [work-info runner]} (run/do-analysis :xprize ready-params
+                                                    (:rclient session))
+        new-work-info (assoc (:work-info session)
+                        (:id work-info) work-info)]
+    (future (web-process/run-scoring work-info runner (:rclient session)))
+    (-> (response (web-process/scoring-html (:id work-info)))
+        (assoc :session
+          (assoc session :work-info new-work-info)))))
+
 (defroutes main-routes
   (GET "/analyses" [:as {session :session}]
        (response (web-process/analyses-html (get-username* session))))
   (POST "/score" [:as {params :params session :session
                        server-name :server-name server-port :server-port}]
-        (let [whost-params (assoc params :host-info
-                                  {:server server-name :port server-port
-                                   :ds-path "dataset"})
-              {:keys [work-info runner]} (run/do-analysis :xprize whost-params
-                                                          (:rclient session))
-              new-work-info (assoc (:work-info session)
-                              (:id work-info) work-info)]
-          (future (web-process/run-scoring work-info runner (:rclient session)))
-          (-> (response (web-process/scoring-html (:id work-info)))
-              (assoc :session
-                (assoc session :work-info new-work-info)))))
+        (run-web-scoring params session
+                         {:server server-name :port server-port :ds-path "dataset"}))
   (GET "/dataset/:dsid" [dsid :as {remote-addr :remote-addr}]
        (dataset/retrieve dsid remote-addr))
   (GET "/dataset/:runid/:name" [runid name :as {session :session}]
