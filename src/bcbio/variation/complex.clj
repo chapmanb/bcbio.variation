@@ -313,6 +313,7 @@
                                    alleles)]
               (new-split-vc vc 0 {:offset i
                                   :size (- (count ref-allele) 1)
+                                  :orig-alleles alleles
                                   :ref-allele (first cur-alleles)
                                   :alleles (rest cur-alleles)})))
           (variant-allele-pos [input-alleles]
