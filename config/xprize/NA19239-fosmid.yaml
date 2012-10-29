@@ -130,6 +130,7 @@ experiments:
           support: allfos
           #annotations: [QD, HaplotypeScore, MQRankSum, ReadPosRankSum, FS, MQ, DP]
           classifiers: [QUAL, DP, ReadPosEndDist, gms_illumina, AD, PL]
+          xspecific: true
           trusted:
             total: 0.65
             technology: 0.65

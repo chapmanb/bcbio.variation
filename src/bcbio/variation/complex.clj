@@ -291,7 +291,6 @@
                                        (remove empty?)
                                        (remove nil?)
                                        multiple-alignment
-                                       (#(if ref-seq (drop-last %) %))
                                        (#(if (> (count %) 2) % (left-align-complex %))))
                                :prev-pad prev-pad)]
     (when-not (= (count alleles) (count (set (map :offset alleles))))
