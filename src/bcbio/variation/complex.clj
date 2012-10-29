@@ -192,10 +192,11 @@
           (all-gap? [xs]
             (= (set (map str xs)) #{"-"}))
           (finalize-alignment [seqs]
-            (let [n 2
+            (let [n (count seqs)
                   gap-free (remove all-gap? (partition n (apply interleave (take n seqs))))]
-              [(string/join "" (map first gap-free))
-               (string/join "" (map second gap-free))]))]
+              (map (fn [i]
+                     (string/join "" (map #(nth % i) gap-free)))
+                   (range n))))]
     (let [align-args (to-array [(SimpleGapPenalty. 20 1)])
           base-align (map #(.getSequenceAsString %)
                           (-> (map #(DNASequence. %) seqs)
@@ -224,7 +225,7 @@
     ATCT  => ATCT
     AC--     A--C"
   [alleles]
-  {:pre [= 2 (count alleles)]
+  {:pre [(= 2 (count alleles))]
    :post [(= (count (first alleles))
              (count (first %)))]}
   (letfn [(gap-start-mismatch? [alleles i]
@@ -285,12 +286,13 @@
   "Split complex indels into individual variant components."
   [vc ref]
   (let [prev-pad (or (extract-sequence ref (:chr vc) (dec (:start vc)) (dec (:start vc))) "N")
-        alleles (split-alleles vc (->> (conj (get-vc-alleles vc)
-                                             (extract-sequence ref (:chr vc) (:start vc) (:end vc)))
+        ref-seq (extract-sequence ref (:chr vc) (:start vc) (:end vc))
+        alleles (split-alleles vc (->> (conj (get-vc-alleles vc) ref-seq)
                                        (remove empty?)
                                        (remove nil?)
                                        multiple-alignment
-                                       left-align-complex)
+                                       (#(if ref-seq (drop-last %) %))
+                                       (#(if (> (count %) 2) % (left-align-complex %))))
                                :prev-pad prev-pad)]
     (when-not (= (count alleles) (count (set (map :offset alleles))))
       (throw (Exception. (format "Mutiple alleles at same position: %s %s %s"

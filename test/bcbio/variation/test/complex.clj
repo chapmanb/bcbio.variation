@@ -48,6 +48,24 @@
 (facts "Deal with multi-nucleotide polymorphisms"
   (normalize-variants mnp-vcf ref) => nomnp-out)
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 (facts "Split complex indels into individual components"
   (normalize-variants cindel-vcf ref) => cindel-out)
 
