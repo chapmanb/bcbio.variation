@@ -6,8 +6,7 @@
             [fs.core :as fs]
             [blend.galaxy.core :as galaxy]
             [clj-genomespace.core :as gs]
-            [bcbio.run.itx :as itx]
-            [bcbio.variation.web.dataset :as dataset]))
+            [bcbio.run.itx :as itx]))
 
 ;; ## Download
 
@@ -128,14 +127,15 @@
   [rclient hid ftype]
   (let [history-id (if (contains? hid :id) (:id hid) hid)
         history-name (or (:name hid) "")]
-    (map (fn [ds]
-           {:id (str "galaxy:" (:history-id ds) "/" (:id ds))
-            :tags [history-name]
-            :folder history-name
-            :filename (:name ds)
-            :size (:file-size ds)
-            :created-on nil})
-         (galaxy/get-datasets-by-type (:conn rclient) ftype :history-id history-id))))
+    (->> (galaxy/get-datasets-by-type (:conn rclient) ftype :history-id history-id)
+         (remove #(:deleted %))
+         (map (fn [ds]
+                {:id (str "galaxy:" (:history-id ds) "/" (:id ds))
+                 :tags [history-name]
+                 :folder history-name
+                 :filename (:name ds)
+                 :size (:file-size ds)
+                 :created-on nil})))))
 
 (defmethod list-files :default
   ^{:doc "Retrieval of pre-downloaded files in our local cache."}
@@ -161,10 +161,9 @@
   [rclient local-file params]
   (let [host-info (:host-info params)
         history-id (first (split-galaxy-id (:input-file params)))
-        provide-url (dataset/expose-w-url local-file (:server rclient) (:server host-info)
-                                          (:port host-info) (:ds-path host-info))]
-    (println provide-url history-id params)
+        provide-url ((:expose-fn params) local-file (:server rclient))]
     (galaxy/upload-to-history (:conn rclient) provide-url
-                              (get params :dbkey "hg_g1k_v37")
+                              (get params :dbkey :hg19)
                               (:file-type params)
-                              :history-id history-id)))
+                              :history-id history-id
+                              :display-name (fs/base-name local-file))))

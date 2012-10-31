@@ -109,7 +109,7 @@
 
 (defn run-scoring-analysis
   "Run scoring analysis from provided work information."
-  [work-info rclient host-info config]
+  [work-info rclient config]
   (let [process-config (create-work-config work-info config)
         comparison (first (variant-comparison-from-config process-config))]
     (prepare-final-files comparison)

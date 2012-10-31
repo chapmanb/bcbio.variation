@@ -29,7 +29,7 @@
     (let [remote-dir (remote/put-file rclient
                                       (str (fs/file local-out-dir (fs/base-name filter-file)))
                                       {:input-file (:filename params)
-                                       :host-info (:host-info params)
+                                       :expose-fn (:expose-fn params)
                                        :tag (name atype)
                                        :file-type :vcf})]
       (remote/list-files rclient remote-dir :vcf))))
@@ -58,14 +58,14 @@
 
 (defn- upload-xprize-files
   "Upload X Prize results files back to remote directories."
-  [{:keys [work-info comparison]} rclient host-info]
+  [{:keys [work-info comparison]} rclient params]
   (when-not (nil? (:conn rclient))
     (doseq [x (map #(get-in comparison [:c-files %])
                    [:concordant :discordant :discordant-missing :phasing-error :summary])]
-      (remote/put-file rclient x {:dbkey "hg_g1k_v37"
-                                  :file-type "hg19"
+      (remote/put-file rclient x {:dbkey :hg19
+                                  :file-type :vcf
                                   :input-file (:orig-variant-file work-info)
-                                  :host-info host-info
+                                  :expose-fn (:expose-fn params)
                                   :tag "xprize"})))
    comparison)
 
@@ -81,7 +81,6 @@
   (let [work-info (xprize/prep-scoring params @web-config)]
     {:runner (future (-> work-info
                          (prep-xprize-files rclient)
-                         (xprize/run-scoring-analysis rclient
-                                                      (:host-info params) @web-config)
-                         (upload-xprize-files rclient (:host-info params))))
+                         (xprize/run-scoring-analysis rclient @web-config)
+                         (upload-xprize-files rclient params)))
      :work-info work-info}))
