@@ -1,7 +1,7 @@
 (ns bcbio.variation.remote.file
   "List, retrieve and push files from a remote filestore."
   (:use [clojure.java.io]
-        [bcbio.variation.api.shared :only [web-config]])
+        [bcbio.variation.api.shared :only [web-config url->dir]])
   (:require [clojure.string :as string]
             [fs.core :as fs]
             [blend.galaxy.core :as galaxy]
@@ -21,7 +21,7 @@
   [fname rclient to-fileinfo-fn download-fn & {:keys [out-dir]}]
   (let [cache-dir (or out-dir (get-in @web-config [:dir :cache]))
         finfo (to-fileinfo-fn fname)
-        local-file (str (file cache-dir (:server rclient) (:local-stub finfo)))
+        local-file (str (file cache-dir (url->dir (:server rclient)) (:local-stub finfo)))
         local-dir (str (fs/parent local-file))]
     (when-not (fs/exists? local-file)
       (when-not (fs/exists? local-dir)
@@ -70,8 +70,9 @@
   [fname rclient & {:keys [out-dir]}]
   (letfn [(fileinfo-galaxy [file-id]
             (let [[history-id ds-id] (split-galaxy-id file-id)
-                  ds (galaxy/get-dataset-by-id (:conn rclient) history-id ds-id)]
-              {:local-stub (str (file (:username rclient) history-id (:name ds)))
+                  ds (galaxy/get-dataset-by-id (:conn rclient) history-id ds-id)
+                  safe-username (string/replace (:username rclient) " " "-")]
+              {:local-stub (str (file safe-username history-id (:name ds)))
                :ds ds}))
           (download-galaxy [rclient file-info out-file]
             (galaxy/download-dataset (:conn rclient) (:ds file-info) out-file))]

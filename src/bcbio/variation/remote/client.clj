@@ -14,11 +14,7 @@
   (fn [creds]
     (:type creds)))
 
-(defn- url->dir
-  [url]
-  (string/replace (.getHost (as-url url)) "." "_"))
-
-(def gs-default-server (url->dir "http://www.genomespace.org/"))
+(def gs-default-server "http://www.genomespace.org/")
 
 (defmethod get-client :gs
   ^{:doc "Retrieve a GenomeSpace client connection"}
@@ -48,6 +44,5 @@
                          (when-not allow-offline?
                            (throw e))))
         username (when user-info
-                   (or (:username user-info) (:email user-info)))
-        server (url->dir url)]
-    (RemoteClient. :galaxy (when user-info galaxy-client) username server)))
+                   (or (:username user-info) (:email user-info)))]
+    (RemoteClient. :galaxy (when user-info galaxy-client) username url)))

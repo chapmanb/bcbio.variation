@@ -12,13 +12,17 @@
 (def ^{:doc "Hold directory of remote files by user and filetype."}
   remote-file-cache (atom {}))
 
+(defn url->dir
+  [url]
+  (string/replace (.getHost (as-url url)) "." "_"))
+
 (defn load-web-config
   [config-file]
   (let [config (-> config-file slurp yaml/parse-string)]
     (letfn [(maybe-fix-biodata [x]
               (if (.startsWith x "biodata:")
                 (str (get-in config [:dir :cache])
-                     "/" gs-default-server
+                     "/" (url->dir gs-default-server)
                      (get-in config [:remote :biodata])
                      (string/replace-first x "biodata:" ""))
                 x))
