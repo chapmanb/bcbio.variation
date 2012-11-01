@@ -7,15 +7,15 @@
                  [org.clojure/core.match "0.2.0-alpha9"]
                  [org.clojure/tools.cli "0.2.2"]
                  ;; GATK requirements
-                 [org.clojars.chapmanb/gatk-lite "2.1.8"]
+                 [org.clojars.chapmanb/gatk-lite "2.2.2"]
                  [org.clojars.chapmanb/picard "1.73"]
                  [org.clojars.chapmanb/sam "1.73"]
                  [org.clojars.chapmanb/tribble "110"]
-                 [org.clojars.chapmanb/cofoja "1.0-20110609"]
+                 [org.clojars.chapmanb/cofoja "1.0-r139"]
                  [org.clojars.chapmanb/jama "1.0.2"]
                  [org.apache.commons/commons-jexl "2.1.1"]
                  [org.apache.commons/commons-math "2.2"]
-                 [org.reflections/reflections "0.9.5-RC2"]
+                 [org.reflections/reflections "0.9.8"]
                  [org.simpleframework/simple-xml "2.0.4"]
                  [colt/colt "1.2.0"]
                  ;;

@@ -14,6 +14,7 @@ import org.broadinstitute.sting.gatk.walkers.annotator.interfaces.ActiveRegionBa
 import org.broadinstitute.sting.gatk.walkers.annotator.interfaces.AnnotatorCompatible;
 import org.broadinstitute.sting.gatk.walkers.annotator.interfaces.InfoFieldAnnotation;
 import org.broadinstitute.sting.gatk.walkers.annotator.interfaces.ExperimentalAnnotation;
+import org.broadinstitute.sting.utils.genotyper.PerReadAlleleLikelihoodMap;
 import org.broadinstitute.sting.utils.MathUtils;
 import org.broadinstitute.sting.utils.QualityUtils;
 import org.broadinstitute.sting.utils.codecs.vcf.VCFConstants;
@@ -44,7 +45,7 @@ public class ReadPosEndDist extends InfoFieldAnnotation implements ExperimentalA
         return Arrays.asList(new VCFInfoHeaderLine("ReadPosEndDist", 1, VCFHeaderLineType.Float, "Parameters indicating incorrect local alignments: 1. Mean distance from either end of read "));
     }
 
-    public Map<String, Object> annotate(RefMetaDataTracker tracker, AnnotatorCompatible walker, ReferenceContext ref, Map<String, AlignmentContext> stratifiedContexts, VariantContext vc) {
+  public Map<String, Object> annotate(RefMetaDataTracker tracker, AnnotatorCompatible walker, ReferenceContext ref, Map<String, AlignmentContext> stratifiedContexts, VariantContext vc, final Map<String, PerReadAlleleLikelihoodMap> stratifiedLikelihoodMap) {
         if ( stratifiedContexts.size() == 0 )
             return null;
 

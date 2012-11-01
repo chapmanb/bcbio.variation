@@ -31,7 +31,7 @@ import org.broadinstitute.sting.gatk.refdata.RefMetaDataTracker;
 import org.broadinstitute.sting.gatk.walkers.annotator.interfaces.AnnotatorCompatible;
 import org.broadinstitute.sting.gatk.walkers.annotator.interfaces.InfoFieldAnnotation;
 import org.broadinstitute.sting.gatk.walkers.annotator.interfaces.ExperimentalAnnotation;
-import org.broadinstitute.sting.gatk.walkers.genotyper.IndelGenotypeLikelihoodsCalculationModel;
+import org.broadinstitute.sting.utils.genotyper.PerReadAlleleLikelihoodMap;
 import org.broadinstitute.sting.utils.QualityUtils;
 import org.broadinstitute.sting.utils.codecs.vcf.VCFHeaderLineType;
 import org.broadinstitute.sting.utils.codecs.vcf.VCFInfoHeaderLine;
@@ -52,7 +52,7 @@ import java.util.*;
 public class AlleleBalanceConfidenceInterval extends InfoFieldAnnotation implements ExperimentalAnnotation {
     private static final String ABCI = "ABCI";
 
-    public Map<String, Object> annotate(RefMetaDataTracker tracker, AnnotatorCompatible walker, ReferenceContext ref, Map<String, AlignmentContext> stratifiedContexts, VariantContext vc) {
+  public Map<String, Object> annotate(RefMetaDataTracker tracker, AnnotatorCompatible walker, ReferenceContext ref, Map<String, AlignmentContext> stratifiedContexts, VariantContext vc, final Map<String, PerReadAlleleLikelihoodMap> stratifiedLikelihoodMap) {
 //        if ( ! vc.isVariant() || vc.isFiltered() )
 //            return null;
 
@@ -61,7 +61,7 @@ public class AlleleBalanceConfidenceInterval extends InfoFieldAnnotation impleme
         if (vc.isBiallelic() && vc.isSNP())
             CIs = calcSNPCIs(stratifiedContexts, vc.getReference(), vc.getAlternateAllele(0));
 /*        else if (vc.isIndel() || vc.isMixed()) {
-            table = getIndelContingencyTable(stratifiedContexts, vc);
+            table = getIndelContingencyTable(stratifiedContexts, vc, stratifiedLikelihoodMap);
             if (table == null)
                 return null;
         }
@@ -242,18 +242,18 @@ CIs[listNum*3-1] = listSum;
     /**
 	TODO: enable CI calculation for indels
      */
-    private static int[][] getIndelContingencyTable(Map<String, AlignmentContext> stratifiedContexts, VariantContext vc) {
+    private static int[][] getIndelContingencyTable(Map<String, AlignmentContext> stratifiedContexts, VariantContext vc, final Map<String, PerReadAlleleLikelihoodMap> stratifiedLikelihoodMap) {
         final double INDEL_LIKELIHOOD_THRESH = 0.3;
-        final HashMap<PileupElement,LinkedHashMap<Allele,Double>> indelLikelihoodMap = IndelGenotypeLikelihoodsCalculationModel.getIndelLikelihoodMap();
 
-        if (indelLikelihoodMap == null)
+        if (stratifiedLikelihoodMap == null)
             return null;
         
         int[][] table = new int[2][2];
 
         for ( String sample : stratifiedContexts.keySet() ) {
+            final PerReadAlleleLikelihoodMap indelLikelihoodMap = stratifiedLikelihoodMap.get(sample);
             final AlignmentContext context = stratifiedContexts.get(sample);
-            if ( context == null ) 
+            if ( context == null || indelLikelihoodMap == null ) 
                 continue;
 
             ReadBackedPileup pileup = context.getBasePileup();
@@ -263,14 +263,14 @@ CIs[listNum*3-1] = listSum;
             for (final PileupElement p: pileup) {
                 if ( p.getRead().getMappingQuality() < 20)
                     continue;
-                if (indelLikelihoodMap.containsKey(p)) {
+                if (indelLikelihoodMap.containsPileupElement(p)) {
                     // to classify a pileup element as ref or alt, we look at the likelihood associated with the allele associated to this element.
                     // A pileup element then has a list of pairs of form (Allele, likelihood of this allele).
                     // To classify a pileup element as Ref or Alt, we look at the likelihood of corresponding alleles.
                     // If likelihood of ref allele > highest likelihood of all alt alleles  + epsilon, then this pileup element is "ref"
                     // otherwise  if highest alt allele likelihood is > ref likelihood + epsilon, then this pileup element it "alt"
                     // retrieve likelihood information corresponding to this read
-                    LinkedHashMap<Allele,Double> el = indelLikelihoodMap.get(p);
+                    Map<Allele,Double> el = indelLikelihoodMap.getLikelihoodsAssociatedWithPileupElement(p);
                     // by design, first element in LinkedHashMap was ref allele
                     boolean isFW = !p.getRead().getReadNegativeStrandFlag();
 

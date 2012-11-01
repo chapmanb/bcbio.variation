@@ -31,7 +31,7 @@
 
 (defn -annotate
   "Retrieve flanking region surrounding variant and calculate MFE."
-  [_ _ _ ref _ _]
+  [_ _ _ ref _ _ _]
   {"MFE" (->> (get-flank-seq ref flank-bp)
               safe-min-free-energy
               (format "%.2f"))})

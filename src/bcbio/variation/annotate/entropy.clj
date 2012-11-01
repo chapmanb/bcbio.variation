@@ -63,7 +63,7 @@
 
 (defn -annotate
   "Retrieve flanking region surrounding variant and calculate entropy."
-  [_ _ _ ref _ _]
+  [_ _ _ ref _ _ _]
   {"Entropy" (->> (get-flank-seq ref flank-bp)
                   seq-entropy
                   (format "%.2f"))})

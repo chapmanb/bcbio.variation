@@ -34,7 +34,7 @@
     - Filter reads to those that match an alternative base
     - Get quality from reads and pull out qualities in surrounding region
     - Calculate mean and return."
-  [_ _ _ _ contexts vc]
+  [_ _ _ _ contexts vc _]
   (letfn [(orient-reads [[offset read]]
             (if (.getReadNegativeStrandFlag read)
               {:offset offset
