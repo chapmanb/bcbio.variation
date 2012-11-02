@@ -49,8 +49,8 @@
   [work-info rclient]
   (letfn [(get-remote-files [work-info]
             (reduce (fn [coll kw]
-                      (assoc coll kw (remote/get-file (get coll kw) rclient
-                                                      :out-dir (:dir work-info))))
+                      (assoc coll kw (when-let [f (get coll kw)]
+                                       (remote/get-file f rclient :out-dir (:dir work-info)))))
                     work-info [:variant-file :region-file]))]
     (-> work-info
         (assoc :orig-variant-file (:variant-file work-info))
@@ -60,13 +60,14 @@
   "Upload X Prize results files back to remote directories."
   [{:keys [work-info comparison]} rclient params]
   (when-not (nil? (:conn rclient))
-    (doseq [x (map #(get-in comparison [:c-files %])
-                   [:concordant :discordant :discordant-missing :phasing-error :summary])]
-      (remote/put-file rclient x {:dbkey :hg19
-                                  :file-type :vcf
-                                  :input-file (:orig-variant-file work-info)
-                                  :expose-fn (:expose-fn params)
-                                  :tag "xprize"})))
+    (when-let [remote-input (:orig-variant-file work-info)]
+      (doseq [x (map #(get-in comparison [:c-files %])
+                     [:concordant :discordant :discordant-missing :phasing-error :summary])]
+        (remote/put-file rclient x {:dbkey :hg19
+                                    :file-type :vcf
+                                    :input-file remote-input
+                                    :expose-fn (:expose-fn params)
+                                    :tag "xprize"}))))
    comparison)
 
 (defmethod do-analysis :xprize
