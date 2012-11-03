@@ -19,6 +19,7 @@
         [bcbio.variation.combine :only [combine-variants]]
         [bcbio.variation.multiple :only [prep-cmp-name-lookup
                                          multiple-overlap-analysis]]
+        [bcbio.variation.report :only [count-variants]]
         [bcbio.variation.variantcontext :only [parse-vcf get-vcf-iterator
                                                write-vcf-w-template]])
   (:require [bcbio.run.broad :as broad]
@@ -45,8 +46,9 @@
 
 (defn select-by-random
   "Subset a VCF file with a random number of variants."
-  [count in-vcf ref]
-  (select-by-general ["--select_random_number" count] "randsubset" in-vcf ref))
+  [n in-vcf ref]
+  (let [frac (float (/ n (count-variants in-vcf ref (fn [x] true))))]
+    (select-by-general ["--select_random_fraction" frac] "randsubset" in-vcf ref)))
 
 (defmulti get-to-validate
   "Select set of variants to validate from total set of potentials."

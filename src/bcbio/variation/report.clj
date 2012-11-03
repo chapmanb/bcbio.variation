@@ -22,7 +22,7 @@
          (map (fn [x] [(keyword (:variable x)) (:value x)]))
          (into {}))))
 
-(defn- count-variants
+(defn count-variants
   "Count variants that pass an optional checker function."
   [f ref-file check?]
   (with-open [vcf-iter (get-vcf-iterator f ref-file)]
