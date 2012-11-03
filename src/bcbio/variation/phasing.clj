@@ -131,7 +131,7 @@
   - `:unknown` -- Other classs of variations (structural)"
   [vcs]
   (letfn [(is-indel? [x]
-            (= "INDEL" (:type x)))
+            (contains? #{"MIXED" "INDEL"} (:type x)))
           (is-multi-indel? [x]
             (and (is-indel? x)
                  (not-every? #(contains? #{0 1} %)
