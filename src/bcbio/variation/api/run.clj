@@ -63,11 +63,14 @@
     (when-let [remote-input (:orig-variant-file work-info)]
       (doseq [x (map #(get-in comparison [:c-files %])
                      [:concordant :discordant :discordant-missing :phasing-error :summary])]
-        (remote/put-file rclient x {:dbkey :hg19
-                                    :file-type :vcf
-                                    :input-file remote-input
-                                    :expose-fn (:expose-fn params)
-                                    :tag "xprize"}))))
+        (let [ftype (cond
+                     (.endsWith x ".vcf") :vcf
+                     :else :tabular)]
+          (remote/put-file rclient x {:dbkey :hg19
+                                      :file-type ftype
+                                      :input-file remote-input
+                                      :expose-fn (:expose-fn params)
+                                      :tag "xprize"})))))
    comparison)
 
 (defmethod do-analysis :xprize

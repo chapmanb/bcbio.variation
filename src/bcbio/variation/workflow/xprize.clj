@@ -51,13 +51,12 @@
   "Output text summary file with scoring information."
   [work-info comparison]
   (let [summary-file (str (fs/file (:dir work-info)
-                                   (format "%s-scoring.txt"
+                                   (format "%s-scoring.tsv"
                                            (get-in comparison [:summary :sample]))))]
     (with-open [wtr (writer summary-file)]
-      (.write wtr (str (doric/table [:metric :value]
-                                    (prep-scoring-table (:metrics comparison)
-                                                        (get-in comparison [:summary :sv])))
-                       "\n")))
+      (doseq [x (prep-scoring-table (:metrics comparison)
+                                    (get-in comparison [:summary :sv]))]
+        (.write wtr (format "%s\t%s\n" (:metric x) (:value x)))))
     summary-file))
 
 (defn- html-summary-table
