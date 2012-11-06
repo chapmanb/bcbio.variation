@@ -80,8 +80,8 @@
                     (apply variants-in-region
                            (cons retriever ((juxt :chr :start :end) (first vcs))))))
           (get-ref-alt-alleles [vc]
-            (let [ref (.getBaseString (:ref-allele vc))]
-              (map (fn [x] [ref (.getBaseString x)]) (:alt-alleles vc))))
+            (let [ref (.getDisplayString (:ref-allele vc))]
+              (map (fn [x] [ref (.getDisplayString x)]) (:alt-alleles vc))))
           (sort-by-allele-count [xs]
             (let [count-groups (group-by val xs)
                   topcount-alleles (keys (get count-groups (apply max (keys count-groups))))]

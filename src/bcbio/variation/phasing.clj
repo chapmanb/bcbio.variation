@@ -102,7 +102,7 @@
   "Compare the haploid allele of a variant against the expected call."
   [vc e-vc i]
   (letfn [(is-ref-allele? [x]
-            (apply = (map #(.getBaseString (% x)) [:cmp :ref])))
+            (apply = (map #(.getDisplayString (% x)) [:cmp :ref])))
           (get-cmp-allele [i x]
             (when (< i (count (get-alleles x)))
               {:ref (:ref-allele x)
@@ -135,7 +135,7 @@
           (is-multi-indel? [x]
             (and (is-indel? x)
                  (not-every? #(contains? #{0 1} %)
-                             (map #(-> % .getBaseString count) (cons (:ref-allele x)
+                             (map #(-> % .getDisplayString count) (cons (:ref-allele x)
                                                                      (:alt-alleles x))))))
           (is-snp? [x]
             (= "SNP" (:type x)))]

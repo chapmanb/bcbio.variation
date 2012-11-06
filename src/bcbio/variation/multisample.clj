@@ -57,8 +57,8 @@
                  (atleast-one-match? g1 g2)))
           (num-matches [g1 g2]
             (count (intersection
-                    (set (map #(.getBaseString %) (:alleles g1)))
-                    (set (map #(.getBaseString %) (:alleles g2))))))]
+                    (set (map #(.getDisplayString %) (:alleles g1)))
+                    (set (map #(.getDisplayString %) (:alleles g2))))))]
     (cond
      (= (:alleles g1) (:alleles g2)) :concordant
      (phase-mismatch? g1 g2) :phasing-mismatch

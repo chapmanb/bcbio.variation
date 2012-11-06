@@ -28,7 +28,7 @@
      1))
 
 (defn- get-vc-alleles [vc]
-  (vec (map #(.getBaseString %) (cons (:ref-allele vc) (:alt-alleles vc)))))
+  (vec (map #(.getDisplayString %) (cons (:ref-allele vc) (:alt-alleles vc)))))
 
 (defn is-multi-indel?
   "Identify complex indels that can be split into multiple calls."
@@ -99,7 +99,7 @@
           (ref-and-alt-alleles [cur-alleles]
             (let [refa (first cur-alleles)
                   alts (map (fn [x]
-                              (if (= (.getBaseString x) (.getBaseString refa))
+                              (if (= (.getDisplayString x) (.getDisplayString refa))
                                 refa x))
                             (rest cur-alleles))]
               {:ref refa :alts alts}))
@@ -142,7 +142,7 @@
                                       [(string/replace x "-" "") i])
                                     orig-alleles))]
               (fn [old-allele]
-                (nth new-alleles (get old-map (.getBaseString old-allele))))))
+                (nth new-alleles (get old-map (.getDisplayString old-allele))))))
           (add-new-genotype [allele-mapper context genotype]
             (doto context
               (.replace (-> (GenotypeBuilder. genotype)
@@ -262,7 +262,7 @@
    and sequences match original."
   [vc new-vcs]
   (letfn [(get-vc-info [vc]
-            (let [alleles (map #(.getBaseString %) (.getAlleles vc))]
+            (let [alleles (map #(.getDisplayString %) (.getAlleles vc))]
               {:start (.getStart vc)
                :alleles alleles}))
           (get-check-ref [orig new]
@@ -318,7 +318,7 @@
                                   :ref-allele (first cur-alleles)
                                   :alleles (rest cur-alleles)})))
           (variant-allele-pos [input-alleles]
-            (let [str-alleles (map #(.getBaseString %) input-alleles)
+            (let [str-alleles (map #(.getDisplayString %) input-alleles)
                   first-var-i (first (filter #(has-variant-base? str-alleles %)
                                      (range (apply max (map count str-alleles)))))]
               [str-alleles first-var-i]))]
