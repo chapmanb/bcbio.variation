@@ -108,14 +108,23 @@
         (fix-non-version-names (get-seq-name-map ref-file))
         (add-alt-keys :underscore))))
 
+(defn- chrs-from-fasta-file
+  "Retrieve a list of all chromosome names from a reference FASTA file."
+  [ref-file]
+  (map #(.getSequenceName %) (-> ref-file get-seq-dict .getSequences)))
+
 (defmethod chr-name-remap :GRCh37
-  [map-key ref-chrs vcf-chrs ref-file]
-  (let [rename-map (prep-rename-map map-key ref-file)]
+  [map-key ref-file orig-ref-file]
+  (let [rename-map (prep-rename-map map-key ref-file)
+        ref-chrs (chrs-from-fasta-file ref-file)
+        vcf-chrs (when orig-ref-file (chrs-from-fasta-file orig-ref-file))]
     (letfn [(maybe-remap-name [x]
               {:post [(contains? ref-chrs %)]}
               (or (get rename-map x) x))]
-      (zipmap vcf-chrs
-              (map maybe-remap-name vcf-chrs)))))
+      (if vcf-chrs
+        (zipmap vcf-chrs
+                (map maybe-remap-name vcf-chrs))
+        rename-map))))
 
 ;; ## Resort and normalize variants
 
@@ -228,7 +237,7 @@
     - INFO lines with empty attributes (starting with ';'), found in
       Complete Genomics VCF files
     - Chromosome renaming."
-  [line ref-info ref-file config]
+  [line chr-map config]
   (letfn [(empty-attribute-info [info]
             (if (.startsWith info ";")
               (subs info 1)
@@ -238,9 +247,7 @@
           (fix-chrom [new xs]
             (assoc xs 0 new))]
     (let [parts (string/split line #"\t")
-          cur-chrom (first (vals
-                            (chr-name-remap (:prep-org config) ref-info [(first parts)]
-                                            ref-file)))]
+          cur-chrom (get chr-map (first parts) (first parts))]
       {:chrom cur-chrom
        :line (->> parts
                   (fix-chrom cur-chrom)
@@ -249,23 +256,23 @@
 
 (defn- vcf-by-chrom
   "Split input VCF into separate files by chromosome, returning a map of file names."
-  [vcf-file ref-file tmp-dir config]
+  [vcf-file ref-file orig-ref-file tmp-dir config]
   (letfn [(ref-chr-files [ref-file]
             (into (ordered-map)
-                  (map (fn [x] [(.getSequenceName x)
-                                (str (fs/file tmp-dir (str "prep" (.getSequenceName x) ".vcf")))])
-                       (-> ref-file get-seq-dict .getSequences))))
-          (write-by-chrom [ref-wrtrs line]
-            (let [line-info (fix-vcf-line line ref-wrtrs ref-file config)]
+                  (map (fn [x] [x (str (fs/file tmp-dir (str "prep" x ".vcf")))])
+                       (chrs-from-fasta-file ref-file))))
+          (write-by-chrom [ref-wrtrs chr-map line]
+            (let [line-info (fix-vcf-line line chr-map config)]
               (.write (get ref-wrtrs (:chrom line-info))
                       (str (:line line-info) "\n"))))]
     (let [ref-chrs (ref-chr-files ref-file)
-          ref-wrtrs (zipmap (keys ref-chrs) (map writer (vals ref-chrs)))]
+          ref-wrtrs (zipmap (keys ref-chrs) (map writer (vals ref-chrs)))
+          chr-map (chr-name-remap (:prep-org config) ref-file orig-ref-file)]
       (with-open [rdr (reader vcf-file)]
         (->> rdr
              line-seq
              (drop-while #(.startsWith % "#"))
-             (map (partial write-by-chrom ref-wrtrs))
+             (map (partial write-by-chrom ref-wrtrs chr-map))
              doall)
         (doseq [x (vals ref-wrtrs)]
           (.close x)))
@@ -299,10 +306,11 @@
 
 (defn- write-prepped-vcf
   "Write VCF file with correctly ordered and cleaned variants."
-  [vcf-file out-info ref-file sample config]
+  [vcf-file out-info ref-file orig-ref-file sample config]
   (itx/with-temp-dir [tmp-dir (fs/parent (:out out-info))]
     (let [reader-by-chr (into (ordered-map) (map (fn [[k v]] [k (reader v)])
-                                                 (vcf-by-chrom vcf-file ref-file tmp-dir config)))]
+                                                 (vcf-by-chrom vcf-file ref-file orig-ref-file
+                                                               tmp-dir config)))]
       (with-open [vcf-reader (AsciiLineReader. (input-stream vcf-file))]
         (let [vcf-decoder (get-vcf-line-parser vcf-reader)]
           (write-vcf-w-template vcf-file out-info
@@ -319,7 +327,7 @@
   Assumes by position sorting of variants in the input VCF. Chromosomes do
   not require a specific order, but positions internal to a chromosome do.
   Currently configured for human preparation."
-  [in-vcf-file ref-file sample & {:keys [out-dir out-fname config]
+  [in-vcf-file ref-file sample & {:keys [out-dir out-fname config orig-ref-file]
                                   :or {config {}}}]
   (let [config (merge-with #(or %1 %2) config
                            {:prep-org :GRCh37 :prep-allele-count 2
@@ -327,7 +335,9 @@
         base-name (if (nil? out-fname) (itx/remove-zip-ext in-vcf-file) out-fname)
         out-file (itx/add-file-part base-name "prep" out-dir)]
     (when (itx/needs-run? out-file)
-      (write-prepped-vcf in-vcf-file {:out out-file} ref-file sample config))
+      (write-prepped-vcf in-vcf-file {:out out-file}
+                         ref-file orig-ref-file
+                         sample config))
     out-file))
 
 (defn pick-best-ref

@@ -140,7 +140,8 @@
     (let [sample-file (if (and (multiple-samples? in-file) (:sample exp))
                         (run-sample-select in-file (get call :ref (:ref exp)) "")
                         in-file)
-          prep-file (if (true? (:prep call))
+          prep-file (if (and (true? (:prep call))
+                             (not= (:ref exp) (:ref call)))
                       (prep-vcf sample-file (:ref exp) (:sample exp) :out-dir out-dir
                                 :out-fname out-fname :orig-ref-file (:ref call)
                                 :config call)
