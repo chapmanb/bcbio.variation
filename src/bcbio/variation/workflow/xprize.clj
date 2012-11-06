@@ -31,8 +31,7 @@
                          :approach "grade"
                          :calls [{:name "reference"
                                   :file (:variants ref)
-                                  :remove-refcalls true
-                                  :normalize true}
+                                  :normalize false}
                                  {:name "contestant"
                                   :prep true
                                   :preclean true
