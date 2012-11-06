@@ -169,7 +169,6 @@
                   :phasing-error {:indel 1 :snp 1}}
                  [:discordant :phasing-error]) => (roughly 62.50))
 
-
 (let [data-dir (str (fs/file "." "test" "data"))
       ref (str (fs/file data-dir "GRCh37.fa"))
       vcf (str (fs/file data-dir "cg-normalize.vcf"))

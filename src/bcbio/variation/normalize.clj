@@ -116,11 +116,12 @@
 (defmethod chr-name-remap :GRCh37
   [map-key ref-file orig-ref-file]
   (let [rename-map (prep-rename-map map-key ref-file)
-        ref-chrs (chrs-from-fasta-file ref-file)
+        ref-chrs (set (chrs-from-fasta-file ref-file))
         vcf-chrs (when orig-ref-file (chrs-from-fasta-file orig-ref-file))]
     (letfn [(maybe-remap-name [x]
-              {:post [(contains? ref-chrs %)]}
-              (or (get rename-map x) x))]
+              (let [remap-x (get rename-map x)]
+                (if (and remap-x (contains? ref-chrs remap-x))
+                  remap-x x)))]
       (if vcf-chrs
         (zipmap vcf-chrs
                 (map maybe-remap-name vcf-chrs))
