@@ -142,7 +142,7 @@
     (cond
      (some is-multi-indel? vcs) :indel
      (some is-indel? vcs) :indel
-     (every? is-snp? vcs) :snp
+     (every? is-snp? (remove nil? vcs)) :snp
      :else :unknown)))
 
 (defn- nomatch-het-alt?
