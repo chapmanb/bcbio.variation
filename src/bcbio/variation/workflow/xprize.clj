@@ -2,6 +2,7 @@
   "Perform X Prize scoring workflow, handling comparison of contestant input with reference."
   (:import [java.util UUID])
   (:use [clojure.java.io]
+        [bcbio.variation.config :only [traceback-to-log load-config]]
         [bcbio.variation.compare :only [variant-comparison-from-config]]
         [bcbio.variation.combine :only [combine-variants]]
         [bcbio.variation.normalize :only [pick-best-ref]]
@@ -105,16 +106,27 @@
       (merge-files-into comparison :discordant :sv-contestant-discordant)
       (merge-files-into comparison :discordant-missing :sv-reference-discordant)))
 
-(defn run-scoring-analysis
-  "Run scoring analysis from provided work information."
-  [work-info rclient config]
-  (let [process-config (create-work-config work-info config)
-        comparison (first (variant-comparison-from-config process-config))]
+(defn run-scoring-analysis*
+  "Run X Prize scoring analysis from provided work information."
+  [work-info rclient config-file]
+  (let [comparison (first (variant-comparison-from-config config-file))]
     (prepare-final-files comparison)
     {:work-info work-info
      :comparison (-> comparison
                      (assoc-in [:c-files :summary] (write-scoring-summary work-info comparison))
                      (assoc-in [:c-files :summary-html] (write-html-scoring-summary work-info comparison)))}))
+
+(defn run-scoring-analysis
+  "Safe running of X Prize workflow with exception catching."
+  [work-info rclient input-config]
+  (prn input-config)
+  (let [config-file (create-work-config work-info input-config)]
+    (try
+      (run-scoring-analysis* work-info rclient config-file)
+      (catch Exception e
+        (do
+          (traceback-to-log e (load-config config-file))
+          (throw e))))))
 
 (defn prep-scoring
   "Prep directory for scoring analysis."
