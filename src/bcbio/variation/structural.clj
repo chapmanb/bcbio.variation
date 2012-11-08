@@ -270,7 +270,9 @@
                 (doseq [m-vc matches]
                   (reset! cmp-tree (remove-itree-vc @cmp-tree (:chr m-vc)
                                                     (:start m-vc) (:end m-vc))))
-                [(if (seq matches) :sv-concordant (:1 disc-kwds)) (:vc vc)]))
+                (if-let [match (first matches)]
+                  [:sv-concordant (:vc match)]
+                  [(:1 disc-kwds) (:vc vc)])))
             (remaining-cmp-svs [itree]
               (partition 2
                          (interleave (repeat (:2 disc-kwds)) (map :vc (get-itree-all itree)))))]

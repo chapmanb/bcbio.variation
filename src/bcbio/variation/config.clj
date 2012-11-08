@@ -4,6 +4,7 @@
         [clj-time.local :only [format-local-time local-now]])
   (:require [clojure.string :as string]
             [clojure.tools.logging :as log]
+            [clj-stacktrace.repl :as stacktrace]
             [clj-yaml.core :as yaml]
             [fs.core :as fs]
             [pallet.algo.fsm.fsm :as fsm-base]
@@ -28,6 +29,16 @@
         (let [[_ state-str info-str] (string/split (last (line-seq rdr)) #" :: ")]
           (-> (read-string info-str)
               (assoc :state (read-string (last (string/split state-str #" "))))))))))
+
+(defn traceback-to-log
+  "Write an error exception to the processing log file"
+  [e config]
+  (with-open [wtr (writer (get-log-file config) :append true)]
+    (binding [*out* wtr]
+      (stacktrace/pst e)
+      (println (str (format-local-time (local-now) :date-hour-minute-second)
+                    " :: State :error :: {:desc \"Exception during processing: "
+                    e "\"}")))))
 
 (defn prep-comparison-fsm
   "Define a finite state machine of transitions during comparison processes."

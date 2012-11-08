@@ -6,6 +6,7 @@
                  [org.clojure/data.csv "0.1.2" :exclusions [org.clojure/clojure]]
                  [org.clojure/core.match "0.2.0-alpha9"]
                  [org.clojure/tools.cli "0.2.2"]
+                 [clj-stacktrace "0.2.5"]
                  ;; GATK requirements
                  [org.clojars.chapmanb/gatk-lite "2.2.2"]
                  [org.clojars.chapmanb/picard "1.73"]
@@ -63,7 +64,7 @@
             [lein-ring "0.7.5"]]
   :profiles {:dev {:dependencies
                    [[midje "1.4.0" :exclusions [org.clojure/clojure ordered]]]}
-             :cljs {:dependencies [[org.reflections/reflections "0.9.5-RC2"
+             :cljs {:dependencies [[org.reflections/reflections "0.9.8"
                                     :exclusions [com.google.collections/google-collections]]]}}
   :repositories {"biojava" {:url "http://www.biojava.org/download/maven/"
                             :snapshots false}}
