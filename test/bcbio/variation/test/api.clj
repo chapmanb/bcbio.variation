@@ -55,7 +55,11 @@
 
 (facts "Index and retrieve metrics using Gemini."
   (set-config-from-file! web-yaml)
-  (when-let [idx (gemini/index-variant-file vcf1 ref)]
-    idx => gemini-index
-    (-> (gemini/get-raw-metrics vcf1 ref) first keys) => #(or (nil? %)
-                                                              (contains? (set %) :id))))
+  (let [raw-out {"impact_severity" "LOW", "is_coding" #{"noncoding"}, "in_public" #{"dbSNP"},
+                 "zygosity" #{"hom"}, "type" #{"transition" "snp"}, "polyphen_score" 0.0,
+                 "sift_score" 1.0, :id ["MT" 73 "G"]}
+        raw-ids [:id "polyphen_score" "sift_score"]]
+    (when-let [idx (gemini/index-variant-file vcf1 ref)]
+      (-> (gemini/get-raw-metrics vcf1 ref :noviz? true) first) => (contains raw-out)
+      idx => gemini-index
+      (-> (gemini/get-raw-metrics vcf1 ref) first keys) => (contains raw-ids :in-any-order))))

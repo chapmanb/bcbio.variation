@@ -63,33 +63,73 @@
 (def ^{:doc "Gemini metrics to expose for query and visualization."
        :private true}
   gemini-metrics
-  (ordered-map "aaf_1kg_all" {:range [0.0 1.0]
-                              :desc "1000 genomes allele frequency, all populations"}
-               "gms_illumina" {:range [0.0 100.0]
-                               :y-scale {:type :log}
-                               :desc "Genome Mappability Score with an Illumina error model"}
-               "sift_score" {:range [0.0 0.1]
-                             :y-scale {:type :log}
-                             :desc (str "SIFT amino acid effect predictions. "
-                                        "Smaller scores are more likely to be deleterious.")}
-               "polyphen_score" {:range [0.5 1.0]
-                                 :y-scale {:type :log}
-                                 :desc (str "Polyphen amino acid effect predictions. "
-                                            "Larger scores are more likely to be deleterious.")}
-               "rmsk" {:viz false}))
+  (ordered-map
+   "aaf_1kg_all" {:range [0.0 1.0]
+                  :desc "1000 genomes allele frequency, all populations"}
+   "gms_illumina" {:range [0.0 100.0]
+                   :y-scale {:type :log}
+                   :desc "Genome Mappability Score with an Illumina error model"}
+   "sift_score" {:range [0.0 0.1]
+                 :y-scale {:type :log}
+                 :desc (str "SIFT amino acid effect predictions. "
+                            "Smaller scores are more likely to be deleterious.")}
+   "polyphen_score" {:range [0.5 1.0]
+                     :y-scale {:type :log}
+                     :desc (str "Polyphen amino acid effect predictions. "
+                                "Larger scores are more likely to be deleterious.")}
+   "rmsk" {:viz false
+           :x-scale {:type :category}
+           :desc "Repeat status: is the variant in a known repeat region"}
+   "type" {:viz false
+           :x-scale {:type :category}
+           :rows {:type identity :sub_type identity}
+           :desc "Type of variant change"}
+   "zygosity" {:viz false
+               :x-scale {:type :category}
+               :rows {:num_hom_ref "hom_ref"
+                      :num_het "het"
+                      :num_hom_alt "hom"}
+               :desc "Allele types present in individuals. Populations can have multiple types."}
+   "encode_consensus_gm12878" {:viz false
+                               :x-scale {:type :category}
+                               :desc "Chromatin status: consensus from ENCODE"}
+   "in_public" {:viz false
+                :x-scale {:type :category}
+                :rows {:in_dbsnp "dbSNP"
+                       :in_hm3 "HapMap3"
+                       :in_esp "ESP"
+                       :in_1kg "1000genomes"}
+                :desc "Presence in large variant projects: dbSNP, HapMap, 1000 genomes, ESP"}
+   "is_coding" {:viz false
+                :x-scale {:type :category}
+                :desc "Type of coding transcript influenced by variant"}
+   "impact_severity" {:viz false
+                      :x-scale {:type :category}
+                      :desc "Severity of variant impact on coding region"}))
+
+(defn- attr->colnames
+  "Convert a gemini attribute into potentially multiple gemini column names."
+  [attr]
+  (->> (if-let [rows (get-in gemini-metrics [(name attr) :rows])]
+         (keys rows)
+         [attr])
+       (map name)))
 
 (defn available-metrics
   "Retrieve metrics available from Gemini."
-  [in-file & {:keys [include-noviz?]}]
+  [in-file & {:keys [noviz?]}]
   (let [all-metrics (->> gemini-metrics
                          (map (fn [[k v]] (assoc v :id k)))
-                         (filter #(or include-noviz? (get % :viz true))))]
+                         (filter #(or noviz? (get % :viz true))))]
     (if-let [index-db (index-variant-file in-file nil)]
       (sql/with-connection (get-sqlite-db index-db)
         (letfn [(db-has-metric? [x]
                   (sql/with-query-results rows
                     [(str "SELECT chrom, start FROM variants WHERE "
-                          (:id x) " IS NOT NULL LIMIT 1")]
+                          (->> (attr->colnames (:id x))
+                               (map #(str % " IS NOT NULL"))
+                               (string/join " OR "))
+                           " LIMIT 1")]
                     (seq rows)))]
           (doall (filter db-has-metric? all-metrics))))
       all-metrics)))
@@ -97,36 +137,99 @@
 
 (defmulti finalize-gemini-attr
   "Provide additional post-processing of gemini supplied attributes."
-  (fn [attr val] (keyword (string/lower-case attr))))
+  (fn [attr row] (keyword (string/lower-case attr))))
 
 (defmethod finalize-gemini-attr :sift_score
-  [_ val]
-  (if (nil? val) 1.0 val))
+  [_ row]
+  (let [val (first (vals row))]
+    (if (nil? val) 1.0 val)))
 
 (defmethod finalize-gemini-attr :polyphen_score
-  [_ val]
-  (if (nil? val) 0.0 val))
+  [_ row]
+  (let [val (first (vals row))]
+    (if (nil? val) 0.0 val)))
 
 (defmethod finalize-gemini-attr :gms_illumina
-  [_ val]
-  (if (nil? val) 100.0 val))
+  [_ row]
+  (let [val (first (vals row))]
+    (if (nil? val) 100.0 val)))
 
 (defmethod finalize-gemini-attr :gms_solid
-  [_ val]
-  (if (nil? val) 100.0 val))
+  [_ row]
+  (let [val (first (vals row))]
+    (if (nil? val) 100.0 val)))
 
 (defmethod finalize-gemini-attr :gms_iontorrent
-  [_ val]
-  (if (nil? val) 100.0 val))
+  [_ row]
+  (let [val (first (vals row))]
+    (if (nil? val) 100.0 val)))
+
+(defmethod finalize-gemini-attr :rmsk
+  [_ row]
+  (let [val (first (vals row))]
+    (if (nil? val) #{"standard"} #{"repeat"})))
+
+(defmethod finalize-gemini-attr :type
+  [_ row]
+  (set (map #(case %
+               "ts" "transition"
+               "tv" "transversion"
+               "ins" "insertion"
+               "del" "deletion"
+               %)
+            (vals row))))
+
+(defn- row->names
+  "Convert a row into pre-configured names based on gemini-metrics :rows"
+  [attr row]
+  (let [row-names (get-in gemini-metrics [attr :rows])]
+    (reduce (fn [coll [k v]]
+              (if (and (not (nil? v))
+                       (pos? v))
+                (conj coll (get row-names (keyword k)))
+                coll))
+            #{} row)))
+
+(defmethod finalize-gemini-attr :zygosity
+  [attr row]
+  (row->names attr row))
+
+(defmethod finalize-gemini-attr :encode_consensus_gm12878
+  ^{:doc "ENCODE chromatin segment predictions, from Table 3 of doi:10.1038/nature11247"}
+  [_ row]
+  (let [val (first (vals row))]
+    (set
+     (case val
+       "CTCF" "CTCF-enriched"
+       "E" "Enhancer"
+       "PF" "Promoter flanking"
+       "R" "Repressed"
+       "TSS" "Promoter with TSS"
+       "T" "Transcribed"
+       "WE" "Weak enchancer"
+       "Unknown"))))
+
+(defmethod finalize-gemini-attr :in_public
+  [attr row]
+  (row->names attr row))
+
+(defmethod finalize-gemini-attr :is_coding
+  [_ row]
+  (let [val (first (vals row))]
+    (if (and (not (nil? val)) (pos? val)) #{"coding"} #{"noncoding"})))
 
 (defmethod finalize-gemini-attr :default
-  [_ val]
-  val)
+  [_ row]
+  (let [val (first (vals row))]
+    val))
 
 (defn- gemini-metric-from-row
   [row attr]
-  (finalize-gemini-attr attr
-                        (get row (keyword (string/lower-case attr)))))
+  (let [colnames (attr->colnames attr)]
+    (finalize-gemini-attr attr
+                          (zipmap colnames
+                                  (map #(get row (keyword (string/lower-case %))) colnames)))))
+
 
 (defn vc-attr-retriever
   "Retrieve metrics by name from a gemini index for provided VariantContexts."
@@ -136,7 +239,7 @@
       (fn [vc attr]
         (sql/with-connection pool
           (sql/with-query-results rows
-            [(str "SELECT " (name attr)
+            [(str "SELECT " (string/join "," (attr->colnames attr))
                   " FROM variants WHERE chrom = ? AND start = ? and ref = ?")
              (str "chr" (:chr vc)) (dec (:start vc)) (.getBaseString (:ref-allele vc))]
             (gemini-metric-from-row (first rows) attr)))))
@@ -144,15 +247,18 @@
 
 (defn get-raw-metrics
   "Retrieve table of Gemini metrics keyed on variant names."
-  [in-file ref-file & {:keys [metrics]}]
+  [in-file ref-file & {:keys [metrics noviz?]}]
   (when-let [index-db (index-variant-file in-file ref-file)]
     (let [plot-metrics (filter (partial contains? gemini-metrics)
-                               (or metrics (map :id (available-metrics in-file))))]
+                               (or metrics (map :id (available-metrics in-file
+                                                                       :noviz? noviz?))))]
       (when (seq plot-metrics)
         (sql/with-connection (get-sqlite-db index-db)
           (sql/with-query-results rows
-            [(str "SELECT chrom, start, ref, " (string/join ", " plot-metrics)
-                  " FROM variants WHERE filter is NULL ORDER BY chrom, start")]
+            [(str "SELECT chrom, start, ref, "
+                  (string/join ", " (mapcat attr->colnames plot-metrics))
+                  " FROM variants WHERE (filter is NULL or filter = 'PASS')"
+                  " ORDER BY chrom, start")]
             (doall (map (fn [orig]
                           (reduce (fn [coll x]
                                     (assoc coll x (gemini-metric-from-row orig x)))
