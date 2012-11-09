@@ -42,7 +42,7 @@
     {:variant-type (case (:type vc)
                      "SNP" :snp
                      :complex)
-     :repetitive (not (nil? (get attrs "rmsk")))}))
+     :repetitive (contains? (get attrs "rmsk") "repeat")}))
 
 ;; ## Linear classifier
 

@@ -77,34 +77,27 @@
                      :y-scale {:type :log}
                      :desc (str "Polyphen amino acid effect predictions. "
                                 "Larger scores are more likely to be deleterious.")}
-   "rmsk" {:viz false
-           :x-scale {:type :category}
+   "rmsk" {:x-scale {:type :category}
            :desc "Repeat status: is the variant in a known repeat region"}
-   "type" {:viz false
-           :x-scale {:type :category}
-           :rows {:type identity :sub_type identity}
+   "type" {:x-scale {:type :category}
+           :rows {:type "" :sub_type ""}
            :desc "Type of variant change"}
-   "zygosity" {:viz false
-               :x-scale {:type :category}
+   "zygosity" {:x-scale {:type :category}
                :rows {:num_hom_ref "hom_ref"
                       :num_het "het"
                       :num_hom_alt "hom"}
                :desc "Allele types present in individuals. Populations can have multiple types."}
-   "encode_consensus_gm12878" {:viz false
-                               :x-scale {:type :category}
+   "encode_consensus_gm12878" {:x-scale {:type :category}
                                :desc "Chromatin status: consensus from ENCODE"}
-   "in_public" {:viz false
-                :x-scale {:type :category}
+   "in_public" {:x-scale {:type :category}
                 :rows {:in_dbsnp "dbSNP"
                        :in_hm3 "HapMap3"
                        :in_esp "ESP"
                        :in_1kg "1000genomes"}
                 :desc "Presence in large variant projects: dbSNP, HapMap, 1000 genomes, ESP"}
-   "is_coding" {:viz false
-                :x-scale {:type :category}
+   "is_coding" {:x-scale {:type :category}
                 :desc "Type of coding transcript influenced by variant"}
-   "impact_severity" {:viz false
-                      :x-scale {:type :category}
+   "impact_severity" {:x-scale {:type :category}
                       :desc "Severity of variant impact on coding region"}))
 
 (defn- attr->colnames
@@ -198,16 +191,15 @@
   ^{:doc "ENCODE chromatin segment predictions, from Table 3 of doi:10.1038/nature11247"}
   [_ row]
   (let [val (first (vals row))]
-    (set
-     (case val
-       "CTCF" "CTCF-enriched"
-       "E" "Enhancer"
-       "PF" "Promoter flanking"
-       "R" "Repressed"
-       "TSS" "Promoter with TSS"
-       "T" "Transcribed"
-       "WE" "Weak enchancer"
-       "Unknown"))))
+    #{(case val
+        "CTCF" "CTCF-enriched"
+        "E" "Enhancer"
+        "PF" "Promoter flanking"
+        "R" "Repressed"
+        "TSS" "Promoter with TSS"
+        "T" "Transcribed"
+        "WE" "Weak enchancer"
+        "Unknown")}))
 
 (defmethod finalize-gemini-attr :in_public
   [attr row]

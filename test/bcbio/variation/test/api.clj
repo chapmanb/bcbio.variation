@@ -4,6 +4,7 @@
         [bcbio.variation.api.metrics]
         [bcbio.variation.api.file]
         [bcbio.variation.api.shared :only [set-config-from-file!]]
+        [bcbio.variation.index.metrics :only [get-raw-metrics-linear]]
         [bcbio.variation.index.subsample])
   (:require [fs.core :as fs]
             [bcbio.run.itx :as itx]
@@ -36,7 +37,7 @@
     (apply + (-> out :metrics first :vals)) => (roughly 1.0)))
 
 (facts "Subsample full metrics files using clustering."
-  (count (subsample-by-cluster (get-raw-metrics vcf1)
+  (count (subsample-by-cluster (get-raw-metrics-linear vcf1 ref)
                                sub-params)) => (get-in sub-params [:subsample :count])
   (im/index-variant-file vcf1 ref :re-index? true :subsample-params sub-params) => out-index
   (count (im/get-raw-metrics vcf1 ref

@@ -116,10 +116,18 @@
     (sql/update-values :metrics ["start > -1"] {:issubsample 1})))
 
 (declare get-raw-metrics)
+(defn get-raw-metrics-linear
+  "Retrieve numerical raw metrics for filtering"
+  [in-file ref-file]
+  (let [metrics (->> (available-metrics in-file)
+                     (filter #(= :linear (get-in % [:x-scale :type] :linear)))
+                     (map :id))]
+    (get-raw-metrics in-file ref-file :metrics metrics)))
+
 (defn- subsample-metrics
   "Identify a subsample of records to use in visualization"
   [index-file in-file ref-file params]
-  (let [sub-ids (subsample-by-cluster (get-raw-metrics in-file ref-file) params)]
+  (let [sub-ids (subsample-by-cluster (get-raw-metrics-linear in-file ref-file) params)]
     (sql/with-connection (get-sqlite-db index-file)
       (sql/transaction
        (doseq [xid sub-ids]
