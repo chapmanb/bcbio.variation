@@ -83,18 +83,18 @@
            :rows {:type "" :sub_type ""}
            :desc "Type of variant change"}
    "zygosity" {:x-scale {:type :category}
-               :rows {:num_hom_ref "hom_ref"
-                      :num_het "het"
-                      :num_hom_alt "hom"}
-               :desc "Allele types present in individuals. Populations can have multiple types."}
+               :rows {:num_hom_ref "homozygous ref"
+                      :num_het "heterozygous"
+                      :num_hom_alt "homozygous"}
+               :desc "Allele types present in individuals"}
    "encode_consensus_gm12878" {:x-scale {:type :category}
-                               :desc "Chromatin status: consensus from ENCODE"}
+                               :desc "Chromatin status: consensus from ENCODE for NA12878"}
    "in_public" {:x-scale {:type :category}
                 :rows {:in_dbsnp "dbSNP"
                        :in_hm3 "HapMap3"
                        :in_esp "ESP"
                        :in_1kg "1000genomes"}
-                :desc "Presence in large variant projects: dbSNP, HapMap, 1000 genomes, ESP"}
+                :desc "Presence in large variant projects like dbSNP and 1000 genomes"}
    "is_coding" {:x-scale {:type :category}
                 :desc "Type of coding transcript influenced by variant"}
    "impact_severity" {:x-scale {:type :category}
@@ -160,7 +160,7 @@
 (defmethod finalize-gemini-attr :rmsk
   [_ row]
   (let [val (first (vals row))]
-    #{(if (nil? val) "standard" "repeat")}))
+    #{(if (nil? val) "non-repeat" "repeat")}))
 
 (defmethod finalize-gemini-attr :type
   [_ row]
@@ -203,7 +203,10 @@
 
 (defmethod finalize-gemini-attr :in_public
   [attr row]
-  (row->names attr row))
+  (let [publics (row->names attr row)]
+    (if (seq publics)
+      publics
+      #{"unique"})))
 
 (defmethod finalize-gemini-attr :is_coding
   [_ row]
