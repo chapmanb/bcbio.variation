@@ -160,7 +160,7 @@
 (defmethod finalize-gemini-attr :rmsk
   [_ row]
   (let [val (first (vals row))]
-    (if (nil? val) #{"standard"} #{"repeat"})))
+    #{(if (nil? val) "standard" "repeat")}))
 
 (defmethod finalize-gemini-attr :type
   [_ row]
@@ -209,6 +209,11 @@
   [_ row]
   (let [val (first (vals row))]
     (if (and (not (nil? val)) (pos? val)) #{"coding"} #{"noncoding"})))
+
+(defmethod finalize-gemini-attr :impact_severity
+  [_ row]
+  (let [val (first (vals row))]
+    #{val}))
 
 (defmethod finalize-gemini-attr :default
   [_ row]

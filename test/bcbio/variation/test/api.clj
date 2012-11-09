@@ -29,8 +29,11 @@
 (facts "Retrieve available metrics from a variant file"
   (set-config-from-file! web-yaml)
   (map :id (available-metrics vcf1)) => (has-prefix ["QUAL" "DP"])
-  (-> (get-raw-metrics vcf1) first keys) => (contains ["QUAL" "DP" :id] :in-any-order :gaps-ok)
-  (let [out (plot-ready-metrics vcf1)]
+  (let [out (plot-ready-metrics vcf1)
+        {:keys [raw metrics]} (get-raw-metrics vcf1)]
+    (-> raw first keys) => (contains ["QUAL" "DP" :id] :in-any-order :gaps-ok)
+    (->> metrics (filter #(= "zygosity" (:id %))) first :choices) => #(or (nil? %)
+                                                                          (= % #{"het" "hom"}))
     (:filename out) => vcf1
     (-> out :metrics first :id) => "QUAL"
     (-> out :metrics first :x-scale :domain) => (just [0.0 10000.0])
@@ -56,7 +59,7 @@
 
 (facts "Index and retrieve metrics using Gemini."
   (set-config-from-file! web-yaml)
-  (let [raw-out {"impact_severity" "LOW", "is_coding" #{"noncoding"}, "in_public" #{"dbSNP"},
+  (let [raw-out {"impact_severity" #{"LOW"}, "is_coding" #{"noncoding"}, "in_public" #{"dbSNP"},
                  "zygosity" #{"hom"}, "type" #{"transition" "snp"}, "polyphen_score" 0.0,
                  "sift_score" 1.0, :id ["MT" 73 "G"]}
         raw-ids [:id "polyphen_score" "sift_score"]]

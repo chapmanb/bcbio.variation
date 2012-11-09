@@ -3,7 +3,8 @@
   (:import [org.jfree.data.statistics HistogramDataset HistogramType])
   (:use [bcbio.variation.api.shared :only [web-config]]
         [bcbio.variation.variantcontext :only [get-vcf-iterator parse-vcf]])
-  (:require [bcbio.variation.index.metrics :as im]
+  (:require [clojure.set :as set]
+            [bcbio.variation.index.metrics :as im]
             [bcbio.variation.index.gemini :as gemini]
             [bcbio.variation.remote.core :as remote]))
 
@@ -91,9 +92,40 @@
      :metrics (map #(merge % (prepare-plot-metrics (:id %) (get raw-metrics (:id %))))
                    (remove #(nil? (get raw-metrics (:id %))) plot-metrics))}))
 
+(defn- collect-category-choices
+  "Retrieve available choices for categorical variables from raw data."
+  [raw to-collect]
+  (reduce (fn [coll [data cur-id]]
+            (if-let [v (get data cur-id)]
+              (assoc coll cur-id (set/union v (get coll cur-id)))
+              coll))
+          (into {} (for [y to-collect] [y #{}]))
+          (for [x raw, y to-collect]
+            [x y])))
+
+(defn- finalize-metrics
+  "Finalize metrics information providing high level choices for categorical variables."
+  [metrics raw]
+  (let [choices (->> metrics
+                     (filter #(= :category (get-in % [:x-scale :type])))
+                     (map :id)
+                     (collect-category-choices raw))]
+    (letfn [(add-choices [m]
+              (if-let [c (get choices (:id m))]
+                (assoc m :choices c)
+                m))
+            (finalize-metric [m]
+              (-> m
+                  add-choices
+                  (dissoc :rows)))]
+      (map finalize-metric metrics))))
+
 (defn get-raw-metrics
   "Retrieve raw metrics values from input VCF."
   [variant-id & {:keys [metrics rclient use-subsample?]}]
   (let [vcf-file (remote/get-file variant-id rclient)
-        ref-file (-> @web-config :ref first :genome)]
-    (combined-raw-metrics vcf-file ref-file metrics use-subsample?)))
+        ref-file (-> @web-config :ref first :genome)
+        metrics (or metrics (available-metrics vcf-file))
+        raw (combined-raw-metrics vcf-file ref-file metrics use-subsample?)]
+    {:raw raw
+     :metrics (finalize-metrics metrics raw)}))
