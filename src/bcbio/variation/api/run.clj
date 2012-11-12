@@ -1,6 +1,6 @@
 (ns bcbio.variation.api.run
   "High level API to run analyses."
-  (:use [bcbio.variation.filter :only [variant-filter jexl-filters-from-map]]
+  (:use [bcbio.variation.filter :only [category-variant-filter]]
         [bcbio.variation.api.shared :only [web-config]])
   (:require [clojure.string :as string]
             [fs.core :as fs]
@@ -18,20 +18,23 @@
   [atype params rclient]
   (let [ref-file (-> @web-config :ref first :genome)
         in-file (remote/get-file (:filename params) rclient)
-        filter-file (variant-filter in-file
-                                    (jexl-filters-from-map (:metrics params))
-                                    ref-file)
+        filter-file (category-variant-filter in-file (:metrics params) ref-file)
         local-out-dir (fs/file (fs/parent in-file) (name atype))]
     (when-not (fs/exists? local-out-dir)
       (fs/mkdirs local-out-dir))
     (doseq [ext ["" ".idx"]]
       (fs/rename (str filter-file ext) (str (fs/file local-out-dir (fs/base-name filter-file)) ext)))
+    (doseq [ext ["-gemini.db" "-metrics.db" "-vep.vcf"]]
+      (let [idx-name (str (fs/file local-out-dir (fs/base-name filter-file true)) ext)]
+        (when (fs/exists? idx-name)
+          (fs/delete idx-name))))
     (let [remote-dir (remote/put-file rclient
                                       (str (fs/file local-out-dir (fs/base-name filter-file)))
                                       {:input-file (:filename params)
                                        :expose-fn (:expose-fn params)
                                        :tag (name atype)
                                        :file-type :vcf})]
+      (file-api/pre-fetch-remotes rclient)
       (remote/list-files rclient remote-dir :vcf))))
 
 (defmethod do-analysis :filter
@@ -39,8 +42,7 @@
           params:
             - filename: The file to process
             - metrics: A map of filters, with metrics names as keys
-              and [min max] as values. Long term we could dispatch on
-              different value types for categorical data."}
+              and either ranges ([min max]) or categories as values."}
   [atype params rclient]
   {:runner (future (run-filter atype params rclient))})
 

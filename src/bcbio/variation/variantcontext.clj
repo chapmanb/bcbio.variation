@@ -5,7 +5,8 @@
            [org.broad.tribble AbstractFeatureReader]
            [org.broad.tribble.readers AsciiLineReader]
            [org.broadinstitute.sting.utils.codecs.vcf
-            VCFCodec VCFUtils VCFHeader]
+            VCFCodec VCFUtils VCFHeader VCFFilterHeaderLine]
+           [org.broadinstitute.sting.utils.variantcontext VariantContextBuilder]
            [org.broadinstitute.sting.utils.variantcontext.writer VariantContextWriterFactory
             Options]
            [org.broadinstitute.sting.gatk.refdata.tracks RMDTrackBuilder]
@@ -13,8 +14,9 @@
            [org.apache.log4j Logger]
            [java.util EnumSet])
   (:use [clojure.java.io]
-        [clojure.set :only [intersection]]
+        [clojure.set :only [intersection union]]
         [lazymap.core :only [lazy-hash-map]]
+        [ordered.set :only [ordered-set]]
         [bcbio.align.ref :only [get-seq-dict]])
   (:require [clojure.string :as string]
             [bcbio.run.itx :as itx]))
@@ -181,15 +183,31 @@
         (doseq [x (vals writer-map)]
           (.close x))))))
 
+(defn- add-filter-header
+  [fname fdesc]
+  (fn [_ header]
+    (let [new #{(VCFFilterHeaderLine. fname fdesc)}]
+      (VCFHeader. (apply ordered-set (concat (.getMetaDataInInputOrder header) new))
+                  (.getGenotypeSamples header)))))
+
+(defn- maybe-add-filter
+  [fname passes? vc]
+  (if (passes? vc)
+    (:vc vc)
+    (-> (VariantContextBuilder. (:vc vc))
+        (.filters (union #{fname} (:filters vc)))
+        .make)))
+
 (defn write-vcf-from-filter
   "Write VCF file from input using a filter function."
-  [vcf ref out-part passes?]
+  [vcf ref out-part fname fdesc passes?]
   (let [out-file (itx/add-file-part vcf out-part)]
     (when (itx/needs-run? out-file)
       (with-open [vcf-iter (get-vcf-iterator vcf ref)]
         (write-vcf-w-template vcf {:out out-file}
-                              (map :vc (filter passes? (parse-vcf vcf-iter)))
-                              ref)))
+                              (map (partial maybe-add-filter fname passes?) (parse-vcf vcf-iter))
+                              ref
+                              :header-update-fn (add-filter-header fname fdesc))))
     out-file))
 
 (defn -main [vcf ref approach]

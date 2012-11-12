@@ -3,14 +3,15 @@
   (:import [org.broadinstitute.sting.utils.variantcontext
             VariantContextBuilder])
   (:use [clojure.string :only [split]]
-        [bcbio.variation.filter.attr :only [get-vc-attr]]
+        [bcbio.variation.filter.attr :only [get-vc-attr prep-vc-attr-retriever]]
         [bcbio.variation.filter.classify :only [pipeline-classify-filter]]
         [bcbio.variation.filter.specific :only [get-x-specific-variants]]
         [bcbio.variation.filter.trusted :only [get-support-vcfs get-trusted-variants]]
         [bcbio.variation.metrics :only [to-float]]
         [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template
                                                get-vcf-iterator write-vcf-from-filter]])
-  (:require [clojure.string :as string]
+  (:require [clojure.set :as set]
+            [clojure.string :as string]
             [bcbio.run.broad :as broad]
             [bcbio.run.itx :as itx]))
 
@@ -20,20 +21,6 @@
             ["--filterName" (str (first (split x #"\s+")) "Filter")
              "--filterExpression" x])]
     (flatten (map jexl-args jexl-filters))))
-
-(defn jexl-filters-from-map
-  "Convert a map of metrics names and ranges into JEXL filter expressions"
-  [filter-map]
-  (letfn [(infinity-flag? [x]
-            (and (string? x)
-                 (.contains x "Infinity")))
-          (to-jexl [[metric [orig-min orig-max]]]
-            (let [min (if (infinity-flag? orig-min) (- Integer/MAX_VALUE) orig-min)
-                  max (if (infinity-flag? orig-max) Integer/MAX_VALUE orig-max)]
-              (format "%s < %.1f || %s > %.1f"
-                      (name metric) (to-float min)
-                      (name metric) (to-float max))))]
-    (map to-jexl filter-map)))
 
 (defn variant-filter
   "Perform hard variant filtering with supplied JEXL expression criteria."
@@ -49,6 +36,38 @@
     (broad/run-gatk "VariantFiltration" args file-info {:out [:out-vcf]})
     (:out-vcf file-info)))
 
+(defn category-variant-filter
+  "Perform hard variant filtration handling both range and category metrics"
+  [in-vcf metrics ref]
+  (let [attr-getter (prep-vc-attr-retriever in-vcf ref)]
+    (letfn [(infinity-flag? [x]
+              (and (string? x)
+                   (.contains x "Infinity")))
+            (in-range? [[orig-min orig-max] x]
+              (let [min (if (infinity-flag? orig-min) (- Integer/MAX_VALUE) orig-min)
+                    max (if (infinity-flag? orig-max) Integer/MAX_VALUE orig-max)]
+                (and (>= x min) (<= x max))))
+            (attr-passes? [got want]
+              (cond
+               (set? want) (not (empty? (set/intersection got want))) 
+               (or (vector? want) (list? want)) (in-range? want got)))
+            (passes-metrics? [vc]
+              (let [attrs (attr-getter (keys metrics) vc)]
+                (every? (fn [[k v]]
+                          (attr-passes? (get attrs k) v)) metrics)))
+            (range-to-str [k [min max]]
+              (cond
+               (infinity-flag? min) (format "%s > %.1f" k max)
+               (infinity-flag? max) (format "%s < %.1f" k min)
+               :else (format "%s not [%.1f %.1f]" k min max)))
+            (metric-to-str [[k v]]
+              (cond
+               (set? v) (format "%s not [%s]" k (string/join "," v))
+               (or (vector? v) (list? v)) (range-to-str k v)))]
+      (write-vcf-from-filter in-vcf ref "filter"
+                             "ManualRanges" (string/join "; " (map metric-to-str metrics))
+                             passes-metrics?))))
+
 (defn variant-format-filter
   "Perform hard filtering base on JEXL expressions on metrics in the Genotype FORMAT field."
   [in-vcf exps ref]
@@ -63,7 +82,9 @@
             (let [int-filters (map format-filter exps)]
               (fn [vc]
                 (every? true? (map #(% vc) int-filters)))))]
-    (write-vcf-from-filter in-vcf ref "ffilter" (format-filter-multi exps))))
+    (write-vcf-from-filter in-vcf ref "ffilter"
+                           "FormatRanges" (string/join "; " exps)
+                           (format-filter-multi exps))))
 
 (defn- variant-recalibration
   "Perform the variant recalibration step with input training VCF files.
