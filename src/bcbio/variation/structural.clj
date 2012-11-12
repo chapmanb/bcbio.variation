@@ -184,6 +184,7 @@
          :DUP (length-from-info vc)
          :CNV (length-from-info vc)
          :BND 0
+         :UNASSEMBLED_EVENT 0
          (throw (Exception. (str "Structural variant type not handled: "
                                  (:sv-type vc))))))
 

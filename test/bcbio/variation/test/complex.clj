@@ -64,7 +64,7 @@
       (concat [:INS] (repeat 6 :BND)
               [nil :DEL :INS :DEL :DUP :INV :INS])
       (doall (map #(get-sv-type % params) (parse-vcf vcf-iter2))) =>
-      [:DUP :BND :BND :INS :CNV :DEL :INV])))
+      [:DUP :UNASSEMBLED_EVENT :BND :BND :INS :CNV :DEL :INV])))
 
 (facts "Compare structural variation calls from two inputs."
   (compare-sv {:name "sv1000g" :file sv-vcf1}
