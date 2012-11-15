@@ -238,6 +238,24 @@
 
 ;; ## Top-level
 
+(defn- get-summary-csv-vals
+  "Retrieve values for CSV output checking for lots of special cases.
+    - Display all values for :total lines
+    - For :snp and :indel lines, only show values with dictionaries that
+      have this detailed info.
+    - Always display initial sample and call values (i <= 3)"
+  [header cmp cur-type]
+  (for [v (map-indexed (fn [i k]
+                         (let [v (get cmp k)]
+                           (cond
+                            (= :type k) (name cur-type)
+                            (and (not= :total cur-type)
+                                 (> i 3)
+                                 (not (map? v))) nil
+                            :else v)))
+                       header)]
+    (if (map? v) (get v cur-type) v)))
+
 (defn variant-comparison-from-config
   "Perform comparison between variant calls using inputs from YAML config."
   [config-file]
@@ -267,15 +285,15 @@
           (write-summary-table (vcf-stats f (get-in x [:exp :ref])) :wrtr w))))
     (with-open [w (get-summary-writer config config-file "summary.csv")]
       (doseq [[i [x cmp-orig]] (map-indexed vector (map (juxt identity :summary) comparisons))]
-        (let [header (concat (take 1 (keys cmp-orig)) [:call1 :call2] (nnext (keys cmp-orig)))
+        (let [header (concat (take 1 (keys cmp-orig)) [:call1 :call2 :type] (nnext (keys cmp-orig)))
               cmp (-> cmp-orig
                       (dissoc :ftypes)
                       (assoc :call1 (-> x :c1 :name))
                       (assoc :call2 (-> x :c2 :name)))]
           (when (= i 0)
             (.write w (format "%s\n" (string/join "," (map name header)))))
-          (.write w (format "%s\n" (string/join "," (for [v (map #(get cmp %) header)]
-                                                      (if (map? v) (:total v) v))))))))
+          (doseq [cur-type [:total :snp :indel]]
+            (.write w (format "%s\n" (string/join "," (get-summary-csv-vals header cmp cur-type))))))))
     (do-transition config :finished "Finished")
     comparisons))
 
