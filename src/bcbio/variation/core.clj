@@ -27,5 +27,7 @@
 
 (defn -main [& args]
   (if-let [alt-fn (get-altmain-fn (first args))]
-    (apply alt-fn (rest args))
+    (do
+      (apply alt-fn (rest args))
+      (System/exit 0))
     (CommandLineGATK/main (into-array (if-not (nil? args) args ["-h"])))))
