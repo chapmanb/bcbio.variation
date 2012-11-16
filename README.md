@@ -2,7 +2,7 @@
 
 A Clojure interface to the [Genome Analysis Toolkit (GATK)][1] to analyze
 variant data in [VCF files][2]. It supports scoring for the
-[Archon Genomic X PRIZE competition][5] but is also a general framework
+[Archon Genomics X PRIZE competition][5] but is also a general framework
 for variant file comparison.
 
 * [presentation from Bioinformatics Open Source Conference 2012][p1]
@@ -249,6 +249,10 @@ preparation and analysis:
   mappings back to an original set of pairwise analyses:
 
       $ lein variant-utils callsummary variants.vcf original-combined-config.yaml
+
+- Convert an Illumina directory of variant calls into a single, cleaned VCF:
+
+      $ lein variant-utils illumina /path/to/IlluminaDir sample-name GRCh37.fa hg19.fa
 
 ## Contributors
 

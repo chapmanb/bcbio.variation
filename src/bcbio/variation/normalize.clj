@@ -366,7 +366,9 @@
   Fixes:
     - Gap characters (-) found in REF or ALT indels.
     - Filter out call with extra N padding on 5' side of indels.
-    - Removes spaces in INFO fields."
+    - Removes spaces in INFO fields.
+    - Handles Illumina special case of SNPs with MAXGT and POLY calls.
+      Uses the MAXGT calls which make no prior assumptions about polymorphism"
   [in-vcf-file sample & {:keys [out-dir]}]
   (letfn [(fix-bad-alt-header [x]
             (str "##ALT=<ID" (string/replace-first x "##ALT=Type" "") ">"))
@@ -375,14 +377,17 @@
                                       (map-indexed vector xs)))]
               (cond
                idx (assoc (vec xs) idx want)
-               (= 1 (count xs)) [want]
+               (contains? #{0 1} (count xs)) [want]
+               (.contains (first xs) "_MAXGT") (cons want (rest xs))
                :else xs)))
           (fix-sample-names [x]
-            (let [[stay-parts samples] (split-at 9 (string/split x #"\t"))
-                  fix-samples (if (contains? (set samples) sample)
-                                samples
-                                (rename-samples samples sample))]
-              (string/join "\t" (concat stay-parts fix-samples))))
+            (if (> (count (string/split x #"\t")) 8)
+              (let [[stay-parts samples] (split-at 9 (string/split x #"\t"))
+                    fix-samples (if (contains? (set samples) sample)
+                                  samples
+                                  (rename-samples samples sample))]
+                (string/join "\t" (concat stay-parts fix-samples)))
+              x))
           (clean-header [x]
             (cond
              (.startsWith x "##ALT=Type=") (fix-bad-alt-header x)
