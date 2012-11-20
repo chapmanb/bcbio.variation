@@ -90,10 +90,11 @@ specifying the maximum indel size to include: `--max-indel 30`.
 
 ### Web interface
 
-A web interface automates the process of preparing configuration files and
-running a variant comparison:
-    
-    $ lein variant-web config/web-processing.yaml
+Aahru is a web interface to this toolkit, providing interaction with Galaxy and
+GenomeSpace, visualization of biological metrics associated with variants,
+reactive filtering and automated scoring: [GitHub project][w1].
+
+[w1]: https://github.com/lynaghk/vcf
 
 ### Run GATK walker for variant statistics
 
@@ -240,19 +241,19 @@ This library also contains useful command line utilities to help with variant
 preparation and analysis:
 
 - Create a BAM file compatible with GATK. This converts coordinates between hg19
-  and GRCh37 for human samples, reorders chromosomes relative to the input file
-  and adds run group information with a defined sample name:
+  and GRCh37 for human samples if needed, reorders chromosomes relative to the
+  input file and adds run group information with a defined sample name:
 
-      $ lein variant-reorder your_file.bam /path/to/GRCh37.fa SampleName
+        $ lein variant-reorder your_file.bam /path/to/GRCh37.fa SampleName
     
 - Provide a summary CSV file of call information for a VCF file, including
   mappings back to an original set of pairwise analyses:
 
-      $ lein variant-utils callsummary variants.vcf original-combined-config.yaml
+        $ lein variant-utils callsummary variants.vcf original-combined-config.yaml
 
 - Convert an Illumina directory of variant calls into a single, cleaned VCF:
 
-      $ lein variant-utils illumina /path/to/IlluminaDir sample-name GRCh37.fa hg19.fa
+        $ lein variant-utils illumina /path/to/IlluminaDir sample-name GRCh37.fa hg19.fa
 
 ## Contributors
 
