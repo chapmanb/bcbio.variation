@@ -16,12 +16,24 @@
             [bcbio.align.ref :refer [get-seq-dict]]
             [bcbio.run.itx :as itx]))
 
+(defn- validates-only-one?
+  "Validates if one end passes and validates our variant, and the other
+   failed to map."
+  [for rev]
+  (or (and (.startsWith for "Pass")
+           (.startsWith rev "Pass")
+           (= for rev))
+      (and (.startsWith for "Pass")
+           (= rev "NA"))
+      (and (.startsWith rev "Pass")
+           (= for "NA"))))
+
 (defn- validates?
   "Validates if both reads pass and match our expected result."
   [for rev]
-  (and (.startsWith for "Pass")
-       (.startsWith rev "Pass")
-       (= for rev)))
+  (or (and (.startsWith for "Pass")
+           (.startsWith rev "Pass")
+           (= for rev))))
 
 (defn- supports-ref?
   "Supports the reference sequence if both fail to validate and at least one
@@ -32,7 +44,7 @@
 
 (defn- get-validate-allele
   [for rev]
-  (-> for
+  (-> (if (.startsWith for "Pass") for rev)
       (string/split #",")
       first
       (string/replace "Pass_" "")))
@@ -40,7 +52,7 @@
 (defn- row->varinfo
   "Map a row to variant information"
   [key ref alt group for rev for-val rev-val]
-  (let [val (cond (validates? for rev) (get-validate-allele for rev)
+  (let [val (cond (validates-only-one? for rev) (get-validate-allele for rev)
                   (supports-ref? for rev for-val rev-val) ref
                   :else nil)]
     (when val
