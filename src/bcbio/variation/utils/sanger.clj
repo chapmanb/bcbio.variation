@@ -8,6 +8,7 @@
            [org.broadinstitute.sting.utils.variantcontext.writer
             VariantContextWriterFactory])
   (:require [clojure.string :as string]
+            [clojure.set :as set]
             [clojure.java.io :as io]
             [incanter.excel :as excel]
             [incanter.core :as icore]
@@ -15,25 +16,41 @@
             [bcbio.align.ref :refer [get-seq-dict]]
             [bcbio.run.itx :as itx]))
 
+(defn- validates?
+  "Validates if both reads pass and match our expected result."
+  [for rev]
+  (and (.startsWith for "Pass")
+       (.startsWith rev "Pass")
+       (= for rev)))
+
+(defn- supports-ref?
+  "Supports the reference sequence if both fail to validate and at least one
+   call identifies the reference."
+  [for rev for-val rev-val]
+  (and (= for "Fail") (= rev "Fail")
+       (not (empty? (set/intersection #{"," "."} (into #{} [for-val rev-val]))))))
+
+(defn- get-validate-allele
+  [for rev]
+  (-> for
+      (string/split #",")
+      first
+      (string/replace "Pass_" "")))
+
 (defn- row->varinfo
   "Map a row to variant information"
-  [key ref alt group for rev]
-  (let [val (cond
-             (and (.startsWith for "Pass")
-                  (.startsWith rev "Pass")
-                  (= for rev))
-             (-> for
-                 (string/replace "Pass_" "")
-                 (string/replace "," ""))
-             (and (= for "Fail") (= rev "Fail")) ref
-             :else nil)]
+  [key ref alt group for rev for-val rev-val]
+  (let [val (cond (validates? for rev) (get-validate-allele for rev)
+                  (supports-ref? for rev for-val rev-val) ref
+                  :else nil)]
     (when val
       (let [[chrom start] (string/split key #"_")
             alts (string/split alt #",")]
         {:chrom chrom
          :start (dec (Integer/parseInt start))
          :ref ref
-         :alts (if (= ref val) alts (set (cons val alts)))
+         :alts alts
+         :orig [for rev]
          :group group
          :val val}))))
 
@@ -42,7 +59,8 @@
   [in-file]
   (->> (excel/read-xls (str in-file))
        (icore/$map row->varinfo ["key" "vcf ref" "vcf allele" "set"
-                                 "forward validated" "reverse validated"])
+                                 "forward validated" "reverse validated"
+                                 "CE validation forward" "CE validation reverse"])
        (remove nil?)))
 
 (defn- get-header [sample-name]
