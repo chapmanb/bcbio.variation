@@ -25,8 +25,9 @@
                  [org.clojars.chapmanb/circdesigna "0.0.2"]
                  [clj-genomespace "0.1.3"]
                  [clj-blend "0.1.1-SNAPSHOT"]
-                 [incanter/incanter-core "1.3.0" :exclusions [org.clojure/clojure]]
-                 [incanter/incanter-charts "1.3.0" :exclusions [org.clojure/clojure]]
+                 [incanter/incanter-core "1.4.0" :exclusions [org.clojure/clojure]]
+                 [incanter/incanter-charts "1.4.0" :exclusions [org.clojure/clojure]]
+                 [incanter/incanter-excel "1.4.0" :exclusions [org.clojure/clojure]]
                  [nz.ac.waikato.cms.weka/weka-stable "3.6.6"]
                  [org.clojars.chapmanb/fast-random-forest "0.98"]
                  [com.leadtune/clj-ml "0.2.4" :exclusions [cs.waikato.ac.nz/weka
