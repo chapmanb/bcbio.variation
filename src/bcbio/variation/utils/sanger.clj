@@ -31,7 +31,7 @@
       (let [[chrom start] (string/split key #"_")
             alts (string/split alt #",")]
         {:chrom chrom
-         :start (Integer/parseInt start)
+         :start (dec (Integer/parseInt start))
          :ref ref
          :alts (if (= ref val) alts (set (cons val alts)))
          :group group
