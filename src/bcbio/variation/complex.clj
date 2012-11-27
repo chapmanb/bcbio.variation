@@ -333,38 +333,39 @@
 ;; ## VCF file conversion
 ;; Process entire files, normalizing complex variations
 
+(defn- round-vc-start
+  "Round the start value of a VC to the nearest 1000
+   This heuristic will cause problems with out of order variant
+   contexts that span this split junction (999 and 1000) but
+   saves having to work with overlapping groups."
+  [vc]
+  (let [rounder 1000.0]
+    (-> (.getStart vc)
+        (/ rounder)
+        Math/floor
+        (* rounder)
+        int)))
+
+(defn- sort-vc-group
+  "Sort a group of variant contexts by start position.
+   Ensures that post-normalized variant contexts
+   sort correctly within the blocks defined by round-vc-start."
+  [vcs]
+  (sort-by #(.getStart %) vcs))
+
 (defn- get-normalized-vcs
-  "Lazy list of variant context with MNPs split into single genotypes and indels stripped.
-  mnp-blockers is a lookup dictionary of positions overlapped by MNPs.
-  Variant representations can have a MNP and also a single SNP representing
-  the same information. In this case we ignore SNPs overlapping a MNP region
-  and rely on MNP splitting to resolve the SNPs."
-  [vc-iter mnp-blockers ref]
-  (letfn [(overlaps-previous-mnp? [vc blockers]
-            (contains? (get blockers (:chr vc) #{}) (:start vc)))
-          (add-mnp-info [coll vc]
-            (let [prev-check 10000] ;; bp to check upstream for overlaps
-              (if (or (= "MNP" (:type vc)) (is-multi-indel? vc))
-                (assoc coll (:chr vc)
-                       (union (set (remove #(< % (- (:start vc) prev-check))
-                                           (get coll (:chr vc) #{})))
-                              (set (range (:start vc)
-                                          (+ (:start vc) (-> (get-vc-alleles vc) first count))))))
-                coll)))
-          (process-vc [vc blockers]
-            (if (overlaps-previous-mnp? vc blockers)
-              []
-              (condp = (:type vc)
-                "MNP" (split-mnp vc)
-                "INDEL" (if (is-multi-indel? vc)
-                          (split-complex-indel vc ref)
-                          [(maybe-strip-indel vc)])
-                [(:vc vc)])))
-          (add-normalized-vcs [vcs blockers]
-            (when (seq vcs)
-              (concat (process-vc (first vcs) blockers)
-                      (get-normalized-vcs (rest vcs) (add-mnp-info blockers (first vcs)) ref))))]
-    (lazy-seq (add-normalized-vcs vc-iter mnp-blockers))))
+  "Lazy list of variant context with MNPs split into single genotypes and indels stripped."
+  [vc-iter ref]
+  (letfn [(process-vc [vc]
+            (condp = (:type vc)
+              "MNP" (split-mnp vc)
+              "INDEL" (if (is-multi-indel? vc)
+                        (split-complex-indel vc ref)
+                        [(maybe-strip-indel vc)])
+              [(:vc vc)]))]
+    (->> (mapcat process-vc vc-iter)
+         (partition-by round-vc-start)
+         (mapcat sort-vc-group))))
 
 (defn left-align-variants
   "Left align variants in an input VCF file for a standard representation.
@@ -397,7 +398,7 @@
          (let [la-file (left-align-variants in-file ref :out-dir out-dir :rerun? true)]
            (with-open [vcf-iter (get-vcf-iterator la-file ref)]
              (write-vcf-w-template in-file {:out out-pre-file}
-                                   (get-normalized-vcs (parse-vcf vcf-iter) {} ref)
+                                   (get-normalized-vcs (parse-vcf vcf-iter) ref)
                                    ref))
            (fs/rename (left-align-variants out-pre-file ref :out-dir out-dir :rerun? true)
                       out-file)))
