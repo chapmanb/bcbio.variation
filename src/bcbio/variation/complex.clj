@@ -334,12 +334,12 @@
 ;; Process entire files, normalizing complex variations
 
 (defn- round-vc-start
-  "Round the start value of a VC to the nearest 1000
+  "Round the start value of a VC to the nearest 100000
    This heuristic will cause problems with out of order variant
-   contexts that span this split junction (999 and 1000) but
-   saves having to work with overlapping groups."
+   contexts that span this split junction (99999 and 100000) but
+   saves having to work with overlapping groups allowing streaming."
   [vc]
-  (let [rounder 1000.0]
+  (let [rounder 100000.0]
     (-> (.getStart vc)
         (/ rounder)
         Math/floor
