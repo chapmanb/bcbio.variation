@@ -3,7 +3,7 @@
   We assess diploid GATK calls based on the phred-normalized likelihood (PL). Lower variant
   PLs are likely to be true and included. The GATK documentation contains a detailed example
   of the format and interpretation:
-  http://gatk.vanillaforums.com/discussion/36/understanding-unifiedgenotypers-vcf-files/p1"
+  http://gatkforums.broadinstitute.org/discussion/1268/how-should-i-interpret-vcf-files-produced-by-the-gatk"
   (:import [org.broadinstitute.sting.utils.variantcontext 
             VariantContextBuilder GenotypesContext GenotypeBuilder Allele])
   (:use [clojure.java.io]
@@ -15,11 +15,15 @@
 
 (defn- get-haploid-thresh
   "Threshold to include a heterozygous allele as a haploid homozygote variant.
-  Based on type of variant: SNPs have lower threshold of inclusion."
+  Based on type of variant: SNPs have lower threshold of inclusion.
+  Includes two thresholds: for possibly being homozygous variant and
+  for not being homozygous reference."
   [vc]
   (case (:type vc)
-    "SNP" 1e-5
-    1e-50))
+    "SNP" {"HOM_VAR" 1e-5
+           "HOM_REF" 1e-20}
+    {"HOM_VAR" 1e-50
+     "HOM_REF" 1e-200}))
 
 (defn get-likelihoods
   "Retrieve all likelihoods (PL) for genotype."
@@ -29,14 +33,28 @@
     (let [in-map (-> (.getLikelihoods g) (.getAsMap (nil? no-convert)))]
       (zipmap (map #(.name %) (keys in-map)) (vals in-map)))))
 
+(defn het-can-be-haploid?
+  "Can we reasonably convert a heterozygote call to haploid based on likelihoods?
+   We allow a het to pass when the homozygous variant prob is less than
+   our defined thresholds, or our homozygous reference prob is greater."
+  [g vc]
+  (let [probs (get-likelihoods g)
+        thresh (get-haploid-thresh vc)]
+    (letfn [(passes-var? []
+              (when-let [p (get probs "HOM_VAR")]
+                (> p (get thresh "HOM_VAR"))))
+            (passes-ref? []
+              (when-let [p (get probs "HOM_REF")]
+                (< p (get thresh "HOM_REF"))))]
+      (or (passes-var?) (passes-ref?)))))
+
 (defn- get-haploid-genotype
   "Retrieve updated genotype with haploid allele."
   [vc]
   (letfn [(maybe-variant-haploid [g vc]
-            (when-let [variant-prob (get (get-likelihoods g) "HOM_VAR")]
-              (when (> variant-prob (get-haploid-thresh vc))
-                (first (filter #(and (.isNonReference %) (.isCalled %))
-                               (.getAlleles g))))))
+            (when (het-can-be-haploid? g vc)
+              (first (filter #(and (.isNonReference %) (.isCalled %))
+                               (.getAlleles g)))))
           (extract-mixed-allele [alleles]
             (let [ready (remove #(.isNoCall %) alleles)]
               (when (= 1 (count ready))
