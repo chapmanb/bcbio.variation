@@ -82,3 +82,7 @@
           calls (-> config :experiments first :calls)]
       (get-x-specific-designation vc calls) => {}
       (get-x-specific-designation vc2 calls) => {:technology "illumina"})))
+
+(facts "Identify variants with less call support"
+  (with-open [vcf-iter (get-vcf-iterator union-file (-> config :experiments first :ref))]
+    (take 5 (map poor-call-support? (parse-vcf vcf-iter))) => [true false false false false]))

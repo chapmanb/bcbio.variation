@@ -4,6 +4,7 @@
            [org.broadinstitute.sting.utils.codecs.vcf VCFHeader VCFInfoHeaderLine
             VCFHeaderLineCount VCFHeaderLineType])
   (:use [ordered.set :only [ordered-set]]
+        [bcbio.variation.multiple :only [poor-call-support?]]
         [bcbio.variation.filter.trusted :only [variant-set-metadata
                                                get-comparison-fullcombine]])
   (:require [bcbio.variation.variantcontext :as gvc])
@@ -57,6 +58,7 @@
         (with-open [base-vcf-iter (gvc/get-vcf-iterator base-vcf (:ref exp))]
           (gvc/write-vcf-w-template base-vcf {:out out-file}
                                     (->> (gvc/parse-vcf base-vcf-iter)
+                                         (filter poor-call-support?)
                                          (map #(add-x-specific % (:calls exp)))
                                          (remove nil?))
                                     (:ref exp) :header-update-fn add-x-specific-header)))
