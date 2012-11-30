@@ -111,12 +111,6 @@
    positive examples."
   [vc]
   (let [attrs (get-vc-attrs vc [[:format "AD"] [:format "DP"]] {})]
-    (println attrs (or (if-let [dp (get attrs [:format "DP"])]
-                         (< dp 30)
-                         false)
-                       (if-let [ad (get attrs [:format "AD"])]
-                         (> ad 0.1)
-                         false)))
     (or (if-let [dp (get attrs [:format "DP"])]
           (< dp 30)
           false)
