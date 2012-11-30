@@ -340,11 +340,12 @@
    saves having to work with overlapping groups allowing streaming."
   [vc]
   (let [rounder 100000.0]
-    (-> (.getStart vc)
-        (/ rounder)
-        Math/floor
-        (* rounder)
-        int)))
+    {:chr (.getChr vc)
+     :pos (-> (.getStart vc)
+              (/ rounder)
+              Math/floor
+              (* rounder)
+              int)}))
 
 (defn- sort-vc-group
   "Sort a group of variant contexts by start position.

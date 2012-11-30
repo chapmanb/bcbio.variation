@@ -298,5 +298,6 @@
     comparisons))
 
 (defn -main [config-file]
-  (variant-comparison-from-config config-file)
-  (System/exit 0))
+  (try
+    (variant-comparison-from-config config-file)
+    (finally (System/exit 0))))
