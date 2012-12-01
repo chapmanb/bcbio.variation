@@ -13,7 +13,7 @@
                                                get-vcf-iterator parse-vcf
                                                get-vcf-line-parser
                                                from-genotype]]
-        [bcbio.align.ref :only [get-seq-dict get-seq-name-map]]
+        [bcbio.align.ref :only [get-seq-dict get-seq-name-map extract-sequence]]
         [ordered.map :only (ordered-map)]
         [ordered.set :only (ordered-set)])
   (:require [clojure.string :as string]
@@ -304,6 +304,22 @@
                               (map #(:vc (fix-vc sample {} %)) (parse-vcf vcf-iter))
                               ref :header-update-fn (update-header sample {}))))
     out-file))
+
+(defn remove-ref-alts
+  "Check a VCF file for alternative alleles that match reference, removing them.
+   This avoids issues where callers output alleles that match expected reference
+   causing GATK errors."
+  [in-file ref-file]
+  (letfn [(alt-matches-ref? [vc]
+            (when-let [ref-seq (extract-sequence ref-file (:chr vc) (:start vc) (:end vc))]
+              (contains? (set (map #(.getBaseString %) (:alt-alleles vc))) ref-seq)))]
+    (let [out-file (itx/add-file-part in-file "callprep")]
+      (when (itx/needs-run? out-file)
+        (with-open [vcf-iter (get-vcf-iterator in-file ref-file)]
+          (write-vcf-w-template in-file {:out out-file}
+                                (map :vc (remove alt-matches-ref? (parse-vcf vcf-iter)))
+                                ref-file)))
+      out-file)))
 
 (defn- write-prepped-vcf
   "Write VCF file with correctly ordered and cleaned variants."
