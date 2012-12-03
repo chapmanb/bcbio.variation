@@ -111,8 +111,8 @@
                            (:chr vc) (:start vc) (:end vc)
                            (:ref-allele vc) (:alt-alleles vc)))]
     (cond
-     (meta-has-variants? :xspecific) false
      (meta-has-variants? :trusted) true
+     (meta-has-variants? :xspecific) false
      :else (> score (get config :min-cscore 0.5)))))
 
 (defn- filter-vc

@@ -85,4 +85,4 @@
 
 (facts "Identify variants with less call support"
   (with-open [vcf-iter (get-vcf-iterator union-file (-> config :experiments first :ref))]
-    (take 5 (map poor-call-support? (parse-vcf vcf-iter))) => [true false false false false]))
+    (take 5 (map #(poor-call-support? % :thresh {:dp 250 :ad -0.1}) (parse-vcf vcf-iter))) => [true true false false false]))

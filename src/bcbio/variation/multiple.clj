@@ -109,14 +109,15 @@
   "Simple measure to evaluate call support based on depth and allele balance.
    This identifies poorly supported items, which primarily make up false
    positive examples."
-  [vc]
+  [vc & {:keys [thresh]
+         :or {thresh {:dp 50 :ad 0.1}}}]
   (let [attrs (get-vc-attrs vc [[:format "AD"] [:format "DP"]] {})]
-    (or (if-let [dp (get attrs [:format "DP"])]
-          (< dp 30)
-          false)
-        (if-let [ad (get attrs [:format "AD"])]
-          (> ad 0.1)
-          false))))
+    (and (if-let [dp (get attrs [:format "DP"])]
+           (< dp (:dp thresh))
+           false)
+         (if-let [ad (get attrs [:format "AD"])]
+           (> ad (:ad thresh))
+           false))))
 
 (defmethod gen-target-fps :recall
   ^{:doc "False positive generation for combine call sets resulting from recalling.
