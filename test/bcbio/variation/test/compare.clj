@@ -24,6 +24,8 @@
                intervals (str (fs/file data-dir "target-regions.bed"))
                vcf1 (str (fs/file data-dir "gatk-calls.vcf"))
                vcf2 (str (fs/file data-dir "freebayes-calls.vcf"))
+               nocall-vcf (str (fs/file data-dir "gatk-nocalls.vcf"))
+               nocall-out (itx/add-file-part nocall-vcf "wrefs")
                pvcf (str (fs/file data-dir "phasing-contestant.vcf"))
                ref-vcf (str (fs/file data-dir "phasing-reference.vcf"))
                ref2-vcf (str (fs/file data-dir "phasing-reference2.vcf"))
@@ -58,7 +60,9 @@
                                   "callable-intervals-sorted"])
                out-intervals (itx/add-file-part (first out-callable) "intervals")]
            (doseq [x (concat [combo-out compare-out annotated-out filter-out nofilter-out
-                              out-sum-compare out-intervals]
+                              out-sum-compare out-intervals nocall-out]
+                             (map str (fs/glob (str (fs/file (fs/parent nocall-vcf)
+                                                             (fs/name nocall-vcf)) "-*vcf")))
                              out-callable combine-out combine-out-xtra (vals match-out) select-out)]
              (itx/remove-path x)
              (when (.endsWith x ".vcf")
@@ -83,6 +87,9 @@
                 :ref ref
                 :calls [{:recall true :name "gatk"} {:recall true :name "freebayes"}]}]
     (create-merged [vcf1 vcf2] [align-bam align-bam] config)) => combine-out)
+
+(facts "Recall with GATK given a defined list of variants"
+  (recall-nocalls nocall-vcf "Test1" "gatk" align-bam ref) => nocall-out)
 
 (facts "Filter variant calls avoiding false positives."
   (variant-filter vcf1 ["QD < 2.0" "MQ < 40.0"] ref) => filter-out

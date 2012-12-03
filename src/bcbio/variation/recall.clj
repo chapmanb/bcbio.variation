@@ -18,7 +18,7 @@
         [bcbio.variation.filter.intervals :only [select-by-sample]]
         [bcbio.variation.haploid :only [diploid-calls-to-haploid]]
         [bcbio.variation.multisample :only [multiple-samples?]]
-        [bcbio.variation.normalize :only [fix-vcf-sample]]
+        [bcbio.variation.normalize :only [fix-vcf-sample remove-ref-alts]]
         [bcbio.variation.phasing :only [is-haploid?]]
         [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template get-vcf-iterator
                                                get-vcf-header]])
@@ -84,7 +84,8 @@
         out-file (itx/add-file-part in-vcf (str sample-str "wrefs") out-dir)]
     (when (itx/needs-run? out-file)
       (let [{:keys [called nocall]} (split-nocalls in-vcf sample ref out-dir)
-            orig-nocall (call-at-known-alleles nocall align-bam ref :cores cores)
+            prep-nocall (remove-ref-alts nocall ref)
+            orig-nocall (call-at-known-alleles prep-nocall align-bam ref :cores cores)
             fix-nocall (fix-vcf-sample orig-nocall sample ref)
             ready-nocall (if (is-haploid? called ref)
                            (diploid-calls-to-haploid fix-nocall ref)
