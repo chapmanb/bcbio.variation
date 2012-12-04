@@ -70,10 +70,16 @@
                                          ref)
                        (get-train-inputs :b false-vcf ctype attrs
                                          (normalizer false-vcf)
-                                         ref))]
+                                         ref))
+        classifier (case (keyword (get config :classifier-type :random-forest))
+                     :svm (make-classifier :support-vector-machine :smo)
+                     :random-forest (make-classifier :decision-tree :random-forest
+                                                     {:num-trees-in-forest 50
+                                                      :num-features-to-consider
+                                                      (-> attrs count Math/sqrt Math/ceil int)}))]
     (when (seq inputs)
       (->> (make-dataset "ds" (conj (vec attrs) {:c [:a :b]}) inputs {:class :c})
-           (classifier-train (make-classifier :support-vector-machine :smo))))))
+           (classifier-train classifier)))))
 
 (defn- build-vcf-classifiers
   "Provide a variant classifier based on provided attributes and true/false examples."
