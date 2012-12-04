@@ -76,7 +76,8 @@
   "Limit input BED intervals to only chromosomes found in a VCF file."
   [intervals call exp config]
   (let [out-file (itx/add-file-part intervals (:name call) (get-in config [:dir :prep]))]
-    (when (itx/needs-run? out-file)
+    (when (or (itx/needs-run? out-file)
+              (> (fs/mod-time intervals) (fs/mod-time out-file)))
       (with-open [rdr (reader intervals)
                   wtr (writer out-file)
                   call-vcf-s (get-vcf-source (:file call) (:ref exp))]

@@ -1,4 +1,5 @@
 pom.xml
+file.dot
 *jar
 /lib/
 /tmp/
@@ -44,6 +45,11 @@ test/data/*-gemini.db
 test/data/gatk-nocalls-*
 test/data/*sum.csv
 test/data/method-comparison-summary*
+test/data/phased/*.idx
+test/data/phased/*-sorted.bed
+test/data/phased/*-illumina.bed
+test/data/phased/*-cmp*.vcf
+test/data/phased/work/
 test/data/prep/
 test/data/grading/
 test/data/method/

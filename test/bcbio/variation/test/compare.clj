@@ -213,3 +213,19 @@
   (highest-count ["a" "b" "b"]) => "b"
   (highest-count ["a" "a" "b" "b"]) => "a"
   (highest-count ["b" "b" "a" "a"]) => "a")
+
+(facts "Compare diploid phased and haploid callsets."
+  (let [base-dir (fs/file data-dir "phased")
+        calls {true [{:file (str (fs/file base-dir "NA12878-fosfinal.vcf"))
+                      :name "fosfinal"}]
+               false [{:file (str (fs/file base-dir "NA12878-illumina.vcf"))
+                       :name "illumina"}]}
+        exp {:ref ref :sample "NA12878"
+             :intervals (str (fs/file base-dir "NA12878-cmp-regions.bed"))}
+        config {:dir {:out (str (fs/file base-dir "work"))}}]
+    (doseq [x (concat [(get-in config [:dir :out])]
+                      (fs/glob (str (fs/file base-dir "NA12878-cmp-regions-*")))
+                      (fs/glob (str (fs/file base-dir "NA12878-fosfinal-cmp*"))))]
+      (itx/remove-path x))
+    (-> (compare-two-vcf-phased calls exp config) :c-files keys) => [:concordant :fosfinal-discordant
+                                                                     :illumina-discordant]))
