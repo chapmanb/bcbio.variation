@@ -110,7 +110,7 @@
    This identifies poorly supported items, which primarily make up false
    positive examples."
   [vc & {:keys [thresh]
-         :or {thresh {:dp 50 :ad 0.1}}}]
+         :or {thresh {:dp 100 :ad 0.05}}}]
   (let [attrs (get-vc-attrs vc [[:format "AD"] [:format "DP"]] {})]
     (and (when-let [dp (get attrs [:format "DP"])]
            (< dp (:dp thresh)))
