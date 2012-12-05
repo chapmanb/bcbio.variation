@@ -61,14 +61,18 @@
            (map (partial get-vc-inputs attrs normalizer group))
            doall))))
 
+(defn- get-dataset
+  [attrs inputs]
+  (make-dataset "ds" (conj (vec attrs) {:c [:pass :fail]}) inputs {:class :c}))
+
 (defn- train-vcf-classifier
   "Do the work of training a variant classifier."
   [ctype attrs base-vcf true-vcf false-vcf ref config]
   (let [normalizer (partial get-vc-attrs-normalized attrs base-vcf ref config)
-        inputs (concat (get-train-inputs :a true-vcf ctype attrs
+        inputs (concat (get-train-inputs :pass true-vcf ctype attrs
                                          (normalizer true-vcf)
                                          ref)
-                       (get-train-inputs :b false-vcf ctype attrs
+                       (get-train-inputs :fail false-vcf ctype attrs
                                          (normalizer false-vcf)
                                          ref))
         classifier (case (keyword (get config :classifier-type :random-forest))
@@ -78,7 +82,7 @@
                                                       :num-features-to-consider
                                                       (-> attrs count Math/sqrt Math/ceil int)}))]
     (when (seq inputs)
-      (->> (make-dataset "ds" (conj (vec attrs) {:c [:a :b]}) inputs {:class :c})
+      (->> (get-dataset attrs inputs)
            (classifier-train classifier)))))
 
 (defn- build-vcf-classifiers
@@ -119,18 +123,19 @@
     (cond
      (meta-has-variants? :trusted) true
      (meta-has-variants? :xspecific) false
-     :else (> score (get config :min-cscore 0.5)))))
+     :else (case score
+             0.0 true
+             1.0 false
+             (throw (Exception. (str "Unexpected score: " score)))))))
 
 (defn- filter-vc
   "Update a variant context with filter information from classifier."
   [classifiers normalizer attr-get meta-getters config vc]
   (let [attrs (vec (:classifiers config))
         c (get classifiers (get-classifier-type vc attr-get))
-        score (-> (make-dataset "ds" (conj attrs :c)
-                                 [(get-vc-inputs attrs normalizer -1 vc)]
-                                 {:class :c})
-                  (make-instance (assoc (normalizer vc) :c -1))
-                  (#(classifier-classify c %)))]
+        val (get-vc-inputs attrs normalizer :fail vc)
+        score (classifier-classify c (-> (get-dataset attrs 1)
+                                         (make-instance val)))]
     (-> (VariantContextBuilder. (:vc vc))
         (.attributes (assoc (:attributes vc) "CSCORE" score))
         (.filters (when-not (vc-passes-w-meta? vc score meta-getters config)
