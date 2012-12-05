@@ -64,7 +64,7 @@
         pls (dissoc (get-likelihoods (:genotype g) :no-convert true)
                     (:type g))]
     (cond
-     (zero? (count pls)) 0.0
+     (zero? (count pls)) nil
      (> (count (:alleles g)) 1) (apply max (vals pls))
      (= (:type g) "HOM_VAR") (get pls "HOM_REF")
      (= (:type g) "HOM_REF") (get pls "HOM_VAR"))))

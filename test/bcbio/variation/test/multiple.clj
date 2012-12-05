@@ -32,7 +32,7 @@
 
 (defn get-out-files [out-dir x ext]
   {:true-positives
-   (str (fs/file out-dir (format "Test1-multiall-fullcombine-Intersection%s.vcf" ext)))
+   (str (fs/file out-dir (format "Test1-multiall-fullcombine-Intersection-poorcall%s.vcf" ext)))
    :false-negatives
    (str (fs/file out-dir (format "Test1-multiall-no%s-fullcombine-%s%s.vcf" x x ext)))
    :false-positives

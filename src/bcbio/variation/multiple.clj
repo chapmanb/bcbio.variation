@@ -9,7 +9,7 @@
         [bcbio.variation.filter.attr :only [get-vc-attrs]]
         [bcbio.variation.metrics :only [nonref-passes-filter?]]
         [bcbio.variation.variantcontext :only [parse-vcf get-vcf-retriever
-                                               variants-in-region
+                                               variants-in-region select-variants
                                                get-vcf-iterator write-vcf-w-template]])
   (:require [clojure.string :as string]
             [fs.core :as fs]
@@ -112,12 +112,10 @@
   [vc & {:keys [thresh]
          :or {thresh {:dp 50 :ad 0.1}}}]
   (let [attrs (get-vc-attrs vc [[:format "AD"] [:format "DP"]] {})]
-    (and (if-let [dp (get attrs [:format "DP"])]
-           (< dp (:dp thresh))
-           false)
-         (if-let [ad (get attrs [:format "AD"])]
-           (> ad (:ad thresh))
-           false))))
+    (and (when-let [dp (get attrs [:format "DP"])]
+           (< dp (:dp thresh)))
+         (when-let [ad (get attrs [:format "AD"])]
+           (> ad (:ad thresh))))))
 
 (defmethod gen-target-fps :recall
   ^{:doc "False positive generation for combine call sets resulting from recalling.
@@ -227,8 +225,10 @@
     (when-not (fs/exists? out-dir)
       (fs/mkdirs out-dir))
     (let [all-overlap (gen-all-concordant cmps-by-name ref out-dir config)
-          true-p-vcf (add-variant-annotations (:intersection all-overlap) (:align target-call)
-                                              ref target-call :out-dir out-dir)
+          true-p-vcf (-> (:intersection all-overlap)
+                         (select-variants poor-call-support? "poorcall" ref)
+                         (add-variant-annotations (:align target-call)
+                                                  ref target-call :out-dir out-dir))
           target-overlaps (-> all-overlap
                               :union
                               (select-variant-by-set ref target-name)

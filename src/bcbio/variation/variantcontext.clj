@@ -210,6 +210,17 @@
                               :header-update-fn (add-filter-header fname fdesc))))
     out-file))
 
+(defn select-variants
+  "Select variants from an input file with supplied filter."
+  [in-file passes? file-out-part ref-file]
+  (let [out-file (itx/add-file-part in-file file-out-part)]
+    (when (itx/needs-run? out-file)
+      (with-open [in-iter (get-vcf-iterator in-file ref-file)]
+        (write-vcf-w-template in-file {:out out-file}
+                              (map :vc (filter passes? (parse-vcf in-iter)))
+                              ref-file)))
+    out-file))
+
 (defn -main [vcf ref approach]
   (with-open [vcf-iter (get-vcf-iterator vcf ref)]
     (letfn [(item-iter []
