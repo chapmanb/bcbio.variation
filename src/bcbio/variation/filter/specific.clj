@@ -4,7 +4,7 @@
            [org.broadinstitute.sting.utils.codecs.vcf VCFHeader VCFInfoHeaderLine
             VCFHeaderLineCount VCFHeaderLineType])
   (:use [ordered.set :only [ordered-set]]
-        [bcbio.variation.multiple :only [poor-call-support?]]
+        [bcbio.variation.filter.attr :only [get-vc-attrs]]
         [bcbio.variation.filter.trusted :only [variant-set-metadata
                                                get-comparison-fullcombine]])
   (:require [bcbio.variation.variantcontext :as gvc])
@@ -48,6 +48,18 @@
                "Identify variant call as specific to a technology or calling method.")}]
     (VCFHeader. (apply ordered-set (concat (.getMetaDataInInputOrder header) new))
                 (.getGenotypeSamples header))))
+
+(defn poor-call-support?
+  "Simple measure to evaluate call support based on depth and allele balance.
+   This identifies poorly supported items, which primarily make up false
+   positive examples."
+  [vc & {:keys [thresh]
+         :or {thresh {:dp 100 :ad 0.05}}}]
+  (let [attrs (get-vc-attrs vc [[:format "AD"] [:format "DP"]] {})]
+    (and (when-let [dp (get attrs [:format "DP"])]
+           (< dp (:dp thresh)))
+         (when-let [ad (get attrs [:format "AD"])]
+           (> ad (:ad thresh))))))
 
 (defn get-x-specific-variants
   "Filter VCF file generating output only variants specific to a technology or caller."

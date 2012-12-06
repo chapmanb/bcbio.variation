@@ -6,10 +6,9 @@
         [bcbio.variation.annotation :only [add-variant-annotations]]
         [bcbio.variation.callable :only [get-callable-checker is-callable? has-callers?]]
         [bcbio.variation.combine :only [combine-variants]]
-        [bcbio.variation.filter.attr :only [get-vc-attrs]]
         [bcbio.variation.metrics :only [nonref-passes-filter?]]
         [bcbio.variation.variantcontext :only [parse-vcf get-vcf-retriever
-                                               variants-in-region select-variants
+                                               variants-in-region
                                                get-vcf-iterator write-vcf-w-template]])
   (:require [clojure.string :as string]
             [fs.core :as fs]
@@ -105,18 +104,6 @@
   (fn [_ _ _ _ call _ _]
     (if (get call :recall false) :recall :default)))
 
-(defn poor-call-support?
-  "Simple measure to evaluate call support based on depth and allele balance.
-   This identifies poorly supported items, which primarily make up false
-   positive examples."
-  [vc & {:keys [thresh]
-         :or {thresh {:dp 100 :ad 0.05}}}]
-  (let [attrs (get-vc-attrs vc [[:format "AD"] [:format "DP"]] {})]
-    (and (when-let [dp (get attrs [:format "DP"])]
-           (< dp (:dp thresh)))
-         (when-let [ad (get attrs [:format "AD"])]
-           (> ad (:ad thresh))))))
-
 (defmethod gen-target-fps :recall
   ^{:doc "False positive generation for combine call sets resulting from recalling.
           Report calls with low support across inputs callsets."}
@@ -126,11 +113,10 @@
         freq (get call :fp-freq 0.25)
         thresh (Math/ceil (* freq (dec (count calls))))]
     (letfn [(is-lowcount-fp? [vc]
-              (and (poor-call-support? vc)
-                   (-> (get-vc-set-calls vc calls)
-                       (disj target-name)
-                       count
-                       (<= thresh))))]
+              (-> (get-vc-set-calls vc calls)
+                  (disj target-name)
+                  count
+                  (<= thresh)))]
       (when (itx/needs-run? out-file)
         (with-open [in-iter (get-vcf-iterator target-overlap-vcf ref)]
           (write-vcf-w-template target-overlap-vcf {:out out-file}
@@ -145,7 +131,6 @@
   (letfn [(check-shared [fetch any-callable]
             (fn [x]
               (and (nonref-passes-filter? x)
-                   (poor-call-support? x)
                    (if (has-callers? any-callable)
                      (is-callable? any-callable (:chr x) (:start x) (:end x))
                      (not (empty? (variants-in-region fetch (:chr x)
@@ -226,7 +211,6 @@
       (fs/mkdirs out-dir))
     (let [all-overlap (gen-all-concordant cmps-by-name ref out-dir config)
           true-p-vcf (-> (:intersection all-overlap)
-                         (select-variants poor-call-support? "poorcall" ref)
                          (add-variant-annotations (:align target-call)
                                                   ref target-call :out-dir out-dir))
           target-overlaps (-> all-overlap
