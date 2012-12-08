@@ -4,7 +4,8 @@
   (:use [clojure.java.io]
         [clojure.set :only [intersection]]
         [ordered.map :only [ordered-map]])
-  (:require [bcbio.run.itx :as itx]
+  (:require [clojure.string :as string]
+            [bcbio.run.itx :as itx]
             [bcbio.variation.variantcontext :as gvc]))
 
 (defn multiple-samples?
@@ -66,8 +67,14 @@
      (atleast-one-match? g1 g2) :partial-mismatch
      :else :discordant)))
 
+(defn- same-vc-coords?
+  "Check if variants have the same position and reference allele."
+  [& xs]
+  (apply = (map (juxt :chr :start :end :ref-allele) xs)))
+
 (defmulti compare-vcs
-  "Compare two sanity-checked variant contexts for concordance"
+  "Flexible comparison of variants, assuming pre-checking of
+   vc1 and vc2 to overlap in the same genomic region."
   (fn [vc1 vc2 params]
     (cond
      (not (nil? (:compare-approach params))) (keyword (:compare-approach params))
@@ -85,30 +92,65 @@
               :nocall-mismatch 0.5
               :partial-mismatch 0.5
               0.0))]
-    (let [score-thresh (get params :multiple-thresh 1.0)
-          vc2-cmps (into {} (map (juxt :sample-name identity) (:genotypes vc2)))
-          score (/ (apply + (map #(calc-genotype-score % (get vc2-cmps (:sample-name %)))
-                                 (:genotypes vc1)))
-                   (:num-samples vc1))]
-      (>= score score-thresh))))
+    (when (same-vc-coords? vc1 vc2)
+      (let [score-thresh (get params :multiple-thresh 1.0)
+            vc2-cmps (into {} (map (juxt :sample-name identity) (:genotypes vc2)))
+            score (/ (apply + (map #(calc-genotype-score % (get vc2-cmps (:sample-name %)))
+                                   (:genotypes vc1)))
+                     (:num-samples vc1))]
+        (>= score score-thresh)))))
 
 (defmethod compare-vcs :approximate
   ^{:doc "Provide approximate comparisons between variants, handling cases
           like het versus homozygous variant calls and indels with
-          different representations. The goal is to identify almost-match
+          different overlapping calls. The goal is to identify almost-match
           cases which are useful for variant evidence."}
-  [vc1 vc2 params])
+  [vc1 vc2 params]
+  (when (= (:type vc1) (:type vc2))
+    (compare-vcs vc1 vc2 (assoc params :compare-approach
+                                (str "approximate-" (-> vc1 :type string/lower-case))))))
+
+(defmethod compare-vcs :approximate-indel
+  ^{:doc "Approximate comparisons for indels, allowing overlapping
+          indels to count as concordant."}
+  [vc1 vc2 params]
+  {:pre [(every? #(= 1 (:num-samples %)) [vc1 vc2])]}
+  (letfn [(all-alleles [x]
+            (map #(.getBaseString %) (cons (:ref-allele x) (-> x :genotypes first :alleles))))]
+    (let [vc1-alleles (all-alleles vc1)
+          vc2-alleles (all-alleles vc2)]
+      (and (contains? (set (range (dec (:start vc1)) (:end vc1))) (dec (:start vc2)))
+           (or (every? #(= 1 (count (first %))) [vc1-alleles vc2-alleles])
+               (every? #(> (count (first %)) 1) [vc1-alleles vc2-alleles]))))))
+
+(defmethod compare-vcs :approximate-snp
+  ^{:doc "Approximate comparisons for SNPs, allowing matching het/hom calls."}
+  [vc1 vc2 params]
+  {:pre [(every? #(= 1 (:num-samples %)) [vc1 vc2])]}
+  (when (same-vc-coords? vc1 vc2)
+    (not (empty?
+          (->> [vc1 vc2]
+               (map #(-> % :genotypes first :alleles set))
+               (apply intersection))))))
 
 (defmethod compare-vcs :default
+  ^{:doc "Provide exact comparisons for variants, requiring identical
+          base coordinates and reference and identical allele calls."}
   [vc1 vc2 params]
-  (throw (Exception. "NotImplemented")))
+  {:pre [(every? #(= 1 (:num-samples %)) [vc1 vc2])]}
+  (when (same-vc-coords? vc1 vc2) 
+    (apply = (map #(-> % :genotypes first :alleles) [vc1 vc2]))))
 
-(defn- vcs-concordant?
-  "Top level comparison of two variant contexts, handling common discordance issues."
-  [vc1 vc2 params]
-  (when-not (nil? vc2)
-    (when (apply = (map (juxt :chr :start :end :ref-allele) [vc1 vc2]))
-      (compare-vcs vc1 vc2 params))))
+(defn find-concordant-vcs
+  "Top level comparison of variant contexts: check if any vc2s match vc1.
+   Flexible handles different comparisons with `compare-vcs`"
+  [vc1 vc2-checks params]
+  (letfn [(are-concordant? [vc1 vc2]
+            (when (compare-vcs vc1 vc2 params)
+              true))]
+    (let [vc2-groups (group-by (partial are-concordant? vc1) vc2-checks)]
+      [(get vc2-groups true [])
+       (get vc2-groups nil [])])))
 
 (defn- add-cmp-kw
   [xs kw]
@@ -122,14 +164,15 @@
   {:pre [(= 3 (count cmp-kws))]}
   (letfn [(less-than-vc? [vc1 vc2]
             (and (= (:chr vc2) (:chr vc1))
-                 (<= (:start vc2) (:start vc1))))]
+                 (<= (:start vc2) (:end vc1))))]
     (let [[cur-vc2-iter rest-vc2-iter] (split-with (partial less-than-vc? vc1) vc2-iter)
-          [vc2-extras vc2] ((juxt butlast last) cur-vc2-iter)]
+          [vc2-extras vc2-checks] (split-with #(< (:start %) (:start vc1)) cur-vc2-iter)
+          [vc2-matches vc2-continues] (find-concordant-vcs vc1 vc2-checks params)]
       {:cur-cmps (concat (add-cmp-kw vc2-extras (last cmp-kws))
-                         (if (vcs-concordant? vc1 vc2 params)
-                           [[(first cmp-kws) vc1]]
-                           [[(second cmp-kws) vc1] [(last cmp-kws) vc2]]))
-       :cur-vc2-iter rest-vc2-iter})))
+                         [(if (seq vc2-matches)
+                            [(first cmp-kws) vc1]
+                            [(second cmp-kws) vc1])])
+       :cur-vc2-iter (concat vc2-continues rest-vc2-iter)})))
 
 (defn- compare-two-vc-iters
   "Lazy comparison of two sets of variants. Assumes identical ordering."
