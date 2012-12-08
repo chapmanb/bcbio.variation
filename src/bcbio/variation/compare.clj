@@ -22,7 +22,7 @@
         [bcbio.variation.filter.intervals :only [combine-multiple-intervals]]
         [bcbio.variation.metrics :only [vcf-stats write-summary-table]]
         [bcbio.variation.multiple :only [prep-cmp-name-lookup pipeline-compare-multiple]]
-        [bcbio.variation.multisample :only [compare-two-vcf-multisample
+        [bcbio.variation.multisample :only [compare-two-vcf-flexible
                                             multiple-samples?]]
         [bcbio.variation.phasing :only [is-haploid? compare-two-vcf-phased]]
         [bcbio.variation.report :only [concordance-report-metrics
@@ -191,7 +191,7 @@
         phased-vcfs (group-by #(-> % :file (is-haploid? (:ref exp))) [c1 c2])
         out-cmp (cond
                  (get phased-vcfs true) (compare-two-vcf-phased phased-vcfs exp config)
-                 (multiple-samples? (:file c1)) (compare-two-vcf-multisample c1 c2 exp config)
+                 (multiple-samples? (:file c1)) (compare-two-vcf-flexible c1 c2 exp config)
                  :else (compare-two-vcf-standard c1 c2 exp config))]
     (assoc out-cmp :c-files (reduce (fn [coll [k v]] (assoc coll k v))
                                     (:c-files out-cmp) sv-cmp))))

@@ -68,10 +68,11 @@
 
 (defmulti compare-vcs
   "Compare two sanity-checked variant contexts for concordance"
-  (fn [vc1 vc2 _]
+  (fn [vc1 vc2 params]
     (cond
+     (not (nil? (:compare-approach params))) (keyword (:compare-approach params))
      (or (> (:num-samples vc1) 1)
-         (> (:num-samples vc2) 2)) :multiple
+         (> (:num-samples vc2) 1)) :multiple
      :else :default)))
 
 (defmethod compare-vcs :multiple
@@ -90,6 +91,13 @@
                                  (:genotypes vc1)))
                    (:num-samples vc1))]
       (>= score score-thresh))))
+
+(defmethod compare-vcs :approximate
+  ^{:doc "Provide approximate comparisons between variants, handling cases
+          like het versus homozygous variant calls and indels with
+          different representations. The goal is to identify almost-match
+          cases which are useful for variant evidence."}
+  [vc1 vc2 params])
 
 (defmethod compare-vcs :default
   [vc1 vc2 params]
@@ -132,8 +140,8 @@
        (concat cur-cmps (compare-two-vc-iters (rest vc1-iter) cur-vc2-iter cmp-kws params)))
      (add-cmp-kw vc2-iter (last cmp-kws)))))
 
-(defn compare-two-vcf-multisample
-  "Compare two multisample variant input files.
+(defn compare-two-vcf-flexible
+  "Compare two variant input files, with flexible matching conditions.
    TODO: restrict comparison by intervals."
   [c1 c2 exp config]
   (let [out-files (get-cmp-outfiles c1 c2 exp config)]

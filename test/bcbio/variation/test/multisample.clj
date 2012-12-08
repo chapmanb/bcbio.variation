@@ -15,6 +15,7 @@
                multi-outdir (str (fs/file data-dir "multi"))
                ref-file (str (fs/file data-dir "GRCh37.fa"))
                vcf-single (str (fs/file data-dir "gatk-calls.vcf"))
+               vcf-single2 (str (fs/file data-dir "freebayes-calls.vcf"))
                vcf-m1 (str (fs/file data-dir "1000genome-multi.vcf"))
                vcf-m2 (str (fs/file data-dir "1000genome-multi-cmp.vcf"))
                compare-out {:concordant (str (fs/file multi-outdir "HG00101multi-c1-c2-concordant.vcf"))
@@ -32,3 +33,12 @@
 
 (facts "Perform comparisons between multiple sample variant files."
   (-> (variant-comparison-from-config config-file-m) first :c-files) => (contains compare-out))
+
+(facts "Perform flexible comparisons between two variant files."
+  (let [c1 {:name "gatk" :file vcf-single}
+        c2 {:name "freebayes" :file vcf-single2}
+        exp {:sample "Test1" :ref ref-file :params {:compare-approach :approximate}}
+        config {:dir {:out (str (fs/file data-dir "flex"))}}]
+    (itx/remove-path (get-in config [:dir :out]))
+    (fs/mkdir (get-in config [:dir :out]))
+    (-> (compare-two-vcf-flexible c1 c2 exp config) keys) => (contains :c-files)))

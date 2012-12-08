@@ -132,6 +132,9 @@ provide example starting points and details on available options are below:
          multiple-thresh: Threshold for percentage of comparisons to match
                           to consider two multiple sample variants the same.
                           (default: 1.0)
+         compare-approach: Provide alternative approaches to compare variants:
+                           approximate -- allow flexible matching of het/hom variants
+                                          and indels
        approach: Type of comparison to do [compare,grade]. Default compare.
        calls: # two or more calls to compare
          - name: Name of call type
