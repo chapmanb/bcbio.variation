@@ -37,7 +37,7 @@
                   allele-count (apply + (map #(nth ads (.indexOf alleles %)) (set (:alleles g))))]
               (calc-expected g ref-count allele-count)))
           (from-ao [g]
-            (let [alt-count (Float/parseFloat (get-in g [:attributes "AO"]))
+            (let [alt-count (apply max (map #(Float/parseFloat %) (string/split (get-in g [:attributes "AO"]) #",")))
                   total-count (float (get-in g [:attributes "DP"]))]
               (calc-expected g (- total-count alt-count) alt-count)))]
     (let [g (-> vc :genotypes first)]
