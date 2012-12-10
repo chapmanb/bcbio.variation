@@ -68,7 +68,8 @@
 (defn- train-vcf-classifier
   "Do the work of training a variant classifier."
   [ctype attrs base-vcf true-vcf false-vcf ref config]
-  (let [normalizer (partial get-vc-attrs-normalized attrs base-vcf ref config)
+  (let [config (merge {:normalize :default} config)
+        normalizer (partial get-vc-attrs-normalized attrs base-vcf ref config)
         inputs (concat (get-train-inputs :pass true-vcf ctype attrs
                                          (normalizer true-vcf)
                                          ref)
@@ -77,6 +78,9 @@
                                          ref))
         classifier (case (keyword (get config :classifier-type :svm))
                      :svm (make-classifier :support-vector-machine :smo)
+                     :svm-rbf (make-classifier :support-vector-machine :smo
+                                               {:kernel-function {:radial-basis {:gamma 1e-05}}
+                                                :complexity-constant 100000.0})
                      :random-forest (make-classifier :decision-tree :random-forest
                                                      {:num-trees-in-forest 50
                                                       :num-features-to-consider
@@ -171,6 +175,7 @@
                     orig-false-vcf)
         cs (build-vcf-classifiers (:classifiers config) base-vcf
                                   true-vcf false-vcf ref config)
+        config (merge {:normalize :default} config)
         normalizer (get-vc-attrs-normalized (:classifiers config) base-vcf ref config base-vcf)
         attr-get (prep-vc-attr-retriever base-vcf ref)]
     (when (itx/needs-run? out-file)
