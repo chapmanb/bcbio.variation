@@ -36,7 +36,10 @@
   Handles GATK annotations and Complete Genomics metrics."
   [vcf-file bam-file ref-file call & {:keys [out-dir intervals]}]
   (let [x (get call :annotate "")
-        ann (if (true? x) "gatk" x)]
+        ann (cond
+             (true? x) "gatk"
+             (false? x) ""
+             :else x)]
     (cond
      (and (= ann "gatk") (not (nil? bam-file)))
      (add-gatk-annotations vcf-file bam-file ref-file :out-dir out-dir :intervals intervals)

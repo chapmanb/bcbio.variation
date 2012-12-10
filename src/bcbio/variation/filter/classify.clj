@@ -75,7 +75,7 @@
                        (get-train-inputs :fail false-vcf ctype attrs
                                          (normalizer false-vcf)
                                          ref))
-        classifier (case (keyword (get config :classifier-type :random-forest))
+        classifier (case (keyword (get config :classifier-type :svm))
                      :svm (make-classifier :support-vector-machine :smo)
                      :random-forest (make-classifier :decision-tree :random-forest
                                                      {:num-trees-in-forest 50
