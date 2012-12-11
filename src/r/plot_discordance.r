@@ -41,10 +41,15 @@ pretty_variable_names <- function(val) {
 pretty_caller_names <- function(val) {
   switch(val,
          ifos = "GATK",
+         gatk = "GATK",
          ifosfb = "FreeBayes",
+         freebayes = "FreeBayes",
          ifospu = "mpileup",
+         samtools = "mpileup",
          ifoscx = "cortex_var",
-         ifosgh = "GATK Haplotype")
+         cortex = "cortex_var",
+         ifosgh = "GATK Haplotype",
+         "gatk-haplotype" = "GATK Haplotype")
 }
 levels(d2$call2) <- unlist(lapply(levels(d2$call2), pretty_caller_names))
 
@@ -52,6 +57,10 @@ vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
 
 types = c("total", "snp", "indel")
 cmps = c("concordant", "discordant1", "discordant2")
+
+# Floors to use for displaying data variability at higher values
+min_limit1 = 110000
+min_limit2 = 9000
 
 pdf(out_file, width = 9, height = 11)
 pushViewport(viewport(layout = grid.layout(length(types), length(cmps))))
@@ -64,10 +73,10 @@ for (i in 1:length(cmps)) {
     p <- ggplot(d.sub, aes(x=call2, weight=value)) + geom_bar() +
       labs(title = paste(pretty_type_names(cur_type), pretty_variable_names(cmp), sep=" : ")) +
       theme(axis.title.y=element_blank(), axis.title.x=element_blank())
-    if (min(d.sub$value) > 110000) {
-      p <- p + coord_cartesian(ylim = c(110000, max(d.sub$value) + 1000))
-    } else if (min(d.sub$value) > 9000) {
-      p <- p + coord_cartesian(ylim = c(9000, max(d.sub$value + 500)))
+    if (min(d.sub$value) > min_limit1) {
+      p <- p + coord_cartesian(ylim = c(min_limit1, max(d.sub$value) + 1000))
+    } else if (min(d.sub$value) > min_limit2) {
+      p <- p + coord_cartesian(ylim = c(min_limit2, max(d.sub$value + 500)))
     }
     ifelse(TRUE, #i == length(types),
            p <- p + theme(axis.text.x=element_text(angle = -90, hjust = 0)),
