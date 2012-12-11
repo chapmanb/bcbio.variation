@@ -108,7 +108,7 @@
   "Retrieve quantile ranges of attributes for min/max normalization."
   [attrs in-vcf ref retrievers]
   (letfn [(get-quartiles [[k v]]
-            [k (stats/quantile v :probs [0.05 0.95])])]
+            [k (stats/quantile (remove nil? v) :probs [0.05 0.95])])]
     (with-open [vcf-iter (gvc/get-vcf-iterator in-vcf ref)]
       (->> (reduce (fn [coll vc]
                     (reduce (fn [icoll [k v]]
@@ -140,7 +140,8 @@
                   trunc-score (if (> trunc-score-max minv) trunc-score-max minv)]
               (/ (- trunc-score minv) (- safe-maxv minv))))
           (min-max-norm-ranges [mm-ranges [k v]]
-            [k (min-max-norm v (get mm-ranges k))])]
+            [k (when-not (nil? v)
+                 (min-max-norm v (get mm-ranges k)))])]
     (let [retrievers (get-external-retrievers in-vcf ref)
           mm-ranges (get-vc-attr-ranges attrs in-vcf ref retrievers)
           work-retrievers (get-external-retrievers work-vcf ref)]
