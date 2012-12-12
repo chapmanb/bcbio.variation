@@ -1,4 +1,4 @@
-(ns bcbio.variation.filter.classify
+j(ns bcbio.variation.filter.classify
   "Provide classification based filtering for variants."
   (:import [org.broadinstitute.sting.utils.variantcontext VariantContextBuilder]
            [org.broadinstitute.sting.utils.codecs.vcf VCFHeader VCFInfoHeaderLine
@@ -77,7 +77,8 @@
                                          (normalizer false-vcf)
                                          ref))
         classifier (case (keyword (get config :classifier-type :svm))
-                     :svm (make-classifier :support-vector-machine :smo)
+                     :svm (make-classifier :support-vector-machine :smo
+                                           {:complexity-constant 100000.0})
                      :svm-rbf (make-classifier :support-vector-machine :smo
                                                {:kernel-function {:radial-basis {:gamma 0.01}}
                                                 :complexity-constant 100000.0})
