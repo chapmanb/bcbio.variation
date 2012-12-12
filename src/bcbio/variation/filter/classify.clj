@@ -1,4 +1,4 @@
-j(ns bcbio.variation.filter.classify
+(ns bcbio.variation.filter.classify
   "Provide classification based filtering for variants."
   (:import [org.broadinstitute.sting.utils.variantcontext VariantContextBuilder]
            [org.broadinstitute.sting.utils.codecs.vcf VCFHeader VCFInfoHeaderLine
