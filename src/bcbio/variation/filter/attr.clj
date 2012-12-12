@@ -129,11 +129,11 @@
       used for building normalization ranges.
     - work-vcf -- file for attribute retrieval, used to setup variable
       retrieval from external sources like Gemini"
-  (fn [_ _ _ config _] (keyword (get config :normalize "default"))))
+  (fn [_ _ _ config] (keyword (get config :normalize "default"))))
 
 ;; Min-max normalization
 (defmethod get-vc-attrs-normalized :minmax
-  [attrs in-vcf ref config work-vcf]
+  [attrs in-vcf ref config]
   (letfn [(min-max-norm [x [minv maxv]]
             (let [safe-maxv (if (= minv maxv) (inc maxv) maxv)
                   trunc-score-max (if (< x safe-maxv) x safe-maxv)
@@ -143,19 +143,21 @@
             [k (when-not (nil? v)
                  (min-max-norm v (get mm-ranges k)))])]
     (let [retrievers (get-external-retrievers in-vcf ref)
-          mm-ranges (get-vc-attr-ranges attrs in-vcf ref retrievers)
-          work-retrievers (get-external-retrievers work-vcf ref)]
-      (fn [vc]
-        (->> (get-vc-attrs vc attrs work-retrievers)
-             (map (partial min-max-norm-ranges mm-ranges))
-             (into {}))))))
+          mm-ranges (get-vc-attr-ranges attrs in-vcf ref retrievers)]
+      (fn [work-vcf]
+        (let [work-retrievers (get-external-retrievers work-vcf ref)]
+          (fn [vc]
+            (->> (get-vc-attrs vc attrs work-retrievers)
+                 (map (partial min-max-norm-ranges mm-ranges))
+                 (into {}))))))))
 
 ;; No normalization
 (defmethod get-vc-attrs-normalized :default
-  [attrs _ ref config work-vcf]
-  (let [retrievers (get-external-retrievers work-vcf ref)]
-    (fn [vc]
-      (into {} (get-vc-attrs vc attrs retrievers)))))
+  [attrs _ ref config]
+  (fn [work-vcf]
+    (let [retrievers (get-external-retrievers work-vcf ref)]
+      (fn [vc]
+        (into {} (get-vc-attrs vc attrs retrievers))))))
 
 (defn prep-vc-attr-retriever
   "Provide easy lookup of attributes from multiple input sources"

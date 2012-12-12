@@ -67,14 +67,13 @@
 
 (defn- train-vcf-classifier
   "Do the work of training a variant classifier."
-  [ctype attrs base-vcf true-vcf false-vcf ref config]
+  [ctype attrs pre-normalizer true-vcf false-vcf ref config]
   (let [config (merge {:normalize :default} config)
-        normalizer (partial get-vc-attrs-normalized attrs base-vcf ref config)
         inputs (concat (get-train-inputs :pass true-vcf ctype attrs
-                                         (normalizer true-vcf)
+                                         (pre-normalizer true-vcf)
                                          ref)
                        (get-train-inputs :fail false-vcf ctype attrs
-                                         (normalizer false-vcf)
+                                         (pre-normalizer false-vcf)
                                          ref))
         classifier (case (keyword (get config :classifier-type :svm))
                      :svm (make-classifier :support-vector-machine :smo
@@ -92,12 +91,12 @@
 
 (defn- build-vcf-classifiers
   "Provide a variant classifier based on provided attributes and true/false examples."
-  [attrs base-vcf true-vcf false-vcf ref config]
+  [attrs pre-normalizer base-vcf true-vcf false-vcf ref config]
   (letfn [(build-vcf-classifier [ctype]
             (let [out-file (format "%s-%s-classifier.bin" (itx/file-root base-vcf) (ctype-to-str ctype))]
               (if-not (itx/needs-run? out-file)
                 (deserialize-from-file out-file)
-                (when-let [classifier (train-vcf-classifier ctype attrs base-vcf true-vcf false-vcf
+                (when-let [classifier (train-vcf-classifier ctype attrs pre-normalizer true-vcf false-vcf
                                                             ref config)]
                   (serialize-to-file classifier out-file)
                   classifier))))]
@@ -167,29 +166,29 @@
 (defn filter-vcf-w-classifier
   "Filter an input VCF file using a trained classifier on true/false variants."
   [base-vcf orig-true-vcf orig-false-vcf meta-files ref config & {:keys [train-w-base?]}]
-  (let [out-file (itx/add-file-part base-vcf "cfilter")
-        true-vcf (if train-w-base?
-                   (get-target-variants base-vcf orig-true-vcf ref "tps")
-                   orig-true-vcf)
-        false-vcf (if train-w-base?
-                    (get-target-variants base-vcf orig-false-vcf ref "fps")
-                    orig-false-vcf)
-        cs (build-vcf-classifiers (:classifiers config) base-vcf
-                                  true-vcf false-vcf ref config)
-        config (merge {:normalize :default} config)
-        normalizer (get-vc-attrs-normalized (:classifiers config) base-vcf ref config base-vcf)
-        attr-get (prep-vc-attr-retriever base-vcf ref)]
+  (let [out-file (itx/add-file-part base-vcf "cfilter")]
     (when (itx/needs-run? out-file)
-      (println "Filter VCF with" (str cs))
-      (with-open [vcf-iter (get-vcf-iterator base-vcf ref)
-                  trusted-get (get-vcf-retriever ref (:trusted meta-files))
-                  xspecific-get (get-vcf-retriever ref (:xspecific meta-files))]
-        (write-vcf-w-template base-vcf {:out out-file}
-                              (map (partial filter-vc cs normalizer attr-get
-                                            {:trusted trusted-get :xspecific xspecific-get}
-                                            config)
-                                   (parse-vcf vcf-iter))
-                              ref :header-update-fn (add-cfilter-header (:classifiers config)))))
+      (let [true-vcf (if train-w-base?
+                       (get-target-variants base-vcf orig-true-vcf ref "tps")
+                       orig-true-vcf)
+            false-vcf (if train-w-base?
+                        (get-target-variants base-vcf orig-false-vcf ref "fps")
+                        orig-false-vcf)
+            pre-normalizer (get-vc-attrs-normalized (:classifiers config) base-vcf ref config)
+            cs (build-vcf-classifiers (:classifiers config) pre-normalizer base-vcf
+                                      true-vcf false-vcf ref config)
+            config (merge {:normalize :default} config)
+            attr-get (prep-vc-attr-retriever base-vcf ref)]
+        (println "Filter VCF with" (str cs))
+        (with-open [vcf-iter (get-vcf-iterator base-vcf ref)
+                    trusted-get (get-vcf-retriever ref (:trusted meta-files))
+                    xspecific-get (get-vcf-retriever ref (:xspecific meta-files))]
+          (write-vcf-w-template base-vcf {:out out-file}
+                                (map (partial filter-vc cs (pre-normalizer base-vcf) attr-get
+                                              {:trusted trusted-get :xspecific xspecific-get}
+                                              config)
+                                     (parse-vcf vcf-iter))
+                                ref :header-update-fn (add-cfilter-header (:classifiers config))))))
     out-file))
 
 (defn pipeline-classify-filter
