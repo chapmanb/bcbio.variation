@@ -77,7 +77,7 @@
                                          ref))
         classifier (case (keyword (get config :classifier-type :svm))
                      :svm (make-classifier :support-vector-machine :smo
-                                           {:complexity-constant 100000.0})
+                                           {:complexity-constant 100.0})
                      :svm-rbf (make-classifier :support-vector-machine :smo
                                                {:kernel-function {:radial-basis {:gamma 0.01}}
                                                 :complexity-constant 100000.0})
