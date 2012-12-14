@@ -146,15 +146,15 @@
   [alleles]
   (letfn [(safe-sum [xs k]
             (apply + (remove nil? (map k xs))))
-          (sum-allele-support [xs]
+          (sum-allele-support [i xs]
             (let [pls (safe-sum xs :pl)
                   quals (safe-sum xs :qual)
                   represent-x (last (sort-by #(vector (:attr-count %) (- (:pl %))) xs))]
-              [(count xs) (- pls) quals represent-x]))]
+              [(count xs) (- pls) quals i represent-x]))]
     (->> alleles
          (group-by :alleles)
          (map second)
-         (map sum-allele-support)
+         (map-indexed sum-allele-support)
          sort
          last ; Best item
          last ; Extract the alleles
