@@ -148,8 +148,8 @@
                          (cons vc)
                          (map (partial get-sample-call sample))
                          frequencies
-                         (sort-by second)
-                         (split-with second)
+                         (sort-by second >)
+                         (partition-by second)
                          first)]
     (-> (VariantContextBuilder. (:vc vc))
         (.genotypes (update-genotype-w-alleles vc sample
