@@ -24,7 +24,11 @@
             [fs.core :as fs]
             [bcbio.run.itx :as itx]
             [bcbio.run.broad :as broad]
+            [bcbio.variation.filter.attr :as attr]
             [bcbio.variation.variantcontext :as gvc]))
+
+(defn- set-header-to-sample [sample _ header]
+  (VCFHeader. (.getMetaDataInInputOrder header) (ordered-set sample)))
 
 (defn- split-nocalls
   "Provide split VCFs of call and no-call variants for the given sample."
@@ -39,9 +43,7 @@
             (when (empty? (:filters vc))
               (let [cur-vc (sample-only-vc (:vc vc))]
                 [(if (.isNoCall (-> cur-vc .getGenotypes (.get sample))) :nocall :called)
-                 cur-vc])))
-          (set-header-to-sample [sample _ header]
-            (VCFHeader. (.getMetaDataInInputOrder header) (ordered-set sample)))]
+                 cur-vc])))]
     (let [sample-str (if (.contains in-vcf sample) "" (str sample "-"))
           out {:called (itx/add-file-part in-vcf (str sample-str "called") out-dir)
                :nocall (itx/add-file-part in-vcf (str sample-str "nocall") out-dir)}]
@@ -97,15 +99,18 @@
 
 (defn- no-recall-vcfs
   "Retrieve inputs VCFs not involved in preparing a recall VCF.
-   This removes both the recalled input file, as well as
-   individual inputs without recalling to avoid double counting."
+   Avoid double pulling inputs with the same initial call files."
   [all-vcfs vcf-configs]
-  (let [remove-vcfs (set (map :file (filter :recall vcf-configs)))]
+  (let [include-names (->> vcf-configs
+                           (group-by :file)
+                           (map second)
+                           (map first)
+                           (map :name)
+                           set)]
     (->> (interleave all-vcfs vcf-configs)
-                         (partition 2)
-                         (map (fn [[x c]]
-                                (when-not (contains? remove-vcfs (:file c)) x)))
-                         (remove nil?))))
+         (partition 2)
+         (map (fn [[x c]] (when (contains? include-names (:name c)) x)))
+         (remove nil?))))
 
 ;; ## Pick consensus variants
 
@@ -119,23 +124,38 @@
                           (map reverse)
                           (map vec)
                           (into {}))]
-    (->> (:genotypes vc)
-         (filter #(= sample (:sample-name %)))
-         first
-         :alleles
-         (sort-by allele-order))))
+    {:qual (:qual vc)
+     :alleles (->> (:genotypes vc)
+                   (filter #(= sample (:sample-name %)))
+                   first
+                   :alleles
+                   (sort-by allele-order))
+     :pl (attr/get-vc-attr vc "PL" nil)}))
 
-(defn- update-genotype-w-alleles
-  "Update a genotype with the provided alleles."
-  [vc sample alleles]
-  (doto (-> vc :vc .getGenotypes GenotypesContext/copy)
-    (.replace (-> (:vc vc)
-                  .getGenotypes
-                  (.get sample)
-                  GenotypeBuilder.
-                  (.alleles alleles)
-                  (.phased false)
-                  .make))))
+(defn- best-supported-alleles
+  "Retrieve alleles with best support from multiple inputs.
+   Use posterior likelihoods and quality scores to rank results
+   with the same alleles and counts. We rank by:
+    - Total number of times identified
+    - lowest set of PLs (most negative = most unlikely)
+    - largest summed quality value.
+   This model could get much fancier if needed."
+  [alleles]
+  (letfn [(safe-sum [xs k]
+            (apply + (remove nil? (map k xs))))
+          (sum-allele-support [xs]
+            ;(println "a" xs)
+            (let [pls (safe-sum xs :pl)
+                  quals (safe-sum xs :qual)]
+              [(count xs) (- pls) quals (-> xs first :alleles)]))]
+    (->> alleles
+         (group-by :alleles)
+         (map second)
+         (map sum-allele-support)
+         sort
+         last ; Best item
+         last ; Extract the alleles
+         )))
 
 (defn- update-vc-w-consensus
   "Update a variant context with consensus genotype from multiple inputs.
@@ -145,17 +165,11 @@
   (let [match-fn (juxt :start :ref-allele)
         max-alleles (->> (gvc/variants-in-region input-vc-getter vc)
                          (filter #(= (match-fn %) (match-fn vc)))
-                         (cons vc)
                          (map (partial get-sample-call sample))
-                         frequencies
-                         (sort-by second >)
-                         (partition-by second)
-                         first)]
+                         best-supported-alleles)]
     (-> (VariantContextBuilder. (:vc vc))
-        (.genotypes (update-genotype-w-alleles vc sample
-                                               (if (= 1 (count max-alleles))
-                                                 (ffirst max-alleles)
-                                                 (get-sample-call sample vc))))
+        (.genotypes (GenotypesContext/create
+                     (java.util.ArrayList. [(GenotypeBuilder/create sample max-alleles)])))
         .make)))
 
 (defn- recall-w-consensus
@@ -168,36 +182,59 @@
         (gvc/write-vcf-w-template base-vcf {:out out-file}
                                   (map #(update-vc-w-consensus % sample input-vc-getter)
                                        (gvc/parse-vcf in-vcf-iter))
-                                  ref-file)))
+                                  ref-file
+                                  :header-update-fn (partial set-header-to-sample sample))))
     out-file))
+
+(defn- get-min-merged
+  "Retrieve a minimal merged file with calls from input VCFs."
+  [vcfs exp out-dir intervals]
+  (-> (combine-variants vcfs (:ref exp) :merge-type :minimal :intervals intervals
+                        :out-dir out-dir :check-ploidy? false
+                        :name-map (zipmap vcfs (map :name (:calls exp))))
+      (fix-minimal-combined vcfs (:ref exp))))
+
+(defmulti recall-vcf
+  "Recall missing calls, handling merging or consensus based approaches"
+  (fn [in-info & _]
+    (if (some nil? [in-info (:bam in-info) (:file in-info)])
+      :consensus
+      (keyword (get in-info :approach :gatk-ug)))))
+
+(defmethod recall-vcf :gatk-ug
+  ^{:doc "Provide recalling of nocalls using GATK's UnifiedGenotyper"}
+  [in-info vcfs exp out-dir intervals]
+  (-> [(:file in-info) (get-min-merged vcfs exp out-dir intervals)]
+      (combine-variants (:ref exp) :merge-type :full :intervals intervals
+                        :out-dir out-dir :check-ploidy? false)
+      (recall-nocalls (:sample exp) (:name in-info) (:bam in-info) (:ref exp)
+                      :out-dir out-dir)))
+
+(defmethod recall-vcf :consensus
+  ^{:doc "Provide recalling of nocalls based on consensus from all inputs."}
+  [_ vcfs exp out-dir intervals]
+  (-> vcfs
+      (get-min-merged exp out-dir intervals)
+      (recall-w-consensus (no-recall-vcfs vcfs (:calls exp))
+                          (:sample exp) (:ref exp))))
 
 (defn create-merged
   "Create merged VCF files with no-call/ref-calls for each of the inputs.
   Works at a higher level than `recall-nocalls` and does the work of
   preparing a set of all merged variants, then re-calling at non-missing positions."
   [vcfs align-bams exp & {:keys [out-dir intervals cores]}]
-  (letfn [(merge-vcf [vcf call-name all-vcf align-bam ref]
-            (-> [vcf all-vcf]
-                (combine-variants ref :merge-type :full :intervals intervals
-                                  :out-dir out-dir :check-ploidy? false)
-                (recall-nocalls (:sample exp) call-name align-bam ref
-                                :out-dir out-dir :cores cores)
-                (recall-w-consensus (no-recall-vcfs vcfs (:calls exp))
-                                    (:sample exp) ref)))]
-    (let [min-merged (-> (combine-variants vcfs (:ref exp) :merge-type :minimal :intervals intervals
-                                       :out-dir out-dir :check-ploidy? false
-                                       :name-map (zipmap vcfs (map :name (:calls exp))))
-                         (fix-minimal-combined vcfs (:ref exp)))]
-      (map (fn [[v b vcf-config]]
-             (if (and (get vcf-config :recall false)
-                      (not (nil? b)))
-               (let [merged (merge-vcf v (:name vcf-config) min-merged b (:ref exp))]
-                 (if (get vcf-config :remove-refcalls true)
-                   (select-by-sample (:sample exp) merged nil (:ref exp)
-                                     :remove-refcalls true :ext "cleaned")
-                   merged))
-               v))
-           (map vector vcfs align-bams (:calls exp))))))
+  (map (fn [[v b vcf-config]]
+         (if (get vcf-config :recall false)
+           (let [base-info (when-let [approach (get-in exp [:params :recall-approach])]
+                             {:name (:name vcf-config) :approach approach
+                              :file v :bam b})
+                 merged (recall-vcf base-info vcfs exp out-dir intervals)]
+             (if (get vcf-config :remove-refcalls true)
+               (select-by-sample (:sample exp) merged nil (:ref exp)
+                                 :remove-refcalls true :ext "cleaned")
+               merged))
+           v))
+       (map vector vcfs align-bams (:calls exp))))
 
 (defn- split-vcf-sample-line
   "Split VCF line into shared attributes and sample specific genotypes.

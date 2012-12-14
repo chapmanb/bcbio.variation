@@ -37,9 +37,11 @@
                out-sum-compare (str (itx/file-root vcf1) "-summary.eval")
                filter-out (itx/add-file-part vcf1 "filter")
                nofilter-out (itx/add-file-part filter-out "nofilter")
-               combine-out [(itx/add-file-part vcf1 "fullcombine-wrefs-consensus-cleaned")]
+               combine-out [(itx/add-file-part vcf1 "fullcombine-wrefs-cleaned")]
+               combine-out-cons [(itx/add-file-part vcf1 "mincombine-fix-consensus-cleaned")]
                combine-out-xtra [(itx/add-file-part vcf1 "mincombine")
                                  (itx/add-file-part vcf1 "mincombine-fix")
+                                 (itx/add-file-part vcf1 "mincombine-fix-consensus")
                                  (itx/add-file-part vcf1 "fullcombine")
                                  (itx/add-file-part vcf1 "fullcombine-Test1-called")
                                  (itx/add-file-part vcf1 "fullcombine-Test1-nocall")
@@ -49,8 +51,7 @@
                                  (itx/add-file-part vcf2 "fullcombine-wrefs")
                                  (itx/add-file-part vcf2 "fullcombine-Test1-called")
                                  (itx/add-file-part vcf2 "fullcombine-Test1-nocall")
-                                 (itx/add-file-part vcf2 "fullcombine-Test1-nocall-wrefs")
-                                 (itx/add-file-part vcf1 "fullcombine-wrefs-consensus")]
+                                 (itx/add-file-part vcf2 "fullcombine-Test1-nocall-wrefs")]
                match-out {:concordant (itx/add-file-part combo-out "concordant")
                           :discordant (itx/add-file-part combo-out "discordant")}
                select-out (doall (map #(str (fs/file data-dir (format "%s-%s.vcf" sample %)))
@@ -65,7 +66,7 @@
                               out-sum-compare out-intervals nocall-out]
                              (map str (fs/glob (str (fs/file (fs/parent nocall-vcf)
                                                              (fs/name nocall-vcf)) "-*vcf")))
-                             out-callable combine-out combine-out-xtra (vals match-out) select-out)]
+                             out-callable combine-out combine-out-cons combine-out-xtra (vals match-out) select-out)]
              (itx/remove-path x)
              (when (.endsWith x ".vcf")
                (itx/remove-path (str x ".idx"))))
@@ -88,8 +89,10 @@
   (let [config {:sample "Test1"
                 :ref ref
                 :calls [{:recall true :name "gatk" :file vcf1}
-                        {:recall false :name "freebayes" :file vcf2}]}]
-    (create-merged [vcf1 vcf2] [align-bam align-bam] config)) => (conj combine-out vcf2))
+                        {:recall false :name "freebayes" :file vcf2}]}
+        config-gatk (assoc config :params {:recall-approach :gatk-ug})]
+    (create-merged [vcf1 vcf2] [align-bam align-bam] config-gatk) => (conj combine-out vcf2)
+    (create-merged [vcf1 vcf2] [align-bam align-bam] config) => (conj combine-out-cons vcf2)))
 
 (facts "Recall with GATK given a defined list of variants"
   (recall-nocalls nocall-vcf "Test1" "gatk" align-bam ref) => nocall-out)
