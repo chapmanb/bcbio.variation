@@ -27,7 +27,7 @@ def main():
     metrics = ['DP', 'Entropy', 'FS', 'GC', 'HRun', 'HaplotypeScore', 'MFE',
                'MQ', 'NBQ', 'ReadPosEndDist']
     format_metrics = ["AD", "PL", "QUAL"]
-    sanger_decisiontree(tp_vcf, fp_vcf, metrics, format_metrics)
+    #sanger_decisiontree(tp_vcf, fp_vcf, metrics, format_metrics)
     ml_params(mp_tps_vcf, mp_fps_vcf, metrics, format_metrics)
 
 # ## Machine learning parameters
@@ -48,10 +48,27 @@ def ml_params(tp_vcf, fp_vcf, metrics, format_metrics):
     if exploring:
         df = df.fillna({"NBQ": df["NBQ"].mean(), "PL" : df["PL"].mean(),
                         "AD" : df["AD"].mean(), "FS": 0.0})
+    df = normalize_inputs(df, metrics + format_metrics)
     for val, name in [(0, "snp"), (1, "indel")]:
         print "--->", name
         ml_param_explore(df[df["indel"] == val], metrics + format_metrics,
                          exploring)
+
+def normalize_inputs(df, metrics):
+    """Normalize all inputs around mean and standard deviation.
+    """
+    for m in metrics:
+        mean = np.mean(df[m])
+        stdev = np.std(df[m])
+        def std_normalize(x):
+            return (x - mean) / stdev
+        #df[m] = df[m].map(std_normalize)
+        xmin = min(df[m])
+        xmax = max(df[m])
+        def minmax_normalize(x):
+            return (x - xmin) / (xmax - xmin)
+        df[m] = df[m].map(minmax_normalize)
+    return df
 
 def ml_param_explore(df, metrics, test_all=False):
     """Explore classification approaches and parameters, leveraging ramp to compare multiple models.
@@ -62,12 +79,17 @@ def ml_param_explore(df, metrics, test_all=False):
                                                           ramp.metrics.HingeLoss()])
     #rf_params = _find_rf_params(df, metrics)
     models = [sklearn.ensemble.RandomForestClassifier(n_estimators=50,
-                                                      max_features=int(math.ceil(math.sqrt(len(metrics)))))]
+                                                      max_features=int(math.ceil(math.sqrt(len(metrics))))),
+              sklearn.linear_model.LogisticRegression()]
     if test_all:
-        rbf_params = _find_svm_rbf_params(df, metrics)
-        models += [sklearn.svm.SVC(kernel="linear"),
-                   sklearn.linear_model.LogisticRegression(),
-                   sklearn.svm.SVC(kernel="rbf", C=rbf_params["C"], gamma=rbf_params["gamma"])]
+        svm_tester = "linear"
+        if svm_tester == "linear":
+            linear_params = _find_svm_rbf_params(df, metrics, "linear")
+            models.append(sklearn.svm.SVC(kernel="linear", C=linear_params["C"]))
+        else:
+            rbf_params = _find_svm_rbf_params(df, metrics, "rbf")
+            models.append(sklearn.svm.SVC(kernel="rbf", C=rbf_params["C"], gamma=rbf_params["gamma"]))
+
     factory = ramp.ConfigFactory(config,
                                  features=[[ramp.BaseFeature(x) for x in metrics]],
                                  model = models)
@@ -96,7 +118,7 @@ def _find_rf_params(df, metrics):
         out[attr] = getattr(grid.best_estimator_, attr)
     return out
 
-def _find_svm_rbf_params(df, metrics):
+def _find_svm_rbf_params(df, metrics, kernel):
     """Perform a grid search to find best parameters for a SVM RBF kernel.
     """
     context = ramp.DataContext(data=df)
@@ -104,14 +126,21 @@ def _find_svm_rbf_params(df, metrics):
                                 features=[ramp.BaseFeature(x) for x in metrics])
     x, y = ramp.models.get_xy(config, context)
 
-    param_grid = dict(gamma=10.0 ** np.arange(-5, 4),
-                      C=10.0 ** np.arange(-2, 9))
-    grid = sklearn.grid_search.GridSearchCV(sklearn.svm.SVC(kernel="rbf"),
+    if kernel == "linear":
+        param_grid = dict(C=10.0 ** np.arange(-2, 5))
+    else:
+        param_grid = dict(gamma=10.0 ** np.arange(-5, 4),
+                          C=10.0 ** np.arange(-2, 9))
+    grid = sklearn.grid_search.GridSearchCV(sklearn.svm.SVC(kernel=kernel),
                                             param_grid=param_grid,
-                                            cv=sklearn.cross_validation.StratifiedKFold(y=y, k=3))
+                                            cv=sklearn.cross_validation.StratifiedKFold(y=y, k=3),
+                                            verbose=True)
     grid.fit(x, y)
     print grid.best_estimator_
-    return {"C": grid.best_estimator_.C, "gamma": grid.best_estimator_.gamma}
+    out = {}
+    for attr in param_grid.keys():
+        out[attr] = getattr(grid.best_estimator_, attr)
+    return out
 
 # ## Decision tree visualization
 
@@ -155,7 +184,7 @@ def read_vcf_metrics(in_handle, metrics, format_metrics, target,
     for x in metrics + format_metrics:
         d[x] = []
     if use_subset:
-        recs = itertools.islice(vcf.VCFReader(in_handle), 5000)
+        recs = itertools.islice(vcf.VCFReader(in_handle), 10000)
     else:
         recs = vcf.VCFReader(in_handle)
     for rec in recs:

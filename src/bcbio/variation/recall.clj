@@ -144,7 +144,6 @@
   (letfn [(safe-sum [xs k]
             (apply + (remove nil? (map k xs))))
           (sum-allele-support [xs]
-            ;(println "a" xs)
             (let [pls (safe-sum xs :pl)
                   quals (safe-sum xs :qual)]
               [(count xs) (- pls) quals (-> xs first :alleles)]))]
@@ -167,10 +166,12 @@
                          (filter #(= (match-fn %) (match-fn vc)))
                          (map (partial get-sample-call sample))
                          best-supported-alleles)]
-    (-> (VariantContextBuilder. (:vc vc))
-        (.genotypes (GenotypesContext/create
-                     (java.util.ArrayList. [(GenotypeBuilder/create sample max-alleles)])))
-        .make)))
+    (when max-alleles
+      (-> (VariantContextBuilder. (:vc vc))
+          (.alleles (set (cons (:ref-allele vc) max-alleles)))
+          (.genotypes (GenotypesContext/create
+                       (java.util.ArrayList. [(GenotypeBuilder/create sample max-alleles)])))
+          .make))))
 
 (defn- recall-w-consensus
   "Recall variants in a combined set of variants based on consensus of all inputs."
@@ -180,8 +181,8 @@
       (with-open [in-vcf-iter (gvc/get-vcf-iterator base-vcf ref-file)
                   input-vc-getter (apply gvc/get-vcf-retriever (cons ref-file input-vcfs))]
         (gvc/write-vcf-w-template base-vcf {:out out-file}
-                                  (map #(update-vc-w-consensus % sample input-vc-getter)
-                                       (gvc/parse-vcf in-vcf-iter))
+                                  (remove nil? (map #(update-vc-w-consensus % sample input-vc-getter)
+                                                    (gvc/parse-vcf in-vcf-iter)))
                                   ref-file
                                   :header-update-fn (partial set-header-to-sample sample))))
     out-file))
