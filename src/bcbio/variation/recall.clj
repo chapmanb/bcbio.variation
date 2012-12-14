@@ -123,13 +123,16 @@
                           (map-indexed vector)
                           (map reverse)
                           (map vec)
-                          (into {}))]
-    {:qual (:qual vc)
-     :alleles (->> (:genotypes vc)
+                          (into {}))
+        g (->> (:genotypes vc)
                    (filter #(= sample (:sample-name %)))
-                   first
-                   :alleles
-                   (sort-by allele-order))
+                   first)]
+    {:qual (:qual vc)
+     :alleles (sort-by allele-order (:alleles g))
+     :attrs (select-keys (:attributes g) ["PL" "DP" "AD"])
+     :attr-count (+ (if (seq (get-in g [:attributes "PL"])) 1 0)
+                    (if (seq (get-in g [:attributes "AD"])) 1 0)
+                    (if (get-in g [:attributes "DP"]) 1 0))
      :pl (attr/get-vc-attr vc "PL" nil)}))
 
 (defn- best-supported-alleles
@@ -145,8 +148,9 @@
             (apply + (remove nil? (map k xs))))
           (sum-allele-support [xs]
             (let [pls (safe-sum xs :pl)
-                  quals (safe-sum xs :qual)]
-              [(count xs) (- pls) quals (-> xs first :alleles)]))]
+                  quals (safe-sum xs :qual)
+                  represent-x (last (sort-by #(vector (:attr-count %) (- (:pl %))) xs))]
+              [(count xs) (- pls) quals represent-x]))]
     (->> alleles
          (group-by :alleles)
          (map second)
@@ -162,15 +166,25 @@
    exists. If there is no consensus default to the existing allele call."
   [vc sample input-vc-getter]
   (let [match-fn (juxt :start :ref-allele)
-        max-alleles (->> (gvc/variants-in-region input-vc-getter vc)
+        most-likely (->> (gvc/variants-in-region input-vc-getter vc)
                          (filter #(= (match-fn %) (match-fn vc)))
                          (map (partial get-sample-call sample))
                          best-supported-alleles)]
-    (when max-alleles
+    (when most-likely
       (-> (VariantContextBuilder. (:vc vc))
-          (.alleles (set (cons (:ref-allele vc) max-alleles)))
+          (.alleles (set (cons (:ref-allele vc) (:alleles most-likely))))
           (.genotypes (GenotypesContext/create
-                       (java.util.ArrayList. [(GenotypeBuilder/create sample max-alleles)])))
+                       (java.util.ArrayList. [(-> (GenotypeBuilder. sample (:alleles most-likely))
+                                                  (#(if-let [pl (seq (get-in most-likely [:attrs "PL"]))]
+                                                      (.PL % (int-array pl))
+                                                      %))
+                                                  (#(if-let [dp (get-in most-likely [:attrs "DP"])]
+                                                      (.DP % dp)
+                                                      %))
+                                                  (#(if-let [ad (seq (get-in most-likely [:attrs "AD"]))]
+                                                      (.AD % (int-array ad))
+                                                      %))
+                                                  .make)])))
           .make))))
 
 (defn- recall-w-consensus
