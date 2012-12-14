@@ -67,7 +67,6 @@
 (facts "Filter based on genotype FORMAT queries"
   (variant-format-filter top-vcf ["DP < 10"] ref) => ffilter-out)
 
-
 (facts "Final filtration of variants using classifier"
   (filter-vcf-w-classifier top-vcf top-vcf c-neg-vcf {} ref
                            {:classifiers ["AD" "QUAL" "DP" "PL"]}) => c-out)

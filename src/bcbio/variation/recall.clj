@@ -107,18 +107,56 @@
                                 (when-not (contains? remove-vcfs (:file c)) x)))
                          (remove nil?))))
 
+;; ## Pick consensus variants
+
 (defn- get-sample-call
-  [vc sample]
-  (->> (:genotypes vc)
-       (filter #(= sample (:sample-name %)))
-       first
-       :alleles))
+  "Retrieve variant alleles for the sample, sorted in a stable order."
+  [sample vc]
+  (let [allele-order (->> (:alt-alleles vc)
+                          (sort-by #(.getBaseString %))
+                          (cons (:ref-allele vc))
+                          (map-indexed vector)
+                          (map reverse)
+                          (map vec)
+                          (into {}))]
+    (->> (:genotypes vc)
+         (filter #(= sample (:sample-name %)))
+         first
+         :alleles
+         (sort-by allele-order))))
+
+(defn- update-genotype-w-alleles
+  "Update a genotype with the provided alleles."
+  [vc sample alleles]
+  (doto (-> vc :vc .getGenotypes GenotypesContext/copy)
+    (.replace (-> (:vc vc)
+                  .getGenotypes
+                  (.get sample)
+                  GenotypeBuilder.
+                  (.alleles alleles)
+                  (.phased false)
+                  .make))))
 
 (defn- update-vc-w-consensus
-  "Update a variant context with consensus genotype from multiple inputs."
+  "Update a variant context with consensus genotype from multiple inputs.
+   Calculates the consensus set of calls, swapping calls to that if it
+   exists. If there is no consensus default to the existing allele call."
   [vc sample input-vc-getter]
-  ;(println (map #(get-sample-call % sample) (cons vc (gvc/variants-in-region input-vc-getter vc))))
-  (:vc vc))
+  (let [match-fn (juxt :start :ref-allele)
+        max-alleles (->> (gvc/variants-in-region input-vc-getter vc)
+                         (filter #(= (match-fn %) (match-fn vc)))
+                         (cons vc)
+                         (map (partial get-sample-call sample))
+                         frequencies
+                         (sort-by second)
+                         (split-with second)
+                         first)]
+    (-> (VariantContextBuilder. (:vc vc))
+        (.genotypes (update-genotype-w-alleles vc sample
+                                               (if (= 1 (count max-alleles))
+                                                 (ffirst max-alleles)
+                                                 (get-sample-call sample vc))))
+        .make)))
 
 (defn- recall-w-consensus
   "Recall variants in a combined set of variants based on consensus of all inputs."
