@@ -19,13 +19,12 @@
         [bcbio.variation.haploid :only [diploid-calls-to-haploid]]
         [bcbio.variation.multisample :only [multiple-samples?]]
         [bcbio.variation.normalize :only [fix-vcf-sample remove-ref-alts]]
-        [bcbio.variation.phasing :only [is-haploid?]]
-        [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template get-vcf-iterator
-                                               get-vcf-header]])
+        [bcbio.variation.phasing :only [is-haploid?]])
   (:require [clojure.string :as string]
             [fs.core :as fs]
             [bcbio.run.itx :as itx]
-            [bcbio.run.broad :as broad]))
+            [bcbio.run.broad :as broad]
+            [bcbio.variation.variantcontext :as gvc]))
 
 (defn- split-nocalls
   "Provide split VCFs of call and no-call variants for the given sample."
@@ -47,11 +46,11 @@
           out {:called (itx/add-file-part in-vcf (str sample-str "called") out-dir)
                :nocall (itx/add-file-part in-vcf (str sample-str "nocall") out-dir)}]
       (when (itx/needs-run? (vals out))
-        (with-open [in-vcf-iter (get-vcf-iterator in-vcf ref)]
-          (write-vcf-w-template in-vcf out
-                                (remove nil? (map split-nocall-vc (parse-vcf in-vcf-iter)))
-                                ref
-                                :header-update-fn (partial set-header-to-sample sample))))
+        (with-open [in-vcf-iter (gvc/get-vcf-iterator in-vcf ref)]
+          (gvc/write-vcf-w-template in-vcf out
+                                    (remove nil? (map split-nocall-vc (gvc/parse-vcf in-vcf-iter)))
+                                    ref
+                                    :header-update-fn (partial set-header-to-sample sample))))
       out)))
 
 (defn call-at-known-alleles
@@ -96,17 +95,57 @@
         (fs/rename (str combine-out ".idx") (str out-file ".idx"))))
     out-file))
 
+(defn- no-recall-vcfs
+  "Retrieve inputs VCFs not involved in preparing a recall VCF.
+   This removes both the recalled input file, as well as
+   individual inputs without recalling to avoid double counting."
+  [all-vcfs vcf-configs]
+  (let [remove-vcfs (set (map :file (filter :recall vcf-configs)))]
+    (->> (interleave all-vcfs vcf-configs)
+                         (partition 2)
+                         (map (fn [[x c]]
+                                (when-not (contains? remove-vcfs (:file c)) x)))
+                         (remove nil?))))
+
+(defn- get-sample-call
+  [vc sample]
+  (->> (:genotypes vc)
+       (filter #(= sample (:sample-name %)))
+       first
+       :alleles))
+
+(defn- update-vc-w-consensus
+  "Update a variant context with consensus genotype from multiple inputs."
+  [vc sample input-vc-getter]
+  ;(println (map #(get-sample-call % sample) (cons vc (gvc/variants-in-region input-vc-getter vc))))
+  (:vc vc))
+
+(defn- recall-w-consensus
+  "Recall variants in a combined set of variants based on consensus of all inputs."
+  [base-vcf input-vcfs sample ref-file]
+  (let [out-file (itx/add-file-part base-vcf "consensus")]
+    (when (itx/needs-run? out-file)
+      (with-open [in-vcf-iter (gvc/get-vcf-iterator base-vcf ref-file)
+                  input-vc-getter (apply gvc/get-vcf-retriever (cons ref-file input-vcfs))]
+        (gvc/write-vcf-w-template base-vcf {:out out-file}
+                                  (map #(update-vc-w-consensus % sample input-vc-getter)
+                                       (gvc/parse-vcf in-vcf-iter))
+                                  ref-file)))
+    out-file))
+
 (defn create-merged
   "Create merged VCF files with no-call/ref-calls for each of the inputs.
   Works at a higher level than `recall-nocalls` and does the work of
   preparing a set of all merged variants, then re-calling at non-missing positions."
   [vcfs align-bams exp & {:keys [out-dir intervals cores]}]
   (letfn [(merge-vcf [vcf call-name all-vcf align-bam ref]
-            (let [ready-vcf (combine-variants [vcf all-vcf] ref
-                                              :merge-type :full :intervals intervals
-                                              :out-dir out-dir :check-ploidy? false)]
-              (recall-nocalls ready-vcf (:sample exp) call-name align-bam ref
-                              :out-dir out-dir :cores cores)))]
+            (-> [vcf all-vcf]
+                (combine-variants ref :merge-type :full :intervals intervals
+                                  :out-dir out-dir :check-ploidy? false)
+                (recall-nocalls (:sample exp) call-name align-bam ref
+                                :out-dir out-dir :cores cores)
+                (recall-w-consensus (no-recall-vcfs vcfs (:calls exp))
+                                    (:sample exp) ref)))]
     (let [min-merged (-> (combine-variants vcfs (:ref exp) :merge-type :minimal :intervals intervals
                                        :out-dir out-dir :check-ploidy? false
                                        :name-map (zipmap vcfs (map :name (:calls exp))))
@@ -165,7 +204,7 @@
 (defn split-vcf-to-samples
   "Create individual sample variant files from input VCF."
   [vcf-file & {:keys [out-dir]}]
-  (let [samples (-> vcf-file get-vcf-header .getGenotypeSamples)
+  (let [samples (-> vcf-file gvc/get-vcf-header .getGenotypeSamples)
         out-files (into (ordered-map) (map (fn [x] [x (itx/add-file-part vcf-file x out-dir)])
                                            samples))]
     (when (itx/needs-run? (vals out-files))
@@ -274,15 +313,15 @@
                       (.make)))
                 (:vc vc))))
           (convert-vcs [vcf-source call-source]
-            (for [vc (parse-vcf vcf-source)]
+            (for [vc (gvc/parse-vcf vcf-source)]
               [:out (maybe-callable-vc vc call-source)]))]
     (let [out-file (itx/add-file-part in-vcf "wrefs")]
       (when (itx/needs-run? out-file)
-        (with-open [in-vcf-iter (get-vcf-iterator in-vcf ref)
+        (with-open [in-vcf-iter (gvc/get-vcf-iterator in-vcf ref)
                     call-source (get-callable-checker align-bam ref :out-dir out-dir
                                                       :intervals intervals)]
-          (write-vcf-w-template in-vcf {:out out-file}
-                                (convert-vcs in-vcf-iter call-source) ref)))
+          (gvc/write-vcf-w-template in-vcf {:out out-file}
+                                    (convert-vcs in-vcf-iter call-source) ref)))
       out-file)))
 
 (defn -main [config-file]
