@@ -5,10 +5,12 @@ This identifies useful classification metrics to distinguish
 true and false variants.
 """
 import os
+import sys
 import math
 import shutil
 import itertools
 
+import yaml
 import vcf
 import numpy as np
 import pandas
@@ -21,23 +23,31 @@ prep_dir = os.path.join(base_dir, "NA12878_fosmid/work/prep")
 mp_tps_vcf = os.path.join(prep_dir, "NA12878-allfos-nomnp-fullcombine-wrefs-cleaned-annotated-ffilter-nosv-nofilter-tps.vcf")
 mp_fps_vcf = os.path.join(prep_dir, "NA12878-allfos-nomnp-fullcombine-wrefs-cleaned-annotated-ffilter-nosv-nofilter-fps.vcf")
 
-def main():
-    tp_vcf = "NA12878-validate-tps.vcf"
-    fp_vcf = "NA12878-validate-fps.vcf"
-    metrics = ['DP', 'Entropy', 'FS', 'GC', 'HRun', 'HaplotypeScore', 'MFE',
+default_config = {"sanger": {"tp": "NA12878-validate-tps.vcf",
+                             "fp": "NA12878-validate-fps.vcf"},
+                  "full": {"tp": mp_tps_vcf,
+                           "fp": mp_fps_vcf}}
+
+def main(config_file = None):
+    if config_file:
+        with open(config_file) as in_handle:
+            config = yaml.load(in_handle)
+    else:
+        config = default_config
+    metrics = ['Entropy', 'FS', 'GC', 'HRun', 'HaplotypeScore', 'MFE',
                'MQ', 'NBQ', 'ReadPosEndDist']
-    format_metrics = ["AD", "PL", "QUAL"]
-    #sanger_decisiontree(tp_vcf, fp_vcf, metrics, format_metrics)
-    ml_params(mp_tps_vcf, mp_fps_vcf, metrics, format_metrics)
+    format_metrics = ["AD", "PL", "QUAL", "DP"]
+    #sanger_decisiontree(config["sanger"]["tp"], config["sanger"]["fp"], metrics, format_metrics)
+    ml_params(config["full"]["tp"], config["full"]["fp"], metrics, format_metrics)
 
 # ## Machine learning parameters
 
 def ml_params(tp_vcf, fp_vcf, metrics, format_metrics):
     """Explore machine learning parameters to identify approaches to help separate data.
     """
-    metrics = ['Entropy', 'FS', 'HRun', 'MFE',
+    metrics = ['Entropy', 'FS', 'MFE',
                'MQ', 'NBQ', 'ReadPosEndDist']
-    exploring = True
+    exploring = False
     with open(tp_vcf) as in_handle:
         df_tp = read_vcf_metrics(in_handle, metrics, format_metrics, 1,
                                  exploring)
@@ -45,14 +55,14 @@ def ml_params(tp_vcf, fp_vcf, metrics, format_metrics):
         df_fp = read_vcf_metrics(in_handle, metrics, format_metrics, -1,
                                  exploring)
     df = pandas.concat([df_tp, df_fp], keys=["tp", "fp"])
-    if exploring:
-        df = df.fillna({"NBQ": df["NBQ"].mean(), "PL" : df["PL"].mean(),
-                        "AD" : df["AD"].mean(), "FS": 0.0})
+    df = df.fillna({"NBQ": df["NBQ"].mean(), "PL" : df["PL"].mean(),
+                    "AD" : df["AD"].mean(), "FS": 0.0, "DP": df["DP"].mean()})
     df = normalize_inputs(df, metrics + format_metrics)
     for val, name in [(0, "snp"), (1, "indel")]:
         print "--->", name
-        ml_param_explore(df[df["indel"] == val], metrics + format_metrics,
-                         exploring)
+        linear_metric_explore(df[df["indel"] == val], metrics + format_metrics)
+        #ml_param_explore(df[df["indel"] == val], metrics + format_metrics,
+        #                 exploring)
 
 def normalize_inputs(df, metrics):
     """Normalize all inputs around mean and standard deviation.
@@ -96,6 +106,38 @@ def ml_param_explore(df, metrics, test_all=False):
     for x in factory:
         ramp.models.cv(x, context, folds=5, repeat=2,
                        print_results=True)
+
+def _get_metrics_groups(metrics):
+    # keeps: AD -- snps, MQ -- indels
+    to_remove = [['Entropy', 'MFE', 'NBQ'],
+                 ['DP', 'Entropy', 'MFE', 'NBQ'],
+                 ['PL', 'QUAL'],
+                 ['Entropy', 'MFE', 'NBQ', 'PL', 'QUAL'],
+                 ['DP', 'Entropy', 'MFE', 'NBQ', 'PL', 'QUAL'],
+                 ['DP', 'Entropy', 'MFE', 'NBQ', 'QUAL'],
+                 ['DP', 'MFE', 'NBQ', 'QUAL'],
+                 ['MFE', 'NBQ', 'QUAL'],
+                 ]
+    for rem in to_remove:
+        new = metrics[:]
+        for x in rem:
+            new.remove(x)
+        yield new
+
+def linear_metric_explore(df, metrics):
+    """Explore different combinations of metrics with a linear classifier.
+    """
+    print df.describe()
+    context = ramp.DataContext(data=df)
+    config = ramp.Configuration(target="target", metrics=[ramp.metrics.AUC()])
+    models = [sklearn.svm.SVC(kernel="linear", C=100.0)]
+    for sub_metrics in [metrics] + list(_get_metrics_groups(metrics)):
+        print "==>", sub_metrics
+        factory = ramp.ConfigFactory(config, model=models,
+                                     features=[[ramp.BaseFeature(x) for x in sub_metrics]])
+        for x in factory:
+            ramp.models.cv(x, context, folds=5, repeat=2,
+                           print_results=True)
 
 def _find_rf_params(df, metrics):
     """Perform a grid search to find best parameters for random forest.
@@ -193,26 +235,42 @@ def read_vcf_metrics(in_handle, metrics, format_metrics, target,
         d["target"] = target
         d["AD"].append(_calc_ad(rec.samples[0].data))
         d["PL"].append(_calc_pl(rec.samples[0].data))
+        format_dp = _calc_dp(rec.samples[0].data)
+        d["DP"].append(format_dp)
         d["QUAL"].append(rec.QUAL)
         d["indel"].append(int(rec.is_indel))
     return pandas.DataFrame(d)
 
+def _calc_dp(data):
+    if hasattr(data, "DP"):
+        return data.DP
+
 def _calc_ad(data):
     if hasattr(data, "AD"):
-        if data.GT == "0":
+        if data.GT in ["0", "0/0"]:
+            target = 1.0
             want, other = data.AD
-        elif data.GT == "1":
+        elif data.GT in ["1", "1/1"]:
+            target = 1.0
             other, want = data.AD
+        elif data.GT in ["0/1"]:
+            target = 0.5
+            want, other = data.AD
         else:
+            print "Need to handle", data.AD, data.GT
+            return None
             raise ValueError
-        return 1.0 - (want / float(want + other))
+        if want + other > 0:
+            return target - (want / float(want + other))
 
 def _calc_pl(data):
     if hasattr(data, "PL"):
         if data.GT == "0":
             return data.PL[-1] / 10.0
-        else:
+        elif data.GT == "1":
             return data.PL[0] / 10.0
+        else:
+            return min(x for x in data.PL if x > 0) / 10.0
 
 if __name__ == "__main__":
-    main()
+    main(*sys.argv[1:])
