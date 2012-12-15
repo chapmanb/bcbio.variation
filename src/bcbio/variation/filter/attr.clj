@@ -34,7 +34,7 @@
             (let [ads (map float (get-in g [:attributes attr]))
                   alleles (cons (:ref-allele vc) (:alt-alleles vc))
                   ref-count (first ads)
-                  allele-count (apply + (map #(nth ads (.indexOf alleles %)) (set (:alleles g))))]
+                  allele-count (apply + (map #(nth ads (.indexOf alleles %)) (set (:alt-alleles vc))))]
               (calc-expected g ref-count allele-count)))
           (from-ao [g]
             (let [alt-count (apply max (map #(Float/parseFloat %) (string/split (get-in g [:attributes "AO"]) #",")))
@@ -56,7 +56,8 @@
 (defmethod get-vc-attr "PL"
   ^{:doc "Provide likelihood ratios for genotype compared to next most likely call.
           For haploid calls, get the homozygous reference or homozygous variant
-          likelihood. For diploid calls, get the largest alternative value."}
+          likelihood. For diploid calls, get the largest alternative value
+          (least negative)."}
   [vc attr _]
   {:pre [(= 1 (:num-samples vc))
          (contains? #{1 2} (-> vc :genotypes first :alleles count))]}
