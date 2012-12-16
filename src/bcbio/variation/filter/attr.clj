@@ -131,8 +131,8 @@
       retrieval from external sources like Gemini"
   (fn [_ _ _ config] (keyword (get config :normalize "default"))))
 
-;; Min-max normalization
 (defmethod get-vc-attrs-normalized :minmax
+  ^{:doc "Minimum/maximum normalization to a 0-1 scale using quartiles."}
   [attrs in-vcf ref config]
   (letfn [(min-max-norm [x [minv maxv]]
             (let [safe-maxv (if (= minv maxv) (inc maxv) maxv)
@@ -151,8 +151,21 @@
                  (map (partial min-max-norm-ranges mm-ranges))
                  (into {}))))))))
 
-;; No normalization
+(defmethod get-vc-attrs-normalized :log
+  ^{:doc "Log normalization of specified input variables."}
+  [attrs in-vcf ref config]
+  (let [base-fn (get-vc-attrs-normalized attrs in-vcf ref (assoc config :normalize :default))
+        need-log-vars (set (:log-attrs config))]
+    (fn [work-vcf]
+      (let [inner-fn (base-fn work-vcf)]
+        (fn [vc]
+          (reduce (fn [coll [k v]]
+                    (assoc coll k
+                           (if (contains? need-log-vars k) (Math/log v) v)))
+                  {} (inner-fn vc)))))))
+
 (defmethod get-vc-attrs-normalized :default
+  ^{:doc "Attribute access without normalization."}
   [attrs _ ref config]
   (fn [work-vcf]
     (let [retrievers (get-external-retrievers work-vcf ref)]

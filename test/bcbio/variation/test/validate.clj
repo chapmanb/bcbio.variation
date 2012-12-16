@@ -52,6 +52,9 @@
           xtra-attrs (conj attrs "gms_illumina")
           config {:normalize "minmax"}
           normalizer ((get-vc-attrs-normalized attrs top-vcf ref config) top-vcf)
+          log-normalizer ((get-vc-attrs-normalized attrs top-vcf ref {:normalize "log"
+                                                                      :log-attrs ["DP"]})
+                          top-vcf)
           ctype {:variant-type :snp :repetitive false}]
       (first (#'bcbio.variation.filter.classify/get-train-inputs
               1 top-vcf ctype xtra-attrs normalizer ref)) => (contains [0.0 (roughly 0.621) 1.0 1]
@@ -62,7 +65,8 @@
       (get-vc-attrs (first vcf-iter) xtra-attrs {}) => {"gms_illumina" nil
                                                         "AD" 0.0 "QUAL" 5826.09 "DP" 250.0}
       (get-vc-attr (first vcf-iter) [:format "DP"] {}) => 5
-      (-> (first vcf-iter) normalizer (get "QUAL")) => (roughly 0.621))))
+      (-> (first vcf-iter) normalizer (get "QUAL")) => (roughly 0.621)
+      (-> (first vcf-iter) log-normalizer (get "DP")) => (roughly 5.521))))
 
 (facts "Filter based on genotype FORMAT queries"
   (variant-format-filter top-vcf ["DP < 10"] ref) => ffilter-out)
