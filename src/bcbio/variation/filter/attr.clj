@@ -54,10 +54,10 @@
   (get-vc-attr vc "AD" retrievers))
 
 (defmethod get-vc-attr "PL"
-  ^{:doc "Provide likelihood ratios for genotype compared to next most likely call.
-          For haploid calls, get the homozygous reference or homozygous variant
-          likelihood. For diploid calls, get the largest alternative value
-          (least negative)."}
+  ^{:doc "Provide likelihood confidence for the called genotype.
+          For reference calls, retrieve the likelihood of the most likely
+          variant (least negative). For variant calls, retrieve
+          the reference likelihood."}
   [vc attr _]
   {:pre [(= 1 (:num-samples vc))
          (contains? #{1 2} (-> vc :genotypes first :alleles count))]}
@@ -66,9 +66,8 @@
                     (:type g))]
     (cond
      (zero? (count pls)) nil
-     (> (count (:alleles g)) 1) (apply max (vals pls))
-     (= (:type g) "HOM_VAR") (get pls "HOM_REF")
-     (= (:type g) "HOM_REF") (get pls "HOM_VAR"))))
+     (= (:type g) "HOM_REF") (apply max (vals pls))
+     :else (get pls "HOM_REF"))))
 
 (defmethod get-vc-attr "QUAL"
   [vc attr _]
