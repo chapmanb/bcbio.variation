@@ -6,6 +6,7 @@
         [bcbio.variation.api.shared :only [web-config remote-file-cache]])
   (:require [clojure.java.shell :as shell]
             [clojure.string :as string]
+            [clj-stacktrace.repl :as stacktrace]
             [fs.core :as fs]
             [bcbio.run.itx :as itx]
             [bcbio.variation.index.metrics :as metrics]
@@ -82,6 +83,8 @@
                   (swap! index-queue conj k)
                   (index-fn local-file ref-file :re-index? is-new?
                             :subsample-params (:params @web-config))
+                  (catch Exception ex
+                    (stacktrace/pst ex))
                   (finally
                    (swap! index-queue disj k))))))]
     (let [ref-file (:genome (first (:ref @web-config)))]
