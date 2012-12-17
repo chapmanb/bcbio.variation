@@ -55,7 +55,7 @@
           log-normalizer ((get-vc-attrs-normalized attrs top-vcf ref {:normalize "log"
                                                                       :log-attrs ["DP"]})
                           top-vcf)
-          ctype {:variant-type :snp :repetitive false}]
+          ctype {:variant-type :snp :repetitive false :zygosity :hom}]
       (first (#'bcbio.variation.filter.classify/get-train-inputs
               1 top-vcf ctype xtra-attrs normalizer ref)) => (contains [0.0 (roughly 0.621) 1.0 1]
                                                                       :in-any-order :gaps-ok)

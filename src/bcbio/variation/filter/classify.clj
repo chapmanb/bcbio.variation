@@ -24,16 +24,19 @@
   "Define splitting of classifiers based on variant characteristics."
   []
   (let [variant-types [:snp :complex]
-        repeats [true false]]
-    (map (fn [[vtype rpt]] {:variant-type vtype
-                            :repetitive rpt})
-         (cartesian-product variant-types repeats))))
+        repeats [true false]
+        zygosity [:hom :het]]
+    (map (fn [[vtype rpt z]] {:variant-type vtype
+                              :repetitive rpt
+                              :zygosity z})
+         (cartesian-product variant-types repeats zygosity))))
 
 (defn- ctype-to-str
   "Convert a classifier types into a string name for output files."
   [x]
-  (str (name (:variant-type x))
-       (if (:repetitive x) "rpt" "std")))
+  (str (name (:variant-type x)) "_"
+       (if (:repetitive x) "rpt" "std") "_"
+       (name (:zygosity x))))
 
 (defn- get-classifier-type
   "Map variant types to specialized classifiers."
@@ -42,7 +45,8 @@
     {:variant-type (case (:type vc)
                      "SNP" :snp
                      :complex)
-     :repetitive (contains? (get attrs "rmsk") "repeat")}))
+     :repetitive (contains? (get attrs "rmsk") "repeat")
+     :zygosity (if (some #(.startsWith (:type %) "HET") (:genotypes vc)) :het :hom)}))
 
 ;; ## Linear classifier
 
