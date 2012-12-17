@@ -47,7 +47,8 @@
 (defn select-by-random
   "Subset a VCF file with a random number of variants."
   [n in-vcf ref]
-  (let [frac (float (/ n (count-variants in-vcf ref (fn [x] true))))]
+  (let [total (count-variants in-vcf ref (fn [x] true)) 
+        frac (if (pos? total) (float (/ n total)) 0.0)]
     (select-by-general ["--select_random_fraction" frac] "randsubset" in-vcf ref)))
 
 (defmulti get-to-validate

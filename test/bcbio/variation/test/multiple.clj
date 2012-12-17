@@ -22,7 +22,7 @@
                config (load-config config-file)
                out-dir (str (fs/file (get-in config [:dir :prep]) "multiple"))
                union-file (str (fs/file (get-in config [:dir :prep]) "multiple"
-                                        "Test1-multiall-fullcombine-gatk-annotated.vcf"))
+                                        "Test1-multiall-fullcombine-gatk.vcf"))
                train-dir (str (fs/file (get-in config [:dir :prep]) "train"))
                trusted-out (itx/add-file-part union-file "trusted")
                cmps (prep-variant-comparison out-dir config-file)]
@@ -42,7 +42,7 @@
    
 (facts "Handle multiple variant approach comparisons."
   (multiple-overlap-analysis cmps config "cg") => (get-out-files out-dir "cg" "")
-  (multiple-overlap-analysis cmps config "gatk") => (get-out-files out-dir "gatk" "-annotated"))
+  (multiple-overlap-analysis cmps config "gatk") => (get-out-files out-dir "gatk" ""))
 
 (facts "Prepare trusted variant file"
   (get-trusted-variants cmps "gatk"

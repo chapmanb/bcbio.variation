@@ -174,8 +174,7 @@
                            :name-map {true-p-vcf "truep"
                                       (:intersection notarget-concordant) target-name}
                            :base-ext (format "multiall-no%s" target-name))
-         (select-variant-by-set ref target-name)
-         (add-variant-annotations (:align target-call) ref target-call :out-dir out-dir))
+         (select-variant-by-set ref target-name))
      :false-positives (gen-target-fps (remove #(not-target? target-name (first %))
                                               cmps-by-name)
                                       target-name (:union notarget-concordant)
@@ -210,14 +209,10 @@
     (when-not (fs/exists? out-dir)
       (fs/mkdirs out-dir))
     (let [all-overlap (gen-all-concordant cmps-by-name ref out-dir config)
-          true-p-vcf (-> (:intersection all-overlap)
-                         (add-variant-annotations (:align target-call)
-                                                  ref target-call :out-dir out-dir))
+          true-p-vcf (:intersection all-overlap)
           target-overlaps (-> all-overlap
                               :union
-                              (select-variant-by-set ref target-name)
-                              (add-variant-annotations (:align target-call) ref
-                                                       target-call :out-dir out-dir))
+                              (select-variant-by-set ref target-name))
           target-problems (gen-target-problems target-name target-call cmps-by-name
                                                true-p-vcf target-overlaps ref out-dir config)]
       (ordered-map :true-positives true-p-vcf
