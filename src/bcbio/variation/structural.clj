@@ -227,7 +227,7 @@
   (and (apply = (map :sv-type [sv1 sv2]))
        (case (:sv-type sv1)
          (:DEL :INS :INV :DUP) (sv-len-concordant? sv1 sv2 params)
-         :BND false
+         (:BND :UNASSEMBLED_EVENT) false
          (throw (Exception. (str "Structural variant type not handled: "
                                  (:sv-type sv1)))))))
 
