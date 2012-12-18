@@ -149,7 +149,9 @@
           (sum-allele-support [i xs]
             (let [pls (safe-sum xs :pl)
                   quals (safe-sum xs :qual)
-                  represent-x (last (sort-by #(vector (:attr-count %) (- (:pl %))) xs))]
+                  represent-x (last (sort-by #(vector (:attr-count %)
+                                                      (- (or (:pl %) Integer/MIN_VALUE)))
+                                             xs))]
               [(count xs) (- pls) quals i represent-x]))]
     (->> alleles
          (group-by :alleles)
