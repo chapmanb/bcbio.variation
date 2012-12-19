@@ -69,14 +69,6 @@
    "gms_illumina" {:range [0.0 100.0]
                    :y-scale {:type :log}
                    :desc "Genome Mappability Score with an Illumina error model"}
-   "sift_score" {:range [0.0 0.1]
-                 :y-scale {:type :log}
-                 :desc (str "SIFT amino acid effect predictions. "
-                            "Smaller scores are more likely to be deleterious.")}
-   "polyphen_score" {:range [0.5 1.0]
-                     :y-scale {:type :log}
-                     :desc (str "Polyphen amino acid effect predictions. "
-                                "Larger scores are more likely to be deleterious.")}
    "rmsk" {:x-scale {:type :category}
            :desc "Repeat status: is the variant in a known repeat region"}
    "type" {:x-scale {:type :category}

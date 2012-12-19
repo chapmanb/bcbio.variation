@@ -13,9 +13,9 @@
 
 (def ^{:doc "Metrics to expose, ranked in order of priority with default min/max values."}
   expose-metrics
-  (ordered-map "QUAL" {:range [0.0 10000.0]
+  (ordered-map "QUAL" {:range [0.0 2000.0]
                        :desc "Variant quality score, phred-scaled"}
-               "DP" {:range [0.0 500.0]
+               "DP" {:range [0.0 250.0]
                      :desc "Read depth after filtering of low quality reads"}
                "MQ" {:range [25.0 75.0]
                      :desc "Mapping quality"}
@@ -36,7 +36,7 @@
                "AD" {:range [0.0 1.0]
                      :y-scale {:type :log}
                      :desc "Deviation from expected allele balance for ref/alt alleles"}
-               "PL" {:range [-250.0 0]
+               "PL" {:range [-150.0 0]
                      :desc "Normalized, phred-scaled likelihoods for alternative genotype"}
                "HaplotypeScore" {:range [0.0 50.0]
                                  :desc "Consistency of the site with at most two segregating haplotypes"}))

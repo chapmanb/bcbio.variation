@@ -36,7 +36,7 @@
                                                                           (= % #{"heterozygous" "homozygous"}))
     (:filename out) => vcf1
     (-> out :metrics first :id) => "QUAL"
-    (-> out :metrics first :x-scale :domain) => (just [0.0 10000.0])
+    (-> out :metrics first :x-scale :domain) => (just [0.0 2000.0])
     (apply + (-> out :metrics first :vals)) => (roughly 1.0)))
 
 (facts "Subsample full metrics files using clustering."
@@ -60,9 +60,8 @@
 (facts "Index and retrieve metrics using Gemini."
   (set-config-from-file! web-yaml)
   (let [raw-out {"impact_severity" #{"LOW"}, "is_coding" #{"noncoding"}, "in_public" #{"dbSNP"},
-                 "zygosity" #{"homozygous"}, "type" #{"transition" "snp"}, "polyphen_score" 0.0,
-                 "sift_score" 1.0, :id ["MT" 73 "G"]}
-        raw-ids [:id "polyphen_score" "sift_score"]]
+                 "zygosity" #{"homozygous"}, "type" #{"transition" "snp"}, :id ["MT" 73 "G"]}
+        raw-ids [:id]]
     (when-let [idx (gemini/index-variant-file vcf1 ref)]
       (-> (gemini/get-raw-metrics vcf1 ref :noviz? true) first) => (contains raw-out)
       idx => gemini-index
