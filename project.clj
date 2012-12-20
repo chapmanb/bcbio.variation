@@ -8,10 +8,10 @@
                  [org.clojure/tools.cli "0.2.2"]
                  [clj-stacktrace "0.2.5"]
                  ;; GATK requirements
-                 [org.clojars.chapmanb/gatk-lite "2.2.2"]
+                 [org.clojars.chapmanb/gatk-lite "2.3.4"]
                  [org.clojars.chapmanb/picard "1.73"]
                  [org.clojars.chapmanb/sam "1.73"]
-                 [org.clojars.chapmanb/tribble "110"]
+                 [org.clojars.chapmanb/tribble "119"]
                  [org.clojars.chapmanb/cofoja "1.0-r139"]
                  [org.clojars.chapmanb/jama "1.0.2"]
                  [org.apache.commons/commons-jexl "2.1.1"]

@@ -57,9 +57,7 @@
 
 (defn get-callable-bed
   "Create BED file of callable regions from the BAM alignment file.
-  Pass the callable BED to GATK for subsetting based on callable intervals.
-  Since the callable output is 1-based inclusive, this converts to 0-based
-  intervals on output."
+  Pass the callable BED to GATK for subsetting based on callable intervals."
   [align-bam ref & {:keys [out-dir intervals]}]
   (let [orig-bed-file (identify-callable align-bam ref :out-dir out-dir
                                          :intervals intervals)
@@ -69,7 +67,7 @@
       (doseq [f bed-iter]
         (when (= (.getName f) "CALLABLE")
           (.write wtr (format "%s\t%s\t%s\n" (.getChr f)
-                              (- (.getStart f) 2) (.getEnd f))))))
+                              (dec (.getStart f)) (.getEnd f))))))
     out-file))
 
 (defn limit-bed-intervals
