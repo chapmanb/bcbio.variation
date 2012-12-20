@@ -139,15 +139,16 @@
            (map variant-id)
            set))))
 
-(defn- filter-by-recalling
+(defn filter-by-recalling
   "Filter problematic single support calls by ability to recall at defined sites.
    Single method support calls can be especially difficult to filter as concordant
    and discordant sites have similar metrics. Testing ability to recall is a useful
    mechanism to help identify ones with little read support."
   [in-file bam-file exp]
   (let [no-recall (no-recall-variants in-file bam-file (:sample exp) (:ref exp))]
-    (println (first no-recall))
-    in-file))
+    (letfn [(can-recall? [vc]
+              (not (contains? no-recall (variant-id vc))))]
+      (gvc/select-variants in-file can-recall? "recallfilter" (:ref exp)))))
 
 ;; ## Pick consensus variants
 

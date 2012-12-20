@@ -38,11 +38,14 @@
                filter-out (itx/add-file-part vcf1 "filter")
                nofilter-out (itx/add-file-part filter-out "nofilter")
                combine-out [(itx/add-file-part vcf1 "fullcombine-wrefs-cleaned")]
-               combine-out-cons [(itx/add-file-part vcf1 "mincombine-fix-consensus-cleaned")]
+               combine-out-cons [(itx/add-file-part vcf1
+                                                    "mincombine-fix-consensus-recallfilter-cleaned")]
                combine-out-xtra [(itx/add-file-part vcf1 "mincombine")
                                  (itx/add-file-part vcf1 "mincombine-fix")
                                  (itx/add-file-part vcf1 "mincombine-fix-consensus")
+                                 (itx/add-file-part vcf1 "mincombine-fix-consensus-cleaned")
                                  (itx/add-file-part vcf1 "mincombine-fix-consensus-singles")
+                                 (itx/add-file-part vcf1 "mincombine-fix-consensus-recallfilter")
                                  (itx/add-file-part vcf1 "mincombine-fix-consensus-singles-wrefs")
                                  (itx/add-file-part vcf1 "fullcombine")
                                  (itx/add-file-part vcf1 "fullcombine-Test1-called")
