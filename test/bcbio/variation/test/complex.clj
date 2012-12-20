@@ -32,6 +32,8 @@
                mnp-vcf (str (fs/file data-dir "freebayes-calls-indels.vcf"))
                cindel-vcf (str (fs/file data-dir "freebayes-calls-complexindels.vcf"))
                cindel-out (itx/add-file-part cindel-vcf "nomnp")
+               cindel-extras (map #(itx/add-file-part cindel-vcf %)
+                                  ["leftalign" "worknomnp" "worknomnp-leftalign"])
                indel-vcf1 (str (fs/file data-dir "sv-indels-fb.vcf"))
                indel-vcf2 (str (fs/file data-dir "sv-indels-gatk.vcf"))
                indel-out (str (fs/file data-dir "Test-svindfb-svindgatk-svconcordance.vcf"))
@@ -41,7 +43,7 @@
                params {:max-indel 100}]
            (doseq [x (concat [nomnp-out indel-out cindel-out headerfix-out fullprep-out
                               multi-out]
-                             (vals sv-out) (vals sv-out2))]
+                             cindel-extras (vals sv-out) (vals sv-out2))]
              (itx/remove-path x))
            ?form)))
 
