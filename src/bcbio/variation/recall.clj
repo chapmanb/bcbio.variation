@@ -126,16 +126,23 @@
          (= 1))))
 
 (defn- variant-id [vc]
-  ((juxt :chr :start :ref-allele :alt-alleles) vc))
+  [(:chr vc) (:start vc) (:ref-allele vc) (first (:alt-alleles vc))])
 
-(defn- no-recall-variants
-  "Retrieve set of variants that a recaller cannot identify."
+(defn- supports-variant?
+  "Test if a recalled posterior likelihood supports a variant call."
+  [thresh vc]
+  (when-let [pl (attr/get-vc-attr vc "PL" nil)]
+    (< pl thresh)))
+
+(defn- get-norecall-variants
+  "Retrieve set of variants that a GATK UnifiedGenotyper recaller can't identify."
   [in-file bam-file sample ref]
-  (let [recall-file (-> (gvc/select-variants in-file single-support? "singles" ref)
+  (let [support-thresh -7.5
+        recall-file (-> (gvc/select-variants in-file single-support? "singles" ref)
                         (call-at-known-alleles bam-file ref))]
     (with-open [in-vcf-iter (gvc/get-vcf-iterator recall-file ref)]
       (->> (gvc/parse-vcf in-vcf-iter)
-           (filter #(.isNoCall (-> (:vc %) .getGenotypes (.get sample))))
+           (remove (partial supports-variant? support-thresh))
            (map variant-id)
            set))))
 
@@ -145,9 +152,9 @@
    and discordant sites have similar metrics. Testing ability to recall is a useful
    mechanism to help identify ones with little read support."
   [in-file bam-file exp]
-  (let [no-recall (no-recall-variants in-file bam-file (:sample exp) (:ref exp))]
+  (let [norecall (get-norecall-variants in-file bam-file (:sample exp) (:ref exp))]
     (letfn [(can-recall? [vc]
-              (not (contains? no-recall (variant-id vc))))]
+              (not (contains? norecall (variant-id vc))))]
       (gvc/select-variants in-file can-recall? "recallfilter" (:ref exp)))))
 
 ;; ## Pick consensus variants
