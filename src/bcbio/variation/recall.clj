@@ -112,6 +112,43 @@
          (map (fn [[x c]] (when (contains? include-names (:name c)) x)))
          (remove nil?))))
 
+;; ## Filtering with recall testing
+
+(defn- single-support?
+  "Does the supplied variant have a single supporting call"
+  [vc]
+  (when-let [callers (get-in vc [:attributes "set"])]
+    (->> (string/split callers #"-")
+         (map string/lower-case)
+         (remove #(.startsWith % "filter"))
+         (remove #(contains? #{"intersection" "combo"} %))
+         count
+         (= 1))))
+
+(defn- variant-id [vc]
+  ((juxt :chr :start :ref-allele :alt-alleles) vc))
+
+(defn- no-recall-variants
+  "Retrieve set of variants that a recaller cannot identify."
+  [in-file bam-file sample ref]
+  (let [recall-file (-> (gvc/select-variants in-file single-support? "singles" ref)
+                        (call-at-known-alleles bam-file ref))]
+    (with-open [in-vcf-iter (gvc/get-vcf-iterator recall-file ref)]
+      (->> (gvc/parse-vcf in-vcf-iter)
+           (filter #(.isNoCall (-> (:vc %) .getGenotypes (.get sample))))
+           (map variant-id)
+           set))))
+
+(defn- filter-by-recalling
+  "Filter problematic single support calls by ability to recall at defined sites.
+   Single method support calls can be especially difficult to filter as concordant
+   and discordant sites have similar metrics. Testing ability to recall is a useful
+   mechanism to help identify ones with little read support."
+  [in-file bam-file exp]
+  (let [no-recall (no-recall-variants in-file bam-file (:sample exp) (:ref exp))]
+    (println (first no-recall))
+    in-file))
+
 ;; ## Pick consensus variants
 
 (defn- get-sample-call
@@ -216,7 +253,7 @@
   (fn [in-info & _]
     (if (some nil? [in-info (:bam in-info) (:file in-info)])
       :consensus
-      (keyword (get in-info :approach :gatk-ug)))))
+      (keyword (get in-info :approach :consensus)))))
 
 (defmethod recall-vcf :gatk-ug
   ^{:doc "Provide recalling of nocalls using GATK's UnifiedGenotyper"}
@@ -229,11 +266,12 @@
 
 (defmethod recall-vcf :consensus
   ^{:doc "Provide recalling of nocalls based on consensus from all inputs."}
-  [_ vcfs exp out-dir intervals]
+  [in-info vcfs exp out-dir intervals]
   (-> vcfs
       (get-min-merged exp out-dir intervals)
       (recall-w-consensus (no-recall-vcfs vcfs (:calls exp))
-                          (:sample exp) (:ref exp))))
+                          (:sample exp) (:ref exp))
+      (filter-by-recalling (:bam in-info) exp)))
 
 (defn create-merged
   "Create merged VCF files with no-call/ref-calls for each of the inputs.
@@ -242,9 +280,9 @@
   [vcfs align-bams exp & {:keys [out-dir intervals cores]}]
   (map (fn [[v b vcf-config]]
          (if (get vcf-config :recall false)
-           (let [base-info (when-let [approach (get-in exp [:params :recall-approach])]
-                             {:name (:name vcf-config) :approach approach
-                              :file v :bam b})
+           (let [base-info {:name (:name vcf-config)
+                            :approach (get-in exp [:params :recall-approach] :consensus)
+                            :file v :bam b}
                  merged (recall-vcf base-info vcfs exp out-dir intervals)]
              (if (get vcf-config :remove-refcalls true)
                (select-by-sample (:sample exp) merged nil (:ref exp)
