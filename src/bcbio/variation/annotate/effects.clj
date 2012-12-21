@@ -12,16 +12,13 @@
 (defn- get-snpeff-config
   [base-dir]
   (let [data-dir (str (fs/file base-dir "snpeff" "data"))
-        orig-config-file (-> (ClassLoader/getSystemClassLoader)
-                             (.getResource "snpEff.config")
-                             (.getFile)
-                             str)
+        orig-config (-> (ClassLoader/getSystemClassLoader)
+                        (.getResourceAsStream "snpEff.config"))
         config-file (str (fs/file base-dir "snpeff" "snpEff.config"))]
     (when-not (fs/exists? data-dir)
       (fs/mkdirs data-dir))
-    (when (or (itx/needs-run? config-file)
-              (> (fs/mod-time orig-config-file) (fs/mod-time config-file)))
-      (with-open [rdr (io/reader orig-config-file)
+    (when (itx/needs-run? config-file)
+      (with-open [rdr (io/reader orig-config)
                   wtr (io/writer config-file)]
         (doseq [line (line-seq rdr)]
           (.write wtr (str
