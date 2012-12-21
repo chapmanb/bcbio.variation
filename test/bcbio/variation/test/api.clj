@@ -23,7 +23,8 @@
                sub-params {:subsample {:method :k-means :count 5}}]
            (doseq [x [out-index gemini-index vep-out]]
              (itx/remove-path x))
-           ?form
+           (binding [*skip-prep* true]
+             ?form)
            )))
 
 (facts "Retrieve available metrics from a variant file"

@@ -4,9 +4,9 @@
   (:use [bcbio.variation.api.shared :only [web-config]]
         [bcbio.variation.variantcontext :only [get-vcf-iterator parse-vcf]])
   (:require [clojure.set :as set]
+            [bcbio.variation.api.file :as fileapi]
             [bcbio.variation.index.metrics :as im]
-            [bcbio.variation.index.gemini :as gemini]
-            [bcbio.variation.remote.core :as remote]))
+            [bcbio.variation.index.gemini :as gemini]))
 
 ;; ## Helper functions
 
@@ -74,16 +74,16 @@
 
 (defn available-metrics
   [file-id & {:keys [rclient]}]
-  (let [vcf-file (when file-id (remote/get-file file-id rclient))]
+  (let [vcf-file (when file-id (fileapi/get-prep-and-index {:id file-id} rclient))]
     (concat (im/available-metrics vcf-file)
             (gemini/available-metrics vcf-file))))
 
 (defn plot-ready-metrics
   "Provide metrics for a VCF file ready for plotting and visualization."
   [in-vcf-file & {:keys [metrics rclient]}]
-  (let [vcf-file (remote/get-file in-vcf-file rclient)
+  (let [vcf-file (fileapi/get-prep-and-index {:id in-vcf-file} rclient)
         ref-file (-> @web-config :ref first :genome)
-        plot-metrics (or metrics (available-metrics vcf-file))
+        plot-metrics (or metrics (available-metrics in-vcf-file :rclient rclient))
         raw-metrics (clean-raw-metrics
                      (combined-raw-metrics vcf-file ref-file plot-metrics false)
                      (map :id plot-metrics))]
@@ -123,9 +123,9 @@
 (defn get-raw-metrics
   "Retrieve raw metrics values from input VCF."
   [variant-id & {:keys [metrics rclient use-subsample?]}]
-  (let [vcf-file (remote/get-file variant-id rclient)
+  (let [vcf-file (fileapi/get-prep-and-index {:id variant-id} rclient)
         ref-file (-> @web-config :ref first :genome)
-        metrics (or metrics (available-metrics vcf-file))
+        metrics (or metrics (available-metrics variant-id :rclient rclient))
         raw (combined-raw-metrics vcf-file ref-file metrics use-subsample?)]
     {:raw raw
      :metrics (finalize-metrics metrics raw)}))

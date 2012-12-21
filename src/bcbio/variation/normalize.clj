@@ -117,7 +117,8 @@
   [map-key ref-file orig-ref-file]
   (let [rename-map (prep-rename-map map-key ref-file)
         ref-chrs (set (chrs-from-fasta-file ref-file))
-        vcf-chrs (when orig-ref-file (chrs-from-fasta-file orig-ref-file))]
+        vcf-chrs (when (and orig-ref-file (not= orig-ref-file ref-file))
+                   (chrs-from-fasta-file orig-ref-file))]
     (letfn [(maybe-remap-name [x]
               (let [remap-x (get rename-map x)]
                 (if (and remap-x (contains? ref-chrs remap-x))
@@ -136,7 +137,8 @@
   haploid but are often represented as diploid with a single call."
   [sample config orig]
   (letfn [(update-genotype-sample [vc sample]
-            (if (= 1 (count (.getGenotypes vc)))
+            (if (and (not (nil? sample))
+                     (= 1 (count (.getGenotypes vc))))
               (let [g (first (.getGenotypes vc))]
                 [(-> (GenotypeBuilder. g)
                      (.name sample)
@@ -287,12 +289,12 @@
   (letfn [(clean-metadata [header]
             (apply ordered-set (remove #(= "contig" (.getKey %)) (.getMetaDataInInputOrder header))))]
     (fn [_ header]
-      (case (count (.getGenotypeSamples header))
-        1 (VCFHeader. (clean-metadata header) (ordered-set sample))
-        0 (if (:prep-sv-genotype config)
-            (VCFHeader. (clean-metadata header) (ordered-set sample))
-            (VCFHeader. (clean-metadata header) #{}))
-        header))))
+      (let [cur-samples (.getGenotypeSamples header)
+            new-samples (if (or (nil? sample) (not= 1 (count cur-samples)))
+                          cur-samples (ordered-set sample))]
+        (if (:prep-sv-genotype config)
+          (VCFHeader. (clean-metadata header) (ordered-set sample))
+          (VCFHeader. (clean-metadata header) new-samples))))))
 
 (defn fix-vcf-sample
   "Update a VCF file with one item to have the given sample name."

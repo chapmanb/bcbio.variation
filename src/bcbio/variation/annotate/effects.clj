@@ -48,18 +48,19 @@
 
 (defn snpeff-annotate
   "Annotate the input file with snpEff, providing predictions of variant effects. "
-  [in-file genome base-dir]
+  [in-file genome base-dir & {:keys [out-dir]}]
   (let [config-file (download-genome genome base-dir)
-        out-file (itx/add-file-part in-file "effects")]
+        out-file (itx/add-file-part in-file "effects" out-dir)]
     (when (itx/needs-run? out-file)
       ;; snpEff prints to standard out so we need to safely redirect that to a file.
       (let [orig-out System/out]
         (try
-          (with-open [wtr (java.io.PrintStream. out-file)]
-            (System/setOut wtr)
-            (doto (SnpEffCmdEff.)
-              (.parseArgs (into-array ["-noStats" "-c" config-file genome in-file]))
-              .run))
+          (itx/with-tx-file [tx-out out-file]
+            (with-open [wtr (java.io.PrintStream. tx-out)]
+              (System/setOut wtr)
+              (doto (SnpEffCmdEff.)
+                (.parseArgs (into-array ["-noStats" "-c" config-file genome in-file]))
+                .run)))
           (finally
            (System/setOut orig-out)))))
     out-file))
