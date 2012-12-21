@@ -20,6 +20,7 @@
                  [org.simpleframework/simple-xml "2.0.4"]
                  [colt/colt "1.2.0"]
                  ;;
+                 [org.clojars.chapmanb/snpeff "3.1"]
                  [org.biojava/biojava3-core "3.0.4"]
                  [org.biojava/biojava3-alignment "3.0.4"]
                  [org.clojars.chapmanb/circdesigna "0.0.2"]
