@@ -11,28 +11,6 @@
             [fs.core :as fs]
             [bcbio.run.itx :as itx]))
 
-;; ## Variant effects
-
-(defn- get-vep-cmd []
-  (let [vep-dir (get-in @web-config [:program :vep])
-        vep-file (when vep-dir (str (file (fs/expand-home vep-dir)
-                                          "variant_effect_predictor.pl")))]
-    (when (and vep-file (fs/exists? vep-file))
-      vep-file)))
-
-(defn run-vep
-  "Run Ensembl Variant Effects Predictor on input variant file.
-   Re-annotates the input file with CSQ field compatible with Gemini."
-  [in-file & {:keys [re-run?]}]
-  (when-let [vep-cmd (get-vep-cmd)]
-    (let [out-file (itx/add-file-part in-file "vep")]
-      (when (or (itx/needs-run? out-file) re-run?)
-        (itx/with-tx-file [tx-out out-file]
-          (shell/sh "perl" vep-cmd "-i" in-file "-o" tx-out "--vcf" "--cache"
-                    "--terms" "so" "--sift" "b" "--polyphen" "b" "--hgnc" "--numbers"
-                    "--fields" "Consequence,Codons,Amino_acids,Gene,HGNC,Feature,EXON,PolyPhen,SIFT")))
-      out-file)))
-
 ;; ## Gemini
 
 (defn get-gemini-cmd []
@@ -43,21 +21,29 @@
     (when (zero? (:exit info))
       cmd)))
 
+(defn- has-snpeff-anns?
+  "Check if the input file contains snpEff annotations."
+  [in-file]
+  (with-open [rdr (reader in-file)]
+    (->> (line-seq rdr)
+         (take-while #(.startsWith % "##"))
+         (filter #(.startsWith % "##SnpEff"))
+         count
+         pos?)))
+
 (defn index-variant-file
-  "Pre-index a variant file with gemini"
+  "Pre-index a variant file with gemini, handling snpEff annotations."
   [in-file _ & {:keys [re-index?]}]
   (when-let [gemini-cmd (get-gemini-cmd)]
     (when in-file
       (let [index-file (str (itx/file-root in-file) "-gemini.db")]
         (when (or (itx/needs-run? index-file) re-index?)
-          (let [vep-file (run-vep in-file :re-run? re-index?)]
-            (itx/with-tx-file [tx-index index-file]
-              (apply shell/sh
-                     (concat [gemini-cmd "load" "-v"]
-                             (if vep-file
-                               [vep-file "-t" "VEP"]
-                               [in-file])
-                             [tx-index])))))
+          (itx/with-tx-file [tx-index index-file]
+            (apply shell/sh
+                   (concat [gemini-cmd "load" "-v" in-file]
+                           (when (has-snpeff-anns? in-file)
+                             ["-t" "snpEff"])
+                           [tx-index]))))
         index-file))))
 
 (def ^{:doc "Gemini metrics to expose for query and visualization."

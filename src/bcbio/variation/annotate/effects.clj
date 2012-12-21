@@ -3,8 +3,11 @@
   (:import [ca.mcgill.mcb.pcingola.snpEffect.commandLine
             SnpEffCmdEff SnpEffCmdDownload])
   (:require [clojure.java.io :as io]
+            [clojure.java.shell :as shell]
             [fs.core :as fs]
             [bcbio.run.itx :as itx]))
+
+;; ## snpEff
 
 (defn- get-snpeff-config
   [base-dir]
@@ -37,21 +40,47 @@
     (when-not (fs/exists? genome-dir)
       (fs/mkdirs genome-dir)
       (doto (SnpEffCmdDownload.)
-        (.parseArgs (into-array ["-noStats" "-c" config-file genome]))
+        (.parseArgs (into-array ["-c" config-file genome]))
         .run)
       (doseq [x (fs/glob (str "*" genome ".zip"))]
         (fs/delete x)))
     config-file))
 
-(defn snpeff-annotation
-  "Annotate the input file with snpEff, providing predictions of variant effects."
+(defn snpeff-annotate
+  "Annotate the input file with snpEff, providing predictions of variant effects. "
   [in-file genome base-dir]
   (let [config-file (download-genome genome base-dir)
         out-file (itx/add-file-part in-file "effects")]
     (when (itx/needs-run? out-file)
-      (with-open [wtr (io/writer out-file)]
-        (binding [*out* wtr]
-          (doto (SnpEffCmdEff.)
-            (.parseArgs (into-array ["-c" config-file genome in-file]))
-            .run))))
+      ;; snpEff prints to standard out so we need to safely redirect that to a file.
+      (let [orig-out System/out]
+        (try
+          (with-open [wtr (java.io.PrintStream. out-file)]
+            (System/setOut wtr)
+            (doto (SnpEffCmdEff.)
+              (.parseArgs (into-array ["-noStats" "-c" config-file genome in-file]))
+              .run))
+          (finally
+           (System/setOut orig-out)))))
     out-file))
+
+;; ## VEP
+
+(defn- get-vep-cmd [vep-dir]
+  (let [vep-file (when vep-dir (str (fs/file (fs/expand-home vep-dir)
+                                             "variant_effect_predictor.pl")))]
+    (when (and vep-file (fs/exists? vep-file))
+      vep-file)))
+
+(defn run-vep
+  "Run Ensembl Variant Effects Predictor on input variant file.
+   Re-annotates the input file with CSQ field compatible with Gemini."
+  [in-file vep-dir & {:keys [re-run?]}]
+  (when-let [vep-cmd (get-vep-cmd vep-dir)]
+    (let [out-file (itx/add-file-part in-file "vep")]
+      (when (or (itx/needs-run? out-file) re-run?)
+        (itx/with-tx-file [tx-out out-file]
+          (shell/sh "perl" vep-cmd "-i" in-file "-o" tx-out "--vcf" "--cache"
+                    "--terms" "so" "--sift" "b" "--polyphen" "b" "--hgnc" "--numbers"
+                    "--fields" "Consequence,Codons,Amino_acids,Gene,HGNC,Feature,EXON,PolyPhen,SIFT")))
+      out-file)))
