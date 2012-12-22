@@ -22,7 +22,7 @@
         ref (first (filter #(= (:sample %) (:comparison-genome work-info))
                            (:ref config)))
         contestant-vcf (if-let [x (:variant-file work-info)]
-                         (str x)
+                         (str (fs/file x))
                          (:default-compare ref))]
     (->> {:dir {:out (str (fs/file (:dir work-info) "grading"))
                 :prep (str (fs/file (:dir work-info) "grading" "prep"))}
@@ -41,7 +41,7 @@
                                                                            (:genome-alts ref)))
                                   :file contestant-vcf
                                   :intervals (if-let [x (:region-file work-info)]
-                                               (str x)
+                                               (str (fs/file x))
                                                (:intervals ref))}]}]}
          yaml/generate-string
          (spit config-file))
