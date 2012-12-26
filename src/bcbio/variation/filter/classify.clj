@@ -185,15 +185,17 @@
 (defmethod get-train-variants [:recall :identify-fps]
   ^{:doc "Identify false positive variants directly from recalled consensus calls.
           These contain the `set` key value pair with information about supporting
-          calls."}
+          calls. We filter variants that have low support and are not represented
+          in dbSNP."}
   [orig-file _ call exp ext]
   (let [freq (get call :fp-freq 0.25)
         thresh (Math/ceil (* freq (dec (count (:calls exp)))))]
     (letfn [(is-potential-fp? [vc]
-              (-> (multiple/get-vc-set-calls vc (:calls exp))
-                  (disj (:name call))
-                  count
-                  (<= thresh)))]
+              (and (contains? #{nil "."} (:id vc))
+                   (-> (multiple/get-vc-set-calls vc (:calls exp))
+                       (disj (:name call))
+                       count
+                       (<= thresh))))]
       (gvc/select-variants orig-file is-potential-fp? ext (:ref exp)))))
 
 (defmethod get-train-variants :default
