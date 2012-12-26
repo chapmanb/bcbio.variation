@@ -135,6 +135,9 @@ provide example starting points and details on available options are below:
          compare-approach: Provide alternative approaches to compare variants:
                            approximate -- allow flexible matching of het/hom variants
                                           and indels
+         recall-approach: Method to use for recalling variants:
+                          consensus -- Most common variant from multiple inputs
+                          gatk-ug -- Use GATK unified genotyper
        approach: Type of comparison to do [compare,grade]. Default compare.
        calls: # two or more calls to compare
          - name: Name of call type
@@ -149,8 +152,8 @@ provide example starting points and details on available options are below:
                     specified JEXL GATK expressions.
            format-filters: Provide hard filtering of variants based on
                            attributes in the genotype FORMAT field.
-           recall: Recall, using GATK, all non-called variant positions after
-                   merging multiple input calls. (boolean; default false)
+           recall: Recall variant positions after merging multiple input calls. 
+                   Can tune with `recall-approach` in `params` (boolean; default false)
            annotate: Annotate calls with GATK annotations (boolean; default false).
            normalize: Normalize MNPs and indels (boolean: default true).
            prep: Prep with in-order chromosomes and sample names (boolean; default false).

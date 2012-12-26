@@ -88,7 +88,7 @@
 (defn- gen-all-concordant
   "Create VCF of the intersection of all concordant calls."
   [cmps-by-name ref out-dir config & {:keys [do-include? base-ext]
-                                  :or {base-ext "multiall"}}]
+                                      :or {base-ext "multiall"}}]
   (let [concordant-map (reduce (fn [m [k v]]
                                  (if (or (nil? do-include?) (do-include? k))
                                    (assoc m (get-in v [:c-files :concordant]) (string/join "AND" k))
