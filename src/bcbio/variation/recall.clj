@@ -278,8 +278,7 @@
   (-> vcfs
       (get-min-merged exp out-dir intervals)
       (recall-w-consensus (no-recall-vcfs vcfs (:calls exp))
-                          (:sample exp) (:ref exp))
-      (filter-by-recalling (:bam in-info) exp)))
+                          (:sample exp) (:ref exp))))
 
 (defn create-merged
   "Create merged VCF files with no-call/ref-calls for each of the inputs.
