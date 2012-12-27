@@ -17,8 +17,9 @@
   (:require [clojure.string :as string]
             [fs.core :as fs]
             [bcbio.run.itx :as itx]
-            [bcbio.variation.variantcontext :as gvc]
-            [bcbio.variation.multiple :as multiple]))
+            [bcbio.variation.filter.trusted :as trusted]
+            [bcbio.variation.multiple :as multiple]
+            [bcbio.variation.variantcontext :as gvc]))
 
 ;; ## Split variants for classification
 
@@ -156,18 +157,18 @@
   "Retrieve variants to use for true/false positive training.
    Dispatches based on approach used. For recalling, we can pull directly
    from input files"
-  (fn [orig-file train-file call exp call-type]
+  (fn [orig-file train-file call exp config call-type]
     (let [is-recall (get call :recall false)
           recall-approach (keyword (get-in exp [:params :compare-approach] :consensus))]
       (if is-recall
-        (if (and (= "fps" call-type) (= :consensus recall-approach))
-          [:recall :identify-fps]
+        (if (= :consensus recall-approach)
+          [:recall (keyword call-type)]
           [:recall :rewrite])
         :default))))
 
 (defmethod get-train-variants [:recall :rewrite]
   ^{:doc "Retrieve variants from original file based on variants in target file."}
-  [orig-file target-file _ exp ext]
+  [orig-file target-file _ exp _ ext]
   (letfn [(get-orig-variants [retriever vc]
             (->> (variants-in-region retriever (:chr vc) (:start vc) (:end vc))
                  (filter #(= (:start %) (:start vc)))
@@ -182,12 +183,12 @@
                                 (:ref exp))))
       out-file)))
 
-(defmethod get-train-variants [:recall :identify-fps]
+(defmethod get-train-variants [:recall :fps]
   ^{:doc "Identify false positive variants directly from recalled consensus calls.
           These contain the `set` key value pair with information about supporting
           calls. We filter variants that have low support and are not represented
           in dbSNP."}
-  [orig-file _ call exp ext]
+  [orig-file _ call exp _ ext]
   (let [freq (get call :fp-freq 0.25)
         thresh (Math/ceil (* freq (dec (count (:calls exp)))))]
     (letfn [(is-potential-fp? [vc]
@@ -198,9 +199,27 @@
                        (<= thresh))))]
       (gvc/select-variants orig-file is-potential-fp? ext (:ref exp)))))
 
+(defmethod get-train-variants [:recall :tps]
+  ^{:doc "Identify true positive training variants directly from recalled consensus.
+          Use variants found in all input callers."}
+  [orig-file _ call exp _ ext]
+  (letfn [(is-tp? [vc]
+            (when-let [set-val (get-in vc [:attributes "set"])]
+              (= set-val "Intersection")))]
+    (gvc/select-variants orig-file is-tp? ext (:ref exp))))
+
+(defmethod get-train-variants [:recall :trusted]
+  ^{:doc "Retrieve set of trusted variants based on input parameters and recalled consensus."}
+  [orig-file _ call exp params ext]
+  (let [calls (remove #(= (:name %) (:name call)) (:calls exp))]
+    (letfn [(is-trusted? [vc]
+              (when-let [trusted (:trusted params)]
+                (trusted/is-trusted-variant? vc trusted calls)))]
+      (gvc/select-variants orig-file is-trusted? ext (:ref exp)))))
+
 (defmethod get-train-variants :default
   ^{:doc "By default, return the prepped training file with no changes."}
-  [_ train-file _ _ _]
+  [_ train-file _ _ _ _]
   train-file)
 
 (defn filter-vcf-w-classifier
@@ -208,8 +227,10 @@
   [base-vcf orig-true-vcf orig-false-vcf meta-files call exp config]
   (let [out-file (itx/add-file-part base-vcf "cfilter")]
     (when (itx/needs-run? out-file)
-      (let [true-vcf (get-train-variants base-vcf orig-true-vcf call exp "tps")
-            false-vcf (get-train-variants base-vcf orig-false-vcf call exp "fps")
+      (let [true-vcf (get-train-variants base-vcf orig-true-vcf call exp config "tps")
+            false-vcf (get-train-variants base-vcf orig-false-vcf call exp config "fps")
+            trusted-vcf (get-train-variants base-vcf (:trusted meta-files) call exp
+                                            config "trusted")
             ref (:ref exp)
             pre-normalizer (get-vc-attrs-normalized (:classifiers config) base-vcf ref config)
             cs (build-vcf-classifiers (:classifiers config) pre-normalizer base-vcf
@@ -218,7 +239,7 @@
             attr-get (prep-vc-attr-retriever base-vcf ref)]
         (println "Filter VCF with" (str cs))
         (with-open [vcf-iter (get-vcf-iterator base-vcf ref)
-                    trusted-get (get-vcf-retriever ref (:trusted meta-files))
+                    trusted-get (get-vcf-retriever ref trusted-vcf)
                     xspecific-get (get-vcf-retriever ref (:xspecific meta-files))]
           (write-vcf-w-template base-vcf {:out out-file}
                                 (map (partial filter-vc cs (pre-normalizer base-vcf) attr-get
