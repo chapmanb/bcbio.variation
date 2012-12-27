@@ -22,7 +22,8 @@
                dip-vcf (str (fs/file data-dir "phasing-input-diploid.vcf"))
                dip-out (itx/add-file-part dip-vcf "haploid")
                c-out (itx/add-file-part top-vcf "cfilter")
-               c-out-extras (map #(itx/add-file-part top-vcf %) ["fps" "tps" "trusted"])
+               c-out-extras (concat (map #(itx/add-file-part top-vcf %) ["fps" "tps" "trusted"])
+                                    (fs/glob (fs/file data-dir "gatk-calls-*.bin")))
                cbin-out (str (itx/file-root top-vcf) "-classifier.bin")
                align-bam (str (fs/file data-dir "aligned-reads.bam"))
                region-bed (str (fs/file data-dir "aligned-reads-regions.bed"))
@@ -73,9 +74,12 @@
   (variant-format-filter top-vcf ["DP < 10"] ref) => ffilter-out)
 
 (facts "Final filtration of variants using classifier"
-  (filter-vcf-w-classifier top-vcf top-vcf c-neg-vcf {} {:recall true} {:ref ref}
-                           {:classifiers ["AD" "QUAL" "DP" "PL"]
-                            :trusted {:total 1.1}}) => c-out)
+  (let [exp
+        {:ref ref
+         :calls [{:name "7_100326_FC6107FAAXX-sort-dup-gatkrecal-realign-variants-snp-filterSNP"}]}]
+    (filter-vcf-w-classifier top-vcf top-vcf c-neg-vcf {} {:recall false} exp
+                             {:classifiers ["AD" "QUAL" "DP" "PL"]
+                              :trusted {:total 0.5}})) => c-out)
 
 (facts "Prepare combined interval lists based on filtering criteria"
   (combine-multiple-intervals region-bed [align-bam] ref
