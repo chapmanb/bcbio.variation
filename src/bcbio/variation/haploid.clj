@@ -30,8 +30,11 @@
   [g & {:keys [no-convert]}]
   (when (and (.hasLikelihoods g)
              (> (count (vec (.getAsVector (.getLikelihoods g)))) 1))
-    (let [in-map (-> (.getLikelihoods g) (.getAsMap (nil? no-convert)))]
-      (zipmap (map #(.name %) (keys in-map)) (vals in-map)))))
+    (let [pl-vec (vec (.getAsVector (.getLikelihoods g)))]
+      (if (= (count pl-vec) 2)
+        (zipmap ["HOM_REF" "HOM_VAR"] pl-vec)
+        (let [in-map (-> (.getLikelihoods g) (.getAsMap (nil? no-convert)))]
+          (zipmap (map #(.name %) (keys in-map)) (vals in-map)))))))
 
 (defn het-can-be-haploid?
   "Can we reasonably convert a heterozygote call to haploid based on likelihoods?
