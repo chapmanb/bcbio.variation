@@ -9,6 +9,7 @@ import sys
 import math
 import shutil
 import itertools
+import subprocess
 
 import yaml
 import vcf
@@ -23,8 +24,9 @@ prep_dir = os.path.join(base_dir, "NA12878_fosmid/work/prep")
 mp_tps_vcf = os.path.join(prep_dir, "NA12878-allfos-nomnp-fullcombine-wrefs-cleaned-annotated-ffilter-nosv-nofilter-tps.vcf")
 mp_fps_vcf = os.path.join(prep_dir, "NA12878-allfos-nomnp-fullcombine-wrefs-cleaned-annotated-ffilter-nosv-nofilter-fps.vcf")
 
-default_config = {"sanger": {"tp": "NA12878-validate-tps.vcf",
-                             "fp": "NA12878-validate-fps.vcf"},
+default_config = {"tree": {"tp": "NA12878-validate-tps.vcf",
+                           "fp": "NA12878-validate-fps.vcf",
+                           "name": "validated"},
                   "full": {"tp": mp_tps_vcf,
                            "fp": mp_fps_vcf}}
 
@@ -37,8 +39,11 @@ def main(config_file = None):
     metrics = ['Entropy', 'FS', 'GC', 'HRun', 'HaplotypeScore', 'MFE',
                'MQ', 'NBQ', 'ReadPosEndDist']
     format_metrics = ["AD", "PL", "QUAL", "DP"]
-    #sanger_decisiontree(config["sanger"]["tp"], config["sanger"]["fp"], metrics, format_metrics)
-    ml_params(config["full"]["tp"], config["full"]["fp"], metrics, format_metrics)
+    if config.has_key("tree") and os.path.exists(config["tree"]["tp"]):
+        prep_decisiontree(config["tree"]["tp"], config["tree"]["fp"],
+                          config["tree"]["name"], metrics, format_metrics)
+    if config.has_key("full") and os.path.exists(config["full"]["tp"]):
+        ml_params(config["full"]["tp"], config["full"]["fp"], metrics, format_metrics)
 
 # ## Machine learning parameters
 
@@ -186,43 +191,58 @@ def _find_svm_rbf_params(df, metrics, kernel):
 
 # ## Decision tree visualization
 
-def sanger_decisiontree(tp_vcf, fp_vcf, metrics, format_metrics):
-    """Explore sanger true/false calls with a decision tree.
+def prep_decisiontree(tp_vcf, fp_vcf, name, metrics, format_metrics):
+    """Explore true/false calls with a decision tree.
 
     This helps identify primary metrics helping to discriminate the data.
     """
-    out_decision = "decision-tree-%s.graphviz"
-    metrics = ['FS', 'MFE',
-               'NBQ', 'ReadPosEndDist']
-    format_metrics = ["AD", "PL", "QUAL"]
+    out_decision = "%s-decisiontree-%s.graphviz"
+    #metrics = ['FS', 'MFE', 'NBQ', 'ReadPosEndDist']
+    #format_metrics = ["AD", "PL", "QUAL"]
+    extras = []
+    depth = 2
     with open(tp_vcf) as in_handle:
         df_tp = read_vcf_metrics(in_handle, metrics, format_metrics, 1)
     with open(fp_vcf) as in_handle:
         df_fp = read_vcf_metrics(in_handle, metrics, format_metrics, -1)
     df = pandas.concat([df_tp, df_fp])
-    for val, name in [(0, "snp"), (1, "indel")]:
-        explore_ml_decisiontree(df[df["indel"] == val],
-                                metrics + format_metrics, out_decision % name)
-    print df_tp.describe()
-    print df_fp.describe()
+    for val, vartype in [(0, "snp"), (1, "indel"), (None, "all")]:
+        if val is None:
+            cur_df = df
+        else:
+            cur_df = df[df["indel"] == val]
+        explore_ml_decisiontree(cur_df,
+                                metrics + format_metrics + extras, depth,
+                                out_decision % (name, vartype))
+    #print df_tp.describe()
+    #print df_fp.describe()
 
-def explore_ml_decisiontree(df, metrics, out_decision):
+def explore_ml_decisiontree(df, metrics, depth, out_decision):
     context = ramp.DataContext(data=df)
     config = ramp.Configuration(target="target", metrics=[ramp.metrics.AUC()])
     factory = ramp.ConfigFactory(config,
                                  features=[[ramp.BaseFeature(x) for x in metrics]],
-                                 model=[sklearn.tree.DecisionTreeClassifier(max_depth=3)])
+                                 model=[sklearn.tree.DecisionTreeClassifier(max_depth=depth,
+                                                                            criterion="entropy")])
     for x in factory:
         ramp.models.fit(x, context)
-        sklearn.tree.export_graphviz(x.model, out_file=out_decision,
-                                     feature_names=metrics)
+        out_file = sklearn.tree.export_graphviz(x.model, out_file=out_decision,
+                                                feature_names=metrics)
+        out_file.close()
+    out_pdf = "%s.pdf" % os.path.splitext(out_decision)[0]
+    subprocess.check_call(["dot", "-T", "pdf", "-o", out_pdf, out_decision])
 
 # ## Parse VCFs into pandas data frames
 
 def read_vcf_metrics(in_handle, metrics, format_metrics, target,
                      use_subset = False):
     d = {"target": [],
-         "indel": []}
+         "indel": [],
+         "zygosity": [],
+         "QUAL": [],
+         "AD": []}
+    zygosity_map = {"0/0": 0, "0/1": 1, "0|1": 1, "1/1": 2, "2/1": 2, "1/2": 2,
+                    "0": 0, "1": 2}
     for x in metrics + format_metrics:
         d[x] = []
     if use_subset:
@@ -230,6 +250,7 @@ def read_vcf_metrics(in_handle, metrics, format_metrics, target,
     else:
         recs = vcf.VCFReader(in_handle)
     for rec in recs:
+        d["zygosity"].append(zygosity_map[rec.samples[0].data.GT])
         for x in metrics:
             d[x].append(rec.INFO.get(x, None))
         d["target"] = target
@@ -269,8 +290,10 @@ def _calc_pl(data):
             return data.PL[-1] / 10.0
         elif data.GT == "1":
             return data.PL[0] / 10.0
-        else:
+        elif data.GT in ["0/0", "0|0"]:
             return min(x for x in data.PL if x > 0) / 10.0
+        else:
+            return data.PL[0] / 10.0
 
 if __name__ == "__main__":
     main(*sys.argv[1:])
