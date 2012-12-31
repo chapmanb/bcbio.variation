@@ -66,7 +66,7 @@
                                                                       (roughly 0.41239)])
       (get-vc-attrs (first vcf-iter) xtra-attrs {}) => {"gms_illumina" nil
                                                         "AD" 0.0 "QUAL" 5826.09 "DP" 250.0}
-      (get-vc-attr (first vcf-iter) [:format "DP"] {}) => 5
+      (get-vc-attr (first vcf-iter) [:format "DP"] {}) => 250.0
       (-> (first vcf-iter) normalizer (get "QUAL")) => (roughly 0.621)
       (-> (first vcf-iter) log-normalizer (get "DP")) => (roughly 5.521))))
 

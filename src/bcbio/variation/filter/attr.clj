@@ -81,10 +81,23 @@
   {:pre [(= 1 (:num-samples vc))]}
   (let [g-attrs (-> vc :genotypes first :attributes)]
     (cond
+     (contains? g-attrs "DP") (to-float (get g-attrs "DP"))
+     (contains? g-attrs "AD") (to-float (apply + (get g-attrs "AD")))
      (contains? g-attrs "COV") (int (apply + (map to-float (string/split (get g-attrs "COV") #","))))
-     (contains? g-attrs "DP") (get g-attrs "DP")
-     (contains? g-attrs "AD") (apply + (get g-attrs "AD"))
      :else nil)))
+
+(defmethod get-vc-attr "DP"
+  ^{:doc "Retrieve depth for an allele, first trying genotype information
+          then falling back on information in INFO column."}
+  [vc attr rets]
+  (let [gt-dp (when (= 1 (:num-samples vc))
+                (get-vc-attr vc [:format attr] rets))
+        info-dp (let [x (get-in vc [:attributes attr])]
+                  (when-not (nil? x)
+                    (try (Float/parseFloat x)
+                         (catch java.lang.NumberFormatException _ x))))
+        ready-dp (if (nil? gt-dp) info-dp gt-dp)]
+    (if (nil? gt-dp) info-dp gt-dp)))
 
 (defmethod get-vc-attr :gemini
   ^{:doc "Retrieve attribute information from associated Gemini index."}

@@ -186,17 +186,40 @@
 (defmethod get-train-variants [:recall :fps]
   ^{:doc "Identify false positive variants directly from recalled consensus calls.
           These contain the `set` key value pair with information about supporting
-          calls. We filter variants that have low support and are not represented
-          in dbSNP."}
+          calls. We filter variants that have low support from multiple callers, then
+          compare based on novelty in dbSNP. Novel and know have different inclusion
+          parameters derived from examining real true/false calls in replicate
+          experiments."}
   [orig-file _ call exp _ ext]
   (let [freq (get call :fp-freq 0.25)
-        thresh (Math/ceil (* freq (dec (count (:calls exp)))))]
-    (letfn [(is-potential-fp? [vc]
-              (and (contains? #{nil "."} (:id vc))
-                   (-> (multiple/get-vc-set-calls vc (:calls exp))
-                       (disj (:name call))
-                       count
-                       (<= thresh))))]
+        thresh (Math/ceil (* freq (dec (count (:calls exp)))))
+         attr-get (prep-vc-attr-retriever orig-file (:ref exp))]
+    (letfn [(below-support-thresh? [vc]
+              (-> (multiple/get-vc-set-calls vc (:calls exp))
+                  (disj (:name call))
+                  count
+                  (<= thresh)))
+            (novel-variant? [vc]
+              (contains? #{nil "."} (:id vc)))
+            (include-novel? [vc]
+              (let [attrs (attr-get ["DP" "PL"] vc)]
+                (when (not-any? nil? (vals attrs))
+                  (if (= "SNP" (:type vc))
+                    (< (get attrs "DP") 50.0)
+                    (< (get attrs "DP") 60.0)))))
+            (include-known? [vc]
+              (let [attrs (attr-get ["DP" "PL" "ReadPosEndDist"] vc)]
+                (when (not-any? nil? (vals attrs))
+                  (if (= "SNP" (:type vc))
+                    (and (> (get attrs "DP") 15.0)
+                         (> (get attrs "PL") -20.0))
+                    (and (> (get attrs "PL") -20.0)
+                         (< (get attrs "ReadPosEndDist") 15.0))))))
+            (is-potential-fp? [vc]
+              (and (below-support-thresh? vc)
+                   (if (novel-variant? vc)
+                     (include-novel? vc)
+                     (include-known? vc))))]
       (gvc/select-variants orig-file is-potential-fp? ext (:ref exp)))))
 
 (defmethod get-train-variants [:recall :tps]
