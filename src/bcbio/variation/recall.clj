@@ -173,6 +173,9 @@
                    (filter #(= sample (:sample-name %)))
                    first)]
     {:qual (:qual vc)
+     :vc-type (:type vc)
+     :call-type (:type g)
+     :ref-allele (:ref-allele vc)
      :alleles (sort-by allele-order (:alleles g))
      :attrs (select-keys (:attributes g) ["PL" "DP" "AD"])
      :attr-count (+ (if (seq (get-in g [:attributes "PL"])) 1 0)
@@ -183,29 +186,64 @@
 (defn- best-supported-alleles
   "Retrieve alleles with best support from multiple inputs.
    Use posterior likelihoods and quality scores to rank results
-   with the same alleles and counts. We rank by:
-    - Total number of times identified
-    - lowest set of PLs (most negative = most unlikely)
-    - largest summed quality value.
-   This model could get much fancier if needed."
+   with the same alleles and counts. We rank by total number of
+   calls identified. We break ties in favor of het calls if there
+   isn't a consensus on het/hom variant calls."
   [alleles]
   (letfn [(safe-sum [xs k]
             (apply + (remove nil? (map k xs))))
-          (sum-allele-support [i xs]
+          (sum-plus-call-type [xs]
             (let [pls (safe-sum xs :pl)
-                  quals (safe-sum xs :qual)
                   represent-x (last (sort-by #(vector (:attr-count %)
                                                       (- (or (:pl %) Integer/MIN_VALUE)))
-                                             xs))]
-              [(count xs) (- pls) quals i represent-x]))]
+                                             xs))
+                  call-code (if (= "HET" (:call-type represent-x)) 1 0)]
+              [(count xs) call-code (- pls) represent-x]))]
     (->> alleles
          (group-by :alleles)
          (map second)
-         (map-indexed sum-allele-support)
+         (map sum-plus-call-type)
          sort
          last ; Best item
          last ; Extract the alleles
          )))
+
+(defmulti prep-alt-call
+  "Prepare an alternative het or hom variant call based on low likelihoods"
+  (fn [info]
+    (:call-type info)))
+
+(defmethod prep-alt-call "HOM_VAR"
+  ^{:doc "Prepare a heterozygous variant call given a hom call."}
+  [info]
+  (-> info
+      (assoc :call-type "HET")
+      (assoc :alleles [(:ref-allele info) (first (:alleles info))])))
+
+(defmethod prep-alt-call "HET"
+  ^{:doc "Prepare a homozygous variant call given a het call."}
+  [info]
+  (let [a (first (remove #(= (:ref-allele info) %) (:alleles info)))]
+    (-> info
+        (assoc :call-type "HOM_VAR")
+        (assoc :alleles [a a]))))
+
+(defn- expand-calls-by-pls
+  "Include possible calls based on genotype likelihoods. When summing
+   calls many callers will have het/hom variant calls that have a high
+   likelihood. We include those in our set of potential consensus calls."
+  [x]
+  (letfn [(pl-thresh [vc-type]
+            (if (= "SNP" vc-type) 100 200))
+          (low-alt-pl? [x]
+            (let [i-map {"HET" 2 "HOM_VAR" 1}
+                  pl (get-in x [:attrs "PL" (get i-map (:call-type x))])]
+              (< pl (pl-thresh (:vc-type x)))))]
+    (if (and (= 2 (count (:alleles x)))
+             (contains? #{"HOM_VAR" "HET"} (:call-type x))
+             (low-alt-pl? x))
+      [x (prep-alt-call x)]
+      [x])))
 
 (defn- update-vc-w-consensus
   "Update a variant context with consensus genotype from multiple inputs.
@@ -216,6 +254,7 @@
         most-likely (->> (gvc/variants-in-region input-vc-getter vc)
                          (filter #(= (match-fn %) (match-fn vc)))
                          (map (partial get-sample-call sample))
+                         (mapcat expand-calls-by-pls)
                          best-supported-alleles)]
     (when most-likely
       (-> (VariantContextBuilder. (:vc vc))
