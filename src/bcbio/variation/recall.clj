@@ -187,22 +187,23 @@
   "Retrieve alleles with best support from multiple inputs.
    Use posterior likelihoods and quality scores to rank results
    with the same alleles and counts. We rank by total number of
-   calls identified. We break ties in favor of het calls if there
-   isn't a consensus on het/hom variant calls."
+   calls identified. We break ties in favor of homozygous calls
+   if there isn't a consensus on het/hom variant calls, since
+   we've failed to establish power for calling more difficult hets."
   [alleles]
   (letfn [(safe-sum [xs k]
             (apply + (remove nil? (map k xs))))
-          (sum-plus-call-type [xs]
+          (sum-plus-call-type [i xs]
             (let [pls (safe-sum xs :pl)
                   represent-x (last (sort-by #(vector (:attr-count %)
                                                       (- (or (:pl %) Integer/MIN_VALUE)))
                                              xs))
-                  call-code (if (= "HET" (:call-type represent-x)) 1 0)]
-              [(count xs) call-code (- pls) represent-x]))]
+                  call-code (if (= "HET" (:call-type represent-x)) 0 1)]
+              [(count xs) call-code (- pls) i represent-x]))]
     (->> alleles
          (group-by :alleles)
          (map second)
-         (map sum-plus-call-type)
+         (map-indexed sum-plus-call-type)
          sort
          last ; Best item
          last ; Extract the alleles
@@ -238,7 +239,8 @@
           (low-alt-pl? [x]
             (let [i-map {"HET" 2 "HOM_VAR" 1}
                   pl (get-in x [:attrs "PL" (get i-map (:call-type x))])]
-              (< pl (pl-thresh (:vc-type x)))))]
+              (when-not (nil? pl)
+                (< pl (pl-thresh (:vc-type x))))))]
     (if (and (= 2 (count (:alleles x)))
              (contains? #{"HOM_VAR" "HET"} (:call-type x))
              (low-alt-pl? x))
