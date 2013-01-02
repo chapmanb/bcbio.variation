@@ -209,44 +209,6 @@
          last ; Extract the alleles
          )))
 
-(defmulti prep-alt-call
-  "Prepare an alternative het or hom variant call based on low likelihoods"
-  (fn [info]
-    (:call-type info)))
-
-(defmethod prep-alt-call "HOM_VAR"
-  ^{:doc "Prepare a heterozygous variant call given a hom call."}
-  [info]
-  (-> info
-      (assoc :call-type "HET")
-      (assoc :alleles [(:ref-allele info) (first (:alleles info))])))
-
-(defmethod prep-alt-call "HET"
-  ^{:doc "Prepare a homozygous variant call given a het call."}
-  [info]
-  (let [a (first (remove #(= (:ref-allele info) %) (:alleles info)))]
-    (-> info
-        (assoc :call-type "HOM_VAR")
-        (assoc :alleles [a a]))))
-
-(defn- expand-calls-by-pls
-  "Include possible calls based on genotype likelihoods. When summing
-   calls many callers will have het/hom variant calls that have a high
-   likelihood. We include those in our set of potential consensus calls."
-  [x]
-  (letfn [(pl-thresh [vc-type]
-            (if (= "SNP" vc-type) 100 200))
-          (low-alt-pl? [x]
-            (let [i-map {"HET" 2 "HOM_VAR" 1}
-                  pl (get-in x [:attrs "PL" (get i-map (:call-type x))])]
-              (when-not (nil? pl)
-                (< pl (pl-thresh (:vc-type x))))))]
-    (if (and (= 2 (count (:alleles x)))
-             (contains? #{"HOM_VAR" "HET"} (:call-type x))
-             (low-alt-pl? x))
-      [x (prep-alt-call x)]
-      [x])))
-
 (defn- update-vc-w-consensus
   "Update a variant context with consensus genotype from multiple inputs.
    Calculates the consensus set of calls, swapping calls to that if it
@@ -256,7 +218,6 @@
         most-likely (->> (gvc/variants-in-region input-vc-getter vc)
                          (filter #(= (match-fn %) (match-fn vc)))
                          (map (partial get-sample-call sample))
-                         (mapcat expand-calls-by-pls)
                          best-supported-alleles)]
     (when most-likely
       (-> (VariantContextBuilder. (:vc vc))
