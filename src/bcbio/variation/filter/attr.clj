@@ -69,6 +69,19 @@
      (= (:type g) "HOM_REF") (apply max (vals pls))
      :else (get pls "HOM_REF"))))
 
+(defmethod get-vc-attr "PL-ratio"
+  ^{:doc "Calculate ratio of reference likelihood call to alternative variant calls.
+          This helps measure whether a call is increasingly likely to be reference
+          compared with variant choices."}
+  [vc attr _]
+  {:pre [(= 1 (:num-samples vc))]}
+  (let [g (-> vc :genotypes first)
+        pls (dissoc (get-likelihoods (:genotype g) :no-convert true)
+                    (:type g))]
+    (when-not (zero? (count pls))
+      (/ (get pls "HOM_REF")
+         (apply min (cons -1.0 (-> pls (dissoc "HOM_REF") vals)))))))
+
 (defmethod get-vc-attr "QUAL"
   [vc attr _]
   (:qual vc))
