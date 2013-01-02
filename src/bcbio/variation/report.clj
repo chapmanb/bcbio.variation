@@ -1,6 +1,7 @@
 (ns bcbio.variation.report
   "Parse and provide detailed information from GATKReport outputs."
-  (:use [ordered.map :only [ordered-map]]
+  (:use [clojure.set :only [intersection]]
+        [ordered.map :only [ordered-map]]
         [clojure.math.combinatorics :only [cartesian-product]]
         [bcbio.variation.variantcontext :only [parse-vcf get-vcf-retriever
                                                variants-in-region
@@ -28,10 +29,21 @@
   (with-open [vcf-iter (get-vcf-iterator f ref-file)]
     (count (filter check? (parse-vcf vcf-iter)))))
 
-(defn discordance-metrics
+(defn- hethom-discordant?
+  "Identify variants that are variant calls but discordant based on het/hom calls."
+  [vc other-vcs]
+  (letfn [(get-alleles [x]
+            (-> x :genotypes first :alleles set))]
+    (let [vc2 (first (filter #(and (= (:start vc) (:start %))
+                                   (= (:ref-allele vc) (:ref-allele %)))
+                             other-vcs))]
+      (seq (intersection (get-alleles vc) (get-alleles vc2))))))
+
+(defn shared-discordant
   "Provide metrics to distinguish types of discordance in a comparison.
   These identify variants which differ due to being missing in one variant
-  call versus calls present in both with different genotypes."
+  call versus calls present in both with different genotypes. It also pulls
+  out variants in diploids that differ due to het/hom calls."
   [file1 file2 ref-file]
   (with-open [file1-iter (get-vcf-iterator file1 ref-file)
               vcf-retriever (get-vcf-retriever ref-file file2)]
@@ -39,8 +51,13 @@
               (let [other-vcs (variants-in-region vcf-retriever
                                                   (:chr vc) (:start vc) (:end vc))
                     vc-type (if-not (empty? other-vcs) :total :unique)]
-                (assoc coll vc-type (inc (get coll vc-type)))))
-            {:total 0 :unique 0}
+                (-> coll
+                    (assoc vc-type (inc (get coll vc-type)))
+                    (assoc :hethom ((if (and (= :total vc-type)
+                                             (hethom-discordant? vc other-vcs))
+                                      inc identity)
+                                    (get coll :hethom))))))
+            {:total 0 :unique 0 :hethom 0}
             (parse-vcf file1-iter))))
 
 (defn nocoverage-count
@@ -121,8 +138,8 @@
              :discordant1 (all-vrn-counts (second c-files) :c2 compared)
              :discordant2 (when (> (count c-files) 2) (all-vrn-counts (nth c-files 2) :c1 compared))
              :discordant_both (when (> (count c-files) 2)
-                                (apply discordance-metrics (conj (vec (take 2 (rest c-files)))
-                                                                 ref-file))))]
+                                (apply shared-discordant (conj (vec (take 2 (rest c-files)))
+                                                                ref-file))))]
         (if-not (= sum-level :full) base
             (assoc base
               :ml_metrics (ml-on-vcf-metrics ref-file (take 2 c-files))))))))
@@ -215,6 +232,7 @@
                                                 [:discordant2 :snp] "SNPs"
                                                 [:discordant2 :indel] "indels")
                                   [[:discordant_both :total] "Shared discordant"
+                                   [:discordant_both :hethom] "het/hom discordant"
                                    [:ml_metrics :top-metrics] "Classification metrics"]))]
       (letfn [(get-value [[k metric]]
                 (when-let [val (if (coll? k) (get-in metrics k) (get metrics k))]
