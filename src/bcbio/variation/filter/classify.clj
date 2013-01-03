@@ -189,24 +189,43 @@
           calls. We filter variants that have low support from multiple callers, then
           compare based on novelty in dbSNP. Novel and know have different inclusion
           parameters derived from examining real true/false calls in replicate
-          experiments."}
+          experiments. The logic for inclusion is:
+          - A variant must be supported by less than `fp-freq` percentage of callers.
+            This defaults to less than 25% of callers used.
+          - We exclude low mapping quality reads, which end up being non-representative
+            of more general cases since they are poorly represented in true positives.
+            This is worth looking at more for generalizing the approach to these regions.
+          - Include indels in low entropy regions which are often problematic.
+          - Include novel variants not found in dbSNP that have low read support.
+          - Include known variants, in dbSNP, depending on type:
+             - SNP: include low depth SNPs with high likelihood of being ref
+             - indel: include indels near the end of reads with high ref likelihood"}
   [orig-file _ call exp _ ext]
   (let [freq (get call :fp-freq 0.25)
         thresh (Math/ceil (* freq (dec (count (:calls exp)))))
-         attr-get (prep-vc-attr-retriever orig-file (:ref exp))]
+        attr-get (prep-vc-attr-retriever orig-file (:ref exp))]
     (letfn [(below-support-thresh? [vc]
               (-> (multiple/get-vc-set-calls vc (:calls exp))
                   (disj (:name call))
                   count
                   (<= thresh)))
+            (get-one-attr [attr vc]
+              (-> (attr-get [attr] vc) (get attr)))
+            (passes-mapping-quality? [vc]
+              (let [mq (get-one-attr "MQ" vc)]
+                (or (nil? mq)
+                    (> mq 50.0))))
+            (low-entropy-indel? [vc]
+              (let [entropy (get-one-attr "Entropy" vc)]
+                (when-not (nil? entropy)
+                  (when (not= "SNP" (:type vc))
+                    (< entropy 2.6)))))
             (novel-variant? [vc]
               (contains? #{nil "."} (:id vc)))
             (include-novel? [vc]
-              (let [attrs (attr-get ["DP" "PL"] vc)]
+              (let [attrs (attr-get ["DP"] vc)]
                 (when (not-any? nil? (vals attrs))
-                  (if (= "SNP" (:type vc))
-                    (< (get attrs "DP") 50.0)
-                    (< (get attrs "DP") 60.0)))))
+                  (< (get attrs "DP") 50.0))))
             (include-known? [vc]
               (let [attrs (attr-get ["DP" "PL" "ReadPosEndDist"] vc)]
                 (when (not-any? nil? (vals attrs))
@@ -217,10 +236,12 @@
                          (< (get attrs "ReadPosEndDist") 15.0))))))
             (is-potential-fp? [vc]
               (and (below-support-thresh? vc)
-                   (if (novel-variant? vc)
-                     (include-novel? vc)
-                     (include-known? vc))))]
-      (gvc/select-variants orig-file is-potential-fp? ext (:ref exp)))))
+                   (passes-mapping-quality? vc)
+                   (or (low-entropy-indel? vc)
+                       (if (novel-variant? vc)
+                         (include-novel? vc)
+                         (include-known? vc)))))]
+    (gvc/select-variants orig-file is-potential-fp? ext (:ref exp)))))
 
 (defmethod get-train-variants [:recall :tps]
   ^{:doc "Identify true positive training variants directly from recalled consensus.

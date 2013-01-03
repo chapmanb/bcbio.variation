@@ -199,9 +199,6 @@ def prep_decisiontree(tp_vcf, fp_vcf, name, metrics, format_metrics):
     out_decision = "%s-decisiontree-%s.graphviz"
     #metrics = ['FS', 'MFE', 'NBQ', 'ReadPosEndDist']
     #format_metrics = ["AD", "PL", "QUAL"]
-    metrics = ['Entropy', 'FS', 'GC', 'HRun', 'HaplotypeScore', 'MFE',
-               'MQ', 'NBQ', 'ReadPosEndDist']
-    format_metrics = ["DP"]
     extras = []
     depth = 2
     with open(tp_vcf) as in_handle:
