@@ -6,7 +6,8 @@
    files in the case of premature termination."
   (:import (java.io File))
   (:use [clojure.java.io])
-  (:require [fs.core :as fs]))
+  (:require [clojure.string :as string]
+            [fs.core :as fs]))
 
 ;; ## Idempotent processing
 ;; avoid re-running when output files exist
@@ -113,6 +114,11 @@
        (if-not (nil? out-dir)
          (str (fs/file out-dir (fs/base-name out-fname)))
          out-fname))))
+
+(defn remove-file-part
+  "Remove file specialization extender: base-part.txt -> base.txt"
+  [fname part]
+  (string/replace (str fname) (str "-" part) ""))
 
 (defn remove-zip-ext
   "Remove any zip extensions from the input filename"

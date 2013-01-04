@@ -7,9 +7,10 @@
         [bcbio.variation.filter.classify :only [pipeline-classify-filter]]
         [bcbio.variation.filter.specific :only [get-x-specific-variants]]
         [bcbio.variation.filter.trusted :only [get-support-vcfs get-trusted-variants]]
-        [bcbio.variation.metrics :only [to-float]]
+        [bcbio.variation.metrics :only [to-float passes-filter?]]
         [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template
-                                               get-vcf-iterator write-vcf-from-filter]])
+                                               get-vcf-iterator write-vcf-from-filter
+                                               select-variants]])
   (:require [clojure.set :as set]
             [clojure.string :as string]
             [bcbio.run.broad :as broad]
@@ -38,11 +39,10 @@
 
 (defn category-variant-filter
   "Perform hard variant filtration handling both range and category metrics"
-  [in-vcf metrics ref]
+  [in-vcf metrics ref & {:keys [remove?]}]
   (let [attr-getter (prep-vc-attr-retriever in-vcf ref)]
     (letfn [(infinity-flag? [x]
-              (and (string? x)
-                   (.contains x "Infinity")))
+              (.contains (str x) "Infinity"))
             (in-range? [[orig-min orig-max] x]
               (let [min (if (infinity-flag? orig-min) (- Integer/MAX_VALUE) orig-min)
                     max (if (infinity-flag? orig-max) Integer/MAX_VALUE orig-max)]
@@ -53,8 +53,9 @@
                (or (vector? want) (list? want)) (in-range? want got)))
             (passes-metrics? [vc]
               (let [attrs (attr-getter (keys metrics) vc)]
-                (every? (fn [[k v]]
-                          (attr-passes? (get attrs k) v)) metrics)))
+                (and (passes-filter? vc) 
+                     (every? (fn [[k v]]
+                               (attr-passes? (get attrs k) v)) metrics))))
             (range-to-str [k [min max]]
               (cond
                (infinity-flag? min) (format "%s > %.1f" k max)
@@ -64,9 +65,11 @@
               (cond
                (set? v) (format "%s not [%s]" k (string/join "," v))
                (or (vector? v) (list? v)) (range-to-str k v)))]
-      (write-vcf-from-filter in-vcf ref "filter"
-                             "ManualRanges" (string/join "; " (map metric-to-str metrics))
-                             passes-metrics?))))
+      (if remove?
+        (select-variants in-vcf passes-metrics? "filter" ref)
+        (write-vcf-from-filter in-vcf ref "filter"
+                               "ManualRanges" (string/join "; " (map metric-to-str metrics))
+                               passes-metrics?)))))
 
 (defn variant-format-filter
   "Perform hard filtering base on JEXL expressions on metrics in the Genotype FORMAT field."

@@ -103,7 +103,7 @@
   (if (or (nil? (:created-on finfo)) (nil? (:size finfo)))
     false
     (or (not= (fs/size local-file) (:size finfo))
-        (<= (fs/mod-time local-file) (.getTime (:created-on finfo))))))
+        (< (fs/mod-time local-file) (.getTime (:created-on finfo))))))
 
 (defn get-prep-and-index
   "Retrieve a file from remote server and prepare for analysis:
