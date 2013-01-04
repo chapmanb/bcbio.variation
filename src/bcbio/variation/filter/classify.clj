@@ -198,7 +198,7 @@
           - Include indels in low entropy regions which are often problematic.
           - Include novel variants not found in dbSNP that have low read support.
           - Include known variants, in dbSNP, depending on type:
-             - SNP: include low depth SNPs with high likelihood of being ref
+             - SNP: include SNPs with high likelihood of being ref
              - indel: include indels near the end of reads with high ref likelihood"}
   [orig-file _ call exp _ ext]
   (let [freq (get call :fp-freq 0.25)
@@ -225,13 +225,12 @@
             (include-novel? [vc]
               (let [attrs (attr-get ["DP"] vc)]
                 (when (not-any? nil? (vals attrs))
-                  (< (get attrs "DP") 50.0))))
+                  (< (get attrs "DP") 100.0))))
             (include-known? [vc]
               (let [attrs (attr-get ["DP" "PL" "ReadPosEndDist"] vc)]
                 (when (not-any? nil? (vals attrs))
                   (if (= "SNP" (:type vc))
-                    (and (> (get attrs "DP") 15.0)
-                         (> (get attrs "PL") -20.0))
+                    (> (get attrs "PL") -20.0)
                     (and (> (get attrs "PL") -20.0)
                          (< (get attrs "ReadPosEndDist") 15.0))))))
             (is-potential-fp? [vc]
@@ -253,7 +252,7 @@
     (letfn [(include-tp? [vc]
               (let [attrs (attr-get ["DP" "PL" "ReadPosEndDist"] vc)]
                 (when (not-any? nil? (vals attrs))
-                  (and (< (get attrs "DP") 50.0)
+                  (and (< (get attrs "DP") 100.0)
                        (> (get attrs "PL") -20.0)))))
             (is-tp? [vc]
               (when-let [set-val (get-in vc [:attributes "set"])]
