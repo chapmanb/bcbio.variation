@@ -245,12 +245,21 @@
 
 (defmethod get-train-variants [:recall :tps]
   ^{:doc "Identify true positive training variants directly from recalled consensus.
-          Use variants found in all input callers."}
+          Use variants found in all input callers, then restrict similarly to false
+          positives to maintain representative sets. We restrict by lower depth and
+          problematic reference likelihoods."}
   [orig-file _ call exp _ ext]
-  (letfn [(is-tp? [vc]
-            (when-let [set-val (get-in vc [:attributes "set"])]
-              (= set-val "Intersection")))]
-    (gvc/select-variants orig-file is-tp? ext (:ref exp))))
+  (let [attr-get (prep-vc-attr-retriever orig-file (:ref exp))]
+    (letfn [(include-tp? [vc]
+              (let [attrs (attr-get ["DP" "PL" "ReadPosEndDist"] vc)]
+                (when (not-any? nil? (vals attrs))
+                  (and (< (get attrs "DP") 50.0)
+                       (> (get attrs "PL") -20.0)))))
+            (is-tp? [vc]
+              (when-let [set-val (get-in vc [:attributes "set"])]
+                (and (= set-val "Intersection")
+                     (include-tp? vc))))]
+      (gvc/select-variants orig-file is-tp? ext (:ref exp)))))
 
 (defmethod get-train-variants [:recall :trusted]
   ^{:doc "Retrieve set of trusted variants based on input parameters and recalled consensus."}
