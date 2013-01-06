@@ -230,13 +230,13 @@
               (let [attrs (attr-get ["DP" "PL" "ReadPosEndDist"] vc)]
                 (when (not-any? nil? (vals attrs))
                   (if (= "SNP" (:type vc))
-                    (> (get attrs "PL") -20.0)
-                    (and (> (get attrs "PL") -20.0)
+                    (> (get attrs "PL") -10.0)
+                    (and (> (get attrs "PL") -10.0)
                          (< (get attrs "ReadPosEndDist") 15.0))))))
             (is-potential-fp? [vc]
               (and (below-support-thresh? vc)
                    (passes-mapping-quality? vc)
-                   (or (low-entropy-indel? vc)
+                   (or false ;(low-entropy-indel? vc)
                        (if (novel-variant? vc)
                          (include-novel? vc)
                          (include-known? vc)))))]
@@ -253,7 +253,7 @@
               (let [attrs (attr-get ["DP" "PL" "ReadPosEndDist"] vc)]
                 (when (not-any? nil? (vals attrs))
                   (and (< (get attrs "DP") 100.0)
-                       (> (get attrs "PL") -20.0)))))
+                       (> (get attrs "PL") -50.0)))))
             (is-tp? [vc]
               (when-let [set-val (get-in vc [:attributes "set"])]
                 (and (= set-val "Intersection")
