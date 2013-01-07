@@ -27,29 +27,24 @@
   "Define splitting of classifiers based on variant characteristics."
   []
   (let [variant-types [:snp :complex]
-        repeats [true false]
         zygosity [:hom :het]]
-    (map (fn [[vtype rpt z]] {:variant-type vtype
-                              :repetitive rpt
-                              :zygosity z})
-         (cartesian-product variant-types repeats zygosity))))
+    (map (fn [[vtype z]] {:variant-type vtype
+                          :zygosity z})
+         (cartesian-product variant-types zygosity))))
 
 (defn- ctype-to-str
   "Convert a classifier types into a string name for output files."
   [x]
   (str (name (:variant-type x)) "_"
-       (if (:repetitive x) "rpt" "std") "_"
        (name (:zygosity x))))
 
 (defn- get-classifier-type
   "Map variant types to specialized classifiers."
   [vc attr-get]
-  (let [attrs (attr-get ["rmsk"] vc)]
-    {:variant-type (case (:type vc)
-                     "SNP" :snp
-                     :complex)
-     :repetitive (contains? (get attrs "rmsk") "repeat")
-     :zygosity (if (some #(.startsWith (:type %) "HET") (:genotypes vc)) :het :hom)}))
+  {:variant-type (case (:type vc)
+                   "SNP" :snp
+                   :complex)
+   :zygosity (if (some #(.startsWith (:type %) "HET") (:genotypes vc)) :het :hom)})
 
 ;; ## Linear classifier
 
@@ -98,9 +93,11 @@
 
 (defn- build-vcf-classifiers
   "Provide a variant classifier based on provided attributes and true/false examples."
-  [attrs pre-normalizer base-vcf true-vcf false-vcf ref config]
+  [attrs pre-normalizer base-vcf true-vcf false-vcf ref config out-dir]
   (letfn [(build-vcf-classifier [ctype]
-            (let [out-file (format "%s-%s-classifier.bin" (itx/file-root base-vcf) (ctype-to-str ctype))]
+            (let [out-dir (if (nil? out-dir) (str (fs/parent base-vcf)) out-dir)
+                  out-file (format "%s/%s-%s-classifier.bin" out-dir
+                                   (fs/name base-vcf) (ctype-to-str ctype))]
               (if-not (itx/needs-run? out-file)
                 (deserialize-from-file out-file)
                 (when-let [classifier (train-vcf-classifier ctype attrs pre-normalizer true-vcf false-vcf
@@ -157,7 +154,7 @@
   "Retrieve variants to use for true/false positive training.
    Dispatches based on approach used. For recalling, we can pull directly
    from input files"
-  (fn [orig-file train-file call exp config call-type]
+  (fn [orig-file train-files call exp config call-type out-dir]
     (let [is-recall (get call :recall false)
           recall-approach (keyword (get-in exp [:params :compare-approach] :consensus))]
       (if is-recall
@@ -168,12 +165,13 @@
 
 (defmethod get-train-variants [:recall :rewrite]
   ^{:doc "Retrieve variants from original file based on variants in target file."}
-  [orig-file target-file _ exp _ ext]
+  [orig-file target-files _ exp _ ext out-dir]
   (letfn [(get-orig-variants [retriever vc]
             (->> (variants-in-region retriever (:chr vc) (:start vc) (:end vc))
                  (filter #(= (:start %) (:start vc)))
                  (map :vc)))]
-    (let [out-file (itx/add-file-part orig-file ext)]
+    (let [out-file (itx/add-file-part orig-file ext out-dir)
+          target-file (get target-files (keyword ext))]
       (when (itx/needs-run? out-file)
         (with-open [vcf-iter (get-vcf-iterator target-file (:ref exp))
                     retriever (get-vcf-retriever (:ref exp) orig-file)]
@@ -214,7 +212,7 @@
           - Include novel variants not found in dbSNP that have low read support.
           - Include known variants, in dbSNP, depending on type:
              - SNP: include SNPs with high likelihood of being ref"}
-  [orig-file _ call exp _ ext]
+  [orig-file _ call exp _ ext out-dir]
   (let [attr-get (prep-vc-attr-retriever orig-file (:ref exp))]
     (letfn [(get-one-attr [attr vc]
               (-> (attr-get [attr] vc) (get attr)))
@@ -243,7 +241,8 @@
                        (if (novel-variant? vc)
                          (include-novel? vc)
                          (include-known? vc)))))]
-    (gvc/select-variants orig-file is-potential-fp? ext (:ref exp)))))
+    (gvc/select-variants orig-file is-potential-fp? ext (:ref exp)
+                         :out-dir out-dir))))
 
 (defmethod get-train-variants [:recall :tps]
   ^{:doc "Identify true positive training variants directly from recalled consensus.
@@ -252,7 +251,7 @@
           problematic reference likelihoods. We also include high confidence calls
           with lower supporting calls to keep a wider range: these include SNPs with
           a low likelihood of being reference and known indels."}
-  [orig-file _ call exp _ ext]
+  [orig-file _ call exp _ ext out-dir]
   (let [attr-get (prep-vc-attr-retriever orig-file (:ref exp))]
     (letfn [(include-tp? [vc]
               (let [attrs (attr-get ["DP" "PL"] vc)]
@@ -272,41 +271,47 @@
                        (if (= "SNP" (:type vc))
                          (include-lowthresh-snp? vc)
                          (not (novel-variant? vc))))))]
-      (gvc/select-variants orig-file is-tp? ext (:ref exp)))))
+      (gvc/select-variants orig-file is-tp? ext (:ref exp)
+                           :out-dir out-dir))))
 
 (defmethod get-train-variants [:recall :trusted]
   ^{:doc "Retrieve set of trusted variants based on input parameters and recalled consensus."}
-  [orig-file _ call exp params ext]
+  [orig-file _ call exp params ext out-dir]
   (let [calls (remove #(= (:name %) (:name call)) (:calls exp))]
     (letfn [(is-trusted? [vc]
               (when-let [trusted (:trusted params)]
                 (trusted/is-trusted-variant? vc trusted calls)))]
-      (gvc/select-variants orig-file is-trusted? ext (:ref exp)))))
+      (gvc/select-variants orig-file is-trusted? ext (:ref exp)
+                           :out-dir out-dir))))
 
 (defmethod get-train-variants :default
   ^{:doc "By default, return the prepped training file with no changes."}
-  [_ train-file _ _ _ _]
-  train-file)
+  [_ train-files _ _ _ ext _]
+  (get train-files (keyword ext)))
 
 (defn filter-vcf-w-classifier
   "Filter an input VCF file using a trained classifier on true/false variants."
-  [base-vcf orig-true-vcf orig-false-vcf meta-files call exp config]
-  (let [out-file (itx/add-file-part base-vcf "cfilter")]
+  [base-vcf train-files call exp config]
+  (let [out-dir (when-let [tround (:round train-files)]
+                  (str (fs/file (fs/parent base-vcf) "trainround") tround))
+        out-file (itx/add-file-part base-vcf "cfilter" out-dir)]
     (when (itx/needs-run? out-file)
-      (let [true-vcf (get-train-variants base-vcf orig-true-vcf call exp config "tps")
-            false-vcf (get-train-variants base-vcf orig-false-vcf call exp config "fps")
-            trusted-vcf (get-train-variants base-vcf (:trusted meta-files) call exp
-                                            config "trusted")
+      (let [true-vcf (get-train-variants base-vcf train-files call exp config
+                                         "tps" out-dir)
+            false-vcf (get-train-variants base-vcf train-files call exp config
+                                          "fps" out-dir)
+            trusted-vcf (get-train-variants base-vcf train-files call exp
+                                            config "trusted" out-dir)
             ref (:ref exp)
             pre-normalizer (get-vc-attrs-normalized (:classifiers config) base-vcf ref config)
             cs (build-vcf-classifiers (:classifiers config) pre-normalizer base-vcf
-                                      true-vcf false-vcf ref config)
+                                      true-vcf false-vcf ref config out-dir)
             config (merge {:normalize :default} config)
             attr-get (prep-vc-attr-retriever base-vcf ref)]
         (println "Filter VCF with" (str cs))
         (with-open [vcf-iter (get-vcf-iterator base-vcf ref)
                     trusted-get (get-vcf-retriever ref trusted-vcf)
-                    xspecific-get (get-vcf-retriever ref (:xspecific meta-files))]
+                    xspecific-get (get-vcf-retriever ref (:xspecific train-files))]
           (write-vcf-w-template base-vcf {:out out-file}
                                 (map (partial filter-vc cs (pre-normalizer base-vcf) attr-get
                                               {:trusted trusted-get :xspecific xspecific-get}
@@ -323,8 +328,9 @@
                        first
                        :file))]
     (pipeline-combine-intervals exp config)
-    (filter-vcf-w-classifier in-vcf (get-train-vcf "concordant")
-                             (get-train-vcf "discordant")
-                             {:trusted (get-train-vcf "trusted")
+    (filter-vcf-w-classifier in-vcf
+                             {:tps (get-train-vcf "concordant")
+                              :fps (get-train-vcf "discordant")
+                              :trusted (get-train-vcf "trusted")
                               :xspecific (get-train-vcf "xspecific")}
                               call exp params)))

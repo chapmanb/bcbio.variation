@@ -57,7 +57,7 @@
           log-normalizer ((get-vc-attrs-normalized attrs top-vcf ref {:normalize "log"
                                                                       :log-attrs ["DP"]})
                           top-vcf)
-          ctype {:variant-type :snp :repetitive false :zygosity :hom}]
+          ctype {:variant-type :snp :zygosity :hom}]
       (first (#'bcbio.variation.filter.classify/get-train-inputs
               1 top-vcf ctype xtra-attrs normalizer ref)) => (contains [0.0 (roughly 0.621) 1.0 1]
                                                                       :in-any-order :gaps-ok)
@@ -78,7 +78,7 @@
   (let [exp
         {:ref ref
          :calls [{:name "7_100326_FC6107FAAXX-sort-dup-gatkrecal-realign-variants-snp-filterSNP"}]}]
-    (filter-vcf-w-classifier top-vcf top-vcf c-neg-vcf {} {:recall false} exp
+    (filter-vcf-w-classifier top-vcf {:tps top-vcf :fps c-neg-vcf} {:recall false} exp
                              {:classifiers ["AD" "QUAL" "DP" "PL"]
                               :trusted {:total 0.5}})) => c-out)
 

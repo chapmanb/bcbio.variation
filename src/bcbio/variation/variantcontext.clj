@@ -212,8 +212,8 @@
 
 (defn select-variants
   "Select variants from an input file with supplied filter."
-  [in-file passes? file-out-part ref-file]
-  (let [out-file (itx/add-file-part in-file file-out-part)]
+  [in-file passes? file-out-part ref-file & {:keys [out-dir]}]
+  (let [out-file (itx/add-file-part in-file file-out-part out-dir)]
     (when (itx/needs-run? out-file)
       (with-open [in-iter (get-vcf-iterator in-file ref-file)]
         (write-vcf-w-template in-file {:out out-file}

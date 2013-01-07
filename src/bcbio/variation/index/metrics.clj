@@ -36,7 +36,7 @@
                "AD" {:range [0.0 1.0]
                      :y-scale {:type :log}
                      :desc "Deviation from expected allele balance for ref/alt alleles"}
-               "PL" {:range [-150.0 0]
+               "PL" {:range [-100.0 0]
                      :desc "Normalized, phred-scaled likelihoods for alternative genotype"}
                "HaplotypeScore" {:range [0.0 50.0]
                                  :desc "Consistency of the site with at most two segregating haplotypes"}))
