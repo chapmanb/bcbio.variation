@@ -1,12 +1,11 @@
 (ns bcbio.variation.filter
   "Filter variant calls according to supplied criteria."
-  (:import [org.broadinstitute.sting.utils.variantcontext
-            VariantContextBuilder])
   (:use [clojure.string :only [split]]
         [bcbio.variation.filter.attr :only [get-vc-attr prep-vc-attr-retriever]]
         [bcbio.variation.filter.classify :only [pipeline-classify-filter]]
         [bcbio.variation.filter.specific :only [get-x-specific-variants]]
         [bcbio.variation.filter.trusted :only [get-support-vcfs get-trusted-variants]]
+        [bcbio.variation.filter.util :only [remove-cur-filters]]
         [bcbio.variation.metrics :only [to-float passes-filter?]]
         [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template
                                                get-vcf-iterator write-vcf-from-filter
@@ -141,21 +140,6 @@
   [in-vcf training-vcfs annotations ref & {:keys [lenient]}]
   (let [recal-files (variant-recalibration in-vcf training-vcfs annotations ref :lenient lenient)]
     (apply-recalibration in-vcf recal-files ref)))
-
-(defn remove-cur-filters
-  "Remove any filter information in the supplied file."
-  [in-vcf ref]
-  (letfn [(remove-vc-filter [vc]
-            [:out (-> (VariantContextBuilder. (:vc vc))
-                      (.passFilters)
-                      (.make))])]
-    (let [out-file (itx/add-file-part in-vcf "nofilter")]
-      (when (itx/needs-run? out-file)
-        (with-open [vcf-iter (get-vcf-iterator in-vcf ref)]
-          (write-vcf-w-template in-vcf {:out out-file}
-                                (map remove-vc-filter (parse-vcf vcf-iter))
-                                ref)))
-      out-file)))
 
 (defn- get-train-info
   "Retrieve training information for GATK recalibration:

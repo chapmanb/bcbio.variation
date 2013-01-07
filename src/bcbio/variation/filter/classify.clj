@@ -9,6 +9,7 @@
         [clj-ml.data :only [make-dataset dataset-set-class make-instance]]
         [clj-ml.classifiers :only [make-classifier classifier-train
                                    classifier-evaluate classifier-classify]]
+        [bcbio.variation.filter.util :only [remove-cur-filters]]
         [bcbio.variation.filter.attr :only [get-vc-attrs-normalized prep-vc-attr-retriever]]
         [bcbio.variation.filter.intervals :only [pipeline-combine-intervals]]
         [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template
@@ -18,6 +19,7 @@
             [fs.core :as fs]
             [bcbio.run.itx :as itx]
             [bcbio.variation.filter.trusted :as trusted]
+            [bcbio.variation.metrics :as metrics]
             [bcbio.variation.multiple :as multiple]
             [bcbio.variation.variantcontext :as gvc]))
 
@@ -159,7 +161,7 @@
           recall-approach (keyword (get-in exp [:params :compare-approach] :consensus))]
       (if is-recall
         (if (= :consensus recall-approach)
-          [:recall (keyword call-type)]
+          [:recall (keyword call-type) (if (:round train-files) :iterate :final)]
           [:recall :rewrite])
         :default))))
 
@@ -196,7 +198,7 @@
   [vc]
   (contains? #{nil "."} (:id vc)))
 
-(defmethod get-train-variants [:recall :fps]
+(defmethod get-train-variants [:recall :fps :iterate]
   ^{:doc "Identify false positive variants directly from recalled consensus calls.
           These contain the `set` key value pair with information about supporting
           calls. We filter variants that have low support from multiple callers, then
@@ -244,7 +246,7 @@
     (gvc/select-variants orig-file is-potential-fp? ext (:ref exp)
                          :out-dir out-dir))))
 
-(defmethod get-train-variants [:recall :tps]
+(defmethod get-train-variants [:recall :tps :iterate]
   ^{:doc "Identify true positive training variants directly from recalled consensus.
           Use variants found in all input callers, then restrict similarly to false
           positives to maintain representative sets. We restrict by lower depth and
@@ -274,7 +276,7 @@
       (gvc/select-variants orig-file is-tp? ext (:ref exp)
                            :out-dir out-dir))))
 
-(defmethod get-train-variants [:recall :trusted]
+(defmethod get-train-variants [:recall :trusted :iterate]
   ^{:doc "Retrieve set of trusted variants based on input parameters and recalled consensus."}
   [orig-file _ call exp params ext out-dir]
   (let [calls (remove #(= (:name %) (:name call)) (:calls exp))]
@@ -283,6 +285,32 @@
                 (trusted/is-trusted-variant? vc trusted calls)))]
       (gvc/select-variants orig-file is-trusted? ext (:ref exp)
                            :out-dir out-dir))))
+
+(defmethod get-train-variants [:recall :trusted :final]
+  [orig-file train-files call exp params ext out-dir]
+  (get-train-variants orig-file (dissoc :round train-files) call exp params ext out-dir))
+
+(defmethod get-train-variants [:recall :tps :final]
+  ^{:doc "Iteratively identify true positive variants: low support variants
+          that pass the previous round of filtering."}
+  [orig-file train-files call exp params ext out-dir]
+  (letfn [(is-previous-tp? [vc]
+            (and (below-support-thresh? call exp vc)
+                 (metrics/passes-filter? vc)))]
+    (gvc/select-variants (:prev train-files) is-previous-tp? ext (:ref exp)
+                         :out-dir out-dir)))
+
+(defmethod get-train-variants [:recall :fps :final]
+  ^{:doc "Iteratively identify false positive variants: low support variants
+          that fail the previous round of filtering."}
+  [orig-file train-files call exp params ext out-dir]
+  (letfn [(is-previous-fp? [vc]
+            (and (below-support-thresh? call exp vc)
+                 (not (metrics/passes-filter? vc))))]
+    (-> (:prev train-files)
+        (gvc/select-variants is-previous-fp? ext (:ref exp)
+                             :out-dir out-dir)
+        (remove-cur-filters (:ref exp)))))
 
 (defmethod get-train-variants :default
   ^{:doc "By default, return the prepped training file with no changes."}
@@ -295,6 +323,8 @@
   (let [out-dir (when-let [tround (:round train-files)]
                   (str (fs/file (fs/parent base-vcf) "trainround") tround))
         out-file (itx/add-file-part base-vcf "cfilter" out-dir)]
+    (when (and out-dir (not (fs/exists? out-dir)))
+      (fs/mkdirs out-dir))
     (when (itx/needs-run? out-file)
       (let [true-vcf (get-train-variants base-vcf train-files call exp config
                                          "tps" out-dir)
@@ -325,12 +355,14 @@
   [in-vcf train-info call exp params config]
   (letfn [(get-train-vcf [type]
             (-> (filter #(= type (:name %)) train-info)
-                       first
-                       :file))]
+                first
+                :file))]
     (pipeline-combine-intervals exp config)
-    (filter-vcf-w-classifier in-vcf
-                             {:tps (get-train-vcf "concordant")
-                              :fps (get-train-vcf "discordant")
-                              :trusted (get-train-vcf "trusted")
-                              :xspecific (get-train-vcf "xspecific")}
-                              call exp params)))
+    (let [x1 (filter-vcf-w-classifier in-vcf
+                                      {:tps (get-train-vcf "concordant")
+                                       :fps (get-train-vcf "discordant")
+                                       :trusted (get-train-vcf "trusted")
+                                       :xspecific (get-train-vcf "xspecific")
+                                       :round 1}
+                                      call exp params)]
+      (filter-vcf-w-classifier in-vcf {:prev x1} call exp params))))
