@@ -358,11 +358,10 @@
                 first
                 :file))]
     (pipeline-combine-intervals exp config)
-    (let [x1 (filter-vcf-w-classifier in-vcf
-                                      {:tps (get-train-vcf "concordant")
-                                       :fps (get-train-vcf "discordant")
-                                       :trusted (get-train-vcf "trusted")
-                                       :xspecific (get-train-vcf "xspecific")
-                                       :round 1}
+    (let [orig-trains {:tps (get-train-vcf "concordant")
+                       :fps (get-train-vcf "discordant")
+                       :trusted (get-train-vcf "trusted")
+                       :xspecific (get-train-vcf "xspecific")}
+          x1 (filter-vcf-w-classifier in-vcf (assoc orig-trains :round 1)
                                       call exp params)]
-      (filter-vcf-w-classifier in-vcf {:prev x1} call exp params))))
+      (filter-vcf-w-classifier in-vcf (assoc orig-trains :prev x1) call exp params))))
