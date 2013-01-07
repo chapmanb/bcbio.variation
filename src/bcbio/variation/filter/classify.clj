@@ -183,6 +183,21 @@
                                 (:ref exp))))
       out-file)))
 
+(defn- below-support-thresh?
+  "Check if a variant context has a low amount of supporting variant calls."
+  [call exp vc]
+  (let [freq (get call :fp-freq 0.25)
+        thresh (Math/ceil (* freq (dec (count (:calls exp)))))]
+    (-> (multiple/get-vc-set-calls vc (:calls exp))
+        (disj (:name call))
+        count
+        (<= thresh))))
+
+(defn- novel-variant?
+  "Is a variant novel, or is it represented in dbSNP?"
+  [vc]
+  (contains? #{nil "."} (:id vc)))
+
 (defmethod get-train-variants [:recall :fps]
   ^{:doc "Identify false positive variants directly from recalled consensus calls.
           These contain the `set` key value pair with information about supporting
@@ -190,7 +205,7 @@
           compare based on novelty in dbSNP. Novel and know have different inclusion
           parameters derived from examining real true/false calls in replicate
           experiments. The logic for inclusion is:
-          - A variant must be supported by less than `fp-freq` percentage of callers.
+          - Variants with support from less than `fp-freq` percentage of callers.
             This defaults to less than 25% of callers used.
           - We exclude low mapping quality reads, which end up being non-representative
             of more general cases since they are poorly represented in true positives.
@@ -198,18 +213,10 @@
           - Include indels in low entropy regions which are often problematic.
           - Include novel variants not found in dbSNP that have low read support.
           - Include known variants, in dbSNP, depending on type:
-             - SNP: include SNPs with high likelihood of being ref
-             - indel: include indels near the end of reads with high ref likelihood"}
+             - SNP: include SNPs with high likelihood of being ref"}
   [orig-file _ call exp _ ext]
-  (let [freq (get call :fp-freq 0.25)
-        thresh (Math/ceil (* freq (dec (count (:calls exp)))))
-        attr-get (prep-vc-attr-retriever orig-file (:ref exp))]
-    (letfn [(below-support-thresh? [vc]
-              (-> (multiple/get-vc-set-calls vc (:calls exp))
-                  (disj (:name call))
-                  count
-                  (<= thresh)))
-            (get-one-attr [attr vc]
+  (let [attr-get (prep-vc-attr-retriever orig-file (:ref exp))]
+    (letfn [(get-one-attr [attr vc]
               (-> (attr-get [attr] vc) (get attr)))
             (passes-mapping-quality? [vc]
               (let [mq (get-one-attr "MQ" vc)]
@@ -220,23 +227,19 @@
                 (when-not (nil? entropy)
                   (when (not= "SNP" (:type vc))
                     (< entropy 2.6)))))
-            (novel-variant? [vc]
-              (contains? #{nil "."} (:id vc)))
             (include-novel? [vc]
               (let [attrs (attr-get ["DP"] vc)]
                 (when (not-any? nil? (vals attrs))
-                  (< (get attrs "DP") 100.0))))
+                  (< (get attrs "DP") 200.0))))
             (include-known? [vc]
-              (let [attrs (attr-get ["DP" "PL" "ReadPosEndDist"] vc)]
+              (let [attrs (attr-get ["PL"] vc)]
                 (when (not-any? nil? (vals attrs))
-                  (if (= "SNP" (:type vc))
-                    (> (get attrs "PL") -10.0)
-                    (and (> (get attrs "PL") -10.0)
-                         (< (get attrs "ReadPosEndDist") 15.0))))))
+                  (when (= "SNP" (:type vc))
+                    (> (get attrs "PL") -20.0)))))
             (is-potential-fp? [vc]
-              (and (below-support-thresh? vc)
+              (and (below-support-thresh? call exp vc)
                    (passes-mapping-quality? vc)
-                   (or false ;(low-entropy-indel? vc)
+                   (or (low-entropy-indel? vc)
                        (if (novel-variant? vc)
                          (include-novel? vc)
                          (include-known? vc)))))]
@@ -246,18 +249,29 @@
   ^{:doc "Identify true positive training variants directly from recalled consensus.
           Use variants found in all input callers, then restrict similarly to false
           positives to maintain representative sets. We restrict by lower depth and
-          problematic reference likelihoods."}
+          problematic reference likelihoods. We also include high confidence calls
+          with lower supporting calls to keep a wider range: these include SNPs with
+          a low likelihood of being reference and known indels."}
   [orig-file _ call exp _ ext]
   (let [attr-get (prep-vc-attr-retriever orig-file (:ref exp))]
     (letfn [(include-tp? [vc]
-              (let [attrs (attr-get ["DP" "PL" "ReadPosEndDist"] vc)]
+              (let [attrs (attr-get ["DP" "PL"] vc)]
                 (when (not-any? nil? (vals attrs))
-                  (and (< (get attrs "DP") 100.0)
-                       (> (get attrs "PL") -50.0)))))
-            (is-tp? [vc]
+                  (and (< (get attrs "DP") 200.0)
+                       (> (get attrs "PL") -20.0)))))
+            (is-intersection? [vc]
               (when-let [set-val (get-in vc [:attributes "set"])]
-                (and (= set-val "Intersection")
-                     (include-tp? vc))))]
+                (= set-val "Intersection")))
+            (include-lowthresh-snp? [vc]
+              (let [attrs (attr-get ["PL"] vc)]
+                (when (not-any? nil? (vals attrs))
+                  (< (get attrs "PL") -15.0))))
+            (is-tp? [vc]
+              (or (and (is-intersection? vc) (include-tp? vc))
+                  (and (below-support-thresh? call exp vc)
+                       (if (= "SNP" (:type vc))
+                         (include-lowthresh-snp? vc)
+                         (not (novel-variant? vc))))))]
       (gvc/select-variants orig-file is-tp? ext (:ref exp)))))
 
 (defmethod get-train-variants [:recall :trusted]

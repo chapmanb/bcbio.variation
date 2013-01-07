@@ -195,8 +195,8 @@
             (apply + (remove nil? (map k xs))))
           (sum-plus-call-type [i xs]
             (let [pls (safe-sum xs :pl)
-                  represent-x (last (sort-by #(vector (:attr-count %)
-                                                      (- (or (:pl %) Integer/MIN_VALUE)))
+                  represent-x (last (sort-by #(vector (or (:pl %) (- Integer/MIN_VALUE))
+                                                      (:attr-count %))
                                              xs))
                   call-code (if (= "HET" (:call-type represent-x)) 0 1)]
               [(count xs) call-code (- pls) i represent-x]))]
