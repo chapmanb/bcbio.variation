@@ -116,8 +116,9 @@
   "Add details on the filtering to the VCF file header."
   [attrs]
   (fn [_ header]
-    (let [desc (str "Classification filters based on true/false positives for: "
-                    (pr-str attrs))
+    (let [str-attrs (map (fn [[k v]] (str (name k) ": " (string/join "," v))) attrs)
+          desc (str "Classification filters based on true/false positives for: "
+                    (string/join "; " str-attrs))
           new #{(VCFInfoHeaderLine. "CFILTERS" VCFHeaderLineCount/UNBOUNDED
                                     VCFHeaderLineType/String desc)
                 (VCFFilterHeaderLine. "CScoreFilter" "Based on classifcation CFILTERS")}]
