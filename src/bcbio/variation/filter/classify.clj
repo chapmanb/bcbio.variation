@@ -27,25 +27,28 @@
 
 (defn- classifier-types
   "Define splitting of classifiers based on variant characteristics."
-  []
+  [attr-key]
   (let [variant-types [:snp :complex]
         zygosity [:hom :het]]
     (map (fn [[vtype z]] {:variant-type vtype
+                          :attr-key attr-key
                           :zygosity z})
          (cartesian-product variant-types zygosity))))
 
 (defn- ctype-to-str
   "Convert a classifier types into a string name for output files."
   [x]
-  (str (name (:variant-type x)) "_"
+  (str (name (:attr-key x)) "-"
+       (name (:variant-type x)) "_"
        (name (:zygosity x))))
 
 (defn- get-classifier-type
   "Map variant types to specialized classifiers."
-  [vc attr-get]
+  [vc attr-key attr-get]
   {:variant-type (case (:type vc)
                    "SNP" :snp
                    :complex)
+   :attr-key attr-key
    :zygosity (if (some #(.startsWith (:type %) "HET") (:genotypes vc)) :het :hom)})
 
 ;; ## Linear classifier
@@ -61,7 +64,7 @@
   (let [attr-get (prep-vc-attr-retriever in-vcf ref)]
     (with-open [vcf-iter (get-vcf-iterator in-vcf ref)]
       (->> (parse-vcf vcf-iter)
-           (filter #(= ctype (get-classifier-type % attr-get)))
+           (filter #(= ctype (get-classifier-type % (:attr-key ctype) attr-get)))
            (map (partial get-vc-inputs attrs normalizer group))
            doall))))
 
@@ -95,8 +98,8 @@
 
 (defn- build-vcf-classifiers
   "Provide a variant classifier based on provided attributes and true/false examples."
-  [attrs pre-normalizer base-vcf true-vcf false-vcf ref config out-dir]
-  (letfn [(build-vcf-classifier [ctype]
+  [attr-map pre-normalizer base-vcf true-vcf false-vcf ref config out-dir]
+  (letfn [(build-vcf-classifier [ctype attrs]
             (let [out-dir (if (nil? out-dir) (str (fs/parent base-vcf)) out-dir)
                   out-file (format "%s/%s-%s-classifier.bin" out-dir
                                    (fs/name base-vcf) (ctype-to-str ctype))]
@@ -106,15 +109,15 @@
                                                             ref config)]
                   (serialize-to-file classifier out-file)
                   classifier))))]
-    (let [ctypes (classifier-types)]
-      (zipmap ctypes (map build-vcf-classifier ctypes)))))
+    (let [ctypes (mapcat classifier-types (keys attr-map))]
+      (zipmap ctypes (map #(build-vcf-classifier % (get attr-map (:attr-key %))) ctypes)))))
 
 (defn- add-cfilter-header
   "Add details on the filtering to the VCF file header."
   [attrs]
   (fn [_ header]
     (let [desc (str "Classification score based on true/false positives for: "
-                    (string/join ", " attrs))
+                    (pr-str attrs))
           new #{(VCFInfoHeaderLine. "CSCORE" 1 VCFHeaderLineType/Float desc)
                 (VCFFilterHeaderLine. "CScoreFilter" "Based on classifcation CSCORE")}]
       (VCFHeader. (apply ordered-set (concat (.getMetaDataInInputOrder header) new))
@@ -124,8 +127,8 @@
   "Check if a variant passes, including external metadata annotations.
    - trusted: pass variants that overlap in the trusted set
    - xspecific: exclude variants specific to a technology or caller
-   - otherwise check the variant filtration score, passing those with high scores"
-  [vc score meta-getters config]
+   - otherwise check the variant filters that failed, passing those that are clean"
+  [vc c-filters meta-getters config]
   (letfn [(meta-has-variants? [kw]
             (has-variants? (get meta-getters kw)
                            (:chr vc) (:start vc) (:end vc)
@@ -133,24 +136,26 @@
     (cond
      (meta-has-variants? :trusted) true
      (meta-has-variants? :xspecific) false
-     :else (case score
-             0.0 true
-             1.0 false
-             (throw (Exception. (str "Unexpected score: " score)))))))
+     (empty? c-filters) true
+     :else false)))
 
 (defn- filter-vc
   "Update a variant context with filter information from classifier."
-  [classifiers normalizer attr-get meta-getters config vc]
-  (let [attrs (vec (:classifiers config))
-        c (get classifiers (get-classifier-type vc attr-get))
-        val (get-vc-inputs attrs normalizer :fail vc)
-        score (classifier-classify c (-> (get-dataset attrs 1)
-                                         (make-instance val)))]
-    (-> (VariantContextBuilder. (:vc vc))
-        (.attributes (assoc (:attributes vc) "CSCORE" score))
-        (.filters (when-not (vc-passes-w-meta? vc score meta-getters config)
-                    #{"CScoreFilter"}))
-        .make)))
+  [cs normalizer attr-get meta-getters config vc]
+  (letfn [(check-attrgroup-classifier [[attr-key attrs]]
+            (let [c (get cs (get-classifier-type vc attr-key attr-get))
+                  val (get-vc-inputs attrs normalizer :fail vc)
+                  score (classifier-classify c (-> (get-dataset attrs 1)
+                                                   (make-instance val)))]
+              (when (pos? score) attr-key)))]
+    (let [c-filters (->> (:classifiers config)
+                         (map check-attrgroup-classifier)
+                         (remove nil?))]
+      (-> (VariantContextBuilder. (:vc vc))
+          (.attributes (assoc (:attributes vc) "CSCORE" (count c-filters)))
+          (.filters (when-not (vc-passes-w-meta? vc c-filters meta-getters config)
+                      #{"CScoreFilter"}))
+          .make))))
 
 (defmulti get-train-variants
   "Retrieve variants to use for true/false positive training.
@@ -288,7 +293,7 @@
 
 (defmethod get-train-variants [:recall :trusted :final]
   [orig-file train-files call exp params ext out-dir]
-  (get-train-variants orig-file (dissoc :round train-files) call exp params ext out-dir))
+  (get-train-variants orig-file (assoc train-files :round 1) call exp params ext out-dir))
 
 (defmethod get-train-variants [:recall :tps :final]
   ^{:doc "Iteratively identify true positive variants: low support variants
@@ -333,7 +338,8 @@
             trusted-vcf (get-train-variants base-vcf train-files call exp
                                             config "trusted" out-dir)
             ref (:ref exp)
-            pre-normalizer (get-vc-attrs-normalized (:classifiers config) base-vcf ref config)
+            pre-normalizer (get-vc-attrs-normalized (apply concat (vals (:classifiers config)))
+                                                    base-vcf ref config)
             cs (build-vcf-classifiers (:classifiers config) pre-normalizer base-vcf
                                       true-vcf false-vcf ref config out-dir)
             config (merge {:normalize :default} config)
@@ -356,12 +362,17 @@
   (letfn [(get-train-vcf [type]
             (-> (filter #(= type (:name %)) train-info)
                 first
-                :file))]
+                :file))
+          (fix-param-classifiers [params]
+            (if (map? (:classifiers params))
+              params
+              (assoc params :classifiers {:all (:classifiers params)})))]
     (pipeline-combine-intervals exp config)
     (let [orig-trains {:tps (get-train-vcf "concordant")
                        :fps (get-train-vcf "discordant")
                        :trusted (get-train-vcf "trusted")
                        :xspecific (get-train-vcf "xspecific")}
+          params (fix-param-classifiers params)
           x1 (filter-vcf-w-classifier in-vcf (assoc orig-trains :round 1)
                                       call exp params)]
       (filter-vcf-w-classifier in-vcf (assoc orig-trains :prev x1) call exp params))))
