@@ -2,7 +2,7 @@
   "Provide classification based filtering for variants."
   (:import [org.broadinstitute.sting.utils.variantcontext VariantContextBuilder]
            [org.broadinstitute.sting.utils.codecs.vcf VCFHeader VCFInfoHeaderLine
-            VCFHeaderLineType VCFFilterHeaderLine])
+            VCFHeaderLineType VCFFilterHeaderLine VCFHeaderLineCount])
   (:use [ordered.set :only [ordered-set]]
         [clojure.math.combinatorics :only [cartesian-product]]
         [clj-ml.utils :only [serialize-to-file deserialize-from-file]]
@@ -116,10 +116,11 @@
   "Add details on the filtering to the VCF file header."
   [attrs]
   (fn [_ header]
-    (let [desc (str "Classification score based on true/false positives for: "
+    (let [desc (str "Classification filters based on true/false positives for: "
                     (pr-str attrs))
-          new #{(VCFInfoHeaderLine. "CSCORE" 1 VCFHeaderLineType/Float desc)
-                (VCFFilterHeaderLine. "CScoreFilter" "Based on classifcation CSCORE")}]
+          new #{(VCFInfoHeaderLine. "CFILTERS" VCFHeaderLineCount/UNBOUNDED
+                                    VCFHeaderLineType/String desc)
+                (VCFFilterHeaderLine. "CScoreFilter" "Based on classifcation CFILTERS")}]
       (VCFHeader. (apply ordered-set (concat (.getMetaDataInInputOrder header) new))
                   (.getGenotypeSamples header)))))
 
@@ -152,7 +153,9 @@
                          (map check-attrgroup-classifier)
                          (remove nil?))]
       (-> (VariantContextBuilder. (:vc vc))
-          (.attributes (assoc (:attributes vc) "CSCORE" (count c-filters)))
+          (.attributes (assoc (:attributes vc) "CFILTERS" (if (empty? c-filters)
+                                                            "None"
+                                                            (string/join "," (map name c-filters)))))
           (.filters (when-not (vc-passes-w-meta? vc c-filters meta-getters config)
                       #{"CScoreFilter"}))
           .make))))
