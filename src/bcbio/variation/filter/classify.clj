@@ -246,11 +246,9 @@
                     (> (get attrs "PL") -20.0)))))
             (is-potential-fp? [vc]
               (and (below-support-thresh? call exp vc)
-                   (passes-mapping-quality? vc)
-                   (or (low-entropy-indel? vc)
-                       (if (novel-variant? vc)
-                         (include-novel? vc)
-                         (include-known? vc)))))]
+                   (if (novel-variant? vc)
+                     (include-novel? vc)
+                     (include-known? vc))))]
     (gvc/select-variants orig-file is-potential-fp? ext (:ref exp)
                          :out-dir out-dir))))
 
@@ -276,11 +274,7 @@
                 (when (not-any? nil? (vals attrs))
                   (< (get attrs "PL") -15.0))))
             (is-tp? [vc]
-              (or (and (is-intersection? vc) (include-tp? vc))
-                  (and (below-support-thresh? call exp vc)
-                       (if (= "SNP" (:type vc))
-                         (include-lowthresh-snp? vc)
-                         (not (novel-variant? vc))))))]
+              (and (is-intersection? vc) (include-tp? vc)))]
       (gvc/select-variants orig-file is-tp? ext (:ref exp)
                            :out-dir out-dir))))
 
