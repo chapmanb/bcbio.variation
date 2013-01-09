@@ -212,13 +212,14 @@
        (= :het (:zygosity (get-classifier-type vc nil attr-get)))))
 
 (defn- novel-low-confidence-het?
-  "Define novel low confidence heterozygotes which we retain as false positives throughout."
+  "Define novel low confidence heterozygotes which we avoid using as true positives."
   [vc attr-get]
-  (when (het-snp? vc attr-get)
-    (let [attrs (attr-get ["DP" "PL"] vc)]
+  (when (and (het-snp? vc attr-get) (novel-variant? vc))
+    (let [attrs (attr-get ["DP" "PL" "PL-ratio"] vc)]
       (when (not-any? nil? (vals attrs))
-        (and (> (get attrs "PL") -7.5)
-             (< (get attrs "DP") 15.0))))))
+        (or (and (> (get attrs "PL") -7.5)
+                 (< (get attrs "DP") 15.0))
+            (< (get attrs "PL-ratio" 0.5)))))))
 
 (defmethod get-train-variants [:recall :fps :iterate]
   ^{:doc "Identify false positive variants directly from recalled consensus calls.
@@ -250,8 +251,10 @@
                   (when (not= "SNP" (:type vc))
                     (< entropy 2.6)))))
             (low-pl-het-snp? [vc]
-              (when-let [pl (get-one-attr "PL" vc)]
-                (> pl -10.0)))
+              (when-let [attrs (attr-get ["PL" "PL-ratio"] vc)]
+                (when (not-any? nil? (vals attrs))
+                  (or (> (get attrs "PL") -10.0)
+                      (< (get attrs "PL-ratio" 0.5))))))
             (include-novel? [vc]
               (let [attrs (attr-get ["DP"] vc)]
                 (when (not-any? nil? (vals attrs))
@@ -334,9 +337,8 @@
   (let [attr-get (prep-vc-attr-retriever orig-file (:ref exp))
         out-file (itx/add-file-part orig-file "fps" out-dir)]
     (letfn [(is-previous-fp? [vc]
-              (when-not (novel-low-confidence-het? vc attr-get)
-                (and (below-support-thresh? call exp vc)
-                     (not (metrics/passes-filter? vc)))))]
+              (and (below-support-thresh? call exp vc)
+                   (not (metrics/passes-filter? vc))))]
       (when (itx/needs-run? out-file)
         (-> (:prev train-files)
             (gvc/select-variants is-previous-fp? ext (:ref exp)
