@@ -236,6 +236,12 @@
                 (when-not (nil? entropy)
                   (when (not= "SNP" (:type vc))
                     (< entropy 2.6)))))
+            (het-snp? [vc]
+              (and (= "SNP" (:type vc))
+                   (= :het (:zygosity (get-classifier-type vc nil attr-get)))))
+            (low-pl-het-snp? [vc]
+              (when-let [pl (get-one-attr "PL" vc)]
+                (> pl -10.0)))
             (include-novel? [vc]
               (let [attrs (attr-get ["DP"] vc)]
                 (when (not-any? nil? (vals attrs))
@@ -247,9 +253,10 @@
                     (> (get attrs "PL") -20.0)))))
             (is-potential-fp? [vc]
               (and (below-support-thresh? call exp vc)
-                   (if (novel-variant? vc)
-                     (include-novel? vc)
-                     (include-known? vc))))]
+                   (cond
+                    (het-snp? vc) (low-pl-het-snp? vc)
+                    (novel-variant? vc) (include-novel? vc)
+                    :else (include-known? vc))))]
     (gvc/select-variants orig-file is-potential-fp? ext (:ref exp)
                          :out-dir out-dir))))
 
@@ -364,7 +371,10 @@
           (fix-param-classifiers [params]
             (if (map? (:classifiers params))
               params
-              (assoc params :classifiers {:all (:classifiers params)})))]
+              (assoc params :classifiers {:all (:classifiers params)})))
+          (flatten-param-classifiers [params]
+            (assoc params :classifiers
+                   {:all (->> (:classifiers config) vals (apply concat) set vec)}))]
     (pipeline-combine-intervals exp config)
     (let [orig-trains {:tps (get-train-vcf "concordant")
                        :fps (get-train-vcf "discordant")
@@ -372,5 +382,5 @@
                        :xspecific (get-train-vcf "xspecific")}
           params (fix-param-classifiers params)
           x1 (filter-vcf-w-classifier in-vcf (assoc orig-trains :round 1)
-                                      call exp params)]
+                                      call exp (flatten-param-classifiers params))]
       (filter-vcf-w-classifier in-vcf (assoc orig-trains :prev x1) call exp params))))
