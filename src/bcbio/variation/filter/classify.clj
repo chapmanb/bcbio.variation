@@ -317,9 +317,9 @@
   (let [attr-get (prep-vc-attr-retriever orig-file (:ref exp))
         out-file (itx/add-file-part orig-file "tps" out-dir)]
     (letfn [(is-previous-tp? [vc]
-              (and (below-support-thresh? call exp vc)
-                   (metrics/passes-filter? vc)
-                   (not (novel-low-confidence-het? vc attr-get))))]
+              (when-not (novel-low-confidence-het? vc attr-get)
+                (and (below-support-thresh? call exp vc)
+                     (metrics/passes-filter? vc))))]
       (when (itx/needs-run? out-file)
         (-> (:prev train-files)
             (gvc/select-variants is-previous-tp? ext (:ref exp)
@@ -334,9 +334,9 @@
   (let [attr-get (prep-vc-attr-retriever orig-file (:ref exp))
         out-file (itx/add-file-part orig-file "fps" out-dir)]
     (letfn [(is-previous-fp? [vc]
-              (and (below-support-thresh? call exp vc)
-                   (or (novel-low-confidence-het? vc attr-get)
-                       (not (metrics/passes-filter? vc)))))]
+              (when-not (novel-low-confidence-het? vc attr-get)
+                (and (below-support-thresh? call exp vc)
+                     (not (metrics/passes-filter? vc)))))]
       (when (itx/needs-run? out-file)
         (-> (:prev train-files)
             (gvc/select-variants is-previous-fp? ext (:ref exp)
