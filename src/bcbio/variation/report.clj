@@ -147,9 +147,9 @@
 (defn calc-accuracy
   "Calculate an overall accuracy score from input metrics.
   The accuracy logic is:
-  (#correctly aligned bases / (#correctly aligned bases +
-                               1*(simple substitutions and indels) +
-                               2*(larger errors)))."
+  (#correctly aligned bases - (1*(simple substitutions and indels) +
+                               2*(larger errors))
+   / #correctly aligned bases)"
   [metrics error-items]
   (letfn [(get-penalty [[error-type call-type]]
             (case call-type
@@ -160,7 +160,7 @@
           error-score (apply + (map #(* (get-in metrics % 0) (get-penalty %)) error-items))
           total-bases (get-in metrics [:total-bases :compared] 1)]
       (float
-       (* 100.0 (/ total-bases (+ total-bases error-score)))))))
+       (* 100.0 (/ (- total-bases error-score) total-bases))))))
 
 (defn prep-scoring-table
   "Summary table of high level variables and scoring metrics for comparison."

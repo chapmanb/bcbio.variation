@@ -187,7 +187,7 @@
   (calc-accuracy {:total-bases {:compared 10}
                   :discordant {:indel 1 :snp 1}
                   :phasing-error {:indel 1 :snp 1}}
-                 [:discordant :phasing-error]) => (roughly 62.50))
+                 [:discordant :phasing-error]) => (roughly 40.0))
 
 (let [data-dir (str (fs/file "." "test" "data"))
       ref (str (fs/file data-dir "GRCh37.fa"))
