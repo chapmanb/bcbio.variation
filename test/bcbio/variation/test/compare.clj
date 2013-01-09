@@ -173,7 +173,7 @@
       (drop 6 (map :comparison (first cmps))) => [:ref-concordant :concordant
                                                   :ref-concordant :discordant])))
 
-(facts "Check is a variant file is a haploid reference."
+(facts "Check if a variant file is a haploid reference."
   (is-haploid? pvcf ref) => false
   (is-haploid? ref-vcf ref) => true)
 

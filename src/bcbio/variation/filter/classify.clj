@@ -207,6 +207,19 @@
   [vc]
   (contains? #{nil "."} (:id vc)))
 
+(defn- het-snp? [vc attr-get]
+  (and (= "SNP" (:type vc))
+       (= :het (:zygosity (get-classifier-type vc nil attr-get)))))
+
+(defn- novel-low-confidence-het?
+  "Define novel low confidence heterozygotes which we retain as false positives throughout."
+  [vc attr-get]
+  (when (het-snp? vc attr-get)
+    (let [attrs (attr-get ["DP" "PL"] vc)]
+      (when (not-any? nil? (vals attrs))
+        (and (> (get attrs "PL") -7.5)
+             (< (get attrs "DP") 15.0))))))
+
 (defmethod get-train-variants [:recall :fps :iterate]
   ^{:doc "Identify false positive variants directly from recalled consensus calls.
           These contain the `set` key value pair with information about supporting
@@ -236,9 +249,6 @@
                 (when-not (nil? entropy)
                   (when (not= "SNP" (:type vc))
                     (< entropy 2.6)))))
-            (het-snp? [vc]
-              (and (= "SNP" (:type vc))
-                   (= :het (:zygosity (get-classifier-type vc nil attr-get)))))
             (low-pl-het-snp? [vc]
               (when-let [pl (get-one-attr "PL" vc)]
                 (> pl -10.0)))
@@ -254,7 +264,7 @@
             (is-potential-fp? [vc]
               (and (below-support-thresh? call exp vc)
                    (cond
-                    (het-snp? vc) (low-pl-het-snp? vc)
+                    (het-snp? vc attr-get) (low-pl-het-snp? vc)
                     (novel-variant? vc) (include-novel? vc)
                     :else (include-known? vc))))]
     (gvc/select-variants orig-file is-potential-fp? ext (:ref exp)
@@ -304,23 +314,36 @@
   ^{:doc "Iteratively identify true positive variants: low support variants
           that pass the previous round of filtering."}
   [orig-file train-files call exp params ext out-dir]
-  (letfn [(is-previous-tp? [vc]
-            (and (below-support-thresh? call exp vc)
-                 (metrics/passes-filter? vc)))]
-    (gvc/select-variants (:prev train-files) is-previous-tp? ext (:ref exp)
-                         :out-dir out-dir)))
+  (let [attr-get (prep-vc-attr-retriever orig-file (:ref exp))
+        out-file (itx/add-file-part orig-file "fps" out-dir)]
+    (letfn [(is-previous-tp? [vc]
+              (and (below-support-thresh? call exp vc)
+                   (metrics/passes-filter? vc)
+                   (not (novel-low-confidence-het? vc attr-get))))]
+      (when (itx/needs-run? out-file)
+        (-> (:prev train-files)
+            (gvc/select-variants is-previous-tp? ext (:ref exp)
+                                 :out-dir out-dir)
+            (fs/rename out-file))))
+    out-file))
 
 (defmethod get-train-variants [:recall :fps :final]
   ^{:doc "Iteratively identify false positive variants: low support variants
           that fail the previous round of filtering."}
   [orig-file train-files call exp params ext out-dir]
-  (letfn [(is-previous-fp? [vc]
-            (and (below-support-thresh? call exp vc)
-                 (not (metrics/passes-filter? vc))))]
-    (-> (:prev train-files)
-        (gvc/select-variants is-previous-fp? ext (:ref exp)
-                             :out-dir out-dir)
-        (remove-cur-filters (:ref exp)))))
+  (let [attr-get (prep-vc-attr-retriever orig-file (:ref exp))
+        out-file (itx/add-file-part orig-file "fps" out-dir)]
+    (letfn [(is-previous-fp? [vc]
+              (and (below-support-thresh? call exp vc)
+                   (or (novel-low-confidence-het? vc attr-get)
+                       (not (metrics/passes-filter? vc)))))]
+      (when (itx/needs-run? out-file)
+        (-> (:prev train-files)
+            (gvc/select-variants is-previous-fp? ext (:ref exp)
+                                 :out-dir out-dir)
+            (remove-cur-filters (:ref exp))
+            (fs/rename out-file))))
+    out-file))
 
 (defmethod get-train-variants :default
   ^{:doc "By default, return the prepped training file with no changes."}
