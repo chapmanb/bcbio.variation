@@ -315,7 +315,7 @@
           that pass the previous round of filtering."}
   [orig-file train-files call exp params ext out-dir]
   (let [attr-get (prep-vc-attr-retriever orig-file (:ref exp))
-        out-file (itx/add-file-part orig-file "fps" out-dir)]
+        out-file (itx/add-file-part orig-file "tps" out-dir)]
     (letfn [(is-previous-tp? [vc]
               (and (below-support-thresh? call exp vc)
                    (metrics/passes-filter? vc)
