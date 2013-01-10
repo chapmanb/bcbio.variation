@@ -337,8 +337,10 @@
   (let [attr-get (prep-vc-attr-retriever orig-file (:ref exp))
         out-file (itx/add-file-part orig-file "fps" out-dir)]
     (letfn [(is-previous-fp? [vc]
-              (and (below-support-thresh? call exp vc)
-                   (not (metrics/passes-filter? vc))))]
+              (if (het-snp? vc attr-get)
+                (novel-low-confidence-het? vc attr-get)
+                (and (below-support-thresh? call exp vc)
+                     (not (metrics/passes-filter? vc)))))]
       (when (itx/needs-run? out-file)
         (-> (:prev train-files)
             (gvc/select-variants is-previous-fp? ext (:ref exp)
