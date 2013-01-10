@@ -215,11 +215,17 @@
   "Define novel low confidence heterozygotes which we avoid using as true positives."
   [vc attr-get]
   (when (and (het-snp? vc attr-get) (novel-variant? vc))
-    (let [attrs (attr-get ["DP" "PL" "PL-ratio"] vc)]
+    (let [attrs (attr-get ["DP" "PL"] vc)]
       (when (not-any? nil? (vals attrs))
-        (or (and (> (get attrs "PL") -7.5)
-                 (< (get attrs "DP") 15.0))
-            (< (get attrs "PL-ratio") 0.5))))))
+        (and (> (get attrs "PL") -7.5)
+             (< (get attrs "DP") 15.0))))))
+
+(defn- passes-mapping-quality?
+  "Avoid feeding low quality mapping into true/false positives."
+  [vc attr-get]
+  (let [attrs (attr-get ["MQ"] vc)]
+    (when (not-any? nil? (vals attrs))
+      (> (get attrs "MQ") 50.0))))
 
 (defmethod get-train-variants [:recall :fps :iterate]
   ^{:doc "Identify false positive variants directly from recalled consensus calls.
@@ -241,10 +247,6 @@
   (let [attr-get (prep-vc-attr-retriever orig-file (:ref exp))]
     (letfn [(get-one-attr [attr vc]
               (-> (attr-get [attr] vc) (get attr)))
-            (passes-mapping-quality? [vc]
-              (let [mq (get-one-attr "MQ" vc)]
-                (or (nil? mq)
-                    (> mq 50.0))))
             (low-entropy-indel? [vc]
               (let [entropy (get-one-attr "Entropy" vc)]
                 (when-not (nil? entropy)
@@ -266,6 +268,7 @@
                     (> (get attrs "PL") -20.0)))))
             (is-potential-fp? [vc]
               (and (below-support-thresh? call exp vc)
+                   (passes-mapping-quality? vc attr-get)
                    (cond
                     (het-snp? vc attr-get) (low-pl-het-snp? vc)
                     (novel-variant? vc) (include-novel? vc)
@@ -338,7 +341,8 @@
         out-file (itx/add-file-part orig-file "fps" out-dir)]
     (letfn [(is-previous-fp? [vc]
               (when (and (below-support-thresh? call exp vc)
-                         (not (metrics/passes-filter? vc)))
+                         (not (metrics/passes-filter? vc))
+                         (passes-mapping-quality? vc attr-get))
                 (if (het-snp? vc attr-get)
                   (novel-low-confidence-het? vc attr-get)
                   true)))]
