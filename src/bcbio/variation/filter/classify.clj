@@ -399,7 +399,7 @@
               (assoc params :classifiers {:all (:classifiers params)})))
           (flatten-param-classifiers [params]
             (assoc params :classifiers
-                   {:all (->> (:classifiers config) vals (apply concat) set vec)}))]
+                   {:all (->> (:classifiers params) vals (apply concat) set vec)}))]
     (pipeline-combine-intervals exp config)
     (let [orig-trains {:tps (get-train-vcf "concordant")
                        :fps (get-train-vcf "discordant")
