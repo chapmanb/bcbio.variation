@@ -219,7 +219,7 @@
       (when (not-any? nil? (vals attrs))
         (or (and (> (get attrs "PL") -7.5)
                  (< (get attrs "DP") 15.0))
-            (< (get attrs "PL-ratio" 0.5)))))))
+            (< (get attrs "PL-ratio") 0.5))))))
 
 (defmethod get-train-variants [:recall :fps :iterate]
   ^{:doc "Identify false positive variants directly from recalled consensus calls.
@@ -254,7 +254,7 @@
               (when-let [attrs (attr-get ["PL" "PL-ratio"] vc)]
                 (when (not-any? nil? (vals attrs))
                   (or (> (get attrs "PL") -10.0)
-                      (< (get attrs "PL-ratio" 0.5))))))
+                      (< (get attrs "PL-ratio") 0.5)))))
             (include-novel? [vc]
               (let [attrs (attr-get ["DP"] vc)]
                 (when (not-any? nil? (vals attrs))
@@ -337,10 +337,11 @@
   (let [attr-get (prep-vc-attr-retriever orig-file (:ref exp))
         out-file (itx/add-file-part orig-file "fps" out-dir)]
     (letfn [(is-previous-fp? [vc]
-              (if (het-snp? vc attr-get)
-                (novel-low-confidence-het? vc attr-get)
-                (and (below-support-thresh? call exp vc)
-                     (not (metrics/passes-filter? vc)))))]
+              (when (and (below-support-thresh? call exp vc)
+                         (not (metrics/passes-filter? vc)))
+                (if (het-snp? vc attr-get)
+                  (novel-low-confidence-het? vc attr-get)
+                  true)))]
       (when (itx/needs-run? out-file)
         (-> (:prev train-files)
             (gvc/select-variants is-previous-fp? ext (:ref exp)
