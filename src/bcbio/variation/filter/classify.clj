@@ -215,9 +215,10 @@
   "Define novel low confidence heterozygotes which we avoid using as true positives."
   [vc attr-get]
   (when (and (het-snp? vc attr-get) (novel-variant? vc))
-    (let [attrs (attr-get ["DP" "PL"] vc)]
+    (let [attrs (attr-get ["DP" "PL" "PL-ratio"] vc)]
       (when (not-any? nil? (vals attrs))
-        (and (> (get attrs "PL") -7.5)
+        (and (or (> (get attrs "PL") -7.5)
+                 (< (get attrs "PL-ratio") 0.25))
              (< (get attrs "DP") 15.0))))))
 
 (defn- passes-mapping-quality?
