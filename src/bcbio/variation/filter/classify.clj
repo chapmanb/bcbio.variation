@@ -211,7 +211,11 @@
   (and (= "SNP" (:type vc))
        (= :het (:zygosity (get-classifier-type vc nil attr-get)))))
 
-(defn- novel-low-confidence-het?
+(defn- het-indel? [vc attr-get]
+  (and (not= "SNP" (:type vc))
+       (= :het (:zygosity (get-classifier-type vc nil attr-get)))))
+
+(defn- novel-low-confidence-het-snp?
   "Define novel low confidence heterozygotes which we avoid using as true positives."
   [vc attr-get]
   (when (and (het-snp? vc attr-get) (novel-variant? vc))
@@ -219,7 +223,15 @@
       (when (not-any? nil? (vals attrs))
         (and (or (> (get attrs "PL") -7.5)
                  (< (get attrs "PL-ratio") 0.25))
-             (< (get attrs "DP") 15.0))))))
+             (< (get attrs "DP") 25.0))))))
+
+(defn- novel-het-indel?
+  "Identify low depth heterozygous indels which are not useful for training."
+  [vc attr-get]
+  (when (and (het-indel? vc attr-get) (novel-variant? vc))
+    (let [attrs (attr-get ["DP"] vc)]
+      (when (not-any? nil? (vals attrs))
+        (< (get attrs "DP") 25.0)))))
 
 (defn- passes-mapping-quality?
   "Avoid feeding low quality mapping into true/false positives."
@@ -227,6 +239,15 @@
   (let [attrs (attr-get ["MQ"] vc)]
     (when (not-any? nil? (vals attrs))
       (> (get attrs "MQ") 50.0))))
+
+(defn- artifact-allele-balance?
+  "Identify skewed heterozygous allele balances indicative of artifacts.
+   This is a signature of problem calls from GATK Haplotype caller."
+  [vc attr-get]
+  (when (het-snp? vc attr-get)
+    (let [attrs (attr-get ["AD"] vc)]
+      (when (not-any? nil? (vals attrs))
+        (> (get attrs "AD") 0.35)))))
 
 (defmethod get-train-variants [:recall :fps :iterate]
   ^{:doc "Identify false positive variants directly from recalled consensus calls.
@@ -294,10 +315,6 @@
             (is-intersection? [vc]
               (when-let [set-val (get-in vc [:attributes "set"])]
                 (= set-val "Intersection")))
-            (include-lowthresh-snp? [vc]
-              (let [attrs (attr-get ["PL"] vc)]
-                (when (not-any? nil? (vals attrs))
-                  (< (get attrs "PL") -15.0))))
             (is-tp? [vc]
               (and (is-intersection? vc) (include-tp? vc)))]
       (gvc/select-variants orig-file is-tp? ext (:ref exp)
@@ -324,7 +341,9 @@
   (let [attr-get (prep-vc-attr-retriever orig-file (:ref exp))
         out-file (itx/add-file-part orig-file "tps" out-dir)]
     (letfn [(is-previous-tp? [vc]
-              (when-not (novel-low-confidence-het? vc attr-get)
+              (when-not (or (novel-low-confidence-het-snp? vc attr-get)
+                            (novel-het-indel? vc attr-get)
+                            (artifact-allele-balance? vc attr-get))
                 (and (below-support-thresh? call exp vc)
                      (metrics/passes-filter? vc))))]
       (when (itx/needs-run? out-file)
@@ -341,12 +360,14 @@
   (let [attr-get (prep-vc-attr-retriever orig-file (:ref exp))
         out-file (itx/add-file-part orig-file "fps" out-dir)]
     (letfn [(is-previous-fp? [vc]
-              (when (and (below-support-thresh? call exp vc)
-                         (not (metrics/passes-filter? vc))
-                         (passes-mapping-quality? vc attr-get))
-                (if (het-snp? vc attr-get)
-                  (novel-low-confidence-het? vc attr-get)
-                  true)))]
+              (when-not (or (novel-het-indel? vc attr-get)
+                            (artifact-allele-balance? vc attr-get))
+                (when (and (below-support-thresh? call exp vc)
+                           (not (metrics/passes-filter? vc))
+                           (passes-mapping-quality? vc attr-get))
+                  (if (het-snp? vc attr-get)
+                    (novel-low-confidence-het-snp? vc attr-get)
+                    true))))]
       (when (itx/needs-run? out-file)
         (-> (:prev train-files)
             (gvc/select-variants is-previous-fp? ext (:ref exp)
