@@ -291,10 +291,11 @@
             (is-potential-fp? [vc]
               (and (below-support-thresh? call exp vc)
                    (passes-mapping-quality? vc attr-get)
-                   (cond
-                    (het-snp? vc attr-get) (low-pl-het-snp? vc)
-                    (novel-variant? vc) (include-novel? vc)
-                    :else (include-known? vc))))]
+                   ;; (cond
+                   ;;  (het-snp? vc attr-get) (low-pl-het-snp? vc)
+                   ;;  (novel-variant? vc) (include-novel? vc)
+                   ;;  :else (include-known? vc))
+                   ))]
     (gvc/select-variants orig-file is-potential-fp? ext (:ref exp)
                          :out-dir out-dir))))
 
@@ -316,7 +317,9 @@
               (when-let [set-val (get-in vc [:attributes "set"])]
                 (= set-val "Intersection")))
             (is-tp? [vc]
-              (and (is-intersection? vc) (include-tp? vc)))]
+              (is-intersection? vc)
+              ;(and (is-intersection? vc) (include-tp? vc))
+              )]
       (gvc/select-variants orig-file is-tp? ext (:ref exp)
                            :out-dir out-dir))))
 
