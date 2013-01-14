@@ -19,8 +19,7 @@
             [fs.core :as fs]
             [bcbio.run.itx :as itx]
             [bcbio.variation.filter.trusted :as trusted]
-            [bcbio.variation.metrics :as metrics]
-            [bcbio.variation.multiple :as multiple]
+            [bcbio.variation.filter.rules :as rules]
             [bcbio.variation.variantcontext :as gvc]))
 
 ;; ## Split variants for classification
@@ -49,7 +48,7 @@
                    "SNP" :snp
                    :complex)
    :attr-key attr-key
-   :zygosity (if (some #(.startsWith (:type %) "HET") (:genotypes vc)) :het :hom)})
+   :zygosity (rules/vc-zygosity vc)})
 
 ;; ## Linear classifier
 
@@ -192,63 +191,6 @@
                                 (:ref exp))))
       out-file)))
 
-(defn- below-support-thresh?
-  "Check if a variant context has a low amount of supporting variant calls."
-  [call exp vc]
-  (let [freq (get call :fp-freq 0.25)
-        thresh (Math/ceil (* freq (dec (count (:calls exp)))))]
-    (-> (multiple/get-vc-set-calls vc (:calls exp))
-        (disj (:name call))
-        count
-        (<= thresh))))
-
-(defn- novel-variant?
-  "Is a variant novel, or is it represented in dbSNP?"
-  [vc]
-  (contains? #{nil "."} (:id vc)))
-
-(defn- het-snp? [vc attr-get]
-  (and (= "SNP" (:type vc))
-       (= :het (:zygosity (get-classifier-type vc nil attr-get)))))
-
-(defn- het-indel? [vc attr-get]
-  (and (not= "SNP" (:type vc))
-       (= :het (:zygosity (get-classifier-type vc nil attr-get)))))
-
-(defn- novel-low-confidence-het-snp?
-  "Define novel low confidence heterozygotes which we avoid using as true positives."
-  [vc attr-get]
-  (when (and (het-snp? vc attr-get) (novel-variant? vc))
-    (let [attrs (attr-get ["DP" "PL" "PL-ratio"] vc)]
-      (when (not-any? nil? (vals attrs))
-        (and (or (> (get attrs "PL") -7.5)
-                 (< (get attrs "PL-ratio") 0.25))
-             (< (get attrs "DP") 25.0))))))
-
-(defn- novel-het-indel?
-  "Identify low depth heterozygous indels which are not useful for training."
-  [vc attr-get]
-  (when (and (het-indel? vc attr-get) (novel-variant? vc))
-    (let [attrs (attr-get ["DP"] vc)]
-      (when (not-any? nil? (vals attrs))
-        (< (get attrs "DP") 25.0)))))
-
-(defn- passes-mapping-quality?
-  "Avoid feeding low quality mapping into true/false positives."
-  [vc attr-get]
-  (let [attrs (attr-get ["MQ"] vc)]
-    (when (not-any? nil? (vals attrs))
-      (> (get attrs "MQ") 50.0))))
-
-(defn- artifact-allele-balance?
-  "Identify skewed heterozygous allele balances indicative of artifacts.
-   This is a signature of problem calls from GATK Haplotype caller."
-  [vc attr-get]
-  (when (het-snp? vc attr-get)
-    (let [attrs (attr-get ["AD"] vc)]
-      (when (not-any? nil? (vals attrs))
-        (> (get attrs "AD") 0.35)))))
-
 (defmethod get-train-variants [:recall :fps :iterate]
   ^{:doc "Identify false positive variants directly from recalled consensus calls.
           These contain the `set` key value pair with information about supporting
@@ -266,35 +208,15 @@
           - Include known variants, in dbSNP, depending on type:
              - SNP: include SNPs with high likelihood of being ref"}
   [orig-file _ call exp _ ext out-dir]
-  (let [attr-get (prep-vc-attr-retriever orig-file (:ref exp))]
-    (letfn [(get-one-attr [attr vc]
-              (-> (attr-get [attr] vc) (get attr)))
-            (low-entropy-indel? [vc]
-              (let [entropy (get-one-attr "Entropy" vc)]
-                (when-not (nil? entropy)
-                  (when (not= "SNP" (:type vc))
-                    (< entropy 2.6)))))
-            (low-pl-het-snp? [vc]
-              (when-let [attrs (attr-get ["PL" "PL-ratio"] vc)]
-                (when (not-any? nil? (vals attrs))
-                  (or (> (get attrs "PL") -10.0)
-                      (< (get attrs "PL-ratio") 0.5)))))
-            (include-novel? [vc]
-              (let [attrs (attr-get ["DP"] vc)]
-                (when (not-any? nil? (vals attrs))
-                  (< (get attrs "DP") 200.0))))
-            (include-known? [vc]
-              (let [attrs (attr-get ["PL"] vc)]
-                (when (not-any? nil? (vals attrs))
-                  (when (= "SNP" (:type vc))
-                    (> (get attrs "PL") -20.0)))))
-            (is-potential-fp? [vc]
-              (and (below-support-thresh? call exp vc)
-                   (passes-mapping-quality? vc attr-get)
-                   (cond
-                    (het-snp? vc attr-get) (low-pl-het-snp? vc)
-                    (novel-variant? vc) (include-novel? vc)
-                    :else (include-known? vc))))]
+  (let [passes-rules? (rules/vc-checker orig-file call exp)]
+    (letfn [(is-potential-fp? [vc]
+              (or (passes-rules? vc
+                                 :yes [:below-call-support :high-map-quality :het-snp :low-confidence])
+                  (passes-rules? vc
+                                 :yes [:below-call-support :high-map-quality :novel])
+                  (passes-rules? vc
+                                 :yes [:below-call-support :high-map-quality :low-confidence]
+                                 :no [:novel])))]
     (gvc/select-variants orig-file is-potential-fp? ext (:ref exp)
                          :out-dir out-dir))))
 
@@ -306,17 +228,9 @@
           with lower supporting calls to keep a wider range: these include SNPs with
           a low likelihood of being reference and known indels."}
   [orig-file _ call exp _ ext out-dir]
-  (let [attr-get (prep-vc-attr-retriever orig-file (:ref exp))]
-    (letfn [(include-tp? [vc]
-              (let [attrs (attr-get ["DP" "PL"] vc)]
-                (when (not-any? nil? (vals attrs))
-                  (and (< (get attrs "DP") 200.0)
-                       (> (get attrs "PL") -20.0)))))
-            (is-intersection? [vc]
-              (when-let [set-val (get-in vc [:attributes "set"])]
-                (= set-val "Intersection")))
-            (is-tp? [vc]
-              (and (is-intersection? vc) (include-tp? vc)))]
+  (let [passes-rules? (rules/vc-checker orig-file call exp)]
+    (letfn [(is-tp? [vc]
+              (passes-rules? vc :yes [:all-callers :flex-low-confidence]))]
       (gvc/select-variants orig-file is-tp? ext (:ref exp)
                            :out-dir out-dir))))
 
@@ -338,14 +252,12 @@
   ^{:doc "Iteratively identify true positive variants: low support variants
           that pass the previous round of filtering."}
   [orig-file train-files call exp params ext out-dir]
-  (let [attr-get (prep-vc-attr-retriever orig-file (:ref exp))
+  (let [passes-rules? (rules/vc-checker orig-file call exp)
         out-file (itx/add-file-part orig-file "tps" out-dir)]
     (letfn [(is-previous-tp? [vc]
-              (when-not (or (novel-low-confidence-het-snp? vc attr-get)
-                            (novel-het-indel? vc attr-get)
-                            (artifact-allele-balance? vc attr-get))
-                (and (below-support-thresh? call exp vc)
-                     (metrics/passes-filter? vc))))]
+              (passes-rules? vc
+                             :yes [:below-call-support :passes-filter]
+                             :no [:problem-allele-balance :novel-het-indel :low-confidence-novel-het-snp]))]
       (when (itx/needs-run? out-file)
         (-> (:prev train-files)
             (gvc/select-variants is-previous-tp? ext (:ref exp)
@@ -357,17 +269,15 @@
   ^{:doc "Iteratively identify false positive variants: low support variants
           that fail the previous round of filtering."}
   [orig-file train-files call exp params ext out-dir]
-  (let [attr-get (prep-vc-attr-retriever orig-file (:ref exp))
+  (let [passes-rules? (rules/vc-checker orig-file call exp)
         out-file (itx/add-file-part orig-file "fps" out-dir)]
     (letfn [(is-previous-fp? [vc]
-              (when-not (or (novel-het-indel? vc attr-get)
-                            (artifact-allele-balance? vc attr-get))
-                (when (and (below-support-thresh? call exp vc)
-                           (not (metrics/passes-filter? vc))
-                           (passes-mapping-quality? vc attr-get))
-                  (if (het-snp? vc attr-get)
-                    (novel-low-confidence-het-snp? vc attr-get)
-                    true))))]
+              (or (passes-rules? vc
+                                 :yes [:below-call-support :high-map-quality]
+                                 :no [:passes-filter])
+                  (passes-rules? vc
+                                 :yes [:below-call-support :high-map-quality
+                                       :het-snp :low-confidence :novel])))]
       (when (itx/needs-run? out-file)
         (-> (:prev train-files)
             (gvc/select-variants is-previous-fp? ext (:ref exp)
