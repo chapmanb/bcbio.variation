@@ -41,10 +41,17 @@
 (defn- low-call-confidence?
   "Define low confidence calls."
   [vc attr-get _ _]
-  (let [attrs (attr-get ["PL" "PL-ratio"] vc)]
+  (let [attrs (attr-get ["PL" "PLratio"] vc)]
     (when (not-any? nil? (vals attrs))
       (or (> (get attrs "PL") -7.5)
-          (< (get attrs "PL-ratio") 0.25)))))
+          (< (get attrs "PLratio") 0.25)))))
+
+(defn- good-pl-support?
+  "Identify PL ratios with reasonable support for being a variant."
+  [vc attr-get _ _]
+  (let [attrs (attr-get ["PLratio"] vc)]
+    (when (not-any? nil? (vals attrs))
+      (> (get attrs "PLratio") 0.4))))
 
 (defn- low-confidence-novel-het-snp?
   [vc attr-get c e]
@@ -96,6 +103,7 @@
          :novel-het-indel novel-het-indel?
          :low-confidence-novel-het-snp low-confidence-novel-het-snp?
          :low-confidence low-call-confidence?
+         :good-pl good-pl-support?
          :flex-low-confidence flex-low-call-confidence?
          :low-depth low-depth?
          :passes-filter passes-filter?

@@ -69,7 +69,7 @@
      (= (:type g) "HOM_REF") (apply max (vals pls))
      :else (get pls "HOM_REF"))))
 
-(defmethod get-vc-attr "PL-ratio"
+(defmethod get-vc-attr "PLratio"
   ^{:doc "Calculate ratio of reference likelihood call to alternative variant calls.
           This helps measure whether a call is increasingly likely to be reference
           compared with variant choices."}

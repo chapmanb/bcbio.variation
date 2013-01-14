@@ -255,13 +255,18 @@
   (let [passes-rules? (rules/vc-checker orig-file call exp)
         out-file (itx/add-file-part orig-file "tps" out-dir)]
     (letfn [(is-previous-tp? [vc]
-              (passes-rules? vc
-                             :yes [:below-call-support :passes-filter]
-                             :no [:problem-allele-balance :novel-het-indel :low-confidence-novel-het-snp]))]
+              (or
+               (passes-rules? vc
+                              :yes [:below-call-support :passes-filter]
+                              :no [:problem-allele-balance :novel-het-indel :low-confidence-novel-het-snp])
+               (passes-rules? vc
+                              :yes [:below-call-support :het-snp :good-pl]
+                              :no [:problem-allele-balance :novel])))]
       (when (itx/needs-run? out-file)
         (-> (:prev train-files)
             (gvc/select-variants is-previous-tp? ext (:ref exp)
                                  :out-dir out-dir)
+            (remove-cur-filters (:ref exp))
             (fs/rename out-file))))
     out-file))
 
