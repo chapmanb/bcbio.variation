@@ -53,19 +53,28 @@
   [vc attr retrievers]
   (get-vc-attr vc "AD" retrievers))
 
+(defn convert-pval-to-phred
+  "Convert p-value into Phred scores compatible with bayesian likelihoods"
+  [pval]
+  (max (* 10.0 (Math/log10 (to-float pval)))
+       -255.0))
+
 (defmethod get-vc-attr "PL"
   ^{:doc "Provide likelihood confidence for the called genotype.
           For reference calls, retrieve the likelihood of the most likely
           variant (least negative). For variant calls, retrieve
-          the reference likelihood."}
+          the reference likelihood.
+          Handles non-Bayesian callers by conversion of p-values for phred scores."}
   [vc attr _]
   {:pre [(= 1 (:num-samples vc))
          (contains? #{1 2} (-> vc :genotypes first :alleles count))]}
   (let [g (-> vc :genotypes first)
         pls (dissoc (get-likelihoods (:genotype g) :no-convert true)
-                    (:type g))]
+                    (:type g))
+        pval (get-in g [:attributes "PVAL"])]
     (cond
-     (zero? (count pls)) nil
+     (zero? (count pls)) (when-not (nil? pval)
+                           (convert-pval-to-phred pval))
      (= (:type g) "HOM_REF") (apply max (vals pls))
      :else (get pls "HOM_REF"))))
 

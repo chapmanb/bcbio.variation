@@ -17,6 +17,7 @@
                ref (str (fs/file data-dir "GRCh37.fa"))
                top-vcf (str (fs/file data-dir "gatk-calls.vcf"))
                fb-vcf (str (fs/file data-dir "freebayes-calls.vcf"))
+               varscan-vcf (str (fs/file data-dir "varscan-calls.vcf"))
                c-neg-vcf (str (fs/file data-dir "sv-indels-gatk.vcf"))
                top-out (itx/add-file-part top-vcf "topsubset")
                dip-vcf (str (fs/file data-dir "phasing-input-diploid.vcf"))
@@ -70,6 +71,11 @@
       (get-vc-attr (first vcf-iter) [:format "DP"] {}) => 250.0
       (-> (first vcf-iter) normalizer (get "QUAL")) => (roughly 0.621)
       (-> (first vcf-iter) log-normalizer (get "DP")) => (roughly 5.521))))
+
+(facts "Provide genotype likelihoods from non-Bayesian callers like VarScan."
+  (with-open [vcf-base (get-vcf-iterator varscan-vcf ref)]
+    (let [vcf-iter (parse-vcf vcf-base)]
+      (get-vc-attrs (first vcf-iter) ["PL"] {}) => (just {"PL" (roughly -95.209)}))))
 
 (facts "Filter based on genotype FORMAT queries"
   (variant-format-filter top-vcf ["DP < 10"] ref) => ffilter-out)
