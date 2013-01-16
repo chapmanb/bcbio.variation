@@ -70,10 +70,9 @@
          (contains? #{1 2} (-> vc :genotypes first :alleles count))]}
   (let [g (-> vc :genotypes first)
         pls (dissoc (get-likelihoods (:genotype g) :no-convert true)
-                    (:type g))
-        pval (get-in g [:attributes "PVAL"])]
+                    (:type g))]
     (cond
-     (zero? (count pls)) (when-not (nil? pval)
+     (zero? (count pls)) (when-let [pval (get-in g [:attributes "PVAL"])]
                            (convert-pval-to-phred pval))
      (= (:type g) "HOM_REF") (apply max (vals pls))
      :else (get pls "HOM_REF"))))
