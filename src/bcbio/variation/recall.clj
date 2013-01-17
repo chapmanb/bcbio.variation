@@ -17,6 +17,7 @@
         [bcbio.variation.config :only [load-config]]
         [bcbio.variation.filter.intervals :only [select-by-sample]]
         [bcbio.variation.haploid :only [diploid-calls-to-haploid]]
+        [bcbio.variation.metrics :only [to-float]]
         [bcbio.variation.multisample :only [multiple-samples?]]
         [bcbio.variation.normalize :only [fix-vcf-sample remove-ref-alts]]
         [bcbio.variation.phasing :only [is-haploid?]])
@@ -230,7 +231,7 @@
                                  (.PL % (int-array pl))
                                  %))
                              (#(if-let [pval (seq (get-in most-likely [:attrs "PVAL"]))]
-                                 (.attribute % "PVAL" pval)
+                                 (.attribute % "PVAL" (to-float pval))
                                  %))
                              (#(if-let [dp (get-in most-likely [:attrs "DP"])]
                                  (.DP % dp)
