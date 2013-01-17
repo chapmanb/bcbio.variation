@@ -178,6 +178,7 @@
      :ref-allele (:ref-allele vc)
      :alleles (sort-by allele-order (:alleles g))
      :attrs (select-keys (:attributes g) ["PL" "DP" "AD" "PVAL"])
+     :has-likelihood (if (seq (get-in g [:attributes "PL"])) 1 0)
      :attr-count (+ (if (seq (get-in g [:attributes "PL"])) 1 0)
                     (if (seq (get-in g [:attributes "PVAL"])) 1 0)
                     (if (seq (get-in g [:attributes "AD"])) 1 0)
@@ -196,7 +197,8 @@
             (apply + (remove nil? (map k xs))))
           (sum-plus-call-type [i xs]
             (let [pls (safe-sum xs :pl)
-                  represent-x (last (sort-by #(vector (or (:pl %) (- Integer/MIN_VALUE))
+                  represent-x (last (sort-by #(vector (:has-likelihood %)
+                                                      (or (:pl %) (- Integer/MIN_VALUE))
                                                       (:attr-count %))
                                              xs))
                   call-code (if (= "HET" (:call-type represent-x)) 0 1)]
