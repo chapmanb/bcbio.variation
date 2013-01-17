@@ -177,8 +177,9 @@
      :call-type (:type g)
      :ref-allele (:ref-allele vc)
      :alleles (sort-by allele-order (:alleles g))
-     :attrs (select-keys (:attributes g) ["PL" "DP" "AD"])
+     :attrs (select-keys (:attributes g) ["PL" "DP" "AD" "PVAL"])
      :attr-count (+ (if (seq (get-in g [:attributes "PL"])) 1 0)
+                    (if (seq (get-in g [:attributes "PVAL"])) 1 0)
                     (if (seq (get-in g [:attributes "AD"])) 1 0)
                     (if (get-in g [:attributes "DP"]) 1 0))
      :pl (attr/get-vc-attr vc "PL" nil)}))
@@ -223,17 +224,21 @@
       (-> (VariantContextBuilder. (:vc vc))
           (.alleles (set (cons (:ref-allele vc) (:alleles most-likely))))
           (.genotypes (GenotypesContext/create
-                       (java.util.ArrayList. [(-> (GenotypeBuilder. sample (:alleles most-likely))
-                                                  (#(if-let [pl (seq (get-in most-likely [:attrs "PL"]))]
-                                                      (.PL % (int-array pl))
-                                                      %))
-                                                  (#(if-let [dp (get-in most-likely [:attrs "DP"])]
-                                                      (.DP % dp)
-                                                      %))
-                                                  (#(if-let [ad (seq (get-in most-likely [:attrs "AD"]))]
-                                                      (.AD % (int-array ad))
-                                                      %))
-                                                  .make)])))
+                       (java.util.ArrayList.
+                        [(-> (GenotypeBuilder. sample (:alleles most-likely))
+                             (#(if-let [pl (seq (get-in most-likely [:attrs "PL"]))]
+                                 (.PL % (int-array pl))
+                                 %))
+                             (#(if-let [pval (seq (get-in most-likely [:attrs "PVAL"]))]
+                                 (.attribute % "PVAL" pval)
+                                 %))
+                             (#(if-let [dp (get-in most-likely [:attrs "DP"])]
+                                 (.DP % dp)
+                                 %))
+                             (#(if-let [ad (seq (get-in most-likely [:attrs "AD"]))]
+                                 (.AD % (int-array ad))
+                                 %))
+                             .make)])))
           .make))))
 
 (defn- recall-w-consensus
