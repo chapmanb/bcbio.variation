@@ -44,7 +44,7 @@
   (let [attrs (attr-get ["PL" "PLratio"] vc)]
     (when (not (nil? (get attrs "PL")))
       (or (> (get attrs "PL") -7.5)
-          (< (get attrs "PLratio" Float/MAX_VALUE) 0.25)))))
+          (< (or (get attrs "PLratio") Float/MAX_VALUE) 0.25)))))
 
 (defn- good-pl-support?
   "Identify PL ratios with reasonable support for being a variant."
