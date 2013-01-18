@@ -69,10 +69,9 @@
 (defn- low-depth?
   "Calls with low supporting depth"
   [vc attr-get _ _]
-  (when (and (het-indel? vc attr-get) (novel-variant? vc))
-    (let [attrs (attr-get ["DP"] vc)]
-      (when (not-any? nil? (vals attrs))
-        (< (get attrs "DP") 25.0)))))
+  (let [attrs (attr-get ["DP"] vc)]
+    (when (not-any? nil? (vals attrs))
+      (< (get attrs "DP") 25.0))))
 
 (defn- passes-mapping-quality?
   "Avoid feeding low quality mapping into true/false positives."
