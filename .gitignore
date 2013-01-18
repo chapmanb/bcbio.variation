@@ -50,6 +50,14 @@ test/data/phased/*-sorted.bed
 test/data/phased/*-illumina.bed
 test/data/phased/*-cmp*.vcf
 test/data/phased/work/
+test/data/svs/*.idx
+test/data/svs/*-sorted.bed
+test/data/svs/*-safesv.vcf
+test/data/svs/reference-calls-sv-prep.vcf
+test/data/svs/reference-calls-sv-prep-regions.bed
+test/data/svs/reference-regions-wsvs.bed
+test/data/svs/reference-calls-wsvs.vcf
+test/data/svs/work/
 test/data/prep/
 test/data/grading/
 test/data/method/

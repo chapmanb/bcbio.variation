@@ -3,12 +3,14 @@
   variations and MNPs"
   (:use [midje.sweet]
         [bcbio.variation.combine :only [full-prep-vcf]]
+        [bcbio.variation.compare :only [variant-comparison-from-config]]
         [bcbio.variation.complex]
         [bcbio.variation.normalize]
         [bcbio.variation.structural]
         [bcbio.variation.variantcontext])
   (:require [fs.core :as fs]
-            [bcbio.run.itx :as itx]))
+            [bcbio.run.itx :as itx]
+            [bcbio.variation.utils.svmerge :as svmerge]))
 
 (background
  (around :facts
@@ -40,10 +42,19 @@
                nomnp-out (itx/add-file-part mnp-vcf "nomnp")
                fullprep-out (itx/add-file-part mnp-vcf "fullprep")
                headerfix-out (itx/add-file-part mnp-vcf "samplefix")
+               ;; SV testing
+               presv-orig (str (fs/file data-dir "svs" "reference-calls.vcf"))
+               sv-calls (str (fs/file data-dir "svs" "reference-calls-sv.vcf"))
+               presv-regions (str (fs/file data-dir "svs" "reference-regions.bed"))
+               sv-out-calls (itx/add-file-part presv-orig "wsvs")
+               sv-out-regions (itx/add-file-part presv-regions "wsvs")
+               sv-workdir (str (fs/file data-dir "svs" "work"))
+               presv-extras [(itx/add-file-part sv-calls "prep")
+                             (itx/add-file-part presv-orig "safesv")]
                params {:max-indel 100}]
            (doseq [x (concat [nomnp-out indel-out cindel-out headerfix-out fullprep-out
-                              multi-out]
-                             cindel-extras (vals sv-out) (vals sv-out2))]
+                              multi-out sv-workdir sv-out-calls sv-out-regions]
+                             presv-extras cindel-extras (vals sv-out) (vals sv-out2))]
              (itx/remove-path x))
            ?form)))
 
@@ -73,6 +84,13 @@
               {:name "svIll" :file sv-vcf2} ref) => (contains sv-out)
   (compare-sv {:name "sv1" :file sv-vcf1}
               {:name "sv2" :file sv-vcf1} ref) => (contains sv-out2))
+
+(facts "Compare structural variants considering overlapping smaller variants"
+  (let [cfile (str (fs/file data-dir "svs" "sv-grading.yaml"))]
+    (svmerge/into-calls presv-orig presv-regions
+                        sv-calls ref) => {:calls sv-out-calls
+                                          :regions sv-out-regions}
+    (variant-comparison-from-config cfile) =future=> nil))
 
 (facts "Combine indels from different calling methodologies that overlap."
   (-> (compare-sv {:name "svindfb" :file indel-vcf1} {:name "svindgatk" :file indel-vcf2}

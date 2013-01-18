@@ -18,6 +18,11 @@
 
 ;; ## interval VCF subsetting by BED
 
+(defn get-sample-names
+  "Retrieve samples identified in the input VCF file."
+  [in-vcf]
+  (-> in-vcf get-vcf-header .getGenotypeSamples vec))
+
 (defn vcf-sample-name
   "Retrieve the sample name in a provided VCF file, allowing for partial matches."
   [sample in-vcf ref-file]
@@ -32,7 +37,8 @@
 
 (defn select-by-sample
   "Select only the sample of interest from input VCF files."
-  [sample in-file name ref & {:keys [out-dir intervals remove-refcalls ext]
+  [sample in-file name ref & {:keys [out-dir intervals remove-refcalls ext
+                                     exclude-intervals]
                               :or {remove-refcalls false}}]
   (let [base-dir (if (nil? out-dir) (fs/parent in-file) out-dir)
         file-info {:out-vcf (if ext (itx/add-file-part in-file ext out-dir)
@@ -43,7 +49,8 @@
                       "--variant" in-file
                       "--unsafe" "ALL" ; "ALLOW_SEQ_DICT_INCOMPATIBILITY"
                       "--out" :out-vcf]
-                     (if remove-refcalls ["--excludeNonVariants" "--excludeFiltered"] [])
+                     (when remove-refcalls ["--excludeNonVariants" "--excludeFiltered"])
+                     (when exclude-intervals ["--excludeIntervals" exclude-intervals])
                      (broad/gatk-cl-intersect-intervals intervals ref))]
     (if-not (fs/exists? base-dir)
       (fs/mkdirs base-dir))
@@ -59,20 +66,22 @@
 
 (defn- intersect-by-contig
   "Intersect a group of intervals present on a contig."
-  [start-intervals]
+  [start-intervals combine-rule]
   (loop [final []
          intervals start-intervals]
     (if (empty? intervals)
       final
       (recur (try (IntervalUtils/mergeListsBySetOperator final (first intervals)
-                                                         IntervalSetRule/INTERSECTION)
+                                                         (if (= :union combine-rule)
+                                                           IntervalSetRule/UNION
+                                                           IntervalSetRule/INTERSECTION))
                   (catch UserException$BadInput e []))
              (rest intervals)))))
 
 (defn- prep-intervals-by-contig
   "Intersect and exclude intervals on a contig."
-  [start-intervals exclude-intervals loc-parser]
-  (let [overlaps (intersect-by-contig start-intervals)]
+  [start-intervals exclude-intervals loc-parser combine-rule]
+  (let [overlaps (intersect-by-contig start-intervals combine-rule)]
     (if (empty? exclude-intervals)
       overlaps
       (let [clean-intervals (->> (group-by #(.getStart %) exclude-intervals)
@@ -85,7 +94,7 @@
 
 (defn intersection-of-bed-files
   "Generate list of intervals that intersect in all provided BED files."
-  [all-beds ref loc-parser & {:keys [exclude-bed]}]
+  [all-beds ref loc-parser & {:keys [exclude-bed combine-rule]}]
   (letfn [(intervals-by-chrom [bed-file]
             (group-by #(.getContig %) (bed-to-intervals bed-file ref loc-parser)))
           (get-by-contig [interval-groups contig]
@@ -94,15 +103,18 @@
           exclude-by-contig (if exclude-bed (intervals-by-chrom exclude-bed) {})
           contigs (vec (apply intersection (map #(set (keys %)) interval-groups)))]
       (mapcat #(prep-intervals-by-contig (get-by-contig interval-groups %)
-                                         (get exclude-by-contig % []) loc-parser)
+                                         (get exclude-by-contig % []) loc-parser
+                                         combine-rule)
               contigs))))
 
 (defn combine-multiple-intervals
   "Combine intervals from an initial BED and coverage BAM files."
-  [initial-bed align-bams ref & {:keys [out-dir name exclude-intervals]}]
-  (let [all-beds (cons initial-bed (map #(get-callable-bed % ref :out-dir out-dir
-                                                           :intervals initial-bed)
-                                        align-bams))
+  [initial-bed align-bams ref & {:keys [out-dir name exclude-intervals combine-rule
+                                        more-beds]}]
+  (let [all-beds (concat [initial-bed] more-beds
+                         (map #(get-callable-bed % ref :out-dir out-dir
+                                                 :intervals initial-bed)
+                              align-bams))
         loc-parser (GenomeLocParser. (get-seq-dict ref))
         out-file (itx/add-file-part initial-bed
                                     (str (if name (str name "-") "") "multicombine")
@@ -111,7 +123,8 @@
       (with-open [wtr (writer out-file)]
         (doseq [x (IntervalUtils/sortAndMergeIntervals
                    loc-parser (intersection-of-bed-files all-beds ref loc-parser
-                                                         :exclude-bed exclude-intervals)
+                                                         :exclude-bed exclude-intervals
+                                                         :combine-rule combine-rule)
                    IntervalMergingRule/ALL)]
           (.write wtr (format "%s\t%s\t%s\n" (.getContig x) (dec (.getStart x)) (.getStop x))))))
     out-file))
