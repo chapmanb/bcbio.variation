@@ -1,0 +1,22 @@
+# Example configuration demonstrating grading a contestant genome
+# against a prepared fosmid reference.
+---
+dir:
+  out: test/data/svs/work
+  prep: test/data/svs/work/prep
+experiments:
+  - sample: NA19239
+    ref: test/data/GRCh37.fa
+    intervals: test/data/svs/reference-regions.bed
+    summary-level: quick
+    approach: grade
+    calls:
+      - name: reference
+        file: test/data/svs/reference-calls.vcf
+        remove-refcalls: true
+      - name: contestant
+        prep: true
+        preclean: true
+        remove-refcalls: true
+        file: test/data/svs/contestant-sv-calls.vcf
+        intervals: test/data/svs/contestant-sv-regions.bed

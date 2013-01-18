@@ -254,14 +254,19 @@
   [orig-file train-files call exp params ext out-dir]
   (let [passes-rules? (rules/vc-checker orig-file call exp)
         out-file (itx/add-file-part orig-file "tps" out-dir)]
-    (letfn [(is-previous-tp? [vc]
-              (or
-               (passes-rules? vc
-                              :yes [:below-call-support :passes-filter]
-                              :no [:problem-allele-balance :novel-het-indel :low-confidence-novel-het-snp])
-               (passes-rules? vc
-                              :yes [:below-call-support :het-snp :good-pl]
-                              :no [:problem-allele-balance :novel])))]
+    (letfn [(low-support-novel? [vc]
+              (passes-rules? vc
+                             :yes [:below-call-support :het-snp :novel :low-depth]))
+            (is-previous-tp? [vc]
+              (when-not (low-support-novel? vc)
+                (or
+                 (passes-rules? vc
+                                :yes [:below-call-support :passes-filter]
+                                :no [:problem-allele-balance :novel-het-indel
+                                     :low-confidence-novel-het-snp])
+                 (passes-rules? vc
+                                :yes [:below-call-support :het-snp :good-pl]
+                                :no [:problem-allele-balance :novel]))))]
       (when (itx/needs-run? out-file)
         (-> (:prev train-files)
             (gvc/select-variants is-previous-tp? ext (:ref exp)
@@ -276,13 +281,18 @@
   [orig-file train-files call exp params ext out-dir]
   (let [passes-rules? (rules/vc-checker orig-file call exp)
         out-file (itx/add-file-part orig-file "fps" out-dir)]
-    (letfn [(is-previous-fp? [vc]
-              (or (passes-rules? vc
-                                 :yes [:below-call-support :high-map-quality]
-                                 :no [:passes-filter])
-                  (passes-rules? vc
-                                 :yes [:below-call-support :high-map-quality
-                                       :het-snp :low-confidence :novel])))]
+    (letfn [(well-supported-known? [vc]
+              (passes-rules? vc
+                             :yes [:below-call-support :het-snp]
+                             :no [:novel :low-depth]))
+            (is-previous-fp? [vc]
+              (when-not (well-supported-known? vc)
+                (or (passes-rules? vc
+                                   :yes [:below-call-support :high-map-quality]
+                                   :no [:passes-filter])
+                    (passes-rules? vc
+                                   :yes [:below-call-support :high-map-quality
+                                         :het-snp :low-confidence :novel]))))]
       (when (itx/needs-run? out-file)
         (-> (:prev train-files)
             (gvc/select-variants is-previous-fp? ext (:ref exp)

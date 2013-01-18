@@ -1,0 +1,288 @@
+##fileformat=VCFv4.1
+##ALT=<ID=BND,Description="Breakpoints">
+##ALT=<ID=COMPLEX,Description="Complex variant, collection of SNPs and indels">
+##ALT=<ID=DEL,Description="Deletion">
+##ALT=<ID=DEL_INV,Description="Deletion + Inversion">
+##ALT=<ID=INDEL,Description="Insertion-deletion">
+##ALT=<ID=INS,Description="Insertion">
+##ALT=<ID=INS_INV,Description="Insertion + Inversion">
+##ALT=<ID=INV,Description="Inversion">
+##ALT=<ID=INV_INDEL,Description="Inversion+indel - this script overcalls these, so worth checking">
+##ALT=<ID=PH_SNPS,Description="Phased SNPs">
+##ALT=<ID=SNP,Description="SNP">
+##ALT=<ID=SNP_FROM_COMPLEX,Description="SNP called from a cluster of phased SNPs or complex SNP/indel , split out for easier comparison with other SNP call sets">
+##ApplyRecalibration="analysis_type=ApplyRecalibration input_file=[] read_buffer_size=null phone_home=STANDARD read_filter=[] intervals=null excludeIntervals=null interval_set_rule=UNION interval_merging=ALL reference_sequence=/usr/local/db/homosapiens/b37/human_g1k_v37.fasta rodBind=[] nonDeterministicRandomSeed=false downsampling_type=BY_SAMPLE downsample_to_fraction=null downsample_to_coverage=1000 baq=OFF baqGapOpenPenalty=40.0 performanceLog=null useOriginalQualities=false defaultBaseQualities=-1 validation_strictness=LENIENT unsafe=null num_threads=1 num_cpu_threads=null num_io_threads=null num_bam_file_handles=null read_group_black_list=null pedigree=[] pedigreeString=[] pedigreeValidationType=STRICT allow_intervals_with_unindexed_bam=false logging_level=INFO log_to_file=null help=false input=[(RodBinding name=input source=NA19239-illumina-fosmid.snp.raw.vcf)] recal_file=NA19239-illumina-fosmid.snp.raw.vcf.recal tranches_file=NA19239-illumina-fosmid.snp.raw.vcf.recal.tranches out=org.broadinstitute.sting.gatk.io.stubs.VCFWriterStub NO_HEADER=org.broadinstitute.sting.gatk.io.stubs.VCFWriterStub sites_only=org.broadinstitute.sting.gatk.io.stubs.VCFWriterStub ts_filter_level=99.0 ignore_filter=null mode=SNP filter_mismatching_base_and_quals=false"
+##CombineVariants="analysis_type=CombineVariants input_file=[] read_buffer_size=null phone_home=STANDARD gatk_key=null read_filter=[] intervals=[/usr/local/projects/xprize/secondary/NA19239/illumina_solid/boundaries/NA19239-intersect-fosmid-final-sorted.bed] excludeIntervals=null interval_set_rule=INTERSECTION interval_merging=ALL interval_padding=0 reference_sequence=/usr/local/db/homosapiens/b37/human_g1k_v37.fasta nonDeterministicRandomSeed=false downsampling_type=BY_SAMPLE downsample_to_fraction=null downsample_to_coverage=1000 baq=OFF baqGapOpenPenalty=40.0 performanceLog=null useOriginalQualities=false BQSR=null quantize_quals=0 disable_indel_quals=false emit_original_quals=false preserve_qscores_less_than=6 defaultBaseQualities=-1 validation_strictness=SILENT remove_program_records=false keep_program_records=false unsafe=ALL num_threads=1 num_cpu_threads=null num_io_threads=null num_bam_file_handles=null read_group_black_list=null pedigree=[] pedigreeString=[] pedigreeValidationType=STRICT allow_intervals_with_unindexed_bam=false generateShadowBCF=false logging_level=INFO log_to_file=null help=false variant=[(RodBinding name=NA19239_illumina_fosmid.snp_preclean source=/usr/local/projects/xprize/quaternary/NA19239_fosmid/work/prep/NA19239-illumina-fosmid.snp-preclean.vcf), (RodBinding name=NA19239_illumina_fosmid.indel_preclean source=/usr/local/projects/xprize/quaternary/NA19239_fosmid/work/prep/NA19239-illumina-fosmid.indel-preclean.vcf)] out=org.broadinstitute.sting.gatk.io.stubs.VariantContextWriterStub no_cmdline_in_header=org.broadinstitute.sting.gatk.io.stubs.VariantContextWriterStub sites_only=org.broadinstitute.sting.gatk.io.stubs.VariantContextWriterStub bcf=org.broadinstitute.sting.gatk.io.stubs.VariantContextWriterStub genotypemergeoption=PRIORITIZE filteredrecordsmergetype=KEEP_IF_ANY_UNFILTERED multipleallelesmergetype=BY_TYPE rod_priority_list=NA19239_illumina_fosmid.snp_preclean,NA19239_illumina_fosmid.indel_preclean printComplexMerges=false filteredAreUncalled=false minimalVCF=false setKey=set assumeIdenticalSamples=false minimumN=1 suppressCommandLineHeader=false mergeInfoWithMaxAC=false filter_mismatching_base_and_quals=false"
+##FILTER=<ID=CScoreFilter,Description="Based on classifcation CSCORE">
+##FILTER=<ID=DUP_ALLELE,Description="Allele has been merged">
+##FILTER=<ID=DUP_CALL,Description="Duplicated variant that was not the first seen">
+##FILTER=<ID=EdgeStandardFilterINDEL,Description="QD < 2.0 || ReadPosRankSum < -20.0 || FS > 200.0">
+##FILTER=<ID=EdgeStandardFilterSNP,Description="QD < 2.0 || MQ < 40.0 || FS > 60.0 || HaplotypeScore > 13.0 || ReadPosRankSum < -8.0">
+##FILTER=<ID=GATKStandardFS,Description="FS > 200.0">
+##FILTER=<ID=GATKStandardHaplotypeScore,Description="HaplotypeScore > 13.0">
+##FILTER=<ID=GATKStandardMQ,Description="MQ < 40.0">
+##FILTER=<ID=GATKStandardMQRankSum,Description="MQRankSum < -12.5">
+##FILTER=<ID=GATKStandardQD,Description="QD < 2.0">
+##FILTER=<ID=GATKStandardReadPosRankSum,Description="ReadPosRankSum < -20.0">
+##FILTER=<ID=LowQual,Description="Low quality">
+##FILTER=<ID=MAPQ,Description="5prime flank maps to reference with mapping quality below 40">
+##FILTER=<ID=MISMAPPED_UNPLACEABLE,Description="Stampy mapped the variant (using the 5p-flank) confidently (mapqual> 40) to a place where the ref-allele does not match">
+##FILTER=<ID=MULTIALLELIC,Description="Variant formed from merged alleles">
+##FILTER=<ID=OVERLAPPING_SITE,Description="If Stampy (or combining VCFs) has placed two biallelic variants overlapping, they are filtered">
+##FILTER=<ID=SnpCluster,Description="SNPs found in clusters">
+##FILTER=<ID=TruthSensitivityTranche99.00to99.90,Description="Truth sensitivity tranche level at VSQ Lod: -10.9008 <= x < 3.2571">
+##FILTER=<ID=TruthSensitivityTranche99.90to100.00+,Description="Truth sensitivity tranche level at VQS Lod < -39476.7327">
+##FILTER=<ID=TruthSensitivityTranche99.90to100.00,Description="Truth sensitivity tranche level at VSQ Lod: -39476.7327 <= x < -10.9008">
+##FORMAT=<ID=AB,Number=1,Type=Float,Description="Allele balance for each het genotype">
+##FORMAT=<ID=ABQV,Number=.,Type=Integer,Description="Allelic average base qv for the REF and ALT alleles in the order listed  in the ALT field">
+##FORMAT=<ID=AD,Number=.,Type=Integer,Description="Allelic depths for the ref and alt alleles in the order listed">
+##FORMAT=<ID=AO,Number=A,Type=Integer,Description="Alternate allele observation count">
+##FORMAT=<ID=APSD,Number=.,Type=Integer,Description="Allelic specific plus strand depths for the REF and ALT alleles in the order listed in the ALT field">
+##FORMAT=<ID=AST,Number=.,Type=Integer,Description="Allelic unique start positions for the REF and ALT alleles in the order listed in the ALT field">
+##FORMAT=<ID=COV,Number=2,Type=Integer,Description="Number of reads on ref and alt alleles">
+##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Approximate read depth (reads with MQ=255 or with bad mates are filtered)">
+##FORMAT=<ID=FA,Number=.,Type=Float,Description="Fractions of reads (excluding MQ0 from both ref and alt) supporting each reported alternative allele, per sample">
+##FORMAT=<ID=FDP,Number=1,Type=Integer,Description="Filtered Read Depth">
+##FORMAT=<ID=GL,Number=.,Type=Float,Description="Genotype Likelihood, log10-scaled likelihoods of the data given the called genotype for each possible genotype generated from the reference and alternate alleles given the sample ploidy">
+##FORMAT=<ID=GLE,Number=1,Type=String,Description="Genotype Likelihood Explicit, same as GL, but with tags to indicate the specific genotype.  For instance, 0^-75.22|1^-223.42|0/0^-323.03|1/0^-99.29|1/1^-802.53 represents both haploid and diploid genotype likilehoods in a biallelic context">
+##FORMAT=<ID=GQ,Number=1,Type=Integer,Description="Genotype Quality">
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+##FORMAT=<ID=GT_CONF,Number=1,Type=Float,Description="Genotype confidence. Difference in log likelihood of most likely and next most likely genotype">
+##FORMAT=<ID=MQ0,Number=1,Type=Integer,Description="Number of Mapping Quality Zero Reads per sample">
+##FORMAT=<ID=PL,Number=G,Type=Integer,Description="Normalized, Phred-scaled likelihoods for genotypes as defined in the VCF specification">
+##FORMAT=<ID=PQ,Number=1,Type=Float,Description="Read-backed phasing quality">
+##FORMAT=<ID=QA,Number=A,Type=Integer,Description="Sum of quality of the alternate observations">
+##FORMAT=<ID=QR,Number=1,Type=Integer,Description="Sum of quality of the reference observations">
+##FORMAT=<ID=RO,Number=1,Type=Integer,Description="Reference allele observation count">
+##FORMAT=<ID=SITE_CONF,Number=1,Type=Float,Description="Probabilitic site classification confidence. Difference in log likelihood of most likely and next most likely model (models are variant, repeat and error)">
+##FORMAT=<ID=SP,Number=1,Type=Integer,Description="Phred-scaled strand bias P-value">
+##INFO=<ID=AB,Number=.,Type=Float,Description="Allele Balance for hets (ref/(ref+alt))">
+##INFO=<ID=ABCI5,Number=1,Type=Float,Description="Allele Balance lower 5% confidence interval">
+##INFO=<ID=ABCI50,Number=1,Type=Float,Description="Allele Balance middle 50% confidence interval">
+##INFO=<ID=ABCI95,Number=1,Type=Float,Description="Allele Balance upper 5% confidence interval">
+##INFO=<ID=ABHet,Number=1,Type=Float,Description="Allele Balance for hets (ref/(ref+alt))">
+##INFO=<ID=ABHom,Number=1,Type=Float,Description="Allele Balance for homs (A/(A+O))">
+##INFO=<ID=ABP,Number=A,Type=Float,Description="Allele balance probability at heterozygous sites: Phred-scaled upper-bounds estimate of the probability of observing the deviation between ABR and ABA given E(ABR/ABA) ~ 0.5, derived using Hoeffding's inequality">
+##INFO=<ID=AC,Number=A,Type=Integer,Description="Allele count in genotypes, for each ALT allele, in the same order as listed">
+##INFO=<ID=AC1,Number=1,Type=Float,Description="Max-likelihood estimate of the first ALT allele count (no HWE assumption)">
+##INFO=<ID=AF,Number=A,Type=Float,Description="Allele Frequency, for each ALT allele, in the same order as listed">
+##INFO=<ID=AF1,Number=1,Type=Float,Description="Max-likelihood estimate of the first ALT allele frequency (assuming HWE)">
+##INFO=<ID=AN,Number=1,Type=Integer,Description="Total number of alleles in called genotypes">
+##INFO=<ID=AO,Number=A,Type=Integer,Description="Alternate allele observations">
+##INFO=<ID=BVAR,Number=0,Type=Flag,Description="The best genotype combination in the posterior is variant (non homozygous).">
+##INFO=<ID=BaseCounts,Number=4,Type=Integer,Description="Counts of each base">
+##INFO=<ID=BaseQRankSum,Number=1,Type=Float,Description="Z-score from Wilcoxon rank sum test of Alt Vs. Ref base qualities">
+##INFO=<ID=CGT,Number=1,Type=String,Description="The most probable constrained genotype configuration in the trio">
+##INFO=<ID=CIEND,Number=2,Type=Integer,Description="Confidence interval around END for imprecise variants">
+##INFO=<ID=CIGAR,Number=A,Type=String,Description="The extended CIGAR representation of each alternate allele, with the exception that '=' is replaced by 'M' to ease VCF parsing.  Note that INDEL alleles do not have the first matched base (which is provided by default, per the spec) referred to by the CIGAR.">
+##INFO=<ID=CIPOS,Number=2,Type=Integer,Description="Confidence interval around POS for imprecise variants">
+##INFO=<ID=CLR,Number=1,Type=Integer,Description="Log ratio of genotype likelihoods with and without the constraint">
+##INFO=<ID=CSCORE,Number=1,Type=Float,Description="Classification score based on true/false positives for: QUAL, DP, ReadPosEndDist, gms_illumina, AD, PL">
+##INFO=<ID=CpG,Number=0,Type=Flag,Description="CpG site (either CpG, TpG or CpA)">
+##INFO=<ID=DB,Number=0,Type=Flag,Description="dbSNP Membership">
+##INFO=<ID=DP,Number=1,Type=Integer,Description="Approximate read depth; some reads may have been filtered">
+##INFO=<ID=DP4,Number=4,Type=Integer,Description="# high-quality ref-forward bases, ref-reverse, alt-forward and alt-reverse bases">
+##INFO=<ID=DPRA,Number=A,Type=Float,Description="Alternate allele depth ratio.  Ratio between depth in samples with each called alternate allele and those without.">
+##INFO=<ID=DS,Number=0,Type=Flag,Description="Were any of the samples downsampled?">
+##INFO=<ID=Dels,Number=1,Type=Float,Description="Fraction of Reads Containing Spanning Deletions">
+##INFO=<ID=END,Number=1,Type=Integer,Description="End position of the variant described in this record">
+##INFO=<ID=EPP,Number=A,Type=Float,Description="End Placement Probability: Phred-scaled upper-bounds estimate of the probability of observing the deviation between EL and ER given E(EL/ER) ~ 0.5, derived using Hoeffding's inequality">
+##INFO=<ID=EPPR,Number=1,Type=Float,Description="End Placement Probability for reference observations: Phred-scaled upper-bounds estimate of the probability of observing the deviation between EL and ER given E(EL/ER) ~ 0.5, derived using Hoeffding's inequality">
+##INFO=<ID=EVENT,Number=1,Type=String,Description="ID of event associated to breakend">
+##INFO=<ID=FQ,Number=1,Type=Float,Description="Phred probability of all samples being the same">
+##INFO=<ID=FS,Number=1,Type=Float,Description="Phred-scaled p-value using Fisher's exact test to detect strand bias">
+##INFO=<ID=G3,Number=3,Type=Float,Description="ML estimate of genotype frequencies">
+##INFO=<ID=GC,Number=1,Type=Integer,Description="GC content within 20 bp +/- the variant">
+##INFO=<ID=HRun,Number=1,Type=Integer,Description="Largest Contiguous Homopolymer Run of Variant Allele In Either Direction">
+##INFO=<ID=HS,Number=0,Type=Flag,Description="Indicate it is at a hot spot">
+##INFO=<ID=HW,Number=1,Type=Float,Description="Phred-scaled p-value for Hardy-Weinberg violation">
+##INFO=<ID=HWE,Number=1,Type=Float,Description="Phred-scaled discrete HWE prior probability of the genotyping across all samples.">
+##INFO=<ID=HaplotypeScore,Number=1,Type=Float,Description="Consistency of the site with at most two segregating haplotypes">
+##INFO=<ID=IMPRECISE,Number=0,Type=Flag,Description="Imprecise structural variation">
+##INFO=<ID=INDEL,Number=0,Type=Flag,Description="Indicates that the variant is an INDEL.">
+##INFO=<ID=InbreedingCoeff,Number=1,Type=Float,Description="Inbreeding coefficient as estimated from the genotype likelihoods per-sample when compared against the Hardy-Weinberg expectation">
+##INFO=<ID=IndelType,Number=1,Type=String,Description="Indel type description">
+##INFO=<ID=LEN,Number=A,Type=Integer,Description="allele length">
+##INFO=<ID=LowMQ,Number=3,Type=Float,Description="3-tuple: <fraction of reads with MQ=0>,<fraction of reads with MQ<=10>,<total number of reads>">
+##INFO=<ID=MATEID,Number=.,Type=String,Description="ID of mate breakends">
+##INFO=<ID=MEANALT,Number=A,Type=Float,Description="Mean number of unique non-reference allele observations per sample with the corresponding alternate alleles.">
+##INFO=<ID=MLEAC,Number=A,Type=Integer,Description="Maximum likelihood expectation (MLE) for the allele counts (not necessarily the same as the AC), for each ALT allele, in the same order as listed">
+##INFO=<ID=MLEAF,Number=A,Type=Float,Description="Maximum likelihood expectation (MLE) for the allele frequency (not necessarily the same as the AF), for each ALT allele, in the same order as listed">
+##INFO=<ID=MPGHetRef,Number=1,Type=Float,Description="Most Probable Genotype likelihood ratio for Het Ref">
+##INFO=<ID=MPGHomRef,Number=1,Type=Float,Description="Most Probable Genotype likelihood ratio for Hom Ref">
+##INFO=<ID=MPGHomVar,Number=1,Type=Float,Description="Most Probable Genotype likelihood ratio for Hom Var">
+##INFO=<ID=MPGLikHetRef,Number=1,Type=Float,Description="Raw likelihood for Het Ref">
+##INFO=<ID=MPGLikHomRef,Number=1,Type=Float,Description="Raw likelihood for Hom Ref">
+##INFO=<ID=MPGLikHomVar,Number=1,Type=Float,Description="Raw likelihood for Hom Var">
+##INFO=<ID=MQ,Number=1,Type=Float,Description="RMS Mapping Quality">
+##INFO=<ID=MQ0,Number=1,Type=Integer,Description="Total Mapping Quality Zero Reads">
+##INFO=<ID=MQ0Fraction,Number=1,Type=Integer,Description="Fraction of Mapping Quality Zero Reads">
+##INFO=<ID=MQM,Number=A,Type=Float,Description="Mean mapping quality of observed alternate alleles">
+##INFO=<ID=MQMR,Number=1,Type=Float,Description="Mean mapping quality of observed reference alleles">
+##INFO=<ID=MQRankSum,Number=1,Type=Float,Description="Z-score From Wilcoxon rank sum test of Alt vs. Ref read mapping qualities">
+##INFO=<ID=NBQ,Number=1,Type=Float,Description="Mean Neighboring Base Quality, includes 5bp on both sides">
+##INFO=<ID=NS,Number=1,Type=Integer,Description="Number of samples with data">
+##INFO=<ID=NUMALT,Number=1,Type=Integer,Description="Number of unique non-reference alleles in called genotypes at this position.">
+##INFO=<ID=Num454,Number=1,Type=Integer,Description="Number of 454 reads">
+##INFO=<ID=NumOther,Number=1,Type=Integer,Description="Number of Other technology reads">
+##INFO=<ID=NumSLX,Number=1,Type=Integer,Description="Number of SLX reads">
+##INFO=<ID=NumSOLiD,Number=1,Type=Integer,Description="Number of SOLiD reads">
+##INFO=<ID=ODDS,Number=1,Type=Float,Description="The log odds ratio of the best genotype combination to the second-best.">
+##INFO=<ID=OND,Number=1,Type=Float,Description="Overall non-diploid ratio (alleles/(alleles+non-alleles))">
+##INFO=<ID=PAIRED,Number=A,Type=Float,Description="Proportion of observed alternate alleles which are supported by properly paired read fragments">
+##INFO=<ID=PAIREDR,Number=1,Type=Float,Description="Proportion of observed reference alleles which are supported by properly paired read fragments">
+##INFO=<ID=PC2,Number=2,Type=Integer,Description="Phred probability of the nonRef allele frequency in group1 samples being larger (,smaller) than in group2.">
+##INFO=<ID=PCHI2,Number=1,Type=Float,Description="Posterior weighted chi^2 P-value for testing the association between group1 and group2 samples.">
+##INFO=<ID=PR,Number=1,Type=Integer,Description="# permutations yielding a smaller PCHI2.">
+##INFO=<ID=PV,Number=1,Type=Integer,Description="Possible variation in clean indel position">
+##INFO=<ID=PV4,Number=4,Type=Float,Description="P-values for strand bias, baseQ bias, mapQ bias and tail distance bias">
+##INFO=<ID=PercentNBaseSolid,Number=1,Type=Float,Description="Percentage of N bases in the pileup (counting only SOLiD reads)">
+##INFO=<ID=PhasingInconsistent,Number=0,Type=Flag,Description="Are the reads significantly haplotype-inconsistent?">
+##INFO=<ID=QCHI2,Number=1,Type=Integer,Description="Phred scaled PCHI2.">
+##INFO=<ID=QD,Number=1,Type=Float,Description="Variant Confidence/Quality by Depth">
+##INFO=<ID=RO,Number=1,Type=Integer,Description="Reference allele observations">
+##INFO=<ID=RPA,Number=.,Type=Integer,Description="Number of times tandem repeat unit is repeated, for each allele (including reference)">
+##INFO=<ID=RPP,Number=A,Type=Float,Description="Read Placement Probability: Phred-scaled upper-bounds estimate of the probability of observing the deviation between RPL and RPR given E(RPL/RPR) ~ 0.5, derived using Hoeffding's inequality">
+##INFO=<ID=RPPR,Number=1,Type=Float,Description="Read Placement Probability for reference observations: Phred-scaled upper-bounds estimate of the probability of observing the deviation between RPL and RPR given E(RPL/RPR) ~ 0.5, derived using Hoeffding's inequality">
+##INFO=<ID=RU,Number=1,Type=String,Description="Tandem repeat unit (bases)">
+##INFO=<ID=RUN,Number=A,Type=Integer,Description="Run length: the number of consecutive repeats of the alternate allele in the reference genome">
+##INFO=<ID=ReadMeanLen,Number=1,Type=Float,Description="Mean number of aligned bases for reads - low number indicate possible mis-alignments">
+##INFO=<ID=ReadMeanPos,Number=1,Type=Float,Description="Parameters indicating incorrect local alignments: Mean position inside read as a fraction of aligned read length">
+##INFO=<ID=ReadPosEndDist,Number=1,Type=Float,Description="Parameters indicating incorrect local alignments: 1. Mean distance from either end of read">
+##INFO=<ID=ReadPosRankSum,Number=1,Type=Float,Description="Z-score from Wilcoxon rank sum test of Alt vs. Ref read position bias">
+##INFO=<ID=SAP,Number=A,Type=Float,Description="Strand balance probability for the alternate allele: Phred-scaled upper-bounds estimate of the probability of observing the deviation between SAF and SAR given E(SAF/SAR) ~ 0.5, derived using Hoeffding's inequality">
+##INFO=<ID=SB,Number=1,Type=Float,Description="Strand Bias">
+##INFO=<ID=SNPEFF_AMINO_ACID_CHANGE,Number=1,Type=String,Description="Old/New amino acid for the highest-impact effect resulting from the current variant (in HGVS style)">
+##INFO=<ID=SNPEFF_CODON_CHANGE,Number=1,Type=String,Description="Old/New codon for the highest-impact effect resulting from the current variant">
+##INFO=<ID=SNPEFF_EFFECT,Number=1,Type=String,Description="The highest-impact effect resulting from the current variant (or one of the highest-impact effects, if there is a tie)">
+##INFO=<ID=SNPEFF_EXON_ID,Number=1,Type=String,Description="Exon ID for the highest-impact effect resulting from the current variant">
+##INFO=<ID=SNPEFF_FUNCTIONAL_CLASS,Number=1,Type=String,Description="Functional class of the highest-impact effect resulting from the current variant: [NONE, SILENT, MISSENSE, NONSENSE]">
+##INFO=<ID=SNPEFF_GENE_BIOTYPE,Number=1,Type=String,Description="Gene biotype for the highest-impact effect resulting from the current variant">
+##INFO=<ID=SNPEFF_GENE_NAME,Number=1,Type=String,Description="Gene name for the highest-impact effect resulting from the current variant">
+##INFO=<ID=SNPEFF_IMPACT,Number=1,Type=String,Description="Impact of the highest-impact effect resulting from the current variant [MODIFIER, LOW, MODERATE, HIGH]">
+##INFO=<ID=SNPEFF_TRANSCRIPT_ID,Number=1,Type=String,Description="Transcript ID for the highest-impact effect resulting from the current variant">
+##INFO=<ID=SRP,Number=1,Type=Float,Description="Strand balance probability for the reference allele: Phred-scaled upper-bounds estimate of the probability of observing the deviation between SRF and SRR given E(SRF/SRR) ~ 0.5, derived using Hoeffding's inequality">
+##INFO=<ID=STR,Number=0,Type=Flag,Description="Variant is a short tandem repeat">
+##INFO=<ID=SVLEN,Number=.,Type=Integer,Description="Difference in length between REF and ALT alleles">
+##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of structural variant">
+##INFO=<ID=Samples,Number=.,Type=String,Description="List of polymorphic samples">
+##INFO=<ID=TDT,Number=1,Type=Float,Description="Test statistic from Wittkowski transmission disequilibrium test.">
+##INFO=<ID=TYPE,Number=A,Type=String,Description="The type of allele, either snp, mnp, ins, del, or complex.">
+##INFO=<ID=UGT,Number=1,Type=String,Description="The most probable unconstrained genotype configuration in the trio">
+##INFO=<ID=VDB,Number=1,Type=Float,Description="Variant Distance Bias">
+##INFO=<ID=VQSLOD,Number=1,Type=Float,Description="Log odds ratio of being a true variant versus being false under the trained gaussian mixture model">
+##INFO=<ID=XAI,Number=A,Type=Float,Description="Alternate allele read INDEL rate: The rate of INDELs (gaps) in reads supporting the alternate allele, excluding the called variant.">
+##INFO=<ID=XAM,Number=A,Type=Float,Description="Alternate allele read mismatch rate: The rate of SNPs + MNPs + INDELs in reads supporting the alternate allele, excluding the called variant.">
+##INFO=<ID=XAS,Number=A,Type=Float,Description="Alternate allele read SNP rate: The rate of per-base mismatches (SNPs + MNPs) in reads supporting the alternate allele, excluding the called variant.">
+##INFO=<ID=XRI,Number=1,Type=Float,Description="Reference allele read INDEL rate: The rate of INDELs (gaps) in reads supporting the reference allele.">
+##INFO=<ID=XRM,Number=1,Type=Float,Description="Reference allele read mismatch rate: The rate of SNPs + MNPs + INDELs in reads supporting the reference allele.">
+##INFO=<ID=XRS,Number=1,Type=Float,Description="Reference allele read SNP rate: The rate of per-base mismatches (SNPs + MNPs) in reads supporting the reference allele.">
+##INFO=<ID=culprit,Number=1,Type=String,Description="The annotation which was the worst performing in the Gaussian mixture model, likely the reason why the variant was filtered out">
+##INFO=<ID=set,Number=1,Type=String,Description="Source VCF for the merged record in CombineVariants">
+##INFO=<ID=technology.illumina,Number=A,Type=Float,Description="Fraction of observations supporting the alternate observed in reads from illumina">
+##INFO=<ID=technology.solid,Number=A,Type=Float,Description="Fraction of observations supporting the alternate observed in reads from solid">
+##LeftAlignVariants="analysis_type=LeftAlignVariants input_file=[] read_buffer_size=null phone_home=STANDARD gatk_key=null read_filter=[] intervals=null excludeIntervals=null interval_set_rule=UNION interval_merging=ALL interval_padding=0 reference_sequence=/usr/local/db/homosapiens/b37/human_g1k_v37.fasta nonDeterministicRandomSeed=false downsampling_type=BY_SAMPLE downsample_to_fraction=null downsample_to_coverage=1000 baq=OFF baqGapOpenPenalty=40.0 performanceLog=null useOriginalQualities=false BQSR=null quantize_quals=0 disable_indel_quals=false emit_original_quals=false preserve_qscores_less_than=6 defaultBaseQualities=-1 validation_strictness=SILENT remove_program_records=false keep_program_records=false unsafe=LENIENT_VCF_PROCESSING num_threads=1 num_cpu_threads=null num_io_threads=null num_bam_file_handles=null read_group_black_list=null pedigree=[] pedigreeString=[] pedigreeValidationType=STRICT allow_intervals_with_unindexed_bam=false generateShadowBCF=false logging_level=INFO log_to_file=null help=false variant=(RodBinding name=variant source=/usr/local/projects/xprize/quaternary/NA19239_fosmid/work/prep/NA19239-allfos-worknomnp.vcf) out=org.broadinstitute.sting.gatk.io.stubs.VariantContextWriterStub no_cmdline_in_header=org.broadinstitute.sting.gatk.io.stubs.VariantContextWriterStub sites_only=org.broadinstitute.sting.gatk.io.stubs.VariantContextWriterStub bcf=org.broadinstitute.sting.gatk.io.stubs.VariantContextWriterStub filter_mismatching_base_and_quals=false"
+##OriginalSnpEffCmd="SnpEff eff -s NA19239-illumina-fosmid.snp.snpEff.html -v -i vcf -o vcf -a 10 -chr chr -c /usr/local/src/snpEff/snpEff.config GRCh37.64 NA19239-illumina-fosmid.snp.vcf "
+##OriginalSnpEffVersion="2.0.5 (build 2011-12-24), by Pablo Cingolani"
+##ReadBackedPhasing="analysis_type=ReadBackedPhasing input_file=[/data/projects1/xprize/secondary/NA19239/illumina/fosmid/other/cortex/work/NA19239-illumina-fosmid.bam] read_buffer_size=null phone_home=STANDARD gatk_key=null read_filter=[] intervals=[/usr/local/projects/xprize/secondary/NA19239/illumina_solid/boundaries/NA19239-fosmid-all.bed] excludeIntervals=null interval_set_rule=INTERSECTION interval_merging=ALL interval_padding=0 reference_sequence=/usr/local/db/homosapiens/b37/human_g1k_v37.fasta nonDeterministicRandomSeed=false downsampling_type=BY_SAMPLE downsample_to_fraction=null downsample_to_coverage=1000 baq=OFF baqGapOpenPenalty=40.0 performanceLog=null useOriginalQualities=false BQSR=null quantize_quals=0 disable_indel_quals=false emit_original_quals=false preserve_qscores_less_than=6 defaultBaseQualities=-1 validation_strictness=SILENT remove_program_records=false keep_program_records=false unsafe=LENIENT_VCF_PROCESSING num_threads=1 num_cpu_threads=null num_io_threads=null num_bam_file_handles=null read_group_black_list=null pedigree=[] pedigreeString=[] pedigreeValidationType=STRICT allow_intervals_with_unindexed_bam=false generateShadowBCF=false logging_level=INFO log_to_file=null help=false variant=(RodBinding name=variant source=/data/projects1/xprize/secondary/NA19239/illumina/fosmid/other/cortex/work/NA19239-illumina-fosmid-variants-gatkann-combined.vcf) out=org.broadinstitute.sting.utils.variantcontext.writer.SortingVariantContextWriter no_cmdline_in_header=org.broadinstitute.sting.utils.variantcontext.writer.SortingVariantContextWriter sites_only=org.broadinstitute.sting.utils.variantcontext.writer.SortingVariantContextWriter bcf=org.broadinstitute.sting.utils.variantcontext.writer.SortingVariantContextWriter cacheWindowSize=20000 maxPhaseSites=10 phaseQualityThresh=10.0 variantStatsFilePrefix=null min_base_quality_score=17 min_mapping_quality_score=20 sampleToPhase=null permitNoSampleOverlap=false respectPhaseInInput=false enableMergePhasedSegregatingPolymorphismsToMNP=false maxGenomicDistanceForMNP=1 outputMultipleBaseCountsFile=null filter_mismatching_base_and_quals=false"
+##SelectVariants="analysis_type=SelectVariants input_file=[] read_buffer_size=null phone_home=STANDARD gatk_key=null read_filter=[] intervals=[/usr/local/projects/xprize/secondary/NA19239/illumina_solid/boundaries/NA19239-intersect-fosmid-final-sorted.bed] excludeIntervals=null interval_set_rule=INTERSECTION interval_merging=ALL interval_padding=0 reference_sequence=/usr/local/db/homosapiens/b37/human_g1k_v37.fasta nonDeterministicRandomSeed=false downsampling_type=BY_SAMPLE downsample_to_fraction=null downsample_to_coverage=1000 baq=OFF baqGapOpenPenalty=40.0 performanceLog=null useOriginalQualities=false BQSR=null quantize_quals=0 disable_indel_quals=false emit_original_quals=false preserve_qscores_less_than=6 defaultBaseQualities=-1 validation_strictness=SILENT remove_program_records=false keep_program_records=false unsafe=ALL num_threads=1 num_cpu_threads=null num_io_threads=null num_bam_file_handles=null read_group_black_list=null pedigree=[] pedigreeString=[] pedigreeValidationType=STRICT allow_intervals_with_unindexed_bam=false generateShadowBCF=false logging_level=INFO log_to_file=null help=false variant=(RodBinding name=variant source=/usr/local/projects/xprize/quaternary/NA19239_fosmid/work/prep/NA19239-allfos-prep-haploid.vcf) discordance=(RodBinding name= source=UNBOUND) concordance=(RodBinding name= source=UNBOUND) out=org.broadinstitute.sting.gatk.io.stubs.VariantContextWriterStub no_cmdline_in_header=org.broadinstitute.sting.gatk.io.stubs.VariantContextWriterStub sites_only=org.broadinstitute.sting.gatk.io.stubs.VariantContextWriterStub bcf=org.broadinstitute.sting.gatk.io.stubs.VariantContextWriterStub sample_name=[NA19239] sample_expressions=null sample_file=null exclude_sample_name=[] exclude_sample_file=[] select_expressions=[] excludeNonVariants=true excludeFiltered=true regenotype=false restrictAllelesTo=ALL keepOriginalAC=false mendelianViolation=false mendelianViolationQualThreshold=0.0 select_random_number=0 select_random_fraction=0.0 remove_fraction_genotypes=0.0 selectTypeToInclude=[] keepIDs=null fullyDecode=false forceGenotypesDecode=false justRead=false filter_mismatching_base_and_quals=false"
+##UnifiedGenotyper="analysis_type=UnifiedGenotyper input_file=[/usr/local/projects/xprize/secondary/NA19239/illumina/fosmid/NA19239-illumina-fosmid.bam] read_buffer_size=null phone_home=STANDARD gatk_key=null read_filter=[] intervals=[/usr/local/projects/xprize/quaternary/NA19239_fosmid/work/prep/NA19239-allfos-nomnp-fullcombine-nocall.vcf] excludeIntervals=null interval_set_rule=UNION interval_merging=ALL interval_padding=0 reference_sequence=/usr/local/db/homosapiens/b37/human_g1k_v37.fasta nonDeterministicRandomSeed=false downsampling_type=BY_SAMPLE downsample_to_fraction=null downsample_to_coverage=250 baq=OFF baqGapOpenPenalty=40.0 performanceLog=null useOriginalQualities=false BQSR=null quantize_quals=0 disable_indel_quals=false emit_original_quals=false preserve_qscores_less_than=6 defaultBaseQualities=-1 validation_strictness=SILENT remove_program_records=false keep_program_records=false unsafe=LENIENT_VCF_PROCESSING num_threads=1 num_cpu_threads=null num_io_threads=null num_bam_file_handles=null read_group_black_list=null pedigree=[] pedigreeString=[] pedigreeValidationType=STRICT allow_intervals_with_unindexed_bam=false generateShadowBCF=false logging_level=INFO log_to_file=null help=false genotype_likelihoods_model=BOTH p_nonref_model=EXACT pcr_error_rate=1.0E-4 noSLOD=false annotateNDA=false min_base_quality_score=17 max_deletion_fraction=0.05 cap_max_alternate_alleles_for_indels=false min_indel_count_for_genotyping=5 min_indel_fraction_per_sample=0.25 indel_heterozygosity=1.25E-4 indelGapContinuationPenalty=10 indelGapOpenPenalty=45 indelHaplotypeSize=80 noBandedIndel=false indelDebug=false ignoreSNPAlleles=false allReadsSP=false ignoreLaneInfo=false reference_sample_calls=(RodBinding name= source=UNBOUND) reference_sample_name=null sample_ploidy=2 min_quality_score=1 max_quality_score=40 site_quality_prior=20 min_power_threshold_for_calling=0.95 min_reference_depth=100 exclude_filtered_reference_sites=false heterozygosity=0.0010 genotyping_mode=GENOTYPE_GIVEN_ALLELES output_mode=EMIT_ALL_SITES standard_min_confidence_threshold_for_calling=0.0 standard_min_confidence_threshold_for_emitting=0.0 alleles=(RodBinding name=alleles source=/usr/local/projects/xprize/quaternary/NA19239_fosmid/work/prep/NA19239-allfos-nomnp-fullcombine-nocall.vcf) max_alternate_alleles=3 dbsnp=(RodBinding name= source=UNBOUND) comp=[] out=org.broadinstitute.sting.gatk.io.stubs.VariantContextWriterStub no_cmdline_in_header=org.broadinstitute.sting.gatk.io.stubs.VariantContextWriterStub sites_only=org.broadinstitute.sting.gatk.io.stubs.VariantContextWriterStub bcf=org.broadinstitute.sting.gatk.io.stubs.VariantContextWriterStub debug_file=null metrics_file=null annotation=[DepthPerAlleleBySample] excludeAnnotation=[] filter_mismatching_base_and_quals=false"
+##VariantAnnotator="analysis_type=VariantAnnotator input_file=[] read_buffer_size=null phone_home=STANDARD read_filter=[] intervals=null excludeIntervals=null interval_set_rule=UNION interval_merging=ALL reference_sequence=/usr/local/db/homosapiens/b37/human_g1k_v37.fasta rodBind=[] nonDeterministicRandomSeed=false downsampling_type=BY_SAMPLE downsample_to_fraction=null downsample_to_coverage=1000 baq=OFF baqGapOpenPenalty=40.0 performanceLog=null useOriginalQualities=false defaultBaseQualities=-1 validation_strictness=LENIENT unsafe=null num_threads=1 num_cpu_threads=null num_io_threads=null num_bam_file_handles=null read_group_black_list=null pedigree=[] pedigreeString=[] pedigreeValidationType=STRICT allow_intervals_with_unindexed_bam=false logging_level=INFO log_to_file=null help=false variant=(RodBinding name=variant source=NA19239-illumina-fosmid.snp.vcf) snpEffFile=(RodBinding name=snpEffFile source=NA19239-illumina-fosmid.snp.snpEff.vcf) dbsnp=(RodBinding name=dbsnp source=/usr/local/db/homosapiens/b37/../annotations/b37/dbsnp.vcf) comp=[] resource=[] out=org.broadinstitute.sting.gatk.io.stubs.VCFWriterStub NO_HEADER=org.broadinstitute.sting.gatk.io.stubs.VCFWriterStub sites_only=org.broadinstitute.sting.gatk.io.stubs.VCFWriterStub annotation=[] excludeAnnotation=[MVLikelihoodRatio] group=[] expression=[] useAllAnnotations=true list=false vcfContainsOnlyIndels=false MendelViolationGenotypeQualityThreshold=0.0 requireStrictAlleleMatch=false filter_mismatching_base_and_quals=false"
+##VariantFiltration="analysis_type=VariantFiltration input_file=[] read_buffer_size=null phone_home=STANDARD read_filter=[] intervals=null excludeIntervals=null interval_set_rule=UNION interval_merging=ALL reference_sequence=/usr/local/db/homosapiens/b37/human_g1k_v37.fasta rodBind=[] nonDeterministicRandomSeed=false downsampling_type=BY_SAMPLE downsample_to_fraction=null downsample_to_coverage=1000 baq=OFF baqGapOpenPenalty=40.0 performanceLog=null useOriginalQualities=false defaultBaseQualities=-1 validation_strictness=LENIENT unsafe=null num_threads=1 num_cpu_threads=null num_io_threads=null num_bam_file_handles=null read_group_black_list=null pedigree=[] pedigreeString=[] pedigreeValidationType=STRICT allow_intervals_with_unindexed_bam=false logging_level=INFO log_to_file=null help=false variant=(RodBinding name=variant source=NA19239-illumina-fosmid.snp.ann.AGAIN.vcf) mask=(RodBinding name= source=UNBOUND) out=org.broadinstitute.sting.gatk.io.stubs.VCFWriterStub NO_HEADER=org.broadinstitute.sting.gatk.io.stubs.VCFWriterStub sites_only=org.broadinstitute.sting.gatk.io.stubs.VCFWriterStub filterExpression=[QD < 2.0 || MQ < 40.0 || FS > 60.0 || HaplotypeScore > 13.0 || ReadPosRankSum < -8.0] filterName=[EdgeStandardFilterSNP] genotypeFilterExpression=[] genotypeFilterName=[] clusterSize=3 clusterWindowSize=10 maskExtension=0 maskName=Mask missingValuesInExpressionsShouldEvaluateAsFailing=false filter_mismatching_base_and_quals=false"
+##commandline="freebayes -b /data/projects1/xprize/secondary/NA19239/solid/fosmid/other/freebayes/work/NA19239-solid-fosmid.bam -v /data/projects1/xprize/secondary/NA19239/solid/fosmid/other/freebayes/work/NA19239-solid-fosmid-variants-split/tx/NA19239-solid-fosmid-MT-variants.vcf -f /usr/local/db/homosapiens/b37/human_g1k_v37.fasta --left-align-indels --use-mapping-quality --ploidy 1 --region MT"
+##contig=<ID=1,length=249250621>
+##contig=<ID=2,length=243199373>
+##contig=<ID=3,length=198022430>
+##contig=<ID=4,length=191154276>
+##contig=<ID=5,length=180915260>
+##contig=<ID=6,length=171115067>
+##contig=<ID=7,length=159138663>
+##contig=<ID=8,length=146364022>
+##contig=<ID=9,length=141213431>
+##contig=<ID=10,length=135534747>
+##contig=<ID=11,length=135006516>
+##contig=<ID=12,length=133851895>
+##contig=<ID=13,length=115169878>
+##contig=<ID=14,length=107349540>
+##contig=<ID=15,length=102531392>
+##contig=<ID=16,length=90354753>
+##contig=<ID=17,length=81195210>
+##contig=<ID=18,length=78077248>
+##contig=<ID=19,length=59128983>
+##contig=<ID=20,length=63025520>
+##contig=<ID=21,length=48129895>
+##contig=<ID=22,length=51304566>
+##contig=<ID=X,length=155270560>
+##contig=<ID=Y,length=59373566>
+##contig=<ID=MT,length=16569>
+##contig=<ID=GL000207.1,length=4262>
+##contig=<ID=GL000226.1,length=15008>
+##contig=<ID=GL000229.1,length=19913>
+##contig=<ID=GL000231.1,length=27386>
+##contig=<ID=GL000210.1,length=27682>
+##contig=<ID=GL000239.1,length=33824>
+##contig=<ID=GL000235.1,length=34474>
+##contig=<ID=GL000201.1,length=36148>
+##contig=<ID=GL000247.1,length=36422>
+##contig=<ID=GL000245.1,length=36651>
+##contig=<ID=GL000197.1,length=37175>
+##contig=<ID=GL000203.1,length=37498>
+##contig=<ID=GL000246.1,length=38154>
+##contig=<ID=GL000249.1,length=38502>
+##contig=<ID=GL000196.1,length=38914>
+##contig=<ID=GL000248.1,length=39786>
+##contig=<ID=GL000244.1,length=39929>
+##contig=<ID=GL000238.1,length=39939>
+##contig=<ID=GL000202.1,length=40103>
+##contig=<ID=GL000234.1,length=40531>
+##contig=<ID=GL000232.1,length=40652>
+##contig=<ID=GL000206.1,length=41001>
+##contig=<ID=GL000240.1,length=41933>
+##contig=<ID=GL000236.1,length=41934>
+##contig=<ID=GL000241.1,length=42152>
+##contig=<ID=GL000243.1,length=43341>
+##contig=<ID=GL000242.1,length=43523>
+##contig=<ID=GL000230.1,length=43691>
+##contig=<ID=GL000237.1,length=45867>
+##contig=<ID=GL000233.1,length=45941>
+##contig=<ID=GL000204.1,length=81310>
+##contig=<ID=GL000198.1,length=90085>
+##contig=<ID=GL000208.1,length=92689>
+##contig=<ID=GL000191.1,length=106433>
+##contig=<ID=GL000227.1,length=128374>
+##contig=<ID=GL000228.1,length=129120>
+##contig=<ID=GL000214.1,length=137718>
+##contig=<ID=GL000221.1,length=155397>
+##contig=<ID=GL000209.1,length=159169>
+##contig=<ID=GL000218.1,length=161147>
+##contig=<ID=GL000220.1,length=161802>
+##contig=<ID=GL000213.1,length=164239>
+##contig=<ID=GL000211.1,length=166566>
+##contig=<ID=GL000199.1,length=169874>
+##contig=<ID=GL000217.1,length=172149>
+##contig=<ID=GL000216.1,length=172294>
+##contig=<ID=GL000215.1,length=172545>
+##contig=<ID=GL000205.1,length=174588>
+##contig=<ID=GL000219.1,length=179198>
+##contig=<ID=GL000224.1,length=179693>
+##contig=<ID=GL000223.1,length=180455>
+##contig=<ID=GL000195.1,length=182896>
+##contig=<ID=GL000212.1,length=186858>
+##contig=<ID=GL000222.1,length=186861>
+##contig=<ID=GL000200.1,length=187035>
+##contig=<ID=GL000193.1,length=189789>
+##contig=<ID=GL000194.1,length=191469>
+##contig=<ID=GL000225.1,length=211173>
+##contig=<ID=GL000192.1,length=547496>
+##fileDate=20120905
+##phasing=none, though some calls involve phasing clustered variants
+##reference=file:///opt/xprize/data/ref_genomes/GRCh37/GRCh37.fa
+##samtoolsVersion=0.1.18 (r982:295)
+##source=SelectVariants
+##variants_justified=left
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	NA19239
+22	9456	rs61069833,rs61069833,UNION_BC_k31_var_11	G	A	3994.53	PASS	ABCI5=-9.318e-03;ABCI50=-3.180e-03;ABCI95=0.014;AC=1;AF=1.00;AN=1;CSCORE=1.00;DP=127;FS=0.000;GC=22.77;HRun=0;HaplotypeScore=0.0000;MPGHetRef=-3.945e+01;MPGHomRef=-3.710e+02;MPGHomVar=39.45;MPGLikHetRef=40.04;MPGLikHomRef=371.60;MPGLikHomVar=0.584;MQ=68.88;MQ0=0;NBQ=28.11;ReadMeanLen=97.3;ReadMeanPos=0.589;ReadPosEndDist=28.4	GT:AD:DP:GQ:PL	1:0,127:127:99:3995,367,0
+22	9519	.	T	<DEL>	.	PASS	AC=1;AF=1.00;AN=1;CIEND=0,1;CIPOS=0,33;END=41019586;IMPRECISE;SVLEN=-69;SVTYPE=DEL	GT	1
+22	9543	rs57489170	A	G	1535.58	PASS	ABCI5=-8.817e-03;ABCI50=3.148e-03;ABCI95=0.044;AC=1;AF=1.00;AN=1;CSCORE=1.00;DP=52;FS=0.000;GC=39.60;HRun=0;HaplotypeScore=0.0000;MPGHetRef=-1.621e+01;MPGHomRef=-1.483e+02;MPGHomVar=16.21;MPGLikHetRef=16.26;MPGLikHomRef=148.30;MPGLikHomVar=0.043;MQ=66.65;MQ0=1;NBQ=27.54;ReadMeanLen=88.9;ReadMeanPos=0.348;ReadPosEndDist=24.0	GT:AD:DP:GQ:PL	1:0,52:52:99:1569,147,0
+22	9921	rs35618364,UNION_BC_k31_var_41	TAG	T	5011.09	PASS	AC=1;AF=1.00;AN=1;CSCORE=1.00;DP=154;FS=0.000;GC=34.65;HRun=0;HaplotypeScore=0.0000;MQ=69.76;MQ0=0;NBQ=27.97;ReadMeanLen=97.5;ReadMeanPos=0.366;ReadPosEndDist=22.8	GT:AD:DP:GQ:PL	1:45,108:154:99:5011,439,0
+22	10054	rs9661280	C	G	1986.76	PASS	ABCI5=-8.953e-03;ABCI50=8.944e-04;ABCI95=0.036;AC=1;AF=1.00;AN=1;CSCORE=1.00;DP=63;FS=0.000;GC=45.54;HRun=1;HaplotypeScore=0.0000;MPGHetRef=-1.922e+01;MPGHomRef=-1.763e+02;MPGHomVar=19.22;MPGLikHetRef=19.27;MPGLikHomRef=176.30;MPGLikHomVar=0.050;MQ=70.00;MQ0=0;NBQ=27.32;ReadMeanLen=95.2;ReadMeanPos=0.315;ReadPosEndDist=22.4	GT:AD:DP:GQ:PL	1:0,63:63:99:2020,189,0
