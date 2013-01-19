@@ -262,7 +262,7 @@
                 (or
                  (passes-rules? vc
                                 :yes [:below-call-support :passes-filter]
-                                :no [:problem-allele-balance :novel-het-indel
+                                :no [:problem-allele-balance
                                      :low-confidence-novel-het-snp])
                  (passes-rules? vc
                                 :yes [:below-call-support :het-snp :good-pl]
