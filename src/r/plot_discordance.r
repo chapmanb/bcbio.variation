@@ -48,6 +48,7 @@ pretty_caller_names <- function(val) {
          samtools = "mpileup",
          ifoscx = "cortex_var",
          cortex = "cortex_var",
+         varscan = "VarScan",
          ifosgh = "GATK Haplotype",
          "gatk-haplotype" = "GATK Haplotype")
 }
@@ -59,10 +60,11 @@ types = c("total", "snp", "indel")
 cmps = c("concordant", "discordant1", "discordant2")
 
 # Floors to use for displaying data variability at higher values
-min_limit1 = 110000
+min_limit1 = 100000
 min_limit2 = 9000
 
 pdf(out_file, width = 9, height = 11)
+#png(out_file, w=700, h=700)
 pushViewport(viewport(layout = grid.layout(length(types), length(cmps))))
 for (i in 1:length(cmps)) {
   for (j in 1:length(types)) {
