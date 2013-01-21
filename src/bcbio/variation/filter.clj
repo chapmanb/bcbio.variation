@@ -48,7 +48,8 @@
                 (and (>= x min) (<= x max))))
             (attr-passes? [got want]
               (cond
-               (set? want) (not (empty? (set/intersection got want))) 
+               (set? want) (or (empty? want)
+                               (not (empty? (set/intersection got want)))) 
                (or (vector? want) (list? want)) (in-range? want got)))
             (passes-metrics? [vc]
               (let [attrs (attr-getter (keys metrics) vc)]
