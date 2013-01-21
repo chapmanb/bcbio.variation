@@ -12,7 +12,7 @@
                  [org.clojars.chapmanb/picard "1.73"]
                  [org.clojars.chapmanb/sam "1.73"]
                  [org.clojars.chapmanb/tribble "119"]
-                 [org.clojars.chapmanb/cofoja "1.0-r139"]
+                 ;; [org.clojars.chapmanb/cofoja "1.0-r139"]
                  [org.clojars.chapmanb/jama "1.0.2"]
                  [org.apache.commons/commons-jexl "2.1.1"]
                  [org.apache.commons/commons-math "2.2"]
@@ -50,14 +50,15 @@
                  [c3p0/c3p0 "0.9.1.2"]
                  [hiccup "1.0.1"]
                  [enlive "1.0.1" :exclusions [org.clojure/clojure]]]
-  :plugins [[lein-cljsbuild "0.2.7"]
-            [lein-marginalia "0.7.1"]
+  :min-lein-version "2.0.0"
+  :plugins [[lein-marginalia "0.7.1"]
             [lein-midje "2.0.0-SNAPSHOT"]]
   :profiles {:dev {:dependencies
                    [[midje "1.4.0" :exclusions [org.clojure/clojure ordered]]]}}
   :repositories {"biojava" {:url "http://www.biojava.org/download/maven/"
                             :snapshots false}}
   :java-source-paths ["src/java"]
+  :javac-options ["-nowarn" "-target" "1.6" "-source" "1.6"]
   ;:jvm-opts ["-Xmx4g"]
   :omit-source false
   :aot [bcbio.variation.vcfwalker bcbio.variation.core bcbio.variation.annotate.nbq
