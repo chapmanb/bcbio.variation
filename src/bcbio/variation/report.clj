@@ -179,10 +179,11 @@
                               ;:nonmatch-het-alt "Non-matching heterozygous alternative alleles"
                               )
         sv-metrics (assoc-in metrics [:discordant :sv]
-                             (apply + (map #(get % :total 0) (rest (vals sv-stats)))))
+                             (-> sv-stats vals second (get :total 0)))
         s-metrics (-> sv-metrics
-                      (assoc :accuracy (calc-accuracy metrics [:discordant]))
-                      (assoc :accuracy-phasing (calc-accuracy metrics [:discordant :phasing-error])))
+                      (assoc :accuracy (calc-accuracy sv-metrics [:discordant]))
+                      (assoc :accuracy-phasing (calc-accuracy sv-metrics
+                                                              [:discordant :phasing-error])))
         need-percents {:accuracy 6
                        :accuracy-phasing 6
                        [:total-bases :percent] 2}]
