@@ -22,7 +22,7 @@
   (let [out-file (str (itx/file-root sv-file) "-regions.bed")]
     (with-open [wtr (io/writer out-file)]
       (doseq [vc (structural/parse-vcf-sv sv-file ref-file)]
-        (when (contains? #{:DEL} (:sv-type vc))
+        (when (contains? #{:DEL :INS} (:sv-type vc))
           (.write wtr (format "%s\t%s\t%s\n" (:chr vc) (dec (:start-ci vc)) (:end-ci vc))))))
     out-file))
 

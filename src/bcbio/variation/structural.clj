@@ -285,9 +285,10 @@
 
 (defn find-non-svs
   "Retrieve list of non-structural variants in the provided input file."
-  [kwd vcf-source params]
+  [kwd vcf-source params ignore-regions]
   (->> (parse-vcf vcf-source)
        (filter #(nil? (get-sv-type % params)))
+       (remove #(contains? ignore-regions [(:chr %) (:start %)]))
        (map :vc)
        (interleave (repeat kwd))
        (partition 2)))
@@ -298,9 +299,23 @@
   (let [out-file (itx/add-file-part in-file "nosv")]
     (with-open [vcf-iter (get-vcf-iterator in-file ref)]
     (write-vcf-w-template in-file {:out out-file}
-                          (find-non-svs :out vcf-iter params)
+                          (find-non-svs :out vcf-iter params #{})
                           ref))
     out-file))
+
+(defn- sv-deletion-coords
+  "Produce set of coordinates resulting from large SV deletions.
+   Useful for avoiding double comparisons where we match SVs and
+   then match smaller variations: we want to avoid those in a SV"
+  [in-file ref params]
+  (letfn [(deletion-positions [vc]
+            (let [[[s _] [_ e]] (get-ci-start-end (assoc vc :sv-type :DEL) {})]
+              (map #(list (:chr vc) %) (range s e))))]
+    (with-open [vcf-iter (get-vcf-iterator in-file ref)]
+      (->> (parse-vcf vcf-iter)
+           (filter #(= :DEL (get-sv-type % params)))
+           (mapcat deletion-positions)
+           set))))
 
 (defn compare-sv
   "Compare structural variants, producing concordant and discordant outputs"
@@ -324,8 +339,9 @@
                               (concat
                                (find-concordant-svs (:file c1) (:file c2) disc-kwds
                                                     ref interval-file params)
-                               (find-non-svs :nosv1 vcf1-iter params)
-                               (find-non-svs :nosv2 vcf2-iter params))
+                               (find-non-svs :nosv1 vcf1-iter params #{})
+                               (find-non-svs :nosv2 vcf2-iter params
+                                             (sv-deletion-coords (:file c1) ref params)))
                               ref :header-update-fn (merge-headers (:file c2))))
       ;; Remove SV VCF indexes since they use alternative Codecs
       (doseq [fname (vals out-files)]

@@ -7,12 +7,12 @@ dir:
 experiments:
   - sample: NA19239
     ref: test/data/GRCh37.fa
-    intervals: test/data/svs/reference-regions.bed
+    intervals: test/data/svs/reference-regions-wsvs.bed
     summary-level: quick
     approach: grade
     calls:
       - name: reference
-        file: test/data/svs/reference-calls.vcf
+        file: test/data/svs/reference-calls-wsvs.vcf
         remove-refcalls: true
       - name: contestant
         prep: true

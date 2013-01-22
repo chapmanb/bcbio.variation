@@ -281,6 +281,8 @@
 ##source=SelectVariants
 ##variants_justified=left
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	NA19239
+22	9456	.	G	A	.	PASS	.	GT	1|1
 22	9525	.	A	T	.	PASS	.	GT	0|1
 22	9535	.	T	A	.	PASS	.	GT	0|1
 22	9545	.	G	T	.	PASS	.	GT	0|1
+22	10054	.	C	G	.	PASS	.	GT	1|1

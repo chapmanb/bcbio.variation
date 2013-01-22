@@ -87,10 +87,12 @@
 
 (facts "Compare structural variants considering overlapping smaller variants"
   (let [cfile (str (fs/file data-dir "svs" "sv-grading.yaml"))]
-    (svmerge/into-calls presv-orig presv-regions
-                        sv-calls ref) => {:calls sv-out-calls
-                                          :regions sv-out-regions}
-    (variant-comparison-from-config cfile) =future=> nil))
+    (svmerge/into-calls presv-orig presv-regions sv-calls ref) =>
+      {:calls sv-out-calls :regions sv-out-regions}
+    (let [sum (-> (variant-comparison-from-config cfile) first :summary)]
+      (get-in sum [:sv :sv-reference-discordant :total]) => 1
+      (get-in sum [:concordant :total]) => 2
+      (get-in sum [:discordant2 :total]) => 0)))
 
 (facts "Combine indels from different calling methodologies that overlap."
   (-> (compare-sv {:name "svindfb" :file indel-vcf1} {:name "svindgatk" :file indel-vcf2}
