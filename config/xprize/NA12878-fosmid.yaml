@@ -1,0 +1,148 @@
+---
+dir:
+  base: /usr/local/projects/xprize/quaternary/NA12878_fosmid
+  out: work
+  prep: work/prep
+experiments:
+  - sample: NA12878
+    ref: /usr/local/db/homosapiens/b37/human_g1k_v37.fasta
+    intervals: /usr/local/projects/xprize/secondary/NA12878/illumina_solid/boundaries/NA12878-intersect-final-callable.bed
+    calls:
+      - name: allfos
+        file:  
+         - /usr/local/projects/xprize/secondary/NA12878/illumina/fosmid/other/reseq_analysis/snp/NA12878-7k-illumina-fosmid.snp.final.vcf
+         -  /usr/local/projects/xprize/secondary/NA12878/illumina/fosmid/other/reseq_analysis/indel/NA12878-7k-illumina-fosmid.indel.final.vcf
+        align: /usr/local/projects/xprize/secondary/NA12878/illumina/fosmid/NA12878-7k-illumina-fosmid.bam
+        format-filters: [DP < 4]
+        preclean: true
+        prep: true
+        make-haploid: true
+        recall: true
+        fp-freq: 0.25
+        annotate: true
+        remove-refcalls: true
+      - name: ifos
+        metadata:
+          caller: gatk
+          technology: illumina
+        file:  
+         - /usr/local/projects/xprize/secondary/NA12878/illumina/fosmid/other/reseq_analysis/snp/NA12878-7k-illumina-fosmid.snp.final.vcf
+         -  /usr/local/projects/xprize/secondary/NA12878/illumina/fosmid/other/reseq_analysis/indel/NA12878-7k-illumina-fosmid.indel.final.vcf
+        align: /usr/local/projects/xprize/secondary/NA12878/illumina/fosmid/NA12878-7k-illumina-fosmid.bam
+        preclean: true
+        prep: true
+        make-haploid: true
+        remove-refcalls: true
+      - name: ifosfb
+        metadata:
+          caller: freebayes
+          technology: illumina
+        align: /usr/local/projects/xprize/secondary/NA12878/illumina/fosmid/NA12878-7k-illumina-fosmid.bam
+        file: /usr/local/projects/xprize/secondary/NA12878/illumina/fosmid/other/freebayes/NA12878-illumina-fosmid-freebayes-latest.vcf
+        prep: true
+        remove-refcalls: true
+        make-haploid: true
+      - name: ifospu
+        metadata:
+          caller: mpileup
+          technology: illumina
+        file: /usr/local/projects/xprize/secondary/NA12878/illumina/fosmid/other/reseq_analysis/snp/NA12878-7k-illumina-fosmid.pileup.vcf
+        align: /usr/local/projects/xprize/secondary/NA12878/illumina/fosmid/NA12878-7k-illumina-fosmid.bam
+        prep: true
+        make-haploid: true
+        remove-refcalls: true
+      - name: ifoscx
+        metadata:
+          caller: cortex
+          technology: illumina
+        align: /usr/local/projects/xprize/secondary/NA12878/illumina/fosmid/NA12878-7k-illumina-fosmid.bam
+        file: /usr/local/projects/xprize/secondary/NA12878/illumina/fosmid/other/cortex/NA12878-illumina-fosmid-cortex-latest.vcf
+        prep: true
+        remove-refcalls: true
+        make-haploid: true
+      - name: ifosgh
+        metadata:
+          caller: gatk-haplotype
+          technology: illumina
+        align: /usr/local/projects/xprize/secondary/NA12878/illumina/fosmid/NA12878-7k-illumina-fosmid.bam
+        file: /usr/local/projects/xprize/secondary/NA12878/illumina/fosmid/other/gatk-haplotype/NA12878-illumina-fosmid-gatk-haplotype-latest.vcf
+        prep: true
+        remove-refcalls: true
+        make-haploid: true
+      - name: sfos
+        metadata:
+          caller: gatk
+          technology: solid
+        align: /usr/local/projects/xprize/secondary/NA12878/solid/fosmid/NA12878-7k-solid-rgfix.bam
+        file:
+          - /usr/local/projects/xprize/secondary/NA12878/solid/fosmid/other/run2/NA12878-7k-solid-rgfix.snp.final.vcf
+          - /usr/local/projects/xprize/secondary/NA12878/solid/fosmid/other/run2/NA12878-7k-solid-rgfix.indel.final.vcf
+        preclean: true
+        prep: true
+        make-haploid: true
+        remove-refcalls: true
+      - name: sfosfb
+        metadata:
+          caller: freebayes
+          technology: solid
+        align: /usr/local/projects/xprize/secondary/NA12878/solid/fosmid/NA12878-7k-solid-rgfix.bam
+        file: /usr/local/projects/xprize/secondary/NA12878/solid/fosmid/other/freebayes/NA12878-solid-fosmid-freebayes.vcf
+        preclean: true
+        prep: true
+        make-haploid: true
+        remove-refcalls: true
+      - name: sfospu
+        metadata:
+          caller: mpileup
+          technology: solid
+        align: /usr/local/projects/xprize/secondary/NA12878/solid/fosmid/NA12878-7k-solid-rgfix.bam
+        file: /usr/local/projects/xprize/secondary/NA12878/solid/fosmid/other/run2/NA12878-7k-solid-rgfix.pileup.vcf
+        preclean: true
+        prep: true
+        make-haploid: true
+        remove-refcalls: true
+      # - name: tfos
+      #   metadata:
+      #     caller: iontorrent
+      #     technology: iontorrent
+      #   align: /usr/local/projects/xprize/secondary/NA12878/ion_torrent/fosmid/NA12878_E2_7K-reorder.bam
+      #   file:
+      #     - /usr/local/projects/xprize/secondary/NA12878/ion_torrent/fosmid/snp/TSVC_SNP_variants.vcf
+      #     - /usr/local/projects/xprize/secondary/NA12878/ion_torrent/fosmid/indel/TSVC_INDEL_variants.vcf
+      #   preclean: true
+      #   prep: true
+      #   remove-refcalls: true
+      #   annotate: true
+      #   make-haploid: true
+      # - name: ifoscl
+      #   metadata:
+      #     caller: celera
+      #     technology: illumina
+      #   align: /usr/local/projects/xprize/secondary/NA12878/illumina/fosmid/NA12878-7k-illumina-fosmid.bam
+      #   file: /usr/local/projects/xprize/secondary/NA12878/illumina/fosmid/denovo/clonesv2/NA12878-illumina-fosmid-denovo-pileup-sorted.vcf
+      #   preclean: true
+      #   prep: true
+      #   prep-sv-genotype: true
+      #   normalize: true
+      #   make-haploid: true
+      #   remove-refcalls: true
+      #   annotate: true
+    finalize:
+      - method: multiple
+        target: allfos
+      - method: recal-filter
+        target: [allfos, ifosfb]
+        params:
+          support: allfos
+          classifier-type: svm
+          #normalize: minmax
+          #classifiers: [DP, QUAL, ReadPosEndDist, gms_illumina, AD, PL, FS, Entropy, HRun, MFE, NBQ, MQ]
+          #classifiers: [QUAL, ReadPosEndDist, gms_illumina, AD, PL, FS, QD, MQ, Entropy, DP]
+          classifiers: 
+            balance: [AD, FS, Entropy]
+            calling: [ReadPosEndDist, PL, Entropy, NBQ]
+          xspecific: true
+          trusted:
+            total: 0.65
+            technology: 0.65
+            caller: 0.65

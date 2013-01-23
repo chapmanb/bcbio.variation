@@ -24,6 +24,7 @@
         args (concat ["-R" ref
                       "-I" align-bam
                       "--variant" in-vcf
+                      "--allow_potentially_misencoded_quality_scores"
                       "-o" :out-vcf]
                      (reduce #(concat %1 ["-A" %2]) [] std-annotations)
                      (broad/gatk-cl-intersect-intervals intervals ref :vcf in-vcf))]

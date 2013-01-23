@@ -14,11 +14,12 @@ experiments:
          - /usr/local/projects/xprize/secondary/NA19239/illumina/fosmid/snp/gatk/NA19239-illumina-fosmid.snp.vcf
          - /usr/local/projects/xprize/secondary/NA19239/illumina/fosmid/indel/gatk/NA19239-illumina-fosmid.indel.vcf
         align: /usr/local/projects/xprize/secondary/NA19239/illumina/fosmid/NA19239-illumina-fosmid.bam
-        format-filters: [DP < 4, AD > 0.3]
+        format-filters: [DP < 4]
         preclean: true
         prep: true
         make-haploid: true
         recall: true
+        fp-freq: 0.25
         annotate: true
         remove-refcalls: true
       - name: ifos
@@ -129,7 +130,10 @@ experiments:
         params:
           support: allfos
           #annotations: [QD, HaplotypeScore, MQRankSum, ReadPosRankSum, FS, MQ, DP]
-          classifiers: [QUAL, DP, ReadPosEndDist, gms_illumina, AD, PL]
+          #classifiers: [QUAL, DP, ReadPosEndDist, gms_illumina, AD, PL]
+          classifiers:
+            balance: [AD, FS, Entropy]
+            calling: [ReadPosEndDist, PL, Entropy, NBQ]
           xspecific: true
           trusted:
             total: 0.65
