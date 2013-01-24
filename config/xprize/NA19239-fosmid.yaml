@@ -89,6 +89,7 @@ experiments:
         prep: true
         remove-refcalls: true
         annotate: true
+        make-haploid: true
       - name: tfos
         metadata:
           caller: iontorrent

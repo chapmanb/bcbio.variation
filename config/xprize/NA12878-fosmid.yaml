@@ -60,15 +60,15 @@ experiments:
         prep: true
         remove-refcalls: true
         make-haploid: true
-      - name: ifosgh
-        metadata:
-          caller: gatk-haplotype
-          technology: illumina
-        align: /usr/local/projects/xprize/secondary/NA12878/illumina/fosmid/NA12878-7k-illumina-fosmid.bam
-        file: /usr/local/projects/xprize/secondary/NA12878/illumina/fosmid/other/gatk-haplotype/NA12878-illumina-fosmid-gatk-haplotype-latest.vcf
-        prep: true
-        remove-refcalls: true
-        make-haploid: true
+      # - name: ifosgh
+      #   metadata:
+      #     caller: gatk-haplotype
+      #     technology: illumina
+      #   align: /usr/local/projects/xprize/secondary/NA12878/illumina/fosmid/NA12878-7k-illumina-fosmid.bam
+      #   file: /usr/local/projects/xprize/secondary/NA12878/illumina/fosmid/other/gatk-haplotype/NA12878-illumina-fosmid-gatk-haplotype-latest.vcf
+      #   prep: true
+      #   remove-refcalls: true
+      #   make-haploid: true
       - name: sfos
         metadata:
           caller: gatk
