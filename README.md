@@ -212,6 +212,8 @@ tag. Available methods are:
               trusted:
                 total: 0.75
                 technology: 0.65
+              untrusted:
+                total: 0.25
     
 The options for filtering are:
 
@@ -224,6 +226,9 @@ The options for filtering are:
   - `trusted` -- Metadata annotation values that specify trusted variants not
    subjected to filtering. The example retains variants present in more than 75%
    of calls or 65% of different technologies.
+  - `untrusted` -- Specify threshold for variants that should be automatically
+   filtered. The example excludes variants with support from less than 25% of the
+   callers.
   - `xspecific` -- Identify and filter calls specific to a technology or calling
     method, when combining multiple callers and technologies.
 
