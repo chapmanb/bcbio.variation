@@ -252,7 +252,7 @@
   ^{:doc "Retrieve specific variants to exclude, handling variants falling below untrusted thresh.
           The `untrusted` keyword in the configuration parameters specifies the threshold to use."}
   [orig-file train-files call exp params ext out-dir]
-  (with-open [xspecific-get (gvc/get-vcf-retriever ref (:xspecific train-files))]
+  (with-open [xspecific-get (gvc/get-vcf-retriever (:ref exp) (:xspecific train-files))]
     (let [calls (remove #(= (:name %) (:name call)) (:calls exp))]
       (letfn [(xspecific? [vc]
                 (has-variants? xspecific-get

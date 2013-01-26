@@ -90,20 +90,20 @@ experiments:
         remove-refcalls: true
         annotate: true
         make-haploid: true
-      - name: tfos
-        metadata:
-          caller: iontorrent
-          technology: iontorrent
-          stringency: strict
-        align: /usr/local/projects/xprize/secondary/NA19239/ion_torrent/fosmid/0234001CA_XPR1194_NA19239_B9_merged_import.bam
-        file:
-          - /usr/local/projects/xprize/secondary/NA19239/ion_torrent/fosmid/snp/TSVC_SNP_variants.vcf
-          - /usr/local/projects/xprize/secondary/NA19239/ion_torrent/fosmid/indel/TSVC_INDEL_variants.vcf
-        preclean: true
-        prep: true
-        remove-refcalls: true
-        annotate: true
-        make-haploid: true
+      # - name: tfos
+      #   metadata:
+      #     caller: iontorrent
+      #     technology: iontorrent
+      #     stringency: strict
+      #   align: /usr/local/projects/xprize/secondary/NA19239/ion_torrent/fosmid/0234001CA_XPR1194_NA19239_B9_merged_import.bam
+      #   file:
+      #     - /usr/local/projects/xprize/secondary/NA19239/ion_torrent/fosmid/snp/TSVC_SNP_variants.vcf
+      #     - /usr/local/projects/xprize/secondary/NA19239/ion_torrent/fosmid/indel/TSVC_INDEL_variants.vcf
+      #   preclean: true
+      #   prep: true
+      #   remove-refcalls: true
+      #   annotate: true
+      #   make-haploid: true
       # - name: sfospu
       #   metadata:
       #     caller: mpileup
@@ -138,6 +138,5 @@ experiments:
           xspecific: true
           trusted:
             total: 0.65
-            technology: 0.65
-            caller: 0.65
-            #stringency: 0.99
+          untrusted:
+            total: 0.20
