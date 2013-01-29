@@ -97,7 +97,8 @@
   [raw to-collect]
   (reduce (fn [coll [data cur-id]]
             (if-let [v (get data cur-id)]
-              (assoc coll cur-id (set/union v (get coll cur-id)))
+              (let [vs (if (set? v) v #{v})]
+                (assoc coll cur-id (set/union vs (get coll cur-id))))
               coll))
           (into {} (for [y to-collect] [y #{}]))
           (for [x raw, y to-collect]

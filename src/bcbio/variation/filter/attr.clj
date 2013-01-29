@@ -123,7 +123,8 @@
 (defmethod get-vc-attr "Context"
   ^{:doc "Retrieve cytosine context, relative to standard CG sites"}
   [vc attr _]
-  (first (get-in vc [:attributes attr])))
+  (let [ctxt (get-in vc [:attributes attr])]
+    (if (string? ctxt) ctxt (first ctxt))))
 
 (defmethod get-vc-attr "CM"
   ^{:doc "Retrieve number of methylated cytosines, requires a single sample"}
