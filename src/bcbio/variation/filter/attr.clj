@@ -120,6 +120,33 @@
         ready-dp (if (nil? gt-dp) info-dp gt-dp)]
     (if (nil? gt-dp) info-dp gt-dp)))
 
+(defmethod get-vc-attr "Context"
+  ^{:doc "Retrieve cytosine context, relative to standard CG sites"}
+  [vc attr _]
+  (first (get-in vc [:attributes attr])))
+
+(defmethod get-vc-attr "CM"
+  ^{:doc "Retrieve number of methylated cytosines, requires a single sample"}
+  [vc _ _]
+  (let [g-attrs (when (= 1 (:num-samples vc))
+                  (select-keys (-> vc :genotypes first :attributes)
+                               ["CM"]))]
+    (when (seq g-attrs)
+      (get g-attrs "CM"))))
+
+(defmethod get-vc-attr "CU"
+  ^{:doc "Retrieve percentage of methylated cytosines, requires a single sample"}
+  [vc _ _]
+  (let [g-attrs (when (= 1 (:num-samples vc))
+                  (reduce (fn [coll [k v]]
+                            (assoc coll k (to-float v)))
+                          {}
+                          (select-keys (-> vc :genotypes first :attributes)
+                                       ["CM" "CU"])))]
+    (when (= 2 (count g-attrs))
+      (let [total (apply + (vals g-attrs))]
+        (if (zero? total) 0.0 (/ (get g-attrs "CM") total))))))
+
 (defmethod get-vc-attr :gemini
   ^{:doc "Retrieve attribute information from associated Gemini index."}
   [vc attr retrievers]

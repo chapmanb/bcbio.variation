@@ -1,0 +1,65 @@
+##fileformat=VCFv4.1
+##fileDate=20121115
+##tcgaversion=1.1
+##vcfProcessLog=<InputVCF=<>, InputVCFSource=<>, InputVCFVer=<1.1>, InputVCFParam=<> InputVCFgeneAnno=<>>
+##reference=<ID=null,Source=file:/n/hsphS10/hsphfs1/chb/biodata/genomes/Hsapiens/hg19/bismark/UCSC/genome.fa>
+##contig=<ID=chrM,length=16571,assembly=null,md5=d2ed829b8a1628d16cbeee88e88e39eb,species=null>
+##contig=<ID=chr1,length=249250621,assembly=null,md5=1b22b98cdeb4a9304cb5d48026a85128,species=null>
+##contig=<ID=chr2,length=243199373,assembly=null,md5=a0d9851da00400dec1098a9255ac712e,species=null>
+##contig=<ID=chr3,length=198022430,assembly=null,md5=641e4338fa8d52a5b781bd2a2c08d3c3,species=null>
+##contig=<ID=chr4,length=191154276,assembly=null,md5=23dccd106897542ad87d2765d28a19a1,species=null>
+##contig=<ID=chr5,length=180915260,assembly=null,md5=0740173db9ffd264d728f32784845cd7,species=null>
+##contig=<ID=chr6,length=171115067,assembly=null,md5=1d3a93a248d92a729ee764823acbbc6b,species=null>
+##contig=<ID=chr7,length=159138663,assembly=null,md5=618366e953d6aaad97dbe4777c29375e,species=null>
+##contig=<ID=chr8,length=146364022,assembly=null,md5=96f514a9929e410c6651697bded59aec,species=null>
+##contig=<ID=chr9,length=141213431,assembly=null,md5=3e273117f15e0a400f01055d9f393768,species=null>
+##contig=<ID=chr10,length=135534747,assembly=null,md5=988c28e000e84c26d552359af1ea2e1d,species=null>
+##contig=<ID=chr11,length=135006516,assembly=null,md5=98c59049a2df285c76ffb1c6db8f8b96,species=null>
+##contig=<ID=chr12,length=133851895,assembly=null,md5=51851ac0e1a115847ad36449b0015864,species=null>
+##contig=<ID=chr13,length=115169878,assembly=null,md5=283f8d7892baa81b510a015719ca7b0b,species=null>
+##contig=<ID=chr14,length=107349540,assembly=null,md5=98f3cae32b2a2e9524bc19813927542e,species=null>
+##contig=<ID=chr15,length=102531392,assembly=null,md5=e5645a794a8238215b2cd77acb95a078,species=null>
+##contig=<ID=chr16,length=90354753,assembly=null,md5=fc9b1a7b42b97a864f56b348b06095e6,species=null>
+##contig=<ID=chr17,length=81195210,assembly=null,md5=351f64d4f4f9ddd45b35336ad97aa6de,species=null>
+##contig=<ID=chr18,length=78077248,assembly=null,md5=b15d4b2d29dde9d3e4f93d1d0f2cbc9c,species=null>
+##contig=<ID=chr19,length=59128983,assembly=null,md5=1aacd71f30db8e561810913e0b72636d,species=null>
+##contig=<ID=chr20,length=63025520,assembly=null,md5=0dec9660ec1efaaf33281c0d5ea2560f,species=null>
+##contig=<ID=chr21,length=48129895,assembly=null,md5=2979a6085bfe28e3ad6f552f361ed74d,species=null>
+##contig=<ID=chr22,length=51304566,assembly=null,md5=a718acaa6135fdca8357d5bfe94211dd,species=null>
+##contig=<ID=chrX,length=155270560,assembly=null,md5=7e0e2e580297b7764e31dbc80c2540dd,species=null>
+##contig=<ID=chrY,length=59373566,assembly=null,md5=1e86411d73e6f00a10590f976be01623,species=null>
+##assembly=none
+##center=USC Epigenome Center
+##phasing=none
+##geneAnno=none
+##BisSNP-0.73 Program Args= -R /n/hsphS10/hsphfs1/chb/biodata/genomes/Hsapiens/hg19/bismark/UCSC/genome.fa -T BisulfiteGenotyper -I ./A554_TTAGGC_L001_R1.trimmed.fq_bismark.RG.RO.recal1.bam -vfn1 ./A554_TTAGGC_L001_R1.trimmed.fq_bismark.RG.RO.recal1.bam.rawcpg.vcf -vfn2 ./A554_TTAGGC_L001_R1.trimmed.fq_bismark.RG.RO.recal1.bam.rawsnp.vcf -stand_call_conf 20 -stand_emit_conf 0 -mmq 30 -mbq 0
+##FILTER=<ID=LowQual,Description="Low quality. When QUAL is less than Confidance score criteria user provided">
+##FORMAT=<ID=BQ,Number=.,Type=Float,Description="Average base quality for reads supporting alleles. For each allele, in the same order as listed">
+##FORMAT=<ID=BRC6,Number=.,Type=Integer,Description="Bisulfite read counts(not filtered by minConv): 1) number of C in cytosine strand, 2) number of T in cytosine strand, 3) number of A/G/N in cytosine strand, 4) number of G in guanine strand, 5) number of A in guanine strand, 6) number of C/T/N in guanine strand.">
+##FORMAT=<ID=CM,Number=1,Type=Integer,Description="Number of Unconverted Cytosines in this position(filtered by minConv)">
+##FORMAT=<ID=CP,Number=1,Type=String,Description="Best Cytosine Context">
+##FORMAT=<ID=CU,Number=1,Type=Integer,Description="Number of Converted Cytosines in this position(filtered by minConv)">
+##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Approximate read depth, not filtered by mapping quality and base quality score criteria yet">
+##FORMAT=<ID=DP4,Number=4,Type=Integer,Description="Reads supporting ALT, only keep good base. Number of 1) forward ref alleles; 2) reverse ref; 3) forward non-ref; 4) reverse non-ref alleles">
+##FORMAT=<ID=GP,Number=G,Type=Integer,Description="Normalized, Phred-scaled posteriors for genotypes as defined in the VCF specification">
+##FORMAT=<ID=GQ,Number=1,Type=Float,Description="Genotype Quality">
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+##FORMAT=<ID=SS,Number=1,Type=Integer,Description="Somatic status of the variant. 1) wildtype; 2) germline, somatic; 3) LOH; 4) post-transcriptional modification; 5) unknown">
+##INFO=<ID=CS,Number=1,Type=Character,Description="Strand of cytosine relative to reference genome. Does not apply to non-cytosine positions">
+##INFO=<ID=Context,Number=.,Type=String,Description="Cytosine Context. e.g. 'CG' means homozygous CG sites, while heterozygous CG sites will be output as IUPAC code">
+##INFO=<ID=DP,Number=1,Type=Integer,Description="Total Depth, not filtered by mapping quality and base quality score criteria yet">
+##INFO=<ID=HQ,Number=1,Type=Float,Description="Consistency of the site with at most two segregating haplotypes">
+##INFO=<ID=MQ0,Number=1,Type=Integer,Description="Total Mapping Quality Zero Reads">
+##INFO=<ID=NS,Number=1,Type=Integer,Description="Number of Samples With Data">
+##INFO=<ID=QD,Number=1,Type=Float,Description="Variant Confidence/Quality by Depth">
+##INFO=<ID=SB,Number=1,Type=Float,Description="Strand Bias">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	./A554_TTAGGC_L001_R1.trimmed.fq_bismark.bam
+MT	6691	.	G	.	36.69	PASS	CS=-;Context=CG,C;DP=187;MQ0=0;NS=1	GT:BQ:BRC6:CM:CP:CU:DP:DP4:GP:GQ:SS	0/0:21.4,22.1:5,182,0,0,0,0:5:CG:182:187:0,5,0,182:0,37,72:36.69:5
+MT	10526	.	G	.	52.82	PASS	CS=-;Context=CG,C;DP=7;MQ0=0;NS=1	GT:BQ:BRC6:CM:CP:CU:DP:DP4:GP:GQ:SS	0/0:30.3,NaN:3,0,0,4,0,0:3:CG:0:7:4,3,0,0:0,53,280:52.82:5
+MT	10542	.	C	.	55.83	PASS	CS=+;Context=CG,C;DP=8;MQ0=0;NS=1	GT:BQ:BRC6:CM:CP:CU:DP:DP4:GP:GQ:SS	0/0:30.3,NaN:4,0,0,4,0,0:4:CG:0:8:4,4,0,0:0,56,315:55.83:5
+MT	10543	.	G	.	55.82	PASS	CS=-;Context=CG,C;DP=8;MQ0=0;NS=1	GT:BQ:BRC6:CM:CP:CU:DP:DP4:GP:GQ:SS	0/0:29.3,NaN:4,0,0,4,0,0:4:CG:0:8:4,4,0,0:0,56,307:55.82:5
+MT	10563	.	C	.	52.82	PASS	CS=+;Context=CG,C;DP=7;MQ0=0;NS=1	GT:BQ:BRC6:CM:CP:CU:DP:DP4:GP:GQ:SS	0/0:31.9,NaN:3,0,0,4,0,0:3:CG:0:7:3,4,0,0:0,53,291:52.82:5
+MT	10564	.	G	.	41.77	PASS	CS=-;Context=CG,C;DP=7;MQ0=0;NS=1	GT:BQ:BRC6:CM:CP:CU:DP:DP4:GP:GQ:SS	0/0:32.5,31.7:1,3,0,3,0,0:1:CG:3:7:3,1,0,3:0,42,174:41.77:5
+MT	10571	.	C	.	49.81	PASS	CS=+;Context=CG,C;DP=6;MQ0=0;NS=1	GT:BQ:BRC6:CM:CP:CU:DP:DP4:GP:GQ:SS	0/0:32.7,NaN:2,0,0,4,0,0:2:CG:0:6:2,4,0,0:0,50,259:49.81:5
+MT	10572	.	G	.	43.79	PASS	CS=-;Context=CG,C;DP=4;MQ0=0;NS=1	GT:BQ:BRC6:CM:CP:CU:DP:DP4:GP:GQ:SS	0/0:32.0,NaN:4,0,0,0,0,0:4:CG:0:4:0,4,0,0:0,44,182:43.79:5
+MT	10578	.	G	.	43.79	PASS	CS=-;Context=CG,C;DP=4;MQ0=0;NS=1	GT:BQ:BRC6:CM:CP:CU:DP:DP4:GP:GQ:SS	0/0:31.0,NaN:4,0,0,0,0,0:4:CG:0:4:0,4,0,0:0,44,178:43.79:5

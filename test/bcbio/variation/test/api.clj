@@ -19,13 +19,14 @@
                vcf1 (str (fs/file data-dir "gatk-calls.vcf"))
                out-index (str (itx/file-root vcf1) "-metrics.db")
                gemini-index (str (itx/file-root vcf1) "-gemini.db")
+               mvcf (str (fs/file data-dir "bissnp-methyl.vcf"))
+               mvcf-out (map #(str (itx/file-root mvcf) %) ["-metrics.db" "-gemini.db"])
                vep-out (itx/add-file-part vcf1 "vep")
                sub-params {:subsample {:method :k-means :count 5}}]
-           (doseq [x [out-index gemini-index vep-out]]
+           (doseq [x (concat mvcf-out [out-index gemini-index vep-out])]
              (itx/remove-path x))
            (binding [*skip-prep* true]
-             ?form)
-           )))
+             ?form))))
 
 (facts "Retrieve available metrics from a variant file"
   (set-config-from-file! web-yaml)
@@ -67,3 +68,8 @@
       (-> (gemini/get-raw-metrics vcf1 ref :noviz? true) first) => (contains raw-out)
       idx => gemini-index
       (-> (gemini/get-raw-metrics vcf1 ref) first keys) => (contains raw-ids :in-any-order))))
+
+(facts "Handle methylation metrics from BisSNP output."
+  (im/index-variant-file mvcf ref)
+  (-> (im/get-raw-metrics mvcf ref) first (select-keys ["CU" "CM" "Context" "CS"])) =>
+  (just {"CS" "-" "Context" "CG" "CM" 5.0 "CU" (roughly 0.026737)}))
