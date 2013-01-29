@@ -248,6 +248,24 @@
   [orig-file train-files call exp params ext out-dir]
   (get-train-variants orig-file (assoc train-files :round 1) call exp params ext out-dir))
 
+(defmethod get-train-variants [:recall :xspecific :final]
+  ^{:doc "Retrieve specific variants to exclude, handling variants falling below untrusted thresh.
+          The `untrusted` keyword in the configuration parameters specifies the threshold to use."}
+  [orig-file train-files call exp params ext out-dir]
+  (with-open [xspecific-get (gvc/get-vcf-retriever (:ref exp) (:xspecific train-files))]
+    (let [calls (remove #(= (:name %) (:name call)) (:calls exp))]
+      (letfn [(xspecific? [vc]
+                (has-variants? xspecific-get
+                               (:chr vc) (:start vc) (:end vc)
+                               (:ref-allele vc) (:alt-alleles vc)))
+              (untrusted? [vc]
+                (when-let [untrusted (:untrusted params)]
+                      (not (trusted/is-trusted-variant? vc untrusted calls))))
+              (is-untrusted? [vc]
+                (or (untrusted? vc) (xspecific? vc)))]
+        (gvc/select-variants orig-file is-untrusted? ext (:ref exp)
+                             :out-dir out-dir)))))
+
 (defmethod get-train-variants [:recall :tps :final]
   ^{:doc "Iteratively identify true positive variants: low support variants
           that pass the previous round of filtering."}
@@ -321,6 +339,8 @@
                                           "fps" out-dir)
             trusted-vcf (get-train-variants base-vcf train-files call exp
                                             config "trusted" out-dir)
+            xspecific-vcf (get-train-variants base-vcf train-files call exp config
+                                              "xspecific" out-dir)
             ref (:ref exp)
             pre-normalizer (get-vc-attrs-normalized (apply concat (vals (:classifiers config)))
                                                     base-vcf ref config)
@@ -331,7 +351,7 @@
         (println "Filter VCF with" (str cs))
         (with-open [vcf-iter (get-vcf-iterator base-vcf ref)
                     trusted-get (get-vcf-retriever ref trusted-vcf)
-                    xspecific-get (get-vcf-retriever ref (:xspecific train-files))]
+                    xspecific-get (get-vcf-retriever ref xspecific-vcf)]
           (write-vcf-w-template base-vcf {:out out-file}
                                 (map (partial filter-vc cs (pre-normalizer base-vcf) attr-get
                                               {:trusted trusted-get :xspecific xspecific-get}
