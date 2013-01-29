@@ -230,7 +230,7 @@
        (remove nochange-alt?)
        (map vcf-decoder)
        (map (partial normalize-sv-genotype config sample))
-       (remove no-call-genotype?)
+       (filter #(or (:keep-nocall config) (not (no-call-genotype? %))))
        (map (partial fix-vc sample config))
        (map :vc)))
 
@@ -350,7 +350,8 @@
                                   :or {config {}}}]
   (let [config (merge-with #(or %1 %2) config
                            {:prep-org :GRCh37 :prep-allele-count 2
-                            :prep-sort-pos false :prep-sv-genotype false})
+                            :prep-sort-pos false :prep-sv-genotype false
+                            :keep-nocall false})
         base-name (if (nil? out-fname) (itx/remove-zip-ext in-vcf-file) out-fname)
         out-file (itx/add-file-part base-name "prep" out-dir)]
     (when (itx/needs-run? out-file)

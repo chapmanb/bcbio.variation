@@ -68,7 +68,8 @@
   [in-file ref-info out-dir cache-dir]
   (let [current-ref (normalize/pick-best-ref in-file (cons (:genome ref-info) (:genome-alts ref-info)))]
     (-> in-file
-        (normalize/prep-vcf (:genome ref-info) nil :out-dir out-dir :orig-ref-file current-ref)
+        (normalize/prep-vcf (:genome ref-info) nil :out-dir out-dir :orig-ref-file current-ref
+                            :config {:keep-nocall true})
         (effects/snpeff-annotate (:effects ref-info) cache-dir :out-dir out-dir))))
 
 (def ^{:doc "Provide knob to avoid doing labor intensive prep for testing environments."
