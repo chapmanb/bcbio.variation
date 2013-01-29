@@ -45,9 +45,11 @@
                      :desc "Strand of cytosine relative to reference genome"}
                "Context" {:x-scale {:type :category}
                           :desc "Cytosine context: homozygous or heterozygous CG sites"}
-               "CM" {:range [0.0 250.0]
+               "CM" {:range [0.0 50.0]
+                     :y-scale {:type :log}
                      :desc "Number of unconverted, methylated, cytosines"}
                "CU" {:range [0.0 1.0]
+                     :y-scale {:type :log}
                      :desc "Percentage of methylated bases at a position."}))
 
 (def ^{:doc "Default metrics that are always available." :private true}
