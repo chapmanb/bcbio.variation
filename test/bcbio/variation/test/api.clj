@@ -72,4 +72,4 @@
 (facts "Handle methylation metrics from BisSNP output."
   (im/index-variant-file mvcf ref)
   (-> (im/get-raw-metrics mvcf ref) first (select-keys ["CU" "CM" "Context" "CS"])) =>
-  (just {"CS" "-" "Context" "CG" "CM" 5.0 "CU" (roughly 0.026737)}))
+  (just {"CS" #{"-"} "Context" #{"CG"} "CM" 5.0 "CU" (roughly 0.026737)}))

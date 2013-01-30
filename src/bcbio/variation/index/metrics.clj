@@ -175,6 +175,13 @@
         (all-metrics-as-subsample index-file)))
     index-file))
 
+(defn- maybe-fix-category
+  "Provide category metrics as expected sets to match gemini usage."
+  [val attr]
+  (if (= :category (get-in expose-metrics [attr :x-scale :type]))
+    #{val}
+    val))
+
 (defn get-raw-metrics
   "Retrieve table of raw metrics using indexed variant file"
   [in-file ref-file & {:keys [metrics use-subsample?]}]
@@ -189,7 +196,9 @@
               "ORDER BY contig, start"
         (doall (map (fn [orig]
                       (reduce (fn [coll x]
-                                (assoc coll x (get orig (keyword (string/lower-case x)))))
+                                (assoc coll x (-> orig
+                                                  (get (keyword (string/lower-case x)))
+                                                  (maybe-fix-category x))))
                               {:id [(:contig orig) (:start orig) (:refallele orig)]}
                               plot-metrics))
                     rows))))))
