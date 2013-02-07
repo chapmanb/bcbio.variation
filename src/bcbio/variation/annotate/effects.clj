@@ -50,16 +50,12 @@
         out-file (itx/add-file-part in-file "effects" out-dir)]
     (when (itx/needs-run? out-file)
       ;; snpEff prints to standard out so we need to safely redirect that to a file.
-      (let [orig-out System/out]
-        (try
-          (itx/with-tx-file [tx-out out-file]
-            (with-open [wtr (java.io.PrintStream. tx-out)]
-              (System/setOut wtr)
-              (doto (SnpEffCmdEff.)
-                (.parseArgs (into-array ["-noStats" "-c" config-file genome in-file]))
-                .run)))
-          (finally
-           (System/setOut orig-out)))))
+      (itx/with-tx-file [tx-out out-file]
+        (with-open [wtr (io/writer tx-out)]
+          (binding [*out* wtr]
+            (doto (SnpEffCmdEff.)
+              (.parseArgs (into-array ["-noStats" "-c" config-file genome in-file]))
+              .run)))))
     out-file))
 
 ;; ## VEP
