@@ -1,7 +1,8 @@
 (ns bcbio.variation.annotate.effects
   "Predict functional consequences of variant changes leveraging snpEff."
   (:import [ca.mcgill.mcb.pcingola.snpEffect.commandLine
-            SnpEffCmdEff SnpEffCmdDownload])
+            SnpEffCmdEff SnpEffCmdDownload]
+           [bcbio.variation.util ThreadLocalPrintStream])
   (:require [clojure.java.io :as io]
             [clojure.java.shell :as shell]
             [fs.core :as fs]
@@ -51,11 +52,15 @@
     (when (itx/needs-run? out-file)
       ;; snpEff prints to standard out so we need to safely redirect that to a file.
       (itx/with-tx-file [tx-out out-file]
-        (with-open [wtr (io/writer tx-out)]
-          (binding [*out* wtr]
-            (doto (SnpEffCmdEff.)
-              (.parseArgs (into-array ["-noStats" "-c" config-file genome in-file]))
-              .run)))))
+        (let [orig-out System/out]
+          (try
+            (with-open [wtr (java.io.PrintStream. tx-out)]
+              (System/setOut (ThreadLocalPrintStream. wtr))
+              (doto (SnpEffCmdEff.)
+                (.parseArgs (into-array ["-noStats" "-c" config-file genome in-file]))
+                .run))
+            (finally
+              (System/setOut orig-out))))))
     out-file))
 
 ;; ## VEP
