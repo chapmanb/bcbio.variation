@@ -20,27 +20,20 @@
         [bcbio.variation.filter :only [variant-filter variant-format-filter
                                        pipeline-recalibration]]
         [bcbio.variation.filter.intervals :only [combine-multiple-intervals]]
-        [bcbio.variation.metrics :only [vcf-stats write-summary-table]]
         [bcbio.variation.multiple :only [prep-cmp-name-lookup pipeline-compare-multiple]]
         [bcbio.variation.multisample :only [compare-two-vcf-flexible
                                             multiple-samples?]]
         [bcbio.variation.phasing :only [is-haploid? compare-two-vcf-phased]]
-        [bcbio.variation.report :only [concordance-report-metrics
-                                       write-concordance-metrics
-                                       write-scoring-table
-                                       top-level-metrics
-                                       write-classification-metrics
-                                       write-sv-metrics]]
         [bcbio.variation.recall :only [create-merged]]
         [bcbio.variation.structural :only [compare-sv-pipeline]]
         [bcbio.variation.validate :only [pipeline-validate]]
         [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template
                                                get-vcf-iterator]])
   (:require [clojure.string :as string]
-            [clojure.data.csv :as csv]
             [fs.core :as fs]
             [bcbio.run.itx :as itx]
-            [bcbio.run.broad :as broad]))
+            [bcbio.run.broad :as broad]
+            [bcbio.variation.report :as report]))
 
 ;; ## Variance assessment
 
@@ -98,20 +91,10 @@
                               ref)))
     out-map))
 
-;; ## Top-level
+;; ## Pipeline
 ;; Process a directory of variant calls from multiple
 ;; sources, generating a summary of concordance plus detailed metrics
 ;; differences for tweaking filters.
-
-(defn- get-summary-writer [config config-file ext]
-  (if-not (nil? (get-in config [:dir :out]))
-    (do
-      (if-not (fs/exists? (get-in config [:dir :out]))
-        (fs/mkdirs (get-in config :dir :out)))
-      (writer (str (fs/file (get-in config [:dir :out])
-                            (format "%s-%s"
-                                    (itx/file-root (fs/base-name config-file)) ext)))))
-    (writer System/out)))
 
 (defn- prepare-input-bams
   "Retrieve BAM files associated with alignments, normalizing if needed."
@@ -178,8 +161,8 @@
                                      ["concordant" (discordant-name c1) (discordant-name c2)])
                                 c-files)
        :c1 c1 :c2 c2 :exp exp :dir (config :dir)
-       :metrics (concordance-report-metrics (:sample exp) eval)
-       :callable-metrics (concordance-report-metrics (:sample exp) c-eval)})))
+       :metrics (report/concordance-report-metrics (:sample exp) eval)
+       :callable-metrics (report/concordance-report-metrics (:sample exp) c-eval)})))
 
 (defn- compare-two-vcf
   "Compare two VCF files, handling standard and haploid specific comparisons."
@@ -220,7 +203,7 @@
   (letfn [(add-summary [x]
             (-> x
                 (assoc :exp exp)
-                (#(assoc % :summary (top-level-metrics %)))))
+                (#(assoc % :summary (report/top-level-metrics %)))))
           (update-w-finalizer [cur-cmps finalizer]
             "Update the current comparisons with a defined finalizer."
             (do-transition config :finalize
@@ -238,23 +221,15 @@
 
 ;; ## Top-level
 
-(defn- get-summary-csv-vals
-  "Retrieve values for CSV output checking for lots of special cases.
-    - Display all values for :total lines
-    - For :snp and :indel lines, only show values with dictionaries that
-      have this detailed info.
-    - Always display initial sample and call values (i <= 3)"
-  [header cmp cur-type]
-  (for [v (map-indexed (fn [i k]
-                         (let [v (get cmp k)]
-                           (cond
-                            (= :type k) (name cur-type)
-                            (and (not= :total cur-type)
-                                 (> i 3)
-                                 (not (map? v))) nil
-                            :else v)))
-                       header)]
-    (if (map? v) (get v cur-type) v)))
+(defn- get-summary-writer [config config-file ext]
+  (if-not (nil? (get-in config [:dir :out]))
+    (do
+      (if-not (fs/exists? (get-in config [:dir :out]))
+        (fs/mkdirs (get-in config :dir :out)))
+      (writer (str (fs/file (get-in config [:dir :out])
+                            (format "%s-%s"
+                                    (itx/file-root (fs/base-name config-file)) ext)))))
+    (writer System/out)))
 
 (defn variant-comparison-from-config
   "Perform comparison between variant calls using inputs from YAML config."
@@ -266,34 +241,12 @@
                                     (compare-two-vcf c1 c2 exp config))]
                          (finalize-comparisons cmps exp config))))]
     (do-transition config :summary "Summarize comparisons")
-    (with-open [w (get-summary-writer config config-file "summary.txt")
-                w2 (get-summary-writer config config-file "files.csv")]
-      (csv/write-csv w2 [["call1" "call2" "type" "fname"]])
-      (doseq [x comparisons]
-        (.write w (format "* %s : %s vs %s\n" (-> x :exp :sample)
-                          (-> x :c1 :name) (-> x :c2 :name)))
-        (write-scoring-table (:metrics x) (get-in x [:summary :sv]) w)
-        (write-concordance-metrics (:summary x) w)
-        (when-let [sv-info (get-in x [:summary :sv])]
-          (write-sv-metrics sv-info w))
-        (when (get-in x [:c1 :mod])
-          (write-classification-metrics x w))
-        (doseq [[k f] (:c-files x)]
-          (.write w (format "** %s\n" (name k)))
-          (csv/write-csv w2 [[(get-in x [:c1 :name]) (get-in x [:c2 :name]) (name k)
-                              (string/replace-first f (str (get-in config [:dir :out]) "/") "")]])
-          (write-summary-table (vcf-stats f (get-in x [:exp :ref])) :wrtr w))))
+    (with-open [w (get-summary-writer config config-file "summary.txt")]
+      (report/write-summary-txt w comparisons))
+    (with-open [w (get-summary-writer config config-file "files.csv")]
+      (report/write-files-csv w comparisons config))
     (with-open [w (get-summary-writer config config-file "summary.csv")]
-      (doseq [[i [x cmp-orig]] (map-indexed vector (map (juxt identity :summary) comparisons))]
-        (let [header (concat (take 1 (keys cmp-orig)) [:call1 :call2 :type] (nnext (keys cmp-orig)))
-              cmp (-> cmp-orig
-                      (dissoc :ftypes)
-                      (assoc :call1 (-> x :c1 :name))
-                      (assoc :call2 (-> x :c2 :name)))]
-          (when (= i 0)
-            (.write w (format "%s\n" (string/join "," (map name header)))))
-          (doseq [cur-type [:total :snp :indel]]
-            (.write w (format "%s\n" (string/join "," (get-summary-csv-vals header cmp cur-type))))))))
+      (report/write-summary-csv w comparisons))
     (do-transition config :finished "Finished")
     comparisons))
 

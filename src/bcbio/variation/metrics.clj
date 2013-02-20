@@ -73,16 +73,6 @@
     (with-open [vcf-iter (get-vcf-iterator vcf-file ref-file)]
       (reduce collect-vc {} (filter passes-filter? (parse-vcf vcf-iter))))))
 
-(defn vcf-stats
-  "Collect summary statistics associated with variant calls."
-  [vcf-file ref-file]
-  (let [raw-stats (raw-vcf-stats vcf-file ref-file)]
-    (map #(apply summary-stats %) (sort-by first raw-stats))))
-
-(defn write-summary-table [stats & {:keys [wrtr]
-                                    :or {wrtr (writer System/out)}}]
-  (.write wrtr (str (doric/table header stats) "\n")))
-
 ;; ## Classify
 ;; Provide metrics for files in preparation for automated
 ;; classification.

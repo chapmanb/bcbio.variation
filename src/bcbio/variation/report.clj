@@ -9,8 +9,9 @@
         [bcbio.variation.callable :only [get-callable-checker is-callable?]]
         [bcbio.variation.evaluate :only [organize-gatk-report-table]]
         [bcbio.variation.metrics :only [ml-on-vcf-metrics passes-filter? nonref-passes-filter?]])
-  (:require [doric.core :as doric]
-            [clojure.string :as string]))
+  (:require [clojure.string :as string]
+            [clojure.data.csv :as csv]
+            [doric.core :as doric]))
 
 (defn concordance-report-metrics
   "Retrieve high level concordance metrics from GATK VariantEval report."
@@ -195,7 +196,7 @@
                           val)}))]
       (map prep-row to-write))))
 
-(defn write-scoring-table
+(defn- write-scoring-table
   "Write high level metrics table in readable format."
   [metrics sv-stats wrtr]
   (when-not (or (nil? metrics)
@@ -203,7 +204,7 @@
     (.write wrtr (str (doric/table [:metric :value] (prep-scoring-table metrics sv-stats))
                       "\n"))))
 
-(defn write-concordance-metrics
+(defn- write-concordance-metrics
   "Summary table of metrics for assessing the score of a variant comparison."
   [metrics wrtr]
   (letfn [(metrics-info [ftype-i & kvs]
@@ -241,7 +242,7 @@
         (.write wrtr (str (doric/table [:metric :value] (remove nil? (map get-value to-write)))
                           "\n"))))))
 
-(defn write-sv-metrics
+(defn- write-sv-metrics
   "Summary table of structural variation comparions."
   [sv-metrics wrtr]
   (letfn [(get-values [[base xs]]
@@ -258,7 +259,7 @@
 
 ;; ## Classification metrics
 
-(defn write-classification-metrics
+(defn- write-classification-metrics
   "Summary table of classification metrics from GATK variant recalibration."
   [cmp-info wrtr]
   (letfn [(get-metric-counts [in-vcf]
@@ -277,3 +278,59 @@
         (.write wrtr (str (doric/table [:metric :count]
                                        (get-recal-metrics (:file call)))
                           "\n"))))))
+
+;; ## Top level reports
+
+(defn write-summary-txt
+  "Write a summary text file with tables of useful concordance metrics."
+  [wtr comparisons]
+  (doseq [x comparisons]
+    (.write wtr (format "* %s : %s vs %s\n" (get-in x [:exp :sample])
+                        (get-in x [:c1 :name]) (get-in x [:c2 :name])))
+    (write-scoring-table (:metrics x) (get-in x [:summary :sv]) wtr)
+    (write-concordance-metrics (:summary x) wtr)
+    (when-let [sv-info (get-in x [:summary :sv])]
+      (write-sv-metrics sv-info wtr))
+    (when (get-in x [:c1 :mod])
+      (write-classification-metrics x wtr))))
+
+(defn- get-summary-csv-vals
+  "Retrieve values for CSV output checking for lots of special cases.
+    - Display all values for :total lines
+    - For :snp and :indel lines, only show values with dictionaries that
+      have this detailed info.
+    - Always display initial sample and call values (i <= 3)"
+  [header cmp cur-type]
+  (for [v (map-indexed (fn [i k]
+                         (let [v (get cmp k)]
+                           (cond
+                            (= :type k) (name cur-type)
+                            (and (not= :total cur-type)
+                                 (> i 3)
+                                 (not (map? v))) nil
+                            :else v)))
+                       header)]
+    (if (map? v) (get v cur-type) v)))
+
+(defn write-summary-csv
+  "Write a top level summary CSV file with useful concordance metrics."
+  [wtr comparisons]
+  (doseq [[i [x cmp-orig]] (map-indexed vector (map (juxt identity :summary) comparisons))]
+    (let [header (concat (take 1 (keys cmp-orig)) [:call1 :call2 :type] (nnext (keys cmp-orig)))
+          cmp (-> cmp-orig
+                  (dissoc :ftypes)
+                  (assoc :call1 (-> x :c1 :name))
+                  (assoc :call2 (-> x :c2 :name)))]
+      (when (= i 0)
+        (csv/write-csv wtr [(map name header)]))
+      (csv/write-csv wtr (for [cur-type [:total :snp :indel]]
+                           (get-summary-csv-vals header cmp cur-type))))))
+
+(defn write-files-csv
+  "Write a CSV file with locations of useful files."
+  [wtr comparisons config]
+  (csv/write-csv wtr [["call1" "call2" "type" "fname"]])
+  (doseq [x comparisons]
+    (doseq [[k f] (:c-files x)]
+      (csv/write-csv wtr [[(get-in x [:c1 :name]) (get-in x [:c2 :name]) (name k)
+                           (string/replace-first f (str (get-in config [:dir :out]) "/") "")]]))))

@@ -38,7 +38,7 @@
                                                            incanter/incanter-charts]]
                  [fs "1.1.2" :exclusions [org.clojure/clojure]]
                  [clj-yaml "0.3.1"]
-                 [doric "0.7.0" :exclusions [org.clojure/clojure]]
+                 [doric "0.8.0" :exclusions [org.clojure/clojure]]
                  [ordered "1.3.2" :exclusions [org.clojure/clojure]]
                  [de.kotka/lazymap "3.0.0"]
                  [pallet-fsm "0.1.0"]
