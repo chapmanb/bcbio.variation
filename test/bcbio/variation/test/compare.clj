@@ -228,11 +228,12 @@
                false [{:file (str (fs/file base-dir "NA12878-illumina.vcf"))
                        :name "illumina"}]}
         exp {:ref ref :sample "NA12878"
-             :intervals (str (fs/file base-dir "NA12878-cmp-regions.bed"))}
+             :intervals (str (fs/file base-dir "NA12878-cmp-regions.bed"))
+             :approach "grade"}
         config {:dir {:out (str (fs/file base-dir "work"))}}]
     (doseq [x (concat [(get-in config [:dir :out])]
                       (fs/glob (str (fs/file base-dir "NA12878-cmp-regions-*")))
                       (fs/glob (str (fs/file base-dir "NA12878-fosfinal-cmp*"))))]
       (itx/remove-path x))
-    (-> (compare-two-vcf-phased calls exp config) :c-files keys) => [:concordant :fosfinal-discordant
-                                                                     :illumina-discordant]))
+    (-> (compare-two-vcf-phased calls exp config) :c-files keys) => [:concordant :discordant
+                                                                     :discordant-missing :phasing-error]))

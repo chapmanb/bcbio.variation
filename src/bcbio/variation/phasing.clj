@@ -286,9 +286,9 @@
       (fs/mkdirs base-dir))
     (when (itx/needs-run? (vals out-files))
       (write-vcf-w-template (:file base-info) out-files
-                            (filter #(contains? (set to-capture) (first %))
-                                    (map (juxt :comparison :vc)
-                                         (flatten vc-info)))
+                            (->> (flatten vc-info)
+                                 (map (juxt :comparison :vc))
+                                 (filter #(contains? (set to-capture) (first %))))
                             ref
                             :header-update-fn (merge-headers (:file other-info))))
     out-files))
@@ -341,19 +341,31 @@
   Handle grading special case as well as standard comparisons."
   (fn [_ exp _] (keyword (get exp :approach "compare"))))
 
-(defn- convert-cmps-to-grade
-  "Convert comparisons into ready to write keywords for grading.
+(defn- convert-cmp-to-grade
+  "Convert comparison into ready to write keywords for grading.
   Deals with discordant comparisons where the competition call
   is missing."
-  [cmps]
-  (letfn [(check-missing-discordant [x]
-            (if (and (= (:comparison x) :discordant)
-                     (nil? (:vc x)))
-              (-> x
-                  (assoc :comparison :discordant-missing)
-                  (assoc :vc (:ref-vc x)))
-              x))]
-    (map check-missing-discordant (flatten cmps))))
+  [cmp]
+  (if (and (= (:comparison cmp) :discordant)
+           (nil? (:vc cmp)))
+    (-> cmp
+        (assoc :comparison :discordant-missing)
+        (assoc :vc (:ref-vc cmp)))
+    cmp))
+
+(defn- add-grading-info
+  "Associate a grading category with each variant based on comparison."
+  [cmp]
+  (letfn [(assign-discordant-cat [{:keys [vc ref-vc]}]
+            (println vc)
+            (println ref-vc))]
+    (let [cat (case (:comparison cmp)
+                :ref-concordant "concordant"
+                :concordant "concordant"
+                :discordant (assign-discordant-cat cmp) 
+                :discordant-missing "discordant-nocall"
+                :phasing-error "discordant-phasing")])
+    cmp))
 
 (defn- get-compare-file
   "Retrieve the comparison file, filtering by intervals if present."
@@ -377,7 +389,10 @@
                 call-vcf-iter (get-vcf-iterator (:file call) (:ref exp))]
       (let [compared-calls (score-phased-calls call-vcf-iter ref-get (:ref exp)
                                                :intervals call-intervals)]
-        {:c-files (write-concordance-output (convert-cmps-to-grade compared-calls)
+        {:c-files (write-concordance-output (->> compared-calls
+                                                 flatten
+                                                 (map convert-cmp-to-grade)
+                                                 (map add-grading-info))
                                             [:concordant :discordant
                                              :discordant-missing :phasing-error]
                                             (:sample exp) call ref
