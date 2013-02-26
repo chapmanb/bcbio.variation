@@ -40,7 +40,7 @@
                  [clj-yaml "0.3.1"]
                  [doric "0.8.0" :exclusions [org.clojure/clojure]]
                  [ordered "1.3.2" :exclusions [org.clojure/clojure]]
-                 [de.kotka/lazymap "3.0.0"]
+                 [de.kotka/lazymap "3.1.0"]
                  [pallet-fsm "0.1.0"]
                  [clj-time "0.4.3"]
                  [clj-aws-s3 "0.3.1" :exclusions [org.codehaus.jackson/jackson-mapper-asl

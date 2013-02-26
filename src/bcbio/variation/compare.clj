@@ -164,7 +164,7 @@
        :metrics (report/concordance-report-metrics (:sample exp) eval)
        :callable-metrics (report/concordance-report-metrics (:sample exp) c-eval)})))
 
-(defn- compare-two-vcf
+(defn compare-two-vcf
   "Compare two VCF files, handling standard and haploid specific comparisons."
   [c1 c2 exp config]
   (do-transition config :compare (format "Comparing VCFs: %s vs %s" (:name c1) (:name c2)))

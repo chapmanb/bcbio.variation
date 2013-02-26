@@ -84,8 +84,9 @@
 (defn do-transition
   "Perform a transition on configured finite state machine moving to the provided state"
   [config state desc]
-  ((get-in config [:fsm :transition]) #(assoc % :state-kw state
-                                              :state-data {:desc desc})))
+  (if-let [do-trans (get-in config [:fsm :transition])]
+    (do-trans #(assoc % :state-kw state :state-data {:desc desc}))
+    (println state desc)))
 
 ;; ## Configuration
 
