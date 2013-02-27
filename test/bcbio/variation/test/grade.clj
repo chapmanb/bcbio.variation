@@ -1,11 +1,13 @@
 (ns bcbio.variation.test.grade
   "Tests for grading and evaluation of variant calls against a reference set of variations."
-  (:use [midje.sweet]
+  (:use [clojure.java.io]
+        [midje.sweet]
         [bcbio.variation.compare :exclude [-main]]
         [bcbio.variation.phasing]
         [bcbio.variation.variantcontext :exclude [-main]])
   (:require [fs.core :as fs]
-            [bcbio.run.itx :as itx]))
+            [bcbio.run.itx :as itx]
+            [bcbio.variation.grade :as grade]))
 
 (background
  (around :facts
@@ -37,14 +39,16 @@
 (facts "Compare diploid callset against a diploid reference"
   (let [base-dir (fs/file data-dir "digrade")
         c1 {:file (str (fs/file base-dir "NA12878-cmp-r1.vcf"))
-            :name "ref"}
+            :name "ref" :type "grading-ref"}
         c2 {:file (str (fs/file base-dir "NA12878-cmp-r2.vcf"))
             :name "eval"}
         exp {:ref ref-file :sample "NA12878" :approach "grade"}
-        config {:dir {:out (str (fs/file base-dir "work"))}}]
-    (itx/remove-path (get-in config [:dir :out]))
-    (fs/mkdirs (get-in config [:dir :out]))
-    (-> (compare-two-vcf c1 c2 exp config) :c-files keys) => [:concordant :ref-discordant
-                                                              :eval-discordant
-                                                              :sv-concordant :sv-ref-discordant
-                                                              :sv-eval-discordant]))
+        config {:dir {:out (str (fs/file base-dir "work"))}}
+        out-file (str (file (get-in config [:dir :out])
+                            "NA12878-eval-ref-discordance-annotate.vcf"))]
+    ;;(itx/remove-path (get-in config [:dir :out]))
+    ;;(fs/mkdirs (get-in config [:dir :out]))
+    (-> (compare-two-vcf c1 c2 exp config)
+        grade/annotate-discordant
+        :c-files
+        :eval-discordant) => out-file))

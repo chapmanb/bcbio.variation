@@ -7,7 +7,7 @@
     - Merge previously called and re-called into final set.
   http://www.broadinstitute.org/gsa/wiki/index.php/Merging_batched_call_sets"
   (:import [org.broadinstitute.sting.utils.variantcontext
-            GenotypeBuilder VariantContextBuilder GenotypesContext]
+            VariantContextBuilder GenotypesContext]
            [org.broadinstitute.sting.utils.codecs.vcf VCFHeader])
   (:use [clojure.java.io]
         [ordered.map :only [ordered-map]]
@@ -172,12 +172,13 @@
         g (->> (:genotypes vc)
                    (filter #(= sample (:sample-name %)))
                    first)]
-    {:qual (:qual vc)
+    {:sample-name sample
+     :qual (:qual vc)
      :vc-type (:type vc)
      :call-type (:type g)
      :ref-allele (:ref-allele vc)
      :alleles (sort-by allele-order (:alleles g))
-     :attrs (select-keys (:attributes g) ["PL" "DP" "AD" "PVAL"])
+     :attributes (select-keys (:attributes g) ["PL" "DP" "AD" "PVAL"])
      :has-likelihood (if (seq (get-in g [:attributes "PL"])) 1 0)
      :attr-count (+ (if (seq (get-in g [:attributes "PL"])) 1 0)
                     (if (seq (get-in g [:attributes "PVAL"])) 1 0)
@@ -225,22 +226,7 @@
     (when most-likely
       (-> (VariantContextBuilder. (:vc vc))
           (.alleles (set (cons (:ref-allele vc) (:alleles most-likely))))
-          (.genotypes (GenotypesContext/create
-                       (java.util.ArrayList.
-                        [(-> (GenotypeBuilder. sample (:alleles most-likely))
-                             (#(if-let [pl (seq (get-in most-likely [:attrs "PL"]))]
-                                 (.PL % (int-array pl))
-                                 %))
-                             (#(if-let [pval (get-in most-likely [:attrs "PVAL"])]
-                                 (.attribute % "PVAL" pval)
-                                 %))
-                             (#(if-let [dp (get-in most-likely [:attrs "DP"])]
-                                 (.DP % dp)
-                                 %))
-                             (#(if-let [ad (seq (get-in most-likely [:attrs "AD"]))]
-                                 (.AD % (int-array ad))
-                                 %))
-                             .make)])))
+          (.genotypes (gvc/create-genotypes [most-likely] :attrs {"PL" "PVAL" "DP" "AD"}))
           .make))))
 
 (defn- recall-w-consensus
@@ -437,23 +423,12 @@
   Older functionality to re-call as reference when region is callable.
   Prefer `recall-nocalls`"
   [in-vcf align-bam ref & {:keys [out-dir intervals num-alleles]}]
-  (letfn [(ref-genotype [g vc]
-            (doto (-> vc :vc .getGenotypes GenotypesContext/copy)
-              (.replace
-               (-> (GenotypeBuilder. (:genotype g))
-                   (.alleles (repeat (if (nil? num-alleles)
-                                       (count (:alleles g))
-                                       num-alleles)
-                                     (:ref-allele vc)))
-                   .make))))
-          (maybe-callable-vc [vc call-source]
+  (letfn [(maybe-callable-vc [vc call-source]
             {:pre (= 1 (:num-samples vc))}
             (let [g (-> vc :genotypes first)]
               (if (.isNoCall (-> g :alleles first))
                 (if (is-callable? call-source (:chr vc) (:start vc) (:end vc))
-                  (-> (VariantContextBuilder. (:vc vc))
-                      (.genotypes (ref-genotype g vc))
-                      (.make))
+                  (gvc/genotypes->refcall vc)
                   (-> (VariantContextBuilder. (:vc vc))
                       (.filters #{"NotCallable"})
                       (.make)))

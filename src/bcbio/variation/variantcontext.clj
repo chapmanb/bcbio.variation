@@ -6,7 +6,8 @@
            [org.broad.tribble.readers AsciiLineReader]
            [org.broadinstitute.sting.utils.codecs.vcf
             VCFCodec VCFUtils VCFHeader VCFFilterHeaderLine]
-           [org.broadinstitute.sting.utils.variantcontext VariantContextBuilder]
+           [org.broadinstitute.sting.utils.variantcontext VariantContextBuilder
+            GenotypeBuilder GenotypesContext]
            [org.broadinstitute.sting.utils.variantcontext.writer VariantContextWriterFactory
             Options]
            [org.broadinstitute.sting.gatk.refdata.tracks RMDTrackBuilder]
@@ -19,6 +20,7 @@
         [ordered.set :only [ordered-set]]
         [bcbio.align.ref :only [get-seq-dict]])
   (:require [clojure.string :as string]
+            [lonocloud.synthread :as ->]
             [bcbio.run.itx :as itx]))
 
 ;; ## Represent VariantContext objects
@@ -220,6 +222,44 @@
                               (map :vc (filter passes? (parse-vcf in-iter)))
                               ref-file)))
     out-file))
+
+;; ## Genotype manipulation
+
+(defn create-genotypes
+  "Create Genotype objects for a samples with defined alleles,
+   optionally including attributes from the parent genotype.
+   gs is a list of genotype dictionaries, with the alleles modified
+   to the new values desired. This converts them into GATK-ready objects."
+  [gs & {:keys [attrs]}]
+  (let [all-attrs [["PL" seq (fn [x _ v] (.PL x (int-array v)))]
+                   ["PVAL" identity (fn [x k v] (.attribute x k v))]
+                   ["DP" identity (fn [x _ v] (.DP x v))]
+                   ["AD" seq (fn [x _ v] (.AD x (int-array v)))]]]
+    (letfn [(alleles->genotype [g]
+              (-> (GenotypeBuilder. (:sample-name g) (:alleles g))
+                  (->/for [[attr val-fn add-fn] all-attrs]
+                    (->/when (contains? attrs attr)
+                      (->/when-let [val (val-fn (get-in g [:attributes attr]))]
+                        (#(add-fn % attr val)))))
+                  .make))]
+      (->> gs
+           (map alleles->genotype)
+           java.util.ArrayList.
+           GenotypesContext/create))))
+
+(defn genotypes->refcall
+  "Convert variant context genotypes into all reference calls (0/0)."
+  [vc & {:keys [attrs num-alleles]}]
+  (letfn [(make-refcall [g]
+            (assoc g :alleles
+                   (repeat (if (nil? num-alleles)
+                             (count (:alleles g))
+                             num-alleles)
+                           (:ref-allele vc))))]
+    (-> (VariantContextBuilder. (:vc vc))
+        (.genotypes (create-genotypes (map make-refcall (:genotypes vc))
+                                      :attrs attrs))
+        .make)))
 
 (defn -main [vcf ref approach]
   (with-open [vcf-iter (get-vcf-iterator vcf ref)]
