@@ -46,8 +46,8 @@
         config {:dir {:out (str (fs/file base-dir "work"))}}
         out-file (str (file (get-in config [:dir :out])
                             "NA12878-eval-ref-discordance-annotate.vcf"))]
-    ;;(itx/remove-path (get-in config [:dir :out]))
-    ;;(fs/mkdirs (get-in config [:dir :out]))
+    (itx/remove-path (get-in config [:dir :out]))
+    (fs/mkdirs (get-in config [:dir :out]))
     (-> (compare-two-vcf c1 c2 exp config)
         grade/annotate-discordant
         :c-files
