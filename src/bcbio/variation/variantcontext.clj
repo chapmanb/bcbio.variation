@@ -156,6 +156,12 @@
                                             (Logger/getLogger ""))
                 (.getGenotypeSamples header))))
 
+(defn header-w-md
+  "Update a header with new INFO and FILTER metadata."
+  [header new-md]
+  (VCFHeader. (apply ordered-set (concat (.getMetaDataInInputOrder header) new-md))
+              (.getGenotypeSamples header)))
+
 (defn write-vcf-w-template
   "Write VCF output files starting with an original input template VCF.
    Handles writing to multiple VCF files simultaneously with the different
@@ -188,9 +194,8 @@
 (defn- add-filter-header
   [fname fdesc]
   (fn [_ header]
-    (let [new #{(VCFFilterHeaderLine. fname fdesc)}]
-      (VCFHeader. (apply ordered-set (concat (.getMetaDataInInputOrder header) new))
-                  (.getGenotypeSamples header)))))
+    (header-w-md header
+                 #{(VCFFilterHeaderLine. fname fdesc)})))
 
 (defn- maybe-add-filter
   [fname passes? vc]

@@ -2,10 +2,10 @@
   "Provide generalized access to variant attributes, handling retrieval
    from multiple sources (VCF INFO file, VCF FORMAT field, Gemini)."
   (:use [bcbio.variation.haploid :only [get-likelihoods]]
-        [bcbio.variation.metrics :only [to-float]]
-        )
+        [bcbio.variation.metrics :only [to-float]])
   (:require [clojure.string :as string]
             [incanter.stats :as stats]
+            [lonocloud.synthread :as ->]
             [bcbio.variation.variantcontext :as gvc]
             [bcbio.variation.index.gemini :as gemini]))
 
@@ -59,6 +59,22 @@
   (max (* 10.0 (Math/log10 (to-float pval)))
        -255.0))
 
+(defn get-pls
+  "Retrieve PLs, handling non-Bayesian callers by conversion of p-values to phred scores."
+  [vc]
+  {:pre [(= 1 (:num-samples vc))
+         (contains? #{1 2} (-> vc :genotypes first :alleles count))]}
+  (let [g (-> vc :genotypes first)
+        pls (dissoc (get-likelihoods (:genotype g) :no-convert true)
+                    (:type g))
+        pval (when-let [pval (get-in g [:attributes "PVAL"])]
+               (convert-pval-to-phred pval))]
+    (-> (:genotype g)
+        (get-likelihoods :no-convert true)
+        (dissoc (:type g))
+        (->/when pval
+          (assoc "HOM_REF" pval)))))
+
 (defmethod get-vc-attr "PL"
   ^{:doc "Provide likelihood confidence for the called genotype.
           For reference calls, retrieve the likelihood of the most likely
@@ -66,16 +82,11 @@
           the reference likelihood.
           Handles non-Bayesian callers by conversion of p-values for phred scores."}
   [vc attr _]
-  {:pre [(= 1 (:num-samples vc))
-         (contains? #{1 2} (-> vc :genotypes first :alleles count))]}
   (let [g (-> vc :genotypes first)
-        pls (dissoc (get-likelihoods (:genotype g) :no-convert true)
-                    (:type g))]
-    (cond
-     (zero? (count pls)) (when-let [pval (get-in g [:attributes "PVAL"])]
-                           (convert-pval-to-phred pval))
-     (= (:type g) "HOM_REF") (apply max (vals pls))
-     :else (get pls "HOM_REF"))))
+        pls (get-pls vc)]
+    (if (= (:type g) "HOM_REF")
+      (apply max (vals pls))
+      (get pls "HOM_REF"))))
 
 (defmethod get-vc-attr "PLratio"
   ^{:doc "Calculate ratio of reference likelihood call to alternative variant calls.

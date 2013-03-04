@@ -1,7 +1,6 @@
 (ns bcbio.variation.report
   "Parse and provide detailed information from GATKReport outputs."
-  (:use [clojure.set :only [intersection]]
-        [ordered.map :only [ordered-map]]
+  (:use [ordered.map :only [ordered-map]]
         [clojure.math.combinatorics :only [cartesian-product]]
         [bcbio.variation.variantcontext :only [parse-vcf get-vcf-retriever
                                                variants-in-region
@@ -11,7 +10,8 @@
         [bcbio.variation.metrics :only [ml-on-vcf-metrics passes-filter? nonref-passes-filter?]])
   (:require [clojure.string :as string]
             [clojure.data.csv :as csv]
-            [doric.core :as doric]))
+            [doric.core :as doric]
+            [bcbio.variation.grade :as grade]))
 
 (defn concordance-report-metrics
   "Retrieve high level concordance metrics from GATK VariantEval report."
@@ -30,16 +30,6 @@
   (with-open [vcf-iter (get-vcf-iterator f ref-file)]
     (count (filter check? (parse-vcf vcf-iter)))))
 
-(defn- hethom-discordant?
-  "Identify variants that are variant calls but discordant based on het/hom calls."
-  [vc other-vcs]
-  (letfn [(get-alleles [x]
-            (-> x :genotypes first :alleles set))]
-    (let [vc2 (first (filter #(and (= (:start vc) (:start %))
-                                   (= (:ref-allele vc) (:ref-allele %)))
-                             other-vcs))]
-      (seq (intersection (get-alleles vc) (get-alleles vc2))))))
-
 (defn shared-discordant
   "Provide metrics to distinguish types of discordance in a comparison.
   These identify variants which differ due to being missing in one variant
@@ -55,7 +45,7 @@
                 (-> coll
                     (assoc vc-type (inc (get coll vc-type)))
                     (assoc :hethom ((if (and (= :total vc-type)
-                                             (hethom-discordant? vc other-vcs))
+                                             (grade/hethom-discordant? vc other-vcs))
                                       inc identity)
                                     (get coll :hethom))))))
             {:total 0 :unique 0 :hethom 0}
