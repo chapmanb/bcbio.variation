@@ -198,10 +198,10 @@
   (let [out-file (itx/add-file-part vcf-file "fullprep")]
     (when (itx/needs-run? out-file)
       (itx/with-temp-dir [out-dir (fs/parent vcf-file)]
-        (let [call {:name "fullprep" :file vcf-file :preclean true
-                    :prep true :normalize true :prep-sv-genotype true}
-              exp {:sample (-> vcf-file get-vcf-header .getGenotypeSamples first)
+        (let [exp {:sample (-> vcf-file get-vcf-header .getGenotypeSamples first)
                    :ref ref-file :params {:max-indel max-indel}}
+              call {:name "fullprep" :file vcf-file :preclean true
+                    :prep true :normalize true :prep-sv-genotype (not (nil? (:sample exp)))}
               out-info (gatk-normalize call exp [] out-dir
                                        (fn [_ x] (println x)))
               nosv-file (if max-indel
