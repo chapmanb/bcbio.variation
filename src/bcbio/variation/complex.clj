@@ -73,6 +73,10 @@
             (and (pos? i)
                  (contains-indel? alleles i)
                  (is-match? alleles (dec i))))
+          (is-anchor-mismatch? [alleles i]
+            (and (= 1 i)
+                 (not (is-match? alleles i))
+                 (is-match? alleles 0)))
           (is-fiveprime-indel? [alleles i]
             (and (zero? i)
                  (or
@@ -216,7 +220,7 @@
                                     nogap-x))))]
     (if (.contains (second alleles) "-")
       [(first alleles) (make-5-gap-wref (second alleles))]
-      alleles)))
+      [(make-5-gap-wref (first alleles)) (second alleles)])))
 
 (defn- left-align-complex
   "Ensure reference alignment gaps next to variants are consistently left aligned.
