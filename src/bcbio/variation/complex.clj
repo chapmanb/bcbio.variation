@@ -290,7 +290,8 @@
   "Split complex indels into individual variant components."
   [vc ref]
   (let [prev-pad (or (extract-sequence ref (:chr vc) (dec (:start vc)) (dec (:start vc))) "N")
-        ref-seq (extract-sequence ref (:chr vc) (:start vc) (:end vc))
+        ; Do not use reference sequence. Causes more trouble than aligning ref/alt directly.
+        ref-seq nil ;(extract-sequence ref (:chr vc) (:start vc) (:end vc))
         alleles (split-alleles vc (->> (conj (get-vc-alleles vc) ref-seq)
                                        (remove empty?)
                                        (remove nil?)
