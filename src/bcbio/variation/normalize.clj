@@ -484,8 +484,8 @@
                    (remove-gap 4)
                    (fix-duplicate-alts)
                    (fix-info-spaces)
-                   (maybe-add-indel-pad-base ref-file)
                    remove-nochange-alt
+                   (maybe-add-indel-pad-base ref-file)
                    (string/join "\t"))))]
     (let [out-file (itx/add-file-part in-vcf-file "preclean" out-dir)]
       (when (itx/needs-run? out-file)
