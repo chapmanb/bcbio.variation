@@ -215,8 +215,8 @@
   (let [[options [vcf-file ref-file] _]
         (cli args
              ["-i" "--max-indel" "Maximum indel size to include" :default nil
-              "-s" "--resort" "Resort input file by coordinate position" :default false
-              :parse-fn #(Integer. %)])
+              :parse-fn #(Integer. %)]
+             ["-s" "--resort" "Resort input file by coordinate position" :default false :flag true])
         out-file (full-prep-vcf vcf-file ref-file :max-indel (:max-indel options)
                                 :resort (:resort options))]
     (println out-file)
