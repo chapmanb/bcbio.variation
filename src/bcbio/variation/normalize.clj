@@ -17,8 +17,9 @@
         [ordered.map :only (ordered-map)]
         [ordered.set :only (ordered-set)])
   (:require [clojure.string :as string]
-            [bcbio.run.itx :as itx]
-            [fs.core :as fs]))
+            [fs.core :as fs]
+            [lonocloud.synthread :as ->]
+            [bcbio.run.itx :as itx]))
 
 ;; ## Chromosome name remapping
 
@@ -378,17 +379,57 @@
       (first (filter (partial has-contig? test-contig) refs)))))
 
 ;; ## Remove problem characters
-;; Handle cleanup for VCF files before feeding to any verifying parser.
+;; Handle cleanup for VCF files before feeding to any verifying
+;; parser.
+
+(defn- maybe-add-indel-pad-base
+  "Check reference and alt alleles for lack of a padding base on indels.
+  The VCF spec requires this and GATK will parse incorrectly when a variant
+  lacks a shared padding base for indels."
+  [ref-file xs]
+  (letfn [(prev-pad [xs]
+            (let [before-start (dec (Integer/parseInt (second xs)))]
+              (string/upper-case
+               (str
+                (or (extract-sequence ref-file (first xs) before-start before-start) "N")))))
+          (get-ref-alt [xs]
+            [(nth xs 3) (nth xs 4)])
+          (indel? [xs]
+            (let [[vc-ref vc-alt] (get-ref-alt xs)]
+              (or (> (count vc-ref) 1) (> (count vc-alt) 1))))
+          (is-5pad-n? [xs]
+            (let [[vc-ref vc-alt] (get-ref-alt xs)]
+              (and (.startsWith vc-ref "N") (.startsWith vc-alt "N"))))
+          (fix-5pad-n [xs]
+            (let [[vc-ref vc-alt] (get-ref-alt xs)]
+              (-> xs
+                  (assoc 3 (str (prev-pad xs) (subs vc-ref 1)))
+                  (assoc 4 (str (prev-pad xs) (subs vc-alt 1))))))
+          (no-pad? [xs]
+            (let [[vc-ref vc-alt] (get-ref-alt xs)]
+              (not= (first vc-ref) (first vc-alt))))
+          (fix-nopad [xs]
+            (let [[vc-ref vc-alt] (get-ref-alt xs)]
+              (-> xs
+                  (assoc 3 (str (prev-pad xs) vc-ref))
+                  (assoc 4 (str (prev-pad xs) vc-alt)))))]
+    (-> xs
+        (->/as cur-xs
+               (->/when (and (indel? cur-xs) (is-5pad-n? cur-xs))
+                 fix-5pad-n))
+        (->/as cur-xs
+               (->/when (and (indel? cur-xs) (no-pad? cur-xs))
+                 fix-nopad)))))
 
 (defn clean-problem-vcf
   "Clean VCF file which GATK parsers cannot handle due to illegal characters.
   Fixes:
     - Gap characters (-) found in REF or ALT indels.
-    - Filter out call with extra N padding on 5' side of indels.
+    - Fixes indels without reference padding or N padding.
     - Removes spaces in INFO fields.
     - Handles Illumina special case of SNPs with MAXGT and POLY calls.
       Uses the MAXGT calls which make no prior assumptions about polymorphism"
-  [in-vcf-file sample & {:keys [out-dir]}]
+  [in-vcf-file ref-file sample & {:keys [out-dir]}]
   (letfn [(fix-bad-alt-header [x]
             (str "##ALT=<ID" (string/replace-first x "##ALT=Type" "") ">"))
           (rename-samples [xs want]
@@ -425,12 +466,7 @@
                                [] (string/split (nth xs n) #","))]
               (assoc xs n
                      (string/join "," alts))))
-          (is-5pad-n? [xs]
-            (let [ref (nth xs 3)
-                  alt (nth xs 4)]
-              (and (= ref "N") (.startsWith alt "N") (> (count alt) 1))))
-          (remove-5pad-n [xs]
-            (if (is-5pad-n? xs) [] xs))
+          
           (remove-nochange-alt [xs]
             (cond
              (empty? xs) []
@@ -447,7 +483,7 @@
                    (remove-gap 4)
                    (fix-duplicate-alts)
                    (fix-info-spaces)
-                   remove-5pad-n
+                   (maybe-add-indel-pad-base ref-file)
                    remove-nochange-alt
                    (string/join "\t"))))]
     (let [out-file (itx/add-file-part in-vcf-file "preclean" out-dir)]
