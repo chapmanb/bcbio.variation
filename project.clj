@@ -1,7 +1,7 @@
 (defproject bcbio.variation "0.0.7-SNAPSHOT"
   :description "Toolkit to analyze genomic variation data, built on the GATK with Clojure"
   :license {:name "MIT" :url "http://www.opensource.org/licenses/mit-license.html"}
-  :dependencies [[org.clojure/clojure "1.4.0"]
+  :dependencies [[org.clojure/clojure "1.5.1"]
                  [org.clojure/math.combinatorics "0.0.2" :exclusions [org.clojure/clojure]]
                  [org.clojure/data.csv "0.1.2" :exclusions [org.clojure/clojure]]
                  [org.clojure/core.match "0.2.0-alpha9"]
@@ -41,7 +41,7 @@
                  [doric "0.8.0" :exclusions [org.clojure/clojure]]
                  [ordered "1.3.2" :exclusions [org.clojure/clojure]]
                  [de.kotka/lazymap "3.1.0"]
-                 [lonocloud/synthread "1.0.1"]
+                 [lonocloud/synthread "1.0.3"]
                  [pallet-fsm "0.1.0"]
                  [clj-time "0.4.3"]
                  [clj-aws-s3 "0.3.1" :exclusions [org.codehaus.jackson/jackson-mapper-asl
@@ -53,9 +53,9 @@
                  [enlive "1.0.1" :exclusions [org.clojure/clojure]]]
   :min-lein-version "2.0.0"
   :plugins [[lein-marginalia "0.7.1"]
-            [lein-midje "2.0.0-SNAPSHOT"]]
+            [lein-midje "3.0-RC1"]]
   :profiles {:dev {:dependencies
-                   [[midje "1.4.0" :exclusions [org.clojure/clojure ordered]]]}}
+                   [[midje "1.5-RC1" :exclusions [org.clojure/clojure ordered]]]}}
   :repositories {"biojava" {:url "http://www.biojava.org/download/maven/"
                             :snapshots false}}
   :java-source-paths ["src/java"]

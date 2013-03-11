@@ -185,7 +185,7 @@
                                   (header-update-fn key tmpl-header)
                                   tmpl-header)))
         (doseq [[fkey item] (map convert-to-output vc-iter)]
-          (let [ready-vc (if (contains? item :vc) (:vc item) item)]
+          (let [ready-vc (if (and (map? item) (contains? item :vc)) (:vc item) item)]
             (when-not (nil? ready-vc)
               (.add (get writer-map fkey) ready-vc))))
         (doseq [x (vals writer-map)]
