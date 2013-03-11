@@ -413,13 +413,14 @@
               (-> xs
                   (assoc 3 (str (prev-pad xs) vc-ref))
                   (assoc 4 (str (prev-pad xs) vc-alt)))))]
-    (-> xs
-        (->/as cur-xs
-               (->/when (and (indel? cur-xs) (is-5pad-n? cur-xs))
-                 fix-5pad-n))
-        (->/as cur-xs
-               (->/when (and (indel? cur-xs) (no-pad? cur-xs))
-                 fix-nopad)))))
+    (if (empty? xs) []
+        (-> xs
+            (->/as cur-xs
+                   (->/when (and (indel? cur-xs) (is-5pad-n? cur-xs))
+                     fix-5pad-n))
+            (->/as cur-xs
+                   (->/when (and (indel? cur-xs) (no-pad? cur-xs))
+                     fix-nopad))))))
 
 (defn clean-problem-vcf
   "Clean VCF file which GATK parsers cannot handle due to illegal characters.
