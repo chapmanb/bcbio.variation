@@ -411,6 +411,7 @@
           (fix-nopad [xs]
             (let [[vc-ref vc-alt] (get-ref-alt xs)]
               (-> xs
+                  (assoc 1 (dec (Integer/parseInt (second xs))))
                   (assoc 3 (str (prev-pad xs) vc-ref))
                   (assoc 4 (str (prev-pad xs) vc-alt)))))]
     (if (empty? xs) []
