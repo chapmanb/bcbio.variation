@@ -194,14 +194,15 @@
 
 (defn full-prep-vcf
   "Provide convenient entry to fully normalize a variant file for comparisons."
-  [vcf-file ref-file & {:keys [max-indel]}]
+  [vcf-file ref-file & {:keys [max-indel resort]}]
   (let [out-file (itx/add-file-part vcf-file "fullprep")]
     (when (itx/needs-run? out-file)
       (itx/with-temp-dir [out-dir (fs/parent vcf-file)]
         (let [exp {:sample (-> vcf-file get-vcf-header .getGenotypeSamples first)
                    :ref ref-file :params {:max-indel max-indel}}
               call {:name "fullprep" :file vcf-file :preclean true
-                    :prep true :normalize true :prep-sv-genotype (not (nil? (:sample exp)))}
+                    :prep true :normalize true :prep-sv-genotype (not (nil? (:sample exp)))
+                    :prep-sort-pos resort}
               out-info (gatk-normalize call exp [] out-dir
                                        (fn [_ x] (println x)))
               nosv-file (if max-indel
@@ -214,7 +215,9 @@
   (let [[options [vcf-file ref-file] _]
         (cli args
              ["-i" "--max-indel" "Maximum indel size to include" :default nil
+              "-s" "--resort" "Resort input file by coordinate position" :default false
               :parse-fn #(Integer. %)])
-        out-file (full-prep-vcf vcf-file ref-file :max-indel (:max-indel options))]
+        out-file (full-prep-vcf vcf-file ref-file :max-indel (:max-indel options)
+                                :resort (:resort options))]
     (println out-file)
     (System/exit 0)))
