@@ -471,6 +471,7 @@
             (cond
              (empty? xs) []
              (= (nth xs 3) (nth xs 4)) []
+             (= "." (nth xs 4)) []
              :else xs))
           (fix-info-spaces [xs]
             (assoc xs 7
