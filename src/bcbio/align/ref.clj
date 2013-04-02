@@ -54,8 +54,9 @@
   "Sort a BED file relative to the input reference"
   [bed-file ref-file]
   (letfn [(process-line [line]
-            (let [parts (if (> (count (string/split line #"\t")) 1)
-                          (string/split line #"\t")
+            (let [tab-parts (string/split line #"\t")
+                  parts (if (> (count tab-parts) 1)
+                          tab-parts
                           (string/split line #" "))]
               (let [[chr start end] (take 3 parts)]
                 [[chr (Integer/parseInt start) (Integer/parseInt end)] line])))

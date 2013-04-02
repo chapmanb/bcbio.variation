@@ -60,7 +60,7 @@
                             :snapshots false}}
   :java-source-paths ["src/java"]
   :javac-options ["-nowarn" "-target" "1.6" "-source" "1.6"]
-  ;:jvm-opts ["-Xmx4g"]
+  :jvm-opts ["-Xms750m" "-Xmx2g"]
   :omit-source false
   :aot [bcbio.variation.vcfwalker bcbio.variation.core bcbio.variation.annotate.nbq
         bcbio.variation.annotate.entropy bcbio.variation.annotate.mfe]
