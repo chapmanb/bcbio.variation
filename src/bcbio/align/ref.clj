@@ -51,28 +51,44 @@
           (#(apply str %))))))
 
 (defn sort-bed-file
-  "Sort a BED file relative to the input reference"
+  "Sort a BED file relative to the input reference.
+   Takes a IO intensive approach over memory intensive by sorting in blocks
+   of chromosomes. `same-time-chrs` handles the tradeoff between speed and
+   memory by determining how many chromosomes to process simultaneously."
   [bed-file ref-file]
-  (letfn [(process-line [line]
+  (letfn [(process-line [cur-chrs line]
             (let [tab-parts (string/split line #"\t")
                   parts (if (> (count tab-parts) 1)
                           tab-parts
                           (string/split line #" "))]
               (let [[chr start end] (take 3 parts)]
-                [[chr (Integer/parseInt start) (Integer/parseInt end)] line])))
-          (ref-sort-fn [ref-file]
-            (let [contig-map (get-seq-name-map ref-file)]
-              (fn [x]
-                (let [sort-vals (first x)]
-                  (vec (cons (get contig-map (first sort-vals))
-                             (rest sort-vals)))))))]
-    (let [out-file (itx/add-file-part bed-file "sorted")]
+                (when (or (nil? cur-chrs) (contains? cur-chrs chr))
+                  [[chr (Integer/parseInt start) (Integer/parseInt end)] line]))))
+          (get-input-chrs [bed-file]
+            (with-open [rdr (reader bed-file)]
+              (->> (line-seq rdr)
+                   (map (partial process-line nil))
+                   (map ffirst)
+                   set)))]
+    (let [out-file (itx/add-file-part bed-file "sorted")
+          input-chrs (get-input-chrs bed-file)
+          same-time-chrs 5]
+      (println input-chrs)
       (when (or (itx/needs-run? out-file)
                 (> (fs/mod-time bed-file) (fs/mod-time out-file)))
-        (with-open [rdr (reader bed-file)
-                    wtr (writer out-file)]
-          (doseq [[_ line] (sort-by (ref-sort-fn ref-file)
-                                    (map process-line (line-seq rdr)))]
-            (.write wtr (str line "\n")))))
+        (itx/with-tx-file [tx-out out-file]
+          (with-open [wtr (writer tx-out)]
+            (doseq [cur-chrs (->> (get-seq-dict ref-file)
+                                  .getSequences
+                                  (map #(.getSequenceName %))
+                                  (filter input-chrs)
+                                  (partition-all same-time-chrs)
+                                  (map set))]
+              (with-open [rdr (reader bed-file)]
+                (doseq [[_ line] (->> (line-seq rdr)
+                                      (map (partial process-line cur-chrs))
+                                      (remove nil?)
+                                      (sort-by first))]
+                  (.write wtr (str line "\n"))))))))
       out-file)))
 
