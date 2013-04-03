@@ -1,8 +1,8 @@
 # bcbio.variation
 
 A Clojure interface to the [Genome Analysis Toolkit (GATK)][1] to analyze
-variant data in [VCF files][2]. It supports scoring for the
-[Archon Genomics X PRIZE competition][5] but is also a general framework
+variant data in [VCF format][2]. It supports scoring for the
+[Archon Genomics X PRIZE competition][5] and is also a general framework
 for variant file comparison.
 
 * [presentation from Bioinformatics Open Source Conference 2012][p1]
@@ -22,38 +22,30 @@ for variant file comparison.
 
 ## Obtaining
 
-### Latest source
-
-The latest version is available directly from GitHub. It requires Java 1.6 or
-better and [Leiningen][u1]. We use the 2.x version of Leiningen, so be sure to
-get the preview release:
-
-    $ wget https://raw.github.com/technomancy/leiningen/preview/bin/lein
-    $ chmod 755 lein && sudo mv lein /usr/local/bin
-
-Then use Leiningen to install all dependencies:
-
-    $ lein deps
-
 ### Download
 
-You can download a release jar from [the GitHub download page][dl] and run
-directly from the command line:
+The latest release is 0.0.7 (2 April 2013): [bcbio.variation-0.0.7-standalone.jar][dl].
+Run from the command line:
 
     $ java -jar bcbio.variation-VERSION-standalone.jar [arguments]
-    
-The jar contains a full GATK commandline with additional walkers, as well as
-custom command line programs. See the usage section below for supported
-arguments.
 
-[dl]: https://github.com/chapmanb/bcbio.variation/downloads
-    
+The jar contains a full GATK commandline with additional walkers, as well as
+custom command line programs. See the usage section below for more details.
+
+[dl]: https://s3.amazonaws.com/bcbio.variation/bcbio.variation-0.0.7-standalone.jar
+ 
 ### As a library
 
 To use as a library from Leiningen or Maven, follow the instructions on the
 [clojars page][clojars].
  
 [clojars]: https://clojars.org/bcbio.variation
+
+### Latest source
+
+The latest version is available directly from GitHub and requires Java 1.6 or
+better and [Leiningen][u1] (version 2). Lein will automatically pull in all
+required dependencies.
 
 ## Usage
 
@@ -240,7 +232,7 @@ The options for filtering are:
   - `support: [gatk, freebayes]` -- Use the gatk/freebayes pairwise comparison
    for true and false positives.
            
-[u1]: https://github.com/technomancy/leiningen
+[u1]: https://github.com/technomancy/leiningen#installation
 [u2]: http://en.wikipedia.org/wiki/YAML
 [u3]: https://github.com/chapmanb/bcbio.variation/blob/master/config/method-comparison.yaml
 [u4]: https://github.com/chapmanb/bcbio.variation/blob/master/config/reference-grading.yaml

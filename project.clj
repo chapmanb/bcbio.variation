@@ -1,4 +1,4 @@
-(defproject bcbio.variation "0.0.7-SNAPSHOT"
+(defproject bcbio.variation "0.0.7"
   :description "Toolkit to analyze genomic variation data, built on the GATK with Clojure"
   :license {:name "MIT" :url "http://www.opensource.org/licenses/mit-license.html"}
   :dependencies [[org.clojure/clojure "1.5.1"]
@@ -60,7 +60,7 @@
                             :snapshots false}}
   :java-source-paths ["src/java"]
   :javac-options ["-nowarn" "-target" "1.6" "-source" "1.6"]
-  :jvm-opts ["-Xms750m" "-Xmx2g"]
+  ;;:jvm-opts ["-Xms750m" "-Xmx2g"]
   :omit-source false
   :aot [bcbio.variation.vcfwalker bcbio.variation.core bcbio.variation.annotate.nbq
         bcbio.variation.annotate.entropy bcbio.variation.annotate.mfe]
