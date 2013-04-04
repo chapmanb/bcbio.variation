@@ -73,7 +73,6 @@
     (let [out-file (itx/add-file-part bed-file "sorted")
           input-chrs (get-input-chrs bed-file)
           same-time-chrs 5]
-      (println input-chrs)
       (when (or (itx/needs-run? out-file)
                 (> (fs/mod-time bed-file) (fs/mod-time out-file)))
         (itx/with-tx-file [tx-out out-file]

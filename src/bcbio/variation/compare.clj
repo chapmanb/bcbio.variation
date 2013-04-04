@@ -23,7 +23,6 @@
         [bcbio.variation.multiple :only [prep-cmp-name-lookup pipeline-compare-multiple]]
         [bcbio.variation.multisample :only [compare-two-vcf-flexible
                                             multiple-samples?]]
-        [bcbio.variation.phasing :only [is-haploid? compare-two-vcf-phased]]
         [bcbio.variation.recall :only [create-merged]]
         [bcbio.variation.structural :only [compare-sv-pipeline]]
         [bcbio.variation.validate :only [pipeline-validate]]
@@ -33,6 +32,8 @@
             [fs.core :as fs]
             [bcbio.run.itx :as itx]
             [bcbio.run.broad :as broad]
+            [bcbio.variation.grade :as grade]
+            [bcbio.variation.phasing :as phasing]
             [bcbio.variation.report :as report]))
 
 ;; ## Variance assessment
@@ -171,13 +172,16 @@
   (let [[c1 c2 sv-cmp] (if-not (:mod c1)
                          (compare-sv-pipeline c1 c2 exp config)
                          [c1 c2 {}])
-        phased-vcfs (group-by #(-> % :file (is-haploid? (:ref exp))) [c1 c2])
+        phased-vcfs (group-by #(-> % :file (phasing/is-haploid? (:ref exp))) [c1 c2])
         out-cmp (cond
-                 (get phased-vcfs true) (compare-two-vcf-phased phased-vcfs exp config)
+                 (get phased-vcfs true) (phasing/compare-two-vcf-phased phased-vcfs exp config)
                  (multiple-samples? (:file c1)) (compare-two-vcf-flexible c1 c2 exp config)
-                 :else (compare-two-vcf-standard c1 c2 exp config))]
-    (assoc out-cmp :c-files (reduce (fn [coll [k v]] (assoc coll k v))
-                                    (:c-files out-cmp) sv-cmp))))
+                 :else (compare-two-vcf-standard c1 c2 exp config))
+        grade-cmp (if (grade/is-grade-cmp? exp)
+                    (grade/annotate-discordant out-cmp)
+                    out-cmp)]
+    (assoc grade-cmp :c-files (reduce (fn [coll [k v]] (assoc coll k v))
+                                      (:c-files grade-cmp) sv-cmp))))
 
 ;; ## Customizable finalizer comparisons
 

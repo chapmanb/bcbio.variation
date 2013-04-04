@@ -49,6 +49,5 @@
     (itx/remove-path (get-in config [:dir :out]))
     (fs/mkdirs (get-in config [:dir :out]))
     (-> (compare-two-vcf c1 c2 exp config)
-        grade/annotate-discordant
         :c-files
         :eval-discordant) => out-file))

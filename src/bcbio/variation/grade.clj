@@ -9,14 +9,31 @@
             [bcbio.run.itx :as itx]
             [bcbio.variation.combine :as combine]
             [bcbio.variation.filter.attr :as attr]
+            [bcbio.variation.phasing :as phasing]
             [bcbio.variation.variantcontext :as gvc]))
 
+;; ## Identify grading references
+
+(defn is-grade-cmp?
+  [exp]
+  (= :grade (keyword (get exp :approach "compare"))))
+
+(defn is-grading-ref?
+  "Grading references are either haploid or identified with grading-ref type."
+  [exp c]
+  (or (= :grading-ref (keyword (:type c)))
+      (-> c :file (phasing/is-haploid? (:ref exp)))))
+
 (defn- find-grading-and-eval
-  "Separate grading reference and evaluation genome based on `type` parameter."
-  [& cs]
-  (let [type-groups (group-by #(keyword (:type %)) cs)]
-    [(first (:grading-ref type-groups))
-     (first (get type-groups nil))]))
+  "Separate grading reference and evaluation genome based on `type` parameter.
+   Defaults to the first being reference and second evaluation if not defined."
+  [exp c1 c2]
+  (let [grade-groups (group-by (partial is-grading-ref? exp) [c1 c2])]
+    (let [marked-ref (first (get grade-groups true))
+          marked-eval (first (get grade-groups false))]
+      (if (and marked-ref marked-eval)
+        [marked-ref marked-eval]
+        [c1 c2]))))
 
 (defn- to-refcalls
   "Convert truth discordants into reference calls "
@@ -106,11 +123,13 @@
 (defn annotate-discordant
   "Update a comparison with annotated information on discordant grading"
   [cmp]
-  (let [[truth-c eval-c] (find-grading-and-eval (:c1 cmp) (:c2 cmp))
+  (let [[truth-c eval-c] (find-grading-and-eval (:exp cmp) (:c1 cmp) (:c2 cmp))
         eval-kw (keyword (str (:name eval-c) "-discordant"))
         truth-kw (keyword (str (:name truth-c) "-discordant"))
-        eval-vcf (get-in cmp [:c-files eval-kw])
-        truth-vcf (get-in cmp [:c-files truth-kw])
+        eval-vcf (or (get-in cmp [:c-files eval-kw])
+                     (get-in cmp [:c-files :discordant]))
+        truth-vcf (or (get-in cmp [:c-files truth-kw])
+                      (get-in cmp [:c-files :discordant-missing]))
         ref-file (get-in cmp [:exp :ref])
         base-eval-vcf (merge-discordants eval-vcf truth-vcf ref-file)
         out-vcf (itx/add-file-part eval-vcf "annotate")]

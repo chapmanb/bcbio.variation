@@ -468,7 +468,6 @@
                                [] (string/split (nth xs n) #","))]
               (assoc xs n
                      (string/join "," alts))))
-          
           (remove-nochange-alt [xs]
             (cond
              (empty? xs) []
@@ -491,9 +490,10 @@
                    (string/join "\t"))))]
     (let [out-file (itx/add-file-part in-vcf-file "preclean" out-dir)]
       (when (itx/needs-run? out-file)
-        (with-open [rdr (reader in-vcf-file)
-                    wtr (writer out-file)]
-          (doall
-           (map #(.write wtr (str % "\n"))
-                (remove empty? (map clean-line (line-seq rdr)))))))
+        (itx/with-tx-file [tx-out-file out-file]
+          (with-open [rdr (reader in-vcf-file)
+                      wtr (writer tx-out-file)]
+            (doall
+             (map #(.write wtr (str % "\n"))
+                  (remove empty? (map clean-line (line-seq rdr))))))))
       out-file)))

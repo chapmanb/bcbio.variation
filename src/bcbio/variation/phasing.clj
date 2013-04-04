@@ -304,13 +304,15 @@
             (apply + (map feature-size xs)))
           (merge-intervals [x y]
             (intersection-of-bed-files [x y] ref-file (GenomeLocParser. (get-seq-dict ref-file))))]
-    (with-open [bed-iter (get-bed-iterator total-bed ref-file)]
-      (let [total (count-bases bed-iter)
-            compared (if (or (nil? call-bed) (= total-bed call-bed)) total
-                         (count-bases (merge-intervals total-bed call-bed)))]
-        {:percent (* 100.0 (/ compared total))
-         :compared compared
-         :total total}))))
+    (if (nil? total-bed)
+      {:percent 0.0 :compared 0 :total 0}
+      (with-open [bed-iter (get-bed-iterator total-bed ref-file)]
+        (let [total (count-bases bed-iter)
+              compared (if (or (nil? call-bed) (= total-bed call-bed)) total
+                           (count-bases (merge-intervals total-bed call-bed)))]
+          {:percent (* 100.0 (/ compared total))
+           :compared compared
+           :total total})))))
 
 (defn- get-phasing-metrics
   "Collect summary metrics for concordant/discordant and phasing calls"
