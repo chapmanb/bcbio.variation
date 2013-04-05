@@ -29,6 +29,7 @@
         [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template
                                                get-vcf-iterator]])
   (:require [clojure.string :as string]
+            [clj-yaml.core :as yaml]
             [fs.core :as fs]
             [lonocloud.synthread :as ->]
             [bcbio.run.itx :as itx]
@@ -209,9 +210,10 @@
             (-> x
                 (assoc :exp exp)
                 (->/as cur-cmp
-                  (assoc :summary (report/top-level-metrics cur-cmp))
-                  (->/when (grade/is-grade-cmp? exp)
-                    (assoc :discordant-breakdown (grade/prep-discordant-breakdown cur-cmp))))))
+                  (assoc :summary (report/top-level-metrics cur-cmp)))
+                (->/when (grade/is-grade-cmp? exp)
+                  (->/as cmp-w-summary
+                    (assoc :grade-breakdown (grade/prep-grade-breakdown cmp-w-summary))))))
           (update-w-finalizer [cur-cmps finalizer]
             "Update the current comparisons with a defined finalizer."
             (do-transition config :finalize
@@ -247,7 +249,9 @@
                      (for [exp (:experiments config)]
                        (let [cmps (for [[c1 c2] (combinations (prepare-vcf-calls exp config) 2)]
                                     (compare-two-vcf c1 c2 exp config))]
-                         (finalize-comparisons cmps exp config))))]
+                         (finalize-comparisons cmps exp config))))
+        grading-file (str (fs/file (get-in config [:dir :out])
+                                   (format "%s-grading.yaml" (itx/file-root (fs/base-name config-file)))))]
     (do-transition config :summary "Summarize comparisons")
     (with-open [w (get-summary-writer config config-file "summary.txt")]
       (report/write-summary-txt w comparisons))
@@ -255,6 +259,8 @@
       (report/write-files-csv w comparisons config))
     (with-open [w (get-summary-writer config config-file "summary.csv")]
       (report/write-summary-csv w comparisons))
+    (when-let [bdowns (seq (remove nil? (map :grade-breakdown comparisons)))]
+      (spit grading-file (yaml/generate-string bdowns)))
     (do-transition config :finished "Finished")
     comparisons))
 

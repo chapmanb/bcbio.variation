@@ -5,6 +5,8 @@
             VCFInfoHeaderLine VCFHeaderLineType]
            [org.broadinstitute.sting.utils.variantcontext VariantContextBuilder])
   (:require [clojure.set :refer [intersection]]
+            [clojure.string :as string]
+            [clojure.math.combinatorics :as combo]
             [lonocloud.synthread :as ->]
             [bcbio.run.itx :as itx]
             [bcbio.variation.combine :as combine]
@@ -12,17 +14,7 @@
             [bcbio.variation.phasing :as phasing]
             [bcbio.variation.variantcontext :as gvc]))
 
-;; ## Summarize grading results
-
-(defn prep-discordant-breakdown
-  "Prepare detailed breakdown of discordant variants.
-   The goal is to help identify common causes of discordance."
-  [cmp]
-  (let [vcf-file (-> cmp :c-files vals (nth 2))
-        ref-file (get-in cmp [:exp :ref])]
-    (println vcf-file)))
-
-;; ## Identify grading references
+;; ## Utility functions
 
 (defn is-grade-cmp?
   [exp]
@@ -34,16 +26,74 @@
   (or (= :grading-ref (keyword (:type c)))
       (-> c :file (phasing/is-haploid? (:ref exp)))))
 
-(defn- find-grading-and-eval
+(defn- find-grading-and-eval-kws
   "Separate grading reference and evaluation genome based on `type` parameter.
    Defaults to the first being reference and second evaluation if not defined."
-  [exp c1 c2]
-  (let [grade-groups (group-by (partial is-grading-ref? exp) [c1 c2])]
-    (let [marked-ref (first (get grade-groups true))
-          marked-eval (first (get grade-groups false))]
-      (if (and marked-ref marked-eval)
-        [marked-ref marked-eval]
-        [c1 c2]))))
+  [exp c1 c2 c-files]
+  (let [grade-groups (group-by (partial is-grading-ref? exp) [c1 c2])
+        marked-ref (first (get grade-groups true))
+        marked-eval (first (get grade-groups false))
+        [truth-c eval-c] (if (and marked-ref marked-eval)
+                           [marked-ref marked-eval]
+                           [c1 c2])
+        eval-kw (keyword (str (:name eval-c) "-discordant"))
+        truth-kw (keyword (str (:name truth-c) "-discordant"))]
+    {:eval (if (contains? c-files eval-kw) eval-kw :discordant)
+     :truth (if (contains? c-files truth-kw) truth-kw :discordant-missing)}))
+
+;; ## Summarize grading results
+
+(defn- pick-discordant-reason
+  "Decide on a likely reason for a discordant variant call"
+  [vc attr-getter]
+  (letfn [(is-repeat-region? [attrs]
+            (or (< (get attrs "gms_illumina" 100.0) 50.0)
+                (contains? (get attrs "rmsk" #{}) "repeat")))]
+    (let [attrs (attr-getter ["DP" "rmsk" "gms_illumina"] vc)]
+      (cond
+       (< (get attrs "DP" 500) 10) :low-coverage
+       (is-repeat-region? attrs) :repeat
+       :else :other))))
+
+(defn- identify-discordant-cat
+  "Identify the variant type and discordant category.
+   - variant types -- :snp :indel
+   - discordant types -- :shared :missing :extra
+   - reason types -- :hethom :vardiff :low-coverage :repeat :other"
+  [vc attr-getter]
+  (let [vtype (keyword (string/lower-case (:type vc)))
+        cat (-> (get-in vc [:attributes "GradeCat"])
+                (string/replace "discordant-" "")
+                keyword)
+        [dtype rtype] (case cat
+                        (:missing :extra) [cat (pick-discordant-reason vc attr-getter)]
+                        [:shared cat])]
+    [vtype dtype rtype]))
+
+(defn- count-discordant-categories
+  [vcf-file ref-file]
+  (let [attr-getter (attr/prep-vc-attr-retriever vcf-file ref-file)]
+    (with-open [in-vcf-iter (gvc/get-vcf-iterator vcf-file ref-file)]
+      (reduce (fn [coll vc]
+                (let [cat (identify-discordant-cat vc attr-getter)]
+                  (assoc-in coll cat (inc (get-in coll cat 0)))))
+              {} (gvc/parse-vcf in-vcf-iter)))))
+
+(defn prep-grade-breakdown
+  "Prepare detailed grading breakdown of concordant and discordant variants.
+   The goal is to help identify common causes of discordance."
+  [cmp]
+  (let [kws (find-grading-and-eval-kws (:exp cmp) (:c1 cmp) (:c2 cmp)
+                                       (:c-files cmp))
+        vcf-file (get-in cmp [:c-files (:eval kws)])
+        ref-file (get-in cmp [:exp :ref])
+        summary (:summary cmp)]
+    {:sample (:sample summary)
+     :concordant (select-keys summary [:genotype_concordance :callable_concordance
+                                       :concordant])
+     :discordant (count-discordant-categories vcf-file ref-file)}))
+
+;; ## Identify grading references
 
 (defn- to-refcalls
   "Convert truth discordants into reference calls "
@@ -61,7 +111,7 @@
   "Merge extra and missing discordant calls into single VCF."
   [eval-vcf truth-vcf ref-file]
   (combine/combine-variants [eval-vcf (to-refcalls truth-vcf ref-file)]
-                            ref-file :merge-type :full :quiet-out? true))
+                            ref-file :merge-type :full :quiet-out? true :check-ploidy? false))
 
 ;; ## Add grading info to VCF
 
@@ -133,13 +183,10 @@
 (defn annotate-discordant
   "Update a comparison with annotated information on discordant grading"
   [cmp]
-  (let [[truth-c eval-c] (find-grading-and-eval (:exp cmp) (:c1 cmp) (:c2 cmp))
-        eval-kw (keyword (str (:name eval-c) "-discordant"))
-        truth-kw (keyword (str (:name truth-c) "-discordant"))
-        eval-vcf (or (get-in cmp [:c-files eval-kw])
-                     (get-in cmp [:c-files :discordant]))
-        truth-vcf (or (get-in cmp [:c-files truth-kw])
-                      (get-in cmp [:c-files :discordant-missing]))
+  (let [kws (find-grading-and-eval-kws (:exp cmp) (:c1 cmp) (:c2 cmp)
+                                       (:c-files cmp))
+        eval-vcf (get-in cmp [:c-files (:eval kws)])
+        truth-vcf (get-in cmp [:c-files (:truth kws)])
         ref-file (get-in cmp [:exp :ref])
         base-eval-vcf (merge-discordants eval-vcf truth-vcf ref-file)
         out-vcf (itx/add-file-part eval-vcf "annotate")]
@@ -150,4 +197,4 @@
                                   (map (partial add-grade-cat ref-get)
                                        (gvc/parse-vcf eval-iter))
                                   ref-file :header-update-fn add-grade-header)))
-    (assoc-in cmp [:c-files eval-kw] out-vcf)))
+    (assoc-in cmp [:c-files (:eval kws)] out-vcf)))

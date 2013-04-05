@@ -49,6 +49,8 @@
                             "NA12878-eval-ref-discordance-annotate.vcf"))]
     (itx/remove-path (get-in config [:dir :out]))
     (fs/mkdirs (get-in config [:dir :out]))
-    (let [cmps (compare-two-vcf c1 c2 exp config)]
-      (grade/prep-discordant-breakdown cmps) => nil
-      (-> cmps :c-files :eval-discordant) => out-file)))
+    (let [cmp (-> [(compare-two-vcf c1 c2 exp config)]
+                   (finalize-comparisons exp config)
+                   first)]
+      (-> cmp :grade-breakdown :discordant :snp :shared :hethom) => 1
+      (-> cmp :c-files :eval-discordant) => out-file)))
