@@ -30,6 +30,7 @@
                                                get-vcf-iterator]])
   (:require [clojure.string :as string]
             [fs.core :as fs]
+            [lonocloud.synthread :as ->]
             [bcbio.run.itx :as itx]
             [bcbio.run.broad :as broad]
             [bcbio.variation.grade :as grade]
@@ -207,7 +208,10 @@
   (letfn [(add-summary [x]
             (-> x
                 (assoc :exp exp)
-                (#(assoc % :summary (report/top-level-metrics %)))))
+                (->/as cur-cmp
+                  (assoc :summary (report/top-level-metrics cur-cmp))
+                  (->/when (grade/is-grade-cmp? exp)
+                    (assoc :discordant-breakdown (grade/prep-discordant-breakdown cur-cmp))))))
           (update-w-finalizer [cur-cmps finalizer]
             "Update the current comparisons with a defined finalizer."
             (do-transition config :finalize

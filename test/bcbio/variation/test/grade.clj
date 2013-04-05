@@ -7,7 +7,8 @@
         [bcbio.variation.variantcontext :exclude [-main]])
   (:require [fs.core :as fs]
             [bcbio.run.itx :as itx]
-            [bcbio.variation.grade :as grade]))
+            [bcbio.variation.grade :as grade]
+            [bcbio.variation.report :as report]))
 
 (background
  (around :facts
@@ -48,6 +49,6 @@
                             "NA12878-eval-ref-discordance-annotate.vcf"))]
     (itx/remove-path (get-in config [:dir :out]))
     (fs/mkdirs (get-in config [:dir :out]))
-    (-> (compare-two-vcf c1 c2 exp config)
-        :c-files
-        :eval-discordant) => out-file))
+    (let [cmps (compare-two-vcf c1 c2 exp config)]
+      (grade/prep-discordant-breakdown cmps) => nil
+      (-> cmps :c-files :eval-discordant) => out-file)))

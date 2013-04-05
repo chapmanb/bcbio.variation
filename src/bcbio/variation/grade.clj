@@ -12,6 +12,16 @@
             [bcbio.variation.phasing :as phasing]
             [bcbio.variation.variantcontext :as gvc]))
 
+;; ## Summarize grading results
+
+(defn prep-discordant-breakdown
+  "Prepare detailed breakdown of discordant variants.
+   The goal is to help identify common causes of discordance."
+  [cmp]
+  (let [vcf-file (-> cmp :c-files vals (nth 2))
+        ref-file (get-in cmp [:exp :ref])]
+    (println vcf-file)))
+
 ;; ## Identify grading references
 
 (defn is-grade-cmp?

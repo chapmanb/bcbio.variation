@@ -11,6 +11,7 @@
   (:require [clojure.string :as string]
             [clojure.data.csv :as csv]
             [doric.core :as doric]
+            [lonocloud.synthread :as ->]
             [bcbio.variation.grade :as grade]))
 
 (defn concordance-report-metrics
@@ -83,57 +84,81 @@
 
 (defn get-sv-metrics
   "Retrieve structural variation metrics from SV concordance files."
-  [finfo ref]
-  (reduce (fn [coll [kw vcf-file]]
-            (assoc coll kw
-                   (ordered-map
-                    :total (count-variants vcf-file ref passes-filter?))))
-          (ordered-map) finfo))
+  [compared ref-file]
+  (when-let [finfo (seq (->> (:c-files compared)
+                             (drop-while #(not= (first %) :sv-concordant))
+                             (take 3)))]
+    (reduce (fn [coll [kw vcf-file]]
+              (assoc coll kw
+                     (ordered-map
+                      :total (count-variants vcf-file ref-file passes-filter?))))
+            (ordered-map) finfo)))
+
+(defn- all-vrn-counts
+  "Provide counts in a file, split by type of variation."
+  [fname cmp-kw compared]
+  (letfn [(vrn-type-passes-filter? [vrn-type]
+            (fn [vc]
+              (and (passes-filter? vc)
+                   (contains? vrn-type (:type vc)))))]
+    (let [sum-level (get-summary-level compared)
+          ref-file (get-in compared [:exp :ref])
+          base {:total (count-variants fname ref-file passes-filter?)}]
+      (if (= sum-level :quick) base
+          (assoc base
+            :nocoverage (nocoverage-count fname ref-file cmp-kw compared)
+            :snp (count-variants fname ref-file
+                                 (vrn-type-passes-filter? #{"SNP"}))
+            :indel (count-variants fname ref-file
+                                   (vrn-type-passes-filter? #{"INDEL"})))))))
+
+(defn- grading-discordance-metrics
+  "Prepare grading based metrics to break down reasons for discordant calls"
+  [vcf-file]
+  (println vcf-file))
+
+(defn- add-discordance-metrics
+  "Add detailed discordance metrics to the summary information."
+  [m compared]
+  (let [ref-file (get-in compared [:exp :ref])
+        c-files (-> compared :c-files vals)]
+    (-> m
+        (assoc :discordant1 (all-vrn-counts (second c-files) :c2 compared))
+        (->/when (> (count c-files) 2)
+          (assoc :discordant2 (all-vrn-counts (nth c-files 2) :c1 compared))
+          (assoc :discordant_both (apply shared-discordant (conj (vec (take 2 (rest c-files)))
+                                                                 ref-file)))))))
+
+(defn- add-concordance-metrics
+  "Add detailed concordance metrics to summary information."
+  [m compared]
+  (let [ref-file (get-in compared [:exp :ref])
+        c-files (-> compared :c-files vals)]
+    (-> m
+        (assoc :genotype_concordance (-> compared :metrics :percent_overall_genotype_concordance))
+        (assoc :callable_concordance (-> compared :callable-metrics
+                                         :percent_overall_genotype_concordance))
+        (assoc :nonref_discrepency (-> compared :metrics :percent_non_reference_discrepancy_rate))
+        (assoc :nonref_sensitivity (-> compared :metrics :percent_non_reference_sensitivity))
+        (assoc :concordant (all-vrn-counts (first c-files) nil compared))
+        (assoc :nonref_concordant (count-variants (first c-files) ref-file
+                                                  nonref-passes-filter?)))))
 
 (defn top-level-metrics
   "Provide one-line summary of similarity metrics for a VCF comparison."
   [compared]
   (let [sum-level (get-summary-level compared)
-        ref-file (get-in compared [:exp :ref])]
-    (letfn [(vrn-type-passes-filter [vrn-type]
-              (fn [vc]
-                (and (passes-filter? vc)
-                     (contains? vrn-type (:type vc)))))
-            (all-vrn-counts [fname cmp-kw compared]
-              (let [base {:total (count-variants fname ref-file passes-filter?)}]
-                (if (= sum-level :quick) base
-                    (assoc base
-                      :nocoverage (nocoverage-count fname ref-file cmp-kw compared)
-                      :snp (count-variants fname ref-file
-                                                (vrn-type-passes-filter #{"SNP"}))
-                      :indel (count-variants fname ref-file
-                                             (vrn-type-passes-filter #{"INDEL"}))))))]
-      (let [c-files (-> compared :c-files vals)
-            base
-            (ordered-map
-             :sample (-> compared :exp :sample)
-             :ftypes (take 3 (-> compared :c-files keys))
-             :sv (let [xs (->> (:c-files compared)
-                               (drop-while #(not= (first %) :sv-concordant))
-                               (take 3))]
-                   (when-not (empty? xs)
-                     (get-sv-metrics xs ref-file)))
-             :genotype_concordance (-> compared :metrics :percent_overall_genotype_concordance)
-             :callable_concordance (-> compared :callable-metrics
-                                       :percent_overall_genotype_concordance)
-             :nonref_discrepency (-> compared :metrics :percent_non_reference_discrepancy_rate)
-             :nonref_sensitivity (-> compared :metrics :percent_non_reference_sensitivity)
-             :concordant (all-vrn-counts (first c-files) nil compared)
-             :nonref_concordant (count-variants (first c-files) ref-file
-                                                nonref-passes-filter?)
-             :discordant1 (all-vrn-counts (second c-files) :c2 compared)
-             :discordant2 (when (> (count c-files) 2) (all-vrn-counts (nth c-files 2) :c1 compared))
-             :discordant_both (when (> (count c-files) 2)
-                                (apply shared-discordant (conj (vec (take 2 (rest c-files)))
-                                                                ref-file))))]
-        (if-not (= sum-level :full) base
-            (assoc base
-              :ml_metrics (ml-on-vcf-metrics ref-file (take 2 c-files))))))))
+        ref-file (get-in compared [:exp :ref])
+        c-files (-> compared :c-files vals)]
+    (-> (ordered-map)
+        (assoc :sample (-> compared :exp :sample))
+        (assoc :ftypes (take 3 (-> compared :c-files keys)))
+        (add-concordance-metrics compared)
+        (add-discordance-metrics compared)
+        (->/when-let [sv-metrics (get-sv-metrics compared ref-file)]
+          (assoc :sv sv-metrics))
+        (->/when (= sum-level :full)
+          (assoc :ml_metrics (ml-on-vcf-metrics ref-file (take 2 c-files)))))))
 
 (defn calc-accuracy
   "Calculate an overall accuracy score from input metrics.
@@ -306,7 +331,7 @@
   "Write a top level summary CSV file with useful concordance metrics."
   [wtr comparisons]
   (doseq [[i [x cmp-orig]] (map-indexed vector (map (juxt identity :summary) comparisons))]
-    (let [header (concat (take 1 (keys cmp-orig)) [:call1 :call2 :type] (nnext (keys cmp-orig)))
+    (let [header (concat [:sample :call1 :call2 :type] (nnext (keys cmp-orig)))
           cmp (-> cmp-orig
                   (dissoc :ftypes)
                   (assoc :call1 (-> x :c1 :name))
