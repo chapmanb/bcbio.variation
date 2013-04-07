@@ -265,5 +265,11 @@
     comparisons))
 
 (defn -main [config-file]
-  (variant-comparison-from-config config-file)
-  (System/exit 0))
+  (try
+    (variant-comparison-from-config config-file)
+    (catch Throwable t
+      (.printStackTrace t)
+      (System/exit -1))
+    (finally
+      (shutdown-agents)
+      (System/exit 0))))
