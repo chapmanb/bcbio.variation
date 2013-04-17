@@ -392,28 +392,30 @@
               (string/upper-case
                (str
                 (or (extract-sequence ref-file (first xs) before-start before-start) "N")))))
-          (get-ref-alt [xs]
-            [(nth xs 3) (nth xs 4)])
+          (get-ref-alts [xs]
+            [(nth xs 3) (string/split (nth xs 4) #",")])
           (indel? [xs]
-            (let [[vc-ref vc-alt] (get-ref-alt xs)]
-              (or (> (count vc-ref) 1) (> (count vc-alt) 1))))
+            (let [[vc-ref vc-alts] (get-ref-alts xs)]
+              (some #(not= (count vc-ref) (count %)) vc-alts)))
           (is-5pad-n? [xs]
-            (let [[vc-ref vc-alt] (get-ref-alt xs)]
-              (and (.startsWith vc-ref "N") (.startsWith vc-alt "N"))))
+            (let [[vc-ref vc-alts] (get-ref-alts xs)]
+              (every? #(and (.startsWith vc-ref "N") (.startsWith % "N")) vc-alts)))
           (fix-5pad-n [xs]
-            (let [[vc-ref vc-alt] (get-ref-alt xs)]
+            (let [[vc-ref vc-alts] (get-ref-alts xs)]
               (-> xs
                   (assoc 3 (str (prev-pad xs) (subs vc-ref 1)))
-                  (assoc 4 (str (prev-pad xs) (subs vc-alt 1))))))
+                  (assoc 4 (string/join ","
+                                        (map #(str (prev-pad xs) (subs % 1)) vc-alts))))))
           (no-pad? [xs]
-            (let [[vc-ref vc-alt] (get-ref-alt xs)]
-              (not= (first vc-ref) (first vc-alt))))
+            (let [[vc-ref vc-alts] (get-ref-alts xs)]
+              (some #(not= (first vc-ref) (first %)) vc-alts)))
           (fix-nopad [xs]
-            (let [[vc-ref vc-alt] (get-ref-alt xs)]
+            (let [[vc-ref vc-alts] (get-ref-alts xs)]
               (-> xs
                   (assoc 1 (dec (Integer/parseInt (second xs))))
                   (assoc 3 (str (prev-pad xs) vc-ref))
-                  (assoc 4 (str (prev-pad xs) vc-alt)))))]
+                  (assoc 4 (string/join ","
+                                        (map #(str (prev-pad xs) %) vc-alts))))))]
     (if (empty? xs) []
         (-> xs
             (->/as cur-xs

@@ -5,7 +5,7 @@
         [bcbio.variation.web.db :only [prepare-web-db]])
   (:require [clojure.string :as string]
             [clj-yaml.core :as yaml]))
-  
+
 (def ^{:doc "Web configuration, loaded from input YAML file"}
   web-config (atom nil))
 

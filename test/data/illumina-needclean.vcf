@@ -13,6 +13,8 @@
 ##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
 ##FORMAT=<ID=GQ,Number=1,Type=Integer,Description="Genotype Quality">
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	NA12878_FIX
+22	7	.	TC	GG,TG	.	.	.	GT	1/2
+22	23	.	A	C,G	.	.	.	GT	1/2
 22	672	.	CATTTCAGTG-----	CCCATCTCAGCGGCA	1102	PASS	DP=42;EXON=info with spaces	GT:GQ	0/1:877
 22	848	.	G	.	587	PASS	DP=16	GT:GQ	1/1:23
 22	849	.	G	C	587	PASS	DP=16	GT:GQ	1/1:23
