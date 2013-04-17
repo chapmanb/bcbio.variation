@@ -47,11 +47,11 @@
   "Decide on a likely reason for a discordant variant call"
   [vc attr-getter]
   (letfn [(is-repeat-region? [attrs]
-            (or (< (get attrs "gms_illumina" 100.0) 50.0)
-                (contains? (get attrs "rmsk" #{}) "repeat")))]
+            (or (< (or (get attrs "gms_illumina") 100.0) 50.0)
+                (contains? (or (get attrs "rmsk") #{}) "repeat")))]
     (let [attrs (attr-getter ["DP" "rmsk" "gms_illumina"] vc)]
       (cond
-       (< (get attrs "DP" 500) 10) :low-coverage
+       (< (or (get attrs "DP") 500) 10) :low-coverage
        (is-repeat-region? attrs) :repeat
        :else :other))))
 
