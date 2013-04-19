@@ -55,6 +55,8 @@
    "gms_illumina" {:range [0.0 100.0]
                    :y-scale {:type :log}
                    :desc "Genome Mappability Score with an Illumina error model"}
+   "in_cse" {:x-scale {:type :category}
+             :desc "Presence of variant in an error prone genomic position"}
    "rmsk" {:x-scale {:type :category}
            :desc "Repeat status: is the variant in a known repeat region"}
    "type" {:x-scale {:type :category}
@@ -134,6 +136,11 @@
   [_ row]
   (let [val (first (vals row))]
     (if (nil? val) 100.0 val)))
+
+(defmethod finalize-gemini-attr :in_cse
+  [_ row]
+  (let [val (first (vals row))]
+    (if (and (not (nil? val)) (pos? val)) #{"error-prone"} #{"standard"})))
 
 (defmethod finalize-gemini-attr :rmsk
   [_ row]

@@ -48,10 +48,13 @@
   [vc attr-getter]
   (letfn [(is-repeat-region? [attrs]
             (or (< (or (get attrs "gms_illumina") 100.0) 50.0)
-                (contains? (or (get attrs "rmsk") #{}) "repeat")))]
+                (contains? (or (get attrs "rmsk") #{}) "repeat")))
+          (is-error-prone? [attrs]
+            (contains? (or (get attrs "in_cse") #{}) "error-prone"))]
     (let [attrs (attr-getter ["DP" "rmsk" "gms_illumina"] vc)]
       (cond
        (< (or (get attrs "DP") 500) 10) :low-coverage
+       (is-error-prone? attrs) :error-prone
        (is-repeat-region? attrs) :repeat
        :else :other))))
 
@@ -59,7 +62,7 @@
   "Identify the variant type and discordant category.
    - variant types -- :snp :indel
    - discordant types -- :shared :missing :extra
-   - reason types -- :hethom :vardiff :low-coverage :repeat :other"
+   - reason types -- :hethom :vardiff :low-coverage :repeat :error-prone :other"
   [vc attr-getter]
   (let [vtype (keyword (string/lower-case (:type vc)))
         cat (-> (get-in vc [:attributes "GradeCat"])
