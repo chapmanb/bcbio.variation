@@ -410,8 +410,8 @@
                                         (map #(str (prev-pad xs) (subs % 1)) vc-alts))))))
           (no-pad? [xs]
             (let [[vc-ref vc-alts] (get-ref-alts xs)]
-              (some #(and (not (.startsWith % "<")
-                               (not= (first vc-ref) (first %))))
+              (some #(and (not (.startsWith % "<"))
+                          (not= (first vc-ref) (first %)))
                     vc-alts)))
           (fix-nopad [xs]
             (let [[vc-ref vc-alts] (get-ref-alts xs)]
@@ -423,11 +423,11 @@
     (if (empty? xs) []
         (-> xs
             (->/as cur-xs
-                   (->/when (and (indel? cur-xs) (is-5pad-n? cur-xs))
-                     fix-5pad-n))
+              (->/when (and (indel? cur-xs) (is-5pad-n? cur-xs))
+                fix-5pad-n))
             (->/as cur-xs
-                   (->/when (and (indel? cur-xs) (no-pad? cur-xs))
-                     fix-nopad))))))
+              (->/when (and (indel? cur-xs) (no-pad? cur-xs))
+                fix-nopad))))))
 
 (defn clean-problem-vcf
   "Clean VCF file which GATK parsers cannot handle due to illegal characters.
