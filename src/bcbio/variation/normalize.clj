@@ -410,7 +410,9 @@
                                         (map #(str (prev-pad xs) (subs % 1)) vc-alts))))))
           (no-pad? [xs]
             (let [[vc-ref vc-alts] (get-ref-alts xs)]
-              (some #(not= (first vc-ref) (first %)) vc-alts)))
+              (some #(and (not (.startsWith % "<")
+                               (not= (first vc-ref) (first %))))
+                    vc-alts)))
           (fix-nopad [xs]
             (let [[vc-ref vc-alts] (get-ref-alts xs)]
               (-> xs
