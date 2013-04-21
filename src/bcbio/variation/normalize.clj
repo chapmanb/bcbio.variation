@@ -396,7 +396,9 @@
             [(nth xs 3) (string/split (nth xs 4) #",")])
           (indel? [xs]
             (let [[vc-ref vc-alts] (get-ref-alts xs)]
-              (some #(not= (count vc-ref) (count %)) vc-alts)))
+              (some #(and (not (.startsWith % "<"))
+                          (not= (count vc-ref) (count %)))
+                    vc-alts)))
           (is-5pad-n? [xs]
             (let [[vc-ref vc-alts] (get-ref-alts xs)]
               (every? #(and (.startsWith vc-ref "N") (.startsWith % "N")) vc-alts)))
