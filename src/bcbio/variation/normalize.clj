@@ -165,8 +165,12 @@
   "Check if a variant has a non-informative no-call genotype."
   [vc]
   (if-not (= 1 (:num-samples vc)) false
-          (contains? #{"NO_CALL" "MIXED" "HOM_REF"}
-                     (-> vc :genotypes first :type))))
+          (try
+            (contains? #{"NO_CALL" "MIXED" "HOM_REF"}
+                       (-> vc :genotypes first :type))
+            (catch Exception e
+              (println (:chr vc) (:start vc))
+              (throw e)))))
 
 (defn nochange-alt?
   "Check a VCF input line for identical REF and ALT calls"
@@ -464,22 +468,21 @@
              :else x))
           (remove-gap [n xs]
             (assoc xs n
-                   (string/replace (nth xs n) "-" "")))
-          (fix-duplicate-alts [xs]
-            (let [n 4
-                  alts (reduce (fn [coll x]
-                                 (if-not (contains? (set coll) x)
-                                   (conj coll x)
-                                   coll))
-                               [] (string/split (nth xs n) #","))]
-              (assoc xs n
-                     (string/join "," alts))))
-          (remove-nochange-alt [xs]
-            (cond
-             (empty? xs) []
-             (= (nth xs 3) (nth xs 4)) []
-             (= "." (nth xs 4)) []
-             :else xs))
+                   (-> (nth xs n)
+                       (string/replace "-" "")
+                       (string/replace "." ""))))
+          (has-duplicate-alts? [alt]
+            (let [alts (string/split alt #",")]
+              (not= (count alts) (count (set alts)))))
+          (remove-problem-alts [xs]
+            (let [ref (nth xs 3)
+                  alt (nth xs 4)]
+              (cond
+               (empty? xs) []
+               (= ref alt) []
+               (= "." alt) []
+               (has-duplicate-alts? alt) []
+               :else xs)))
           (fix-info-spaces [xs]
             (assoc xs 7
                    (string/replace (nth xs 7) " " "_")))
@@ -489,9 +492,8 @@
               (->> (string/split line #"\t")
                    (remove-gap 3)
                    (remove-gap 4)
-                   (fix-duplicate-alts)
                    (fix-info-spaces)
-                   remove-nochange-alt
+                   remove-problem-alts
                    (maybe-add-indel-pad-base ref-file)
                    (string/join "\t"))))]
     (let [out-file (itx/add-file-part in-vcf-file "preclean" out-dir)]
