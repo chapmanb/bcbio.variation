@@ -255,7 +255,7 @@
           (fix-chrom [new xs]
             (assoc xs 0 new))]
     (let [parts (string/split line #"\t")
-          cur-chrom (get chr-map (first parts) (first parts))]
+          cur-chrom (or (get chr-map (first parts)) (first parts))]
       {:chrom cur-chrom
        :line (->> parts
                   (fix-chrom cur-chrom)
