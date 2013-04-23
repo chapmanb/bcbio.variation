@@ -269,6 +269,7 @@
     (variant-comparison-from-config config-file)
     (catch Throwable t
       (.printStackTrace t)
+      (shutdown-agents)
       (System/exit -1))
     (finally
       (shutdown-agents)

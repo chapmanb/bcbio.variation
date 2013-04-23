@@ -108,28 +108,30 @@
 (defmethod get-vc-attr [:format "DP"]
   ^{:doc "Retrieve depth from Genotype FORMAT metrics.
           Handles custom cases like cortex_var with alternative
-          depth attributes."}
+          depth attributes, and Illumina with (DPU and DPI)."}
   [vc attr _]
   {:pre [(= 1 (:num-samples vc))]}
-  (let [g-attrs (-> vc :genotypes first :attributes)]
-    (cond
-     (contains? g-attrs "DP") (to-float (get g-attrs "DP"))
-     (contains? g-attrs "AD") (to-float (apply + (get g-attrs "AD")))
-     (contains? g-attrs "COV") (int (apply + (map to-float (string/split (get g-attrs "COV") #","))))
-     :else nil)))
+  (letfn [(contains-good? [xs x]
+            (and (contains? xs x)
+                 (not= (get xs x) -1)
+                 (not= (get xs x) [])))]
+    (let [g-attrs (-> vc :genotypes first :attributes)]
+      (cond
+       (contains-good? g-attrs "DP") (to-float (get g-attrs "DP"))
+       (contains-good? g-attrs "AD") (to-float (apply + (get g-attrs "AD")))
+       (contains-good? g-attrs "COV") (int (apply + (map to-float (string/split (get g-attrs "COV") #","))))
+       (contains-good? g-attrs "DPU") (to-float (get g-attrs "DPU"))
+       (contains-good? g-attrs "DPI") (to-float (get g-attrs "DPI"))
+       :else nil))))
 
 (defmethod get-vc-attr "DP"
   ^{:doc "Retrieve depth for an allele, first trying genotype information
           then falling back on information in INFO column."}
   [vc attr rets]
-  (let [gt-dp (when (= 1 (:num-samples vc))
-                (get-vc-attr vc [:format attr] rets))
-        info-dp (let [x (get-in vc [:attributes attr])]
-                  (when-not (nil? x)
-                    (try (Float/parseFloat x)
-                         (catch java.lang.NumberFormatException _ x))))
-        ready-dp (if (nil? gt-dp) info-dp gt-dp)]
-    (if (nil? gt-dp) info-dp gt-dp)))
+  (if-let [gt-dp (when (= 1 (:num-samples vc))
+                   (get-vc-attr vc [:format attr] rets))]
+    gt-dp
+    (to-float (get-in vc [:attributes attr]))))
 
 (defmethod get-vc-attr "Context"
   ^{:doc "Retrieve cytosine context, relative to standard CG sites"}

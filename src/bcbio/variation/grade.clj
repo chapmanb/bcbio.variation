@@ -9,6 +9,7 @@
             [clojure.math.combinatorics :as combo]
             [lonocloud.synthread :as ->]
             [bcbio.run.itx :as itx]
+            [bcbio.variation.annotation :as annotation]
             [bcbio.variation.combine :as combine]
             [bcbio.variation.filter.attr :as attr]
             [bcbio.variation.phasing :as phasing]
@@ -51,7 +52,7 @@
                 (contains? (or (get attrs "rmsk") #{}) "repeat")))
           (is-error-prone? [attrs]
             (contains? (or (get attrs "in_cse") #{}) "error-prone"))]
-    (let [attrs (attr-getter ["DP" "rmsk" "gms_illumina"] vc)]
+    (let [attrs (attr-getter ["DP" "rmsk" "gms_illumina" "in_cse"] vc)]
       (cond
        (< (or (get attrs "DP") 500) 10) :low-coverage
        (is-error-prone? attrs) :error-prone
@@ -105,16 +106,20 @@
     (when (itx/needs-run? out-file)
       (with-open [in-vcf-iter (gvc/get-vcf-iterator f ref-file)]
         (gvc/write-vcf-w-template f {:out out-file}
-                                  (map #(gvc/genotypes->refcall % :attrs #{"DP"})
+                                  (map #(gvc/genotypes->refcall %)
                                        (gvc/parse-vcf in-vcf-iter))
                                   ref-file)))
     out-file))
 
 (defn- merge-discordants
   "Merge extra and missing discordant calls into single VCF."
-  [eval-vcf truth-vcf ref-file]
-  (combine/combine-variants [eval-vcf (to-refcalls truth-vcf ref-file)]
-                            ref-file :merge-type :full :quiet-out? true :check-ploidy? false))
+  [eval-vcf truth-vcf align-bam ref-file]
+  (let [truth-dis-vcf (-> truth-vcf
+                          (to-refcalls ref-file)
+                          (->/when align-bam
+                            (annotation/add-gatk-annotations align-bam ref-file :annos ["DepthOfCoverage"])))]
+    (combine/combine-variants [eval-vcf truth-dis-vcf]
+                              ref-file :merge-type :full :quiet-out? true :check-ploidy? false)))
 
 ;; ## Add grading info to VCF
 
@@ -191,7 +196,8 @@
         eval-vcf (get-in cmp [:c-files (:eval kws)])
         truth-vcf (get-in cmp [:c-files (:truth kws)])
         ref-file (get-in cmp [:exp :ref])
-        base-eval-vcf (merge-discordants eval-vcf truth-vcf ref-file)
+        align-bam (get-in cmp [:exp :align])
+        base-eval-vcf (merge-discordants eval-vcf truth-vcf align-bam ref-file)
         out-vcf (itx/add-file-part eval-vcf "annotate")]
     (when (itx/needs-run? out-vcf)
       (with-open [ref-get (gvc/get-vcf-retriever ref-file truth-vcf)

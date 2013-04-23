@@ -18,15 +18,16 @@
 
 (defn add-gatk-annotations
   "Add GATK annotation metrics to variant calls."
-  [in-vcf align-bam ref & {:keys [out-dir intervals]}]
+  [in-vcf align-bam ref & {:keys [out-dir intervals annos]}]
   {:pre [(not (nil? align-bam))]}
   (let [file-info {:out-vcf (itx/add-file-part in-vcf "annotated" out-dir)}
+        ready-annos (if annos annos std-annotations)
         args (concat ["-R" ref
                       "-I" align-bam
                       "--variant" in-vcf
                       "--allow_potentially_misencoded_quality_scores"
                       "-o" :out-vcf]
-                     (reduce #(concat %1 ["-A" %2]) [] std-annotations)
+                     (reduce #(concat %1 ["-A" %2]) [] ready-annos)
                      (broad/gatk-cl-intersect-intervals intervals ref :vcf in-vcf))]
     (broad/index-bam align-bam)
     (broad/run-gatk "VariantAnnotator" args file-info {:out [:out-vcf]})
