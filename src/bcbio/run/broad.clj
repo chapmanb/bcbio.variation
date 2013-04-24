@@ -25,7 +25,8 @@
     (create-ref-dict-gatk args)
     (let [std-args (concat ["-T" program]
                            (when-not (contains? (set args) "--unsafe")
-                             ["--unsafe" "LENIENT_VCF_PROCESSING"]))]
+                             ["--unsafe" "LENIENT_VCF_PROCESSING"])
+                           ["--read_filter" "BadCigar" "--read_filter" "NotPrimaryAlignment"])]
       (itx/with-tx-files [tx-file-info file-info (get map-info :out []) [".idx"]]
         (try
           (CommandLineGATK/start (CommandLineGATK.)
