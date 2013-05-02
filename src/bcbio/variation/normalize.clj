@@ -433,6 +433,24 @@
               (->/when (and (indel? cur-xs) (no-pad? cur-xs))
                 fix-nopad))))))
 
+(defn- remove-bad-ref
+  "Remove calls where the reference base does not match expected reference allele."
+  [ref-file xs]
+  (letfn [(is-bad-ref? [xs]
+            (let [check-bases #{"A" "C" "G" "T"} 
+                  [chrom start _ vc-ref] (take 4 xs)
+                  real-ref (extract-sequence ref-file chrom (Integer/parseInt start)
+                                             (Integer/parseInt start))]
+              (and (= 1 (count vc-ref))
+                   (not (nil? real-ref))
+                   (contains? check-bases (string/upper-case real-ref))
+                   (contains? check-bases (string/upper-case vc-ref))
+                   (not= (string/upper-case vc-ref) (string/upper-case real-ref)))))]
+    (cond
+     (empty? xs) []
+     (is-bad-ref? xs) []
+     :else xs)))
+
 (defn clean-problem-vcf
   "Clean VCF file which GATK parsers cannot handle due to illegal characters.
   Fixes:
@@ -494,6 +512,7 @@
                    (remove-gap 4)
                    (fix-info-spaces)
                    remove-problem-alts
+                   (remove-bad-ref ref-file)
                    (maybe-add-indel-pad-base ref-file)
                    (string/join "\t"))))]
     (let [out-file (itx/add-file-part in-vcf-file "preclean" out-dir)]

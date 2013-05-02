@@ -16,7 +16,6 @@ experiments:
         remove-refcalls: true
       - name: contestant
         prep: true
-        preclean: true
         remove-refcalls: true
         file: test/data/svs/contestant-sv-calls.vcf
         intervals: test/data/svs/contestant-sv-regions.bed

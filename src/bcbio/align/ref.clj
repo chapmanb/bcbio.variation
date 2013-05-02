@@ -38,7 +38,8 @@
                        (map #(.getSequenceName %) (.getSequences (get-seq-dict ref-file))))))
 
 (defn extract-sequence
-  "Retrieve sequence in the provided region from input reference file."
+  "Retrieve sequence in the provided region from input reference file.
+   start and end are 1-based inclusive coordinates (VCF style)"
   [ref-file contig start end]
   (let [seq-ref (ReferenceSequenceFileFactory/getReferenceSequenceFile (file ref-file))
         seq-dict (-> seq-ref .getSequenceDictionary)]
