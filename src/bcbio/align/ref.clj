@@ -28,6 +28,15 @@
 
 (def get-seq-dict (memoize get-seq-dict*))
 
+(defn get-seq-dict-and-ref*
+  "Retrieve Picard sequence dictionary and reference from FASTA file."
+  [ref-file]
+  (let [seq-ref (ReferenceSequenceFileFactory/getReferenceSequenceFile (file ref-file))
+        seq-dict (-> seq-ref .getSequenceDictionary)]
+    [seq-dict seq-ref]))
+
+(def get-seq-dict-and-ref (memoize get-seq-dict-and-ref*))
+
 (defn get-seq-name-map
   "Retrieve map of sequence names to index positions in the input reference.
    This is useful for sorting by position."
@@ -41,8 +50,7 @@
   "Retrieve sequence in the provided region from input reference file.
    start and end are 1-based inclusive coordinates (VCF style)"
   [ref-file contig start end]
-  (let [seq-ref (ReferenceSequenceFileFactory/getReferenceSequenceFile (file ref-file))
-        seq-dict (-> seq-ref .getSequenceDictionary)]
+  (let [[seq-dict seq-ref] (get-seq-dict-and-ref ref-file)]
     (when (and (contains? (set (map #(.getSequenceName %) (.getSequences seq-dict))) contig)
                (<= end (.getSequenceLength (.getSequence seq-dict contig))))
       (-> seq-ref
