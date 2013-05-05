@@ -40,6 +40,9 @@
                      :desc "Normalized, phred-scaled likelihoods for alternative genotype"}
                "HaplotypeScore" {:range [0.0 50.0]
                                  :desc "Consistency of the site with at most two segregating haplotypes"}
+               ;; Validation
+               "GradeCat" {:x-scale {:type :category}
+                           :desc "Validation category, differentiating discordant types"}
                ;; Methylation metrics from BisSNP
                "CS" {:x-scale {:type :category}
                      :desc "Strand of cytosine relative to reference genome"}
