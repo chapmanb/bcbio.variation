@@ -84,9 +84,10 @@
   [vc attr _]
   (let [g (-> vc :genotypes first)
         pls (get-pls vc)]
-    (if (= (:type g) "HOM_REF")
-      (apply max (vals pls))
-      (get pls "HOM_REF"))))
+    (when-not (empty? pls)
+      (if (= (:type g) "HOM_REF")
+        (apply max (vals pls))
+        (get pls "HOM_REF")))))
 
 (defmethod get-vc-attr "PLratio"
   ^{:doc "Calculate ratio of reference likelihood call to alternative variant calls.
