@@ -31,9 +31,10 @@
               (when (= 1 (count do-match))
                 (first do-match))))]
     (let [vcf-samples (-> in-vcf get-vcf-header .getGenotypeSamples set)]
-      (if (contains? vcf-samples sample)
-        sample
-        (sample-match sample vcf-samples)))))
+      (cond
+       (contains? vcf-samples sample) sample
+       (= 1 (count vcf-samples)) (first vcf-samples)
+       :else (sample-match sample vcf-samples)))))
 
 (defn select-by-sample
   "Select only the sample of interest from input VCF files."
