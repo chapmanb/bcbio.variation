@@ -194,7 +194,7 @@
 
 (defn full-prep-vcf
   "Provide convenient entry to fully normalize a variant file for comparisons."
-  [vcf-file ref-file & {:keys [max-indel resort]}]
+  [vcf-file ref-file & {:keys [max-indel resort keep-ref]}]
   (let [out-file (itx/add-file-part vcf-file "fullprep")]
     (when (itx/needs-run? out-file)
       (itx/with-temp-dir [out-dir (fs/parent vcf-file)]
@@ -202,7 +202,8 @@
                    :ref ref-file :params {:max-indel max-indel}}
               call {:name "fullprep" :file vcf-file :preclean true
                     :prep true :normalize true :prep-sv-genotype (not (nil? (:sample exp)))
-                    :prep-sort-pos resort}
+                    :prep-sort-pos resort
+                    :remove-refcalls (not keep-ref)}
               out-info (gatk-normalize call exp [] out-dir
                                        (fn [_ x] (println x)))
               nosv-file (if max-indel
@@ -212,12 +213,20 @@
     out-file))
 
 (defn -main [& args]
-  (let [[options [vcf-file ref-file] _]
+  (let [[options [vcf-file ref-file] banner]
         (cli args
              ["-i" "--max-indel" "Maximum indel size to include" :default nil
               :parse-fn #(Integer. %)]
-             ["-s" "--resort" "Resort input file by coordinate position" :default false :flag true])
-        out-file (full-prep-vcf vcf-file ref-file :max-indel (:max-indel options)
-                                :resort (:resort options))]
-    (println out-file)
-    (System/exit 0)))
+             ["-s" "--resort" "Resort input file by coordinate position" :default false :flag true]
+             ["-r" "--keep-ref" "Keep reference and no-calls" :default false :flag true])]
+    (when (or (:help options) (nil? vcf-file) (nil? ref-file))
+      (println "Required arguments:")
+      (println "    <vcf-file> VCF input file to prepare.")
+      (println "    <ref-file> Genome reference file (GRCh37/b37 coordinates)")
+      (println)
+      (println banner)
+      (System/exit 0))
+    (let [out-file (full-prep-vcf vcf-file ref-file :max-indel (:max-indel options)
+                                  :resort (:resort options) :keep-ref (:keep-ref options))]
+      (println out-file)
+      (System/exit 0))))
