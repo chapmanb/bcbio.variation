@@ -31,6 +31,8 @@
 (defn get-seq-dict-and-ref*
   "Retrieve Picard sequence dictionary and reference from FASTA file."
   [ref-file]
+  (create-ref-dict ref-file)
+  (ReferenceDataSource. (file ref-file))
   (let [seq-ref (ReferenceSequenceFileFactory/getReferenceSequenceFile (file ref-file))
         seq-dict (-> seq-ref .getSequenceDictionary)]
     [seq-dict seq-ref]))

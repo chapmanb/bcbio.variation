@@ -271,8 +271,10 @@
                        (chrs-from-fasta-file ref-file))))
           (write-by-chrom [ref-wrtrs chr-map line]
             (let [line-info (fix-vcf-line line chr-map config)]
-              (.write (get ref-wrtrs (:chrom line-info))
-                      (str (:line line-info) "\n"))))]
+              (if-let [wtr (get ref-wrtrs (:chrom line-info))]
+                (.write wtr (str (:line line-info) "\n"))
+                (throw (Exception. (format "Could not find remapping of chromosome %s in reference: %s"
+                                           (:chrom line-info) (keys ref-wrtrs)))))))]
     (let [ref-chrs (ref-chr-files ref-file)
           ref-wrtrs (zipmap (keys ref-chrs) (map writer (vals ref-chrs)))
           chr-map (chr-name-remap (:prep-org config) ref-file orig-ref-file)]
@@ -437,7 +439,7 @@
   "Remove calls where the reference base does not match expected reference allele."
   [ref-file xs]
   (letfn [(is-bad-ref? [xs]
-            (let [check-bases #{"A" "C" "G" "T"} 
+            (let [check-bases #{"A" "C" "G" "T"}
                   [chrom start _ vc-ref] (take 4 xs)
                   real-ref (extract-sequence ref-file chrom (Integer/parseInt start)
                                              (Integer/parseInt start))]
