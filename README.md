@@ -78,7 +78,8 @@ To produce a stable, decomposed variant file for comparison run:
 This will also handle re-ordering variants to match the reference file ordering,
 essential for feeding into tools like GATK, and remapping hg19 to GRCh37
 chromosome names. To additionally filter outputs by indel size, pass an argument
-specifying the maximum indel size to include: `--max-indel 30`.
+specifying the maximum indel size to include: `--max-indel 30`. To retain
+reference (`0/0`) and no calls in the prepped file, use `--keep-ref`.
 
 ### Web interface
 
