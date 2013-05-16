@@ -36,6 +36,7 @@ experiments:
           caller: cg
           technology: cg
         prep: true
+        fix-sample-header: true
         file: test/data/cg-calls.vcf
     finalize:
       - method: multiple

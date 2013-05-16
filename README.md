@@ -152,6 +152,8 @@ provide example starting points and details on available options are below:
            prep: Prep with in-order chromosomes and sample names (boolean; default false).
            prep-sort-pos: Sort by position during prep. Required if variants are
                           not coordinate sorted within chromosomes. (boolean; default false).
+           fix-sample-header: Adjust VCF sample header names to match sample
+                              specified in `sample` (boolean; default false)
            prep-sv-genotype: Normalize structural variant genotypes to a single
                              ref call (boolean; default false).
            prep-allele-count: Number of alleles to convert calls to during
