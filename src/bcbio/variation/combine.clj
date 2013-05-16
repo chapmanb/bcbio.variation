@@ -201,7 +201,8 @@
         (let [exp {:sample (-> vcf-file get-vcf-header .getGenotypeSamples first)
                    :ref ref-file :params {:max-indel max-indel}}
               call {:name "fullprep" :file vcf-file :preclean true
-                    :prep true :normalize true :prep-sv-genotype (not (nil? (:sample exp)))
+                    :prep true :normalize true :prep-sv-genotype false
+                    :fix-sample-header true
                     :prep-sort-pos resort
                     :remove-refcalls (not keep-ref)}
               out-info (gatk-normalize call exp [] out-dir
@@ -218,7 +219,7 @@
              ["-i" "--max-indel" "Maximum indel size to include" :default nil
               :parse-fn #(Integer. %)]
              ["-s" "--resort" "Resort input file by coordinate position" :default false :flag true]
-             ["-r" "--keep-ref" "Keep reference and no-calls" :default false :flag true])]
+             ["-r" "--keep-ref" "Keep reference (0/0) calls" :default false :flag true])]
     (when (or (:help options) (nil? vcf-file) (nil? ref-file))
       (println "Required arguments:")
       (println "    <vcf-file> VCF input file to prepare.")

@@ -163,14 +163,17 @@
 
 (defn- no-call-genotype?
   "Check if a variant has a non-informative no-call genotype."
-  [vc]
-  (if-not (= 1 (:num-samples vc)) false
-          (try
-            (contains? #{"NO_CALL" "MIXED" "HOM_REF"}
-                       (-> vc :genotypes first :type))
-            (catch Exception e
-              (println (:chr vc) (:start vc))
-              (throw e)))))
+  [vc config]
+  (let [to-remove (cond
+                   (:prep-sv-genotype config) #{}
+                   (:remove-refcalls config) #{"NO_CALL" "MIXED" "HOM_REF"}
+                   :else #{"NO_CALL" "MIXED"})]
+    (if-not (= 1 (:num-samples vc)) false
+            (try
+              (contains? to-remove (-> vc :genotypes first :type))
+              (catch Exception e
+                (println (:chr vc) (:start vc))
+                (throw e))))))
 
 (defn nochange-alt?
   "Check a VCF input line for identical REF and ALT calls"
@@ -203,9 +206,9 @@
               "MIXED" (-> (GenotypeBuilder. (:genotype g))
                           (.alleles) (remove #(.isNoCall %) (:alleles g))
                           .make)
-              "UNAVAILABLE" (-> (GenotypeBuilder. (:genotype g))
-                                (.alleles [alt-allele])
-                                .make)
+              ("UNAVAILABLE" "NO_CALL") (-> (GenotypeBuilder. (:genotype g))
+                                            (.alleles [alt-allele])
+                                            .make)
               (:genotype g)))
           (ref-vc-genotype [gs alt-allele]
             (case (count gs)
@@ -234,8 +237,8 @@
        (#(if (:prep-sort-pos config) (sort-by-position %) %))
        (remove nochange-alt?)
        (map vcf-decoder)
+       (remove #(no-call-genotype? % config))
        (map (partial normalize-sv-genotype config sample))
-       (remove #(and (:remove-refcalls config) (no-call-genotype? %)))
        (map (partial fix-vc sample config))
        (map :vc)))
 
@@ -297,11 +300,12 @@
             (apply ordered-set (remove #(= "contig" (.getKey %)) (.getMetaDataInInputOrder header))))]
     (fn [_ header]
       (let [cur-samples (.getGenotypeSamples header)
-            new-samples (if (or (nil? sample) (not= 1 (count cur-samples)))
-                          cur-samples (ordered-set sample))]
-        (if (:prep-sv-genotype config)
-          (VCFHeader. (clean-metadata header) (ordered-set sample))
-          (VCFHeader. (clean-metadata header) new-samples))))))
+            new-samples (if (and (:fix-sample-header config)
+                                 (not (nil? sample))
+                                 (< (count cur-samples) 2))
+                          (ordered-set sample)
+                          cur-samples)]
+        (VCFHeader. (clean-metadata header) new-samples)))))
 
 (defn fix-vcf-sample
   "Update a VCF file with one item to have the given sample name."
@@ -358,6 +362,7 @@
   (let [config (merge-with #(if (nil? %1) %2 %1) config
                            {:prep-org :GRCh37 :prep-allele-count 2
                             :prep-sort-pos false :prep-sv-genotype false
+                            :fix-sample-header false
                             :remove-refcalls true})
         base-name (if (nil? out-fname) (itx/remove-zip-ext in-vcf-file) out-fname)
         out-file (itx/add-file-part base-name "prep" out-dir)]

@@ -35,6 +35,7 @@
       (let [sample (first (intervals/get-sample-names call-file))
             svready-file (normalize/prep-vcf sv-file ref-file sample
                                              :config {:prep-sv-genotype true
+                                                      :fix-sample-header true
                                                       :prep-allele-count 1})
             sv-bed (sv->bed svready-file ref-file)
             call-safesv (-> (intervals/select-by-sample sample call-file nil ref-file
