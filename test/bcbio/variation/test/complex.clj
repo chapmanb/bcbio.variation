@@ -110,3 +110,9 @@
 
 (facts "Handle preparation of multi-sample input files"
   (normalize-variants multi-vcf ref) => multi-out)
+
+(facts "Normalize problematic input VCF files, handling special cases"
+  (let [inp-vcf (str (fs/file data-dir "phasing-comparison-needprep.vcf"))
+        outp-vcf (itx/add-file-part inp-vcf "fullprep")]
+    (itx/remove-path outp-vcf)
+    (full-prep-vcf inp-vcf ref :keep-ref true) => outp-vcf))

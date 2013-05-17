@@ -393,17 +393,25 @@
 ;; Handle cleanup for VCF files before feeding to any verifying
 ;; parser.
 
+(defn- get-prev-pad
+  "Given a VCF line, retrieve the reference base prior to the variant.
+   Used to include the required reference padding in indels missing them."
+  [ref-file]
+  (let [chr-map (prep-rename-map :GRCh37 ref-file)
+        get-ref-chrom (fn [chrom]
+                        (get chr-map chrom chrom))]
+    (fn [xs]
+      (let [before-start (dec (Integer/parseInt (second xs)))]
+        (string/upper-case
+         (str
+          (or (extract-sequence ref-file (get-ref-chrom (first xs)) before-start before-start) "N")))))))
+
 (defn- maybe-add-indel-pad-base
   "Check reference and alt alleles for lack of a padding base on indels.
   The VCF spec requires this and GATK will parse incorrectly when a variant
   lacks a shared padding base for indels."
-  [ref-file xs]
-  (letfn [(prev-pad [xs]
-            (let [before-start (dec (Integer/parseInt (second xs)))]
-              (string/upper-case
-               (str
-                (or (extract-sequence ref-file (first xs) before-start before-start) "N")))))
-          (get-ref-alts [xs]
+  [ref-file prev-pad xs]
+  (letfn [(get-ref-alts [xs]
             [(nth xs 3) (string/split (nth xs 4) #",")])
           (indel? [xs]
             (let [[vc-ref vc-alts] (get-ref-alts xs)]
@@ -520,7 +528,7 @@
                    (fix-info-spaces)
                    remove-problem-alts
                    (remove-bad-ref ref-file)
-                   (maybe-add-indel-pad-base ref-file)
+                   (maybe-add-indel-pad-base ref-file (get-prev-pad ref-file))
                    (string/join "\t"))))]
     (let [out-file (itx/add-file-part in-vcf-file "preclean" out-dir)]
       (when (itx/needs-run? out-file)
