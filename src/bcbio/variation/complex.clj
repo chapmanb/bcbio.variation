@@ -312,24 +312,28 @@
   removing this if not needed to distinguish any potential alleles."
   [vc]
   (letfn [(strip-indel [vc i alleles]
-            (let [start-pos (- i 1)
+            (let [start-pos (dec i)
                   ref-allele (subs (first alleles) start-pos)
                   cur-alleles (map #(Allele/create (subs % start-pos)
                                                    (= ref-allele (subs % start-pos)))
                                    alleles)]
-              (new-split-vc vc 0 {:offset i
-                                  :size (- (count ref-allele) 1)
+              (new-split-vc vc 0 {:offset start-pos
+                                  :size (dec (count ref-allele))
                                   :orig-alleles alleles
                                   :ref-allele (first cur-alleles)
                                   :alleles (rest cur-alleles)})))
           (variant-allele-pos [input-alleles]
             (let [str-alleles (map #(.getDisplayString %) input-alleles)
                   first-var-i (first (filter #(has-variant-base? str-alleles %)
-                                     (range (apply max (map count str-alleles)))))]
-              [str-alleles first-var-i]))]
-    (let [[orig-alleles first-var-i] (variant-allele-pos (cons (:ref-allele vc)
-                                                               (:alt-alleles vc)))
-          [_ nocall-i] (variant-allele-pos (cons (:ref-allele vc) (:alt-alleles vc)))]
+                                             (range (apply max (map count str-alleles)))))]
+              [str-alleles first-var-i]))
+          (used-alt-alleles [vc]
+            (let [genotype-alleles (set (mapcat :alleles (:genotypes vc)))]
+              (filter #(contains? genotype-alleles %) (:alt-alleles vc))))]
+    (let [alt-alleles (used-alt-alleles vc)
+          [orig-alleles first-var-i] (variant-allele-pos (cons (:ref-allele vc)
+                                                               alt-alleles))
+          [_ nocall-i] (variant-allele-pos (cons (:ref-allele vc) alt-alleles))]
       (if (or (nil? first-var-i) (<= first-var-i 1)
               (nil? nocall-i) (<= nocall-i 1))
         (:vc vc)
