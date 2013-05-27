@@ -17,7 +17,6 @@ test/data/*discordance.vcf
 test/data/*.bai
 test/data/*-reorder.bam
 test/data/*.dict
-test/data/*.fai
 test/data/*-callable*
 test/data/*-annotated.vcf
 test/data/*-fullcombine*vcf

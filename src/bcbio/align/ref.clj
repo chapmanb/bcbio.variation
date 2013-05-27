@@ -6,15 +6,22 @@
   (:use [clojure.java.io]
         [ordered.map :only [ordered-map]])
   (:require [clojure.string :as string]
+            [clojure.java.shell :as shell]
             [fs.core :as fs]
             [bcbio.run.itx :as itx]))
 
 (defn create-ref-dict
+  "Create reference dictionaries required by GATK and Picard.
+   Requires samtools command to create *.fai if missing, since
+   code to create these is no longer present in GATK."
   [ref-file]
-  (let [dict-file (str (itx/file-root ref-file) ".dict")]
+  (let [dict-file (str (itx/file-root ref-file) ".dict")
+        fai-file (str ref-file ".fai")]
     (when (itx/needs-run? dict-file)
       (.instanceMain (CreateSequenceDictionary.)
                      (into-array [(str "r=" ref-file) (str "o=" dict-file)])))
+    (when (itx/needs-run? fai-file)
+      (shell/sh "samtools" "faidx" ref-file))
     dict-file))
 
 (defn get-seq-dict*
