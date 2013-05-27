@@ -4,7 +4,7 @@
    Based on 'vcfentropy' from Erik Garrison's vcflib:
    https://github.com/ekg/vcflib"
   (:import [org.broadinstitute.sting.gatk.walkers.annotator.interfaces.InfoFieldAnnotation]
-           [org.broadinstitute.sting.utils.codecs.vcf VCFInfoHeaderLine VCFHeaderLineType])
+           [org.broadinstitute.variant.vcf VCFInfoHeaderLine VCFHeaderLineType])
   (:gen-class
    :name bcbio.variation.annotate.entropy.ShannonEntropy
    :extends org.broadinstitute.sting.gatk.walkers.annotator.interfaces.InfoFieldAnnotation))

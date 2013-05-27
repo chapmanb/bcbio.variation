@@ -18,12 +18,8 @@
   "Retrieve high level concordance metrics from GATK VariantEval report."
   [sample in-file]
   (letfn [(sample-in-row? [x]
-            (and (= (:Sample x) sample)
-                 (= (:Novelty x) "all")
-                 (= (:Filter x) "called")))]
-    (->> (organize-gatk-report-table in-file "GenotypeConcordance" sample-in-row?)
-         (map (fn [x] [(keyword (:variable x)) (:value x)]))
-         (into {}))))
+            (= (:Sample x) sample))]
+    (first (organize-gatk-report-table in-file "GenotypeConcordance_Summary" sample-in-row?))))
 
 (defn count-variants
   "Count variants that pass an optional checker function."
@@ -138,8 +134,8 @@
         (assoc :genotype_concordance (-> compared :metrics :percent_overall_genotype_concordance))
         (assoc :callable_concordance (-> compared :callable-metrics
                                          :percent_overall_genotype_concordance))
-        (assoc :nonref_discrepency (-> compared :metrics :percent_non_reference_discrepancy_rate))
-        (assoc :nonref_sensitivity (-> compared :metrics :percent_non_reference_sensitivity))
+        (assoc :nonref_sensitivity (-> compared :metrics :Non-Reference_Sensitivity))
+        (assoc :nonref_discrepancy (-> compared :metrics :Non-Reference_Discrepancy))
         (assoc :concordant (all-vrn-counts (first c-files) nil compared))
         (assoc :nonref_concordant (count-variants (first c-files) ref-file
                                                   nonref-passes-filter?)))))
@@ -231,7 +227,7 @@
     (let [to-write (apply ordered-map
                           (concat [:genotype_concordance "Overall genotype concordance"
                                    :callable_concordance "Callable genotype concordance"
-                                   :nonref_discrepency "Non-reference discrepancy rate"
+                                   :nonref_discrepancy "Non-reference discrepancy rate"
                                    :nonref_sensitivity "Non-reference sensitivity"]
                                   (metrics-info 0
                                                 [:concordant :total] "total"

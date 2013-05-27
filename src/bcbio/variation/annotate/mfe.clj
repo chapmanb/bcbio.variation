@@ -4,7 +4,7 @@
    of the most problematic secondary structures. Larger negative free energy
    values are especially stable and problematic."
   (:import [org.broadinstitute.sting.gatk.walkers.annotator.interfaces.InfoFieldAnnotation]
-           [org.broadinstitute.sting.utils.codecs.vcf VCFInfoHeaderLine VCFHeaderLineType])
+           [org.broadinstitute.variant.vcf VCFInfoHeaderLine VCFHeaderLineType])
   (:use [circdesigna.core :only [min-free-energy]]
         [bcbio.variation.annotate.entropy :only [get-flank-seq]])
   (:gen-class

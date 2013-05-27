@@ -6,13 +6,16 @@
             [bcbio.run.itx :as itx]
             [bcbio.run.broad :as broad]))
 
+(def ^{:doc "Original annotations from GATK-lite" :private true} gatklite-annotations
+  ["BaseQualityRankSumTest" "HaplotypeScore" "HomopolymerRun"
+   "MappingQualityRankSumTest" "QualByDepth" "ReadPosRankSumTest"
+   "RMSMappingQuality" "DepthPerAlleleBySample" "FisherStrand"])
+
 (def ^{:doc "Standard annotations applied to variants"} std-annotations
-  ["AlleleBalance" "BaseQualityRankSumTest" "DepthOfCoverage"
-   "FisherStrand" "GCContent" "HaplotypeScore" "HomopolymerRun"
-   "MappingQualityRankSumTest" "MappingQualityZero"
-   "MeanNeighboringBaseQuality" "QualByDepth"
-   "ReadPosRankSumTest" "RMSMappingQuality"
-   "DepthPerAlleleBySample" "AlleleBalanceConfidenceInterval"
+  ["DepthOfCoverage" "GCContent"
+   "AlleleBalance" "AlleleBalanceBySample"
+   "MappingQualityZeroBySample" "MeanNeighboringBaseQuality"
+   "AlleleBalanceConfidenceInterval"
    "MostProbableGenotype" "ReadMeanLen" "ReadMeanPos"
    "ReadPosEndDist" "MinFreeEnergy" "ShannonEntropy"])
 

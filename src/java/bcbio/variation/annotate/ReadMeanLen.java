@@ -5,8 +5,6 @@ import net.sf.samtools.CigarElement;
 import net.sf.samtools.CigarOperator;
 import net.sf.samtools.SAMRecord;
 
-import org.broadinstitute.sting.gatk.walkers.genotyper.IndelGenotypeLikelihoodsCalculationModel;
-import org.broadinstitute.sting.gatk.walkers.indels.PairHMMIndelErrorModel;
 import org.broadinstitute.sting.gatk.contexts.AlignmentContext;
 import org.broadinstitute.sting.gatk.contexts.ReferenceContext;
 import org.broadinstitute.sting.gatk.refdata.RefMetaDataTracker;
@@ -17,16 +15,16 @@ import org.broadinstitute.sting.gatk.walkers.annotator.interfaces.ExperimentalAn
 import org.broadinstitute.sting.utils.genotyper.PerReadAlleleLikelihoodMap;
 import org.broadinstitute.sting.utils.MathUtils;
 import org.broadinstitute.sting.utils.QualityUtils;
-import org.broadinstitute.sting.utils.codecs.vcf.VCFConstants;
-import org.broadinstitute.sting.utils.codecs.vcf.VCFHeaderLineType;
-import org.broadinstitute.sting.utils.codecs.vcf.VCFInfoHeaderLine;
+import org.broadinstitute.variant.vcf.VCFConstants;
+import org.broadinstitute.variant.vcf.VCFHeaderLineType;
+import org.broadinstitute.variant.vcf.VCFInfoHeaderLine;
 import org.broadinstitute.sting.utils.pileup.PileupElement;
 import org.broadinstitute.sting.utils.pileup.ReadBackedPileup;
 import org.broadinstitute.sting.utils.sam.AlignmentUtils;
 import org.broadinstitute.sting.utils.sam.GATKSAMRecord;
 import org.broadinstitute.sting.utils.sam.ReadUtils;
-import org.broadinstitute.sting.utils.variantcontext.Allele;
-import org.broadinstitute.sting.utils.variantcontext.VariantContext;
+import org.broadinstitute.variant.variantcontext.Allele;
+import org.broadinstitute.variant.variantcontext.VariantContext;
 
 import java.util.*;
 
@@ -54,7 +52,7 @@ public class ReadMeanLen extends InfoFieldAnnotation implements ExperimentalAnno
         for ( Map.Entry<String, AlignmentContext> sample : stratifiedContexts.entrySet() ) {
             for ( PileupElement p : sample.getValue().getBasePileup() )	{
         	        int readPos = AlignmentUtils.calcAlignmentByteArrayOffset(p.getRead().getCigar(), p, 0, 0);
-        	        final int numAlignedBases = AlignmentUtils.getNumAlignedBases(p.getRead());
+        	        final int numAlignedBases = AlignmentUtils.getNumAlignedBasesCountingSoftClips(p.getRead());
 
 			readLenSum+=((double) numAlignedBases);
 
@@ -84,7 +82,7 @@ public class ReadMeanLen extends InfoFieldAnnotation implements ExperimentalAnno
         // Do a stricter base clipping than provided by CIGAR string, since this one may be too conservative,
         // and may leave a string of Q2 bases still hanging off the reads.
         for (int i = numStartClippedBases; i < unclippedReadBases.length; i++) {
-            if (unclippedReadQuals[i] < PairHMMIndelErrorModel.BASE_QUAL_THRESHOLD)
+            if (unclippedReadQuals[i] < 20)
                 numStartClippedBases++;
             else
                 break;
@@ -114,7 +112,7 @@ public class ReadMeanLen extends InfoFieldAnnotation implements ExperimentalAnno
         // Do a stricter base clipping than provided by CIGAR string, since this one may be too conservative,
         // and may leave a string of Q2 bases still hanging off the reads.
         for (int i = unclippedReadBases.length - numEndClippedBases - 1; i >= 0; i--) {
-            if (unclippedReadQuals[i] < PairHMMIndelErrorModel.BASE_QUAL_THRESHOLD)
+            if (unclippedReadQuals[i] < 20)
                 numEndClippedBases++;
             else
                 break;

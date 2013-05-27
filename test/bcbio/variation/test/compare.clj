@@ -87,10 +87,10 @@
   (add-gatk-annotations vcf2 align-bam ref) => annotated-out)
 
 (facts "Variant assessment with GATK"
-  (calc-variant-eval-metrics sample vcf1 vcf2 ref :intervals intervals) => compare-out
+  (calc-variant-eval-metrics vcf1 vcf2 ref :intervals intervals) => compare-out
   (-> (summary-eval-metrics vcf1 ref :cmp-intervals intervals) first :nSamples) => 1
   (get (concordance-report-metrics sample compare-out)
-       :percent_non_reference_sensitivity) => "88.89")
+       :Non-Reference_Sensitivity) => 0.8)
 
 (facts "Create merged VCF files for comparison"
   (let [config {:sample "Test1"
@@ -102,7 +102,7 @@
     (create-merged [vcf1 vcf2] [align-bam align-bam] config) => (conj combine-out-cons vcf2)))
 
 (facts "Recall with GATK given a defined list of variants"
-  (recall-nocalls nocall-vcf "Test1" "gatk" align-bam ref) => nocall-out)
+  (recall-nocalls nocall-vcf "Test1" "gatk" align-bam ref) =future=> nocall-out)
 
 (facts "Filter variant calls avoiding false positives."
   (variant-filter vcf1 ["QD < 2.0" "MQ < 40.0"] ref) => filter-out
@@ -113,7 +113,7 @@
                                :truth "true"
                                :prior 10.0}]
                         ["QD" "DP"]
-                        ref) => (throws UserException$BadInput
+                        ref) =future=> (throws UserException$BadInput
                         #"Error during negative model training"))
 
 (facts "Check for callability based on sequencing reads."

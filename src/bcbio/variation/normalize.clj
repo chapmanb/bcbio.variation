@@ -5,8 +5,8 @@
   match, enabling VCF comparisons.
   Currently implemented for human only, with hooks to generalize for other
   organisms."
-  (:import [org.broadinstitute.sting.utils.variantcontext VariantContextBuilder GenotypeBuilder]
-           [org.broadinstitute.sting.utils.codecs.vcf VCFHeader]
+  (:import [org.broadinstitute.variant.variantcontext VariantContextBuilder GenotypeBuilder]
+           [org.broadinstitute.variant.vcf VCFHeader]
            [org.broad.tribble.readers AsciiLineReader])
   (:use [clojure.java.io]
         [bcbio.variation.variantcontext :only [write-vcf-w-template

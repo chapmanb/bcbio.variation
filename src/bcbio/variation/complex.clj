@@ -1,7 +1,7 @@
 (ns bcbio.variation.complex
   "Handle complex variations representations: multi-nucleotide
    polymorphisms and indels."
-  (:import [org.broadinstitute.sting.utils.variantcontext Allele
+  (:import [org.broadinstitute.variant.variantcontext Allele
             VariantContextBuilder GenotypesContext GenotypeBuilder
             VariantContextUtils]
            [org.biojava3.core.sequence DNASequence]

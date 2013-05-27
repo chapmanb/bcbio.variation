@@ -2,9 +2,9 @@
   "Build reference Genomic Mappability Score (GMS) variant file.
   Uses full GMS files to generate VCF of potentially problematic low-GMS regions:
   http://sourceforge.net/apps/mediawiki/gma-bio/index.php"
-  (:import [org.broadinstitute.sting.utils.variantcontext VariantContextBuilder Allele]
-           [org.broadinstitute.sting.utils.variantcontext.writer VariantContextWriterFactory]
-           [org.broadinstitute.sting.utils.codecs.vcf VCFHeader
+  (:import [org.broadinstitute.variant.variantcontext VariantContextBuilder Allele]
+           [org.broadinstitute.variant.variantcontext.writer VariantContextWriterFactory]
+           [org.broadinstitute.variant.vcf VCFHeader
             VCFInfoHeaderLine VCFHeaderLineCount VCFHeaderLineType])
   (:use [clojure.java.io]
         [ordered.map :only [ordered-map]]

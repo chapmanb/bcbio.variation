@@ -2,8 +2,8 @@
   "Add metrics from Complete Genomics masterVar file to a VCF.
   This updates a converted VCF from Complete Genomics with metrics information
   allowing assessment and filtering."
-  (:import [org.broadinstitute.sting.utils.variantcontext VariantContextBuilder]
-           [org.broadinstitute.sting.utils.codecs.vcf VCFHeader VCFInfoHeaderLine
+  (:import [org.broadinstitute.variant.variantcontext VariantContextBuilder]
+           [org.broadinstitute.variant.vcf VCFHeader VCFInfoHeaderLine
             VCFHeaderLineCount VCFHeaderLineType])
   (:use [clojure.java.io]
         [ordered.set :only (ordered-set)]

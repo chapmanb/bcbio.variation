@@ -8,10 +8,11 @@
                  [org.clojure/tools.cli "0.2.2"]
                  [clj-stacktrace "0.2.5"]
                  ;; GATK requirements
-                 [org.clojars.chapmanb/gatk-lite "2.3.4"]
-                 [org.clojars.chapmanb/picard "1.73"]
-                 [org.clojars.chapmanb/sam "1.73"]
-                 [org.clojars.chapmanb/tribble "119"]
+                 [org.clojars.chapmanb/gatk-lite "2.5.2"]
+                 [org.clojars.chapmanb/picard "1.90"]
+                 [org.clojars.chapmanb/sam "1.90"]
+                 [org.clojars.chapmanb/tribble "1.90"]
+                 [org.clojars.chapmanb/variant "1.90"]
                  ;; [org.clojars.chapmanb/cofoja "1.0-r139"]
                  [org.clojars.chapmanb/jama "1.0.2"]
                  [org.apache.commons/commons-jexl "2.1.1"]
@@ -19,6 +20,7 @@
                  [org.reflections/reflections "0.9.8"]
                  [org.simpleframework/simple-xml "2.0.4"]
                  [colt/colt "1.2.0"]
+                 [it.unimi.dsi/fastutil "6.5.3"]
                  ;;
                  [org.clojars.chapmanb/snpeff "3.1"]
                  [org.biojava/biojava3-core "3.0.4"]

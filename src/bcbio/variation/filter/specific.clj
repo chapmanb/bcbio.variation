@@ -1,7 +1,7 @@
 (ns bcbio.variation.filter.specific
   "Identify technology or caller specific variants from multiple combined callsets."
-  (:import [org.broadinstitute.sting.utils.variantcontext VariantContextBuilder]
-           [org.broadinstitute.sting.utils.codecs.vcf VCFHeader VCFInfoHeaderLine
+  (:import [org.broadinstitute.variant.variantcontext VariantContextBuilder]
+           [org.broadinstitute.variant.vcf VCFHeader VCFInfoHeaderLine
             VCFHeaderLineCount VCFHeaderLineType])
   (:use [ordered.set :only [ordered-set]]
         [bcbio.variation.filter.attr :only [get-vc-attrs]]

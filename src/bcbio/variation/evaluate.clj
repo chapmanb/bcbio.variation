@@ -10,24 +10,16 @@
 
 (defn calc-variant-eval-metrics
   "Compare two variant files with GenotypeConcordance in VariantEval"
-  [sample vcf1 vcf2 ref & {:keys [out-base intervals]}]
+  [vcf1 vcf2 ref & {:keys [out-base intervals]}]
   (let [file-info {:out-eval (str (itx/file-root (if (nil? out-base) vcf1 out-base)) ".eval")}
         args (concat
               ["-R" ref
                "--out" :out-eval
                "--eval" vcf1
                "--comp" vcf2
-               "--sample" sample
-               "--doNotUseAllStandardModules"
-               "--evalModule" "CompOverlap"
-               "--evalModule" "CountVariants"
-               "--evalModule" "GenotypeConcordance"
-               "--evalModule" "TiTvVariantEvaluator"
-               "--evalModule" "ValidationReport"
-               "--stratificationModule" "Sample"
-               "--stratificationModule" "Filter"]
+               "--moltenize"]
               (broad/gatk-cl-intersect-intervals intervals ref))]
-    (broad/run-gatk "VariantEval" args file-info {:out [:out-eval]})
+    (broad/run-gatk "GenotypeConcordance" args file-info {:out [:out-eval]})
     (:out-eval file-info)))
 
 (defn- calc-summary-eval-metrics
@@ -60,11 +52,11 @@
   [eval-file table-name filter-fn]
   (let [table (-> (GATKReport. (file eval-file))
                   (.getTable table-name))
-        cols (rest (.getColumnInfo table))
+        cols (.getColumnInfo table)
         headers (map #(keyword (.getColumnName %)) cols)]
     (->> (for [i (range (.getNumRows table))]
            (zipmap headers
-                   (map #(.get table i (inc %)) (range (count headers)))))
+                   (map #(.get table i %) (range (count headers)))))
          (filter filter-fn))))
 
 (defn summary-eval-metrics

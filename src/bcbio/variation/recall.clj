@@ -6,9 +6,9 @@
     - Re-call the no-call variants using the UnifiedGenotyper
     - Merge previously called and re-called into final set.
   http://www.broadinstitute.org/gsa/wiki/index.php/Merging_batched_call_sets"
-  (:import [org.broadinstitute.sting.utils.variantcontext
+  (:import [org.broadinstitute.variant.variantcontext
             VariantContextBuilder GenotypesContext]
-           [org.broadinstitute.sting.utils.codecs.vcf VCFHeader])
+           [org.broadinstitute.variant.vcf VCFHeader])
   (:use [clojure.java.io]
         [ordered.map :only [ordered-map]]
         [ordered.set :only [ordered-set]]

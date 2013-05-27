@@ -4,15 +4,15 @@
   (:import [org.broad.tribble.index IndexFactory]
            [org.broad.tribble AbstractFeatureReader]
            [org.broad.tribble.readers AsciiLineReader]
-           [org.broadinstitute.sting.utils.codecs.vcf
+           [org.broadinstitute.variant.vcf
             VCFCodec VCFUtils VCFHeader VCFFilterHeaderLine]
-           [org.broadinstitute.sting.utils.variantcontext VariantContextBuilder
+           [org.broadinstitute.variant.variantcontext VariantContextBuilder
             GenotypeBuilder GenotypesContext]
-           [org.broadinstitute.sting.utils.variantcontext.writer VariantContextWriterFactory
+           [org.broadinstitute.variant.variantcontext.writer VariantContextWriterFactory
             Options]
            [org.broadinstitute.sting.gatk.refdata.tracks RMDTrackBuilder]
            [org.broadinstitute.sting.gatk.arguments ValidationExclusion$TYPE]
-           [org.apache.log4j Logger]
+           [org.broadinstitute.sting.utils GenomeLocParser]
            [java.util EnumSet])
   (:use [clojure.java.io]
         [clojure.set :only [intersection union]]
@@ -80,7 +80,9 @@
       (AbstractFeatureReader/getFeatureReader in-file cur-codec false)
       (let [validate (when (false? ensure-safe)
                        ValidationExclusion$TYPE/ALLOW_SEQ_DICT_INCOMPATIBILITY)
-            idx (.loadIndex (RMDTrackBuilder. (get-seq-dict ref-file) nil validate)
+            idx (.loadIndex (RMDTrackBuilder. (get-seq-dict ref-file)
+                                              (GenomeLocParser. (get-seq-dict ref-file))
+                                              validate false)
                             (file in-file) cur-codec)]
         (AbstractFeatureReader/getFeatureReader (.getAbsolutePath (file in-file)) cur-codec idx)))))
 
@@ -153,7 +155,7 @@
   [& merge-files]
   (fn [_ header]
     (VCFHeader. (VCFUtils/smartMergeHeaders (cons header (map get-vcf-header merge-files))
-                                            (Logger/getLogger ""))
+                                            true)
                 (.getGenotypeSamples header))))
 
 (defn header-w-md

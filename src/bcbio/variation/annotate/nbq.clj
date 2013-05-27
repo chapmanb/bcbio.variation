@@ -7,7 +7,7 @@
   http://www.biomedcentral.com/1471-2105/13/8/abstract
   "
   (:import [org.broadinstitute.sting.gatk.walkers.annotator.interfaces.InfoFieldAnnotation]
-           [org.broadinstitute.sting.utils.codecs.vcf VCFInfoHeaderLine VCFHeaderLineType]
+           [org.broadinstitute.variant.vcf VCFInfoHeaderLine VCFHeaderLineType]
            [org.broadinstitute.sting.utils BaseUtils])
   (:require [incanter.stats :as istats])
   (:gen-class

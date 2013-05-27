@@ -1,8 +1,8 @@
 (ns bcbio.variation.structural
   "Handle structural variations for larger insertions, deletions and
   genome rearrangements."
-  (:import [org.broadinstitute.sting.utils.codecs.vcf VCFCodec]
-           [org.broadinstitute.sting.utils.variantcontext VariantContextBuilder
+  (:import [org.broadinstitute.variant.vcf VCFCodec]
+           [org.broadinstitute.variant.variantcontext VariantContextBuilder
             Allele]
            [org.broad.tribble.readers AsciiLineReader PositionalBufferedStream]
            [net.sf.picard.util IntervalTree])

@@ -1,6 +1,6 @@
 (ns bcbio.variation.filter.util
   "Provide useful utilities dealing with filtering of variants"
-  (:import [org.broadinstitute.sting.utils.variantcontext
+  (:import [org.broadinstitute.variant.variantcontext
             VariantContextBuilder])
 (:require [bcbio.run.itx :as itx]
           [bcbio.variation.variantcontext :as gvc]))
