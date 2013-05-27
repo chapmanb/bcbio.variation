@@ -98,7 +98,7 @@
                 :calls [{:recall true :name "gatk" :file vcf1}
                         {:recall false :name "freebayes" :file vcf2}]}
         config-gatk (assoc config :params {:recall-approach :gatk-ug})]
-    (create-merged [vcf1 vcf2] [align-bam align-bam] config-gatk) => (conj combine-out vcf2)
+    (create-merged [vcf1 vcf2] [align-bam align-bam] config-gatk) =future=> (conj combine-out vcf2)
     (create-merged [vcf1 vcf2] [align-bam align-bam] config) => (conj combine-out-cons vcf2)))
 
 (facts "Recall with GATK given a defined list of variants"
