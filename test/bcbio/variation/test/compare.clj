@@ -107,14 +107,7 @@
 (facts "Filter variant calls avoiding false positives."
   (variant-filter vcf1 ["QD < 2.0" "MQ < 40.0"] ref) => filter-out
   (remove-cur-filters filter-out ref) => nofilter-out
-  (split-variants-by-match vcf1 vcf2 ref) => match-out
-  (variant-recal-filter vcf1 [{:file (:concordant match-out)
-                               :name "concordant"
-                               :truth "true"
-                               :prior 10.0}]
-                        ["QD" "DP"]
-                        ref) =future=> (throws UserException$BadInput
-                        #"Error during negative model training"))
+  (split-variants-by-match vcf1 vcf2 ref) => match-out)
 
 (facts "Check for callability based on sequencing reads."
   (identify-callable align-bam ref) => (first out-callable)

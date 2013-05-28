@@ -44,7 +44,6 @@ experiments:
       - method: recal-filter
         target: [gatk, freebayes]
         params:
-          #annotations:  [QD, HaplotypeScore, MQRankSum, ReadPosRankSum, FS, MQ, DP, AB]
           filters: [HRun > 5.0]
           classifiers: [AD, DP, QUAL, PL, gms_illumina]
           xspecific: true

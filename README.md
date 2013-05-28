@@ -209,8 +209,6 @@ tag. Available methods are:
             target: [gatk, freebayes]
             params:
               filters: [HRun > 5.0]
-              annotations:  [QD, HaplotypeScore, MQRankSum, ReadPosRankSum]
-              lenient: false
               classifiers: [AD, DP, QUAL]
               xspecific: true
               trusted:
@@ -222,9 +220,6 @@ tag. Available methods are:
 The options for filtering are:
 
   - `filters` -- Perform hard filtering of the file with specified expressions.
-  - `annotations` -- Perform [GATK Variant Quality Score Recalibration][u5]
-   using the supplied annotations. The `lenient` option allows VQSR on samples
-   with a lower number of total variations and is useful in VQSR fails.
   - `classifiers` -- Perform classification of true/false reads
    based on the provided attributes.
   - `trusted` -- Metadata annotation values that specify trusted variants not
