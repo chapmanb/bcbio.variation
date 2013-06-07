@@ -21,6 +21,11 @@
     (not-every? true?
                 (map file-non-empty? (flatten fnames)))))
 
+(defn up-to-date?
+  "Ensure a derived file is up to date with the parent file."
+  [derived parent]
+  (>= (fs/mod-time derived) (fs/mod-time parent)))
+
 (defn subs-kw-files
   "Substitute any keywords in the arguments from file information map."
   [args file-info]

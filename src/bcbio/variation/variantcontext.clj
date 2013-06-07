@@ -1,18 +1,16 @@
 (ns bcbio.variation.variantcontext
-  "Helper functions to retrieve information from GATK VariantContext
+  "Helper functions to retrieve information from Picard/GATK VariantContext
    objects, which represent variant data stored in VCF files."
   (:import [org.broad.tribble.index IndexFactory]
            [org.broad.tribble AbstractFeatureReader]
            [org.broad.tribble.readers AsciiLineReader]
+           [org.broad.tribble.util LittleEndianOutputStream]
            [org.broadinstitute.variant.vcf
             VCFCodec VCFUtils VCFHeader VCFFilterHeaderLine]
            [org.broadinstitute.variant.variantcontext VariantContextBuilder
             GenotypeBuilder GenotypesContext]
            [org.broadinstitute.variant.variantcontext.writer VariantContextWriterFactory
             Options]
-           [org.broadinstitute.sting.gatk.refdata.tracks RMDTrackBuilder]
-           [org.broadinstitute.sting.gatk.arguments ValidationExclusion$TYPE]
-           [org.broadinstitute.sting.utils GenomeLocParser]
            [java.util EnumSet])
   (:use [clojure.java.io]
         [clojure.set :only [intersection union]]
@@ -70,27 +68,33 @@
 
 ;; ## Parsing VCF files
 
+(defn- create-vcf-index
+  "Retrieve a Tribble index for a VCF file, read/writing from/to idx file."
+  [vcf-file]
+  (let [idx-file (str vcf-file ".idx")]
+    (if (or (itx/needs-run? idx-file)
+            (not (itx/up-to-date? idx-file vcf-file)))
+      (let [idx (IndexFactory/createDynamicIndex (file vcf-file) (VCFCodec.))]
+        (itx/with-tx-file [tx-idx-file idx-file]
+          (with-open [wtr (LittleEndianOutputStream. (output-stream tx-idx-file))]
+            (.write idx wtr)))
+        idx)
+      (IndexFactory/loadIndex (.getAbsolutePath (file idx-file))))))
+
 (defn get-vcf-source
   "Create a Tribble FeatureSource for VCF file.
    Handles indexing and parsing of VCF into VariantContexts.
    We treat gzipped files as tabix indexed VCFs."
-  [in-file ref-file & {:keys [ensure-safe codec]}]
-  (let [cur-codec (if (nil? codec) (VCFCodec.) codec)]
-    (if (.endsWith in-file ".gz")
-      (AbstractFeatureReader/getFeatureReader in-file cur-codec false)
-      (let [validate (when (false? ensure-safe)
-                       ValidationExclusion$TYPE/ALLOW_SEQ_DICT_INCOMPATIBILITY)
-            idx (.loadIndex (RMDTrackBuilder. (get-seq-dict ref-file)
-                                              (GenomeLocParser. (get-seq-dict ref-file))
-                                              validate false)
-                            (file in-file) cur-codec)]
-        (AbstractFeatureReader/getFeatureReader (.getAbsolutePath (file in-file)) cur-codec idx)))))
+  [in-file ref-file]
+  (if (.endsWith in-file ".gz")
+    (AbstractFeatureReader/getFeatureReader in-file (VCFCodec.) false)
+    (AbstractFeatureReader/getFeatureReader (.getAbsolutePath (file in-file)) (VCFCodec.)
+                                            (create-vcf-index in-file))))
 
 (defn get-vcf-iterator
   "Create an iterator over VCF VariantContexts."
-  [in-file ref-file & {:keys [ensure-safe codec]}]
-  (.iterator (get-vcf-source in-file ref-file :ensure-safe ensure-safe
-                             :codec codec)))
+  [in-file ref-file]
+  (.iterator (get-vcf-source in-file ref-file)))
 
 (defn variants-in-region
   "Retrieve variants located in potentially multiple variant files"
