@@ -139,7 +139,6 @@ provide example starting points and details on available options are below:
                                           and indels
          recall-approach: Method to use for recalling variants:
                           consensus -- Most common variant from multiple inputs
-                          gatk-ug -- Use GATK unified genotyper
        approach: Type of comparison to do [compare,grade]. Default compare.
        calls: # two or more calls to compare
          - name: Name of call type

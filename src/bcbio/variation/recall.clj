@@ -1,101 +1,23 @@
 (ns bcbio.variation.recall
-  "Recall batched sets of variants containing no-call regions.
-  Combined variant calls from batches contain regions called in
-  some samples but not others. The approach:
-    - Split sample into called and no-call variants
-    - Re-call the no-call variants using the UnifiedGenotyper
-    - Merge previously called and re-called into final set.
-  http://www.broadinstitute.org/gsa/wiki/index.php/Merging_batched_call_sets"
-  (:import [org.broadinstitute.variant.variantcontext
-            VariantContextBuilder GenotypesContext]
+  "Recall batched sets of variants using consensus from multiple inputs."
+  (:import [org.broadinstitute.variant.variantcontext VariantContextBuilder]
            [org.broadinstitute.variant.vcf VCFHeader])
   (:use [clojure.java.io]
         [ordered.map :only [ordered-map]]
         [ordered.set :only [ordered-set]]
         [bcbio.variation.callable :only [get-callable-checker is-callable?]]
         [bcbio.variation.combine :only [combine-variants fix-minimal-combined]]
-        [bcbio.variation.config :only [load-config]]
         [bcbio.variation.filter.intervals :only [select-by-sample]]
-        [bcbio.variation.haploid :only [diploid-calls-to-haploid]]
-        [bcbio.variation.multisample :only [multiple-samples?]]
-        [bcbio.variation.normalize :only [fix-vcf-sample remove-ref-alts]]
-        [bcbio.variation.phasing :only [is-haploid?]])
+        [bcbio.variation.multisample :only [multiple-samples?]])
   (:require [clojure.string :as string]
-            [fs.core :as fs]
             [bcbio.run.itx :as itx]
-            [bcbio.run.broad :as broad]
             [bcbio.variation.filter.attr :as attr]
             [bcbio.variation.variantcontext :as gvc]))
 
+;; ## Utilities
+
 (defn- set-header-to-sample [sample _ header]
   (VCFHeader. (.getMetaDataInInputOrder header) (ordered-set sample)))
-
-(defn- split-nocalls
-  "Provide split VCFs of call and no-call variants for the given sample."
-  [in-vcf sample ref out-dir]
-  (letfn [(sample-only-vc [vc]
-            (-> (VariantContextBuilder. vc)
-                (.genotypes (GenotypesContext/create
-                             (into-array [(-> vc .getGenotypes (.get sample))])))
-                (.attributes {})
-                (.make)))
-          (split-nocall-vc [vc]
-            (when (empty? (:filters vc))
-              (let [cur-vc (sample-only-vc (:vc vc))]
-                [(if (.isNoCall (-> cur-vc .getGenotypes (.get sample))) :nocall :called)
-                 cur-vc])))]
-    (let [sample-str (if (.contains in-vcf sample) "" (str sample "-"))
-          out {:called (itx/add-file-part in-vcf (str sample-str "called") out-dir)
-               :nocall (itx/add-file-part in-vcf (str sample-str "nocall") out-dir)}]
-      (when (itx/needs-run? (vals out))
-        (with-open [in-vcf-iter (gvc/get-vcf-iterator in-vcf ref)]
-          (gvc/write-vcf-w-template in-vcf out
-                                    (remove nil? (map split-nocall-vc (gvc/parse-vcf in-vcf-iter)))
-                                    ref
-                                    :header-update-fn (partial set-header-to-sample sample))))
-      out)))
-
-(defn call-at-known-alleles
-  "Do UnifiedGenotyper calling at known variation alleles."
-  [site-vcf align-bam ref & {:keys [cores]}]
-  (let [file-info {:out-vcf (itx/add-file-part site-vcf "wrefs")}
-        annotations ["DepthPerAlleleBySample"]
-        args (concat ["-R" ref
-                      "-o" :out-vcf
-                      "-I" align-bam
-                      "--alleles" site-vcf
-                      "-L" site-vcf
-                      "--genotyping_mode" "GENOTYPE_GIVEN_ALLELES"
-                      "--output_mode" "EMIT_ALL_SITES"
-                      "-stand_call_conf" "0.0"
-                      "-stand_emit_conf" "0.0"
-                      "--max_deletion_fraction" "2.0"
-                      "--min_indel_count_for_genotyping" "3"
-                      "--genotype_likelihoods_model" "BOTH"]
-                     (if cores ["-nt" (str cores)] [])
-                     (reduce #(concat %1 ["-A" %2]) [] annotations))]
-    (broad/index-bam align-bam)
-    (broad/run-gatk "UnifiedGenotyper" args file-info {:out [:out-vcf]})
-    (:out-vcf file-info)))
-
-(defn recall-nocalls
-  "Recall variations at no-calls in a sample using UnifiedGenotyper."
-  [in-vcf sample call-name align-bam ref & {:keys [out-dir cores]}]
-  (let [sample-str (if (.contains in-vcf call-name) "" (str call-name "-"))
-        out-file (itx/add-file-part in-vcf (str sample-str "wrefs") out-dir)]
-    (when (itx/needs-run? out-file)
-      (let [{:keys [called nocall]} (split-nocalls in-vcf sample ref out-dir)
-            prep-nocall (remove-ref-alts nocall ref)
-            orig-nocall (call-at-known-alleles prep-nocall align-bam ref :cores cores)
-            fix-nocall (fix-vcf-sample orig-nocall sample ref)
-            ready-nocall (if (is-haploid? called ref)
-                           (diploid-calls-to-haploid fix-nocall ref)
-                           fix-nocall)
-            combine-out (combine-variants [called ready-nocall] ref :merge-type :full
-                                          :quiet-out? true)]
-        (fs/rename combine-out out-file)
-        (fs/rename (str combine-out ".idx") (str out-file ".idx"))))
-    out-file))
 
 (defn- no-recall-vcfs
   "Retrieve inputs VCFs not involved in preparing a recall VCF.
@@ -111,51 +33,6 @@
          (partition 2)
          (map (fn [[x c]] (when (contains? include-names (:name c)) x)))
          (remove nil?))))
-
-;; ## Filtering with recall testing
-
-(defn- single-support?
-  "Does the supplied variant have a single supporting call"
-  [vc]
-  (when-let [callers (get-in vc [:attributes "set"])]
-    (->> (string/split callers #"-")
-         (map string/lower-case)
-         (remove #(.startsWith % "filter"))
-         (remove #(contains? #{"intersection" "combo"} %))
-         count
-         (= 1))))
-
-(defn- variant-id [vc]
-  [(:chr vc) (:start vc) (:ref-allele vc) (first (:alt-alleles vc))])
-
-(defn- supports-variant?
-  "Test if a recalled posterior likelihood supports a variant call."
-  [thresh vc]
-  (when-let [pl (attr/get-vc-attr vc "PL" nil)]
-    (< pl thresh)))
-
-(defn- get-norecall-variants
-  "Retrieve set of variants that a GATK UnifiedGenotyper recaller can't identify."
-  [in-file bam-file sample ref]
-  (let [support-thresh -7.5
-        recall-file (-> (gvc/select-variants in-file single-support? "singles" ref)
-                        (call-at-known-alleles bam-file ref))]
-    (with-open [in-vcf-iter (gvc/get-vcf-iterator recall-file ref)]
-      (->> (gvc/parse-vcf in-vcf-iter)
-           (remove (partial supports-variant? support-thresh))
-           (map variant-id)
-           set))))
-
-(defn filter-by-recalling
-  "Filter problematic single support calls by ability to recall at defined sites.
-   Single method support calls can be especially difficult to filter as concordant
-   and discordant sites have similar metrics. Testing ability to recall is a useful
-   mechanism to help identify ones with little read support."
-  [in-file bam-file exp]
-  (let [norecall (get-norecall-variants in-file bam-file (:sample exp) (:ref exp))]
-    (letfn [(can-recall? [vc]
-              (not (contains? norecall (variant-id vc))))]
-      (gvc/select-variants in-file can-recall? "recallfilter" (:ref exp)))))
 
 ;; ## Pick consensus variants
 
@@ -258,15 +135,6 @@
       :consensus
       (keyword (get in-info :approach :consensus)))))
 
-(defmethod recall-vcf :gatk-ug
-  ^{:doc "Provide recalling of nocalls using GATK's UnifiedGenotyper"}
-  [in-info vcfs exp out-dir intervals]
-  (-> [(:file in-info) (get-min-merged vcfs exp out-dir intervals)]
-      (combine-variants (:ref exp) :merge-type :full :intervals intervals
-                        :out-dir out-dir :check-ploidy? false)
-      (recall-nocalls (:sample exp) (:name in-info) (:bam in-info) (:ref exp)
-                      :out-dir out-dir)))
-
 (defmethod recall-vcf :consensus
   ^{:doc "Provide recalling of nocalls based on consensus from all inputs."}
   [in-info vcfs exp out-dir intervals]
@@ -277,7 +145,7 @@
 
 (defn create-merged
   "Create merged VCF files with no-call/ref-calls for each of the inputs.
-  Works at a higher level than `recall-nocalls` and does the work of
+  Works at a higher level than `recall-vcf` and does the work of
   preparing a set of all merged variants, then re-calling at non-missing positions."
   [vcfs align-bams exp & {:keys [out-dir intervals cores]}]
   (map (fn [[v b vcf-config]]
@@ -405,23 +273,10 @@
     (let [batch-vcfs (map combine-w-args (partition-all batch-size vcfs))]
       (combine-w-args batch-vcfs))))
 
-(defn- do-recall-exp
-  "Perform recalling on all specific inputs in an experiment"
-  [exp out-dir config]
-  (let [recall-vcfs (map (fn [call]
-                           (recall-nocalls (:file call) (:sample exp) (:name call) (:align call)
-                                           (:ref exp) :out-dir out-dir
-                                           :cores (get-in config [:resources :cores])))
-                         (split-config-multi (:calls exp) (:ref exp) out-dir))
-        clean-multi (map #(remove-sample-info % out-dir)
-                         (filter multiple-samples? (set (map :file (:calls exp)))))]
-    (batch-combine-variants (concat clean-multi recall-vcfs) (:ref exp) :merge-type :full
-                            :quiet-out? true :check-ploidy? false)))
-
 (defn convert-no-calls-w-callability
   "Convert no-calls into callable reference and real no-calls.
   Older functionality to re-call as reference when region is callable.
-  Prefer `recall-nocalls`"
+  Prefer `recall-vcf`"
   [in-vcf align-bam ref & {:keys [out-dir intervals num-alleles]}]
   (letfn [(maybe-callable-vc [vc call-source]
             {:pre (= 1 (:num-samples vc))}
@@ -444,9 +299,3 @@
           (gvc/write-vcf-w-template in-vcf {:out out-file}
                                     (convert-vcs in-vcf-iter call-source) ref)))
       out-file)))
-
-(defn -main [config-file]
-  (let [config (load-config config-file)
-        out-dir (get-in config [:dir :out])]
-    (doseq [exp (:experiments config)]
-      (do-recall-exp exp out-dir config))))
