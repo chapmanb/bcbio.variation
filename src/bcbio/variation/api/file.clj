@@ -7,7 +7,7 @@
   (:require [clojure.java.shell :as shell]
             [clojure.string :as string]
             [clj-stacktrace.repl :as stacktrace]
-            [fs.core :as fs]
+            [me.raynes.fs :as fs]
             [bcbio.run.itx :as itx]
             [bcbio.variation.annotate.effects :as effects]
             [bcbio.variation.index.metrics :as metrics]

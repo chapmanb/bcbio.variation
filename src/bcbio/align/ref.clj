@@ -7,7 +7,7 @@
         [ordered.map :only [ordered-map]])
   (:require [clojure.string :as string]
             [clojure.java.shell :as shell]
-            [fs.core :as fs]
+            [me.raynes.fs :as fs]
             [bcbio.run.itx :as itx]))
 
 (defn create-ref-dict

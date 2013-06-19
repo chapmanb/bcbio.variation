@@ -12,7 +12,7 @@
                                                from-vc write-vcf-w-template]]
         [bcbio.variation.callable :only [get-bed-source features-in-region]])
   (:require [clojure.string :as string]
-            [fs.core :as fs]
+            [me.raynes.fs :as fs]
             [bcbio.run.itx :as itx]))
 
 (def ^{:private true

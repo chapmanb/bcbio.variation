@@ -5,7 +5,7 @@
         [bcbio.variation.compare :exclude [-main]]
         [bcbio.variation.phasing]
         [bcbio.variation.variantcontext :exclude [-main]])
-  (:require [fs.core :as fs]
+  (:require [me.raynes.fs :as fs]
             [bcbio.run.itx :as itx]
             [bcbio.variation.grade :as grade]
             [bcbio.variation.report :as report]))

@@ -16,7 +16,7 @@
   (:require [clojure.string :as string]
             [bcbio.run.broad :as broad]
             [bcbio.run.itx :as itx]
-            [fs.core :as fs]))
+            [me.raynes.fs :as fs]))
 
 ;; ## Multi-nucleotide polymorphisms (MNPs)
 ;; Split into single variant primitives.

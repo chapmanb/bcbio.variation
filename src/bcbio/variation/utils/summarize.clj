@@ -8,7 +8,7 @@
         [bcbio.variation.variantcontext :only [parse-vcf get-vcf-iterator]])
   (:require [clojure.string :as string]
             [clojure.data.csv :as csv]
-            [incanter.stats :as istats]
+            [criterium.stats :as stats]
             [bcbio.run.itx :as itx]))
 
 (defn- to-float [x]
@@ -26,7 +26,7 @@
                         out (map (fn [k] [k (get counts k 0)])
                                  variant-types))))
             (get-attr-avg [k gs]
-              (istats/mean (->> gs
+              (stats/mean (->> gs
                                 (filter #(contains? (set variant-types) (:type %)))
                                 (map #(get-in % [:attributes k]))
                                 (remove nil?)

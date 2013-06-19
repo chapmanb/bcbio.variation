@@ -3,7 +3,7 @@
   (:use [clojure.java.io]
         [midje.sweet]
         [bcbio.variation.workflow.xprize])
-  (:require [fs.core :as fs]
+  (:require [me.raynes.fs :as fs]
             [clj-yaml.core :as yaml]
             [bcbio.run.itx :as itx]))
 

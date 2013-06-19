@@ -14,7 +14,7 @@
   (fn [creds]
     (:type creds)))
 
-(def gs-default-server "http://www.genomespace.org/")
+(def ^{:private true} gs-default-server "http://www.genomespace.org/")
 
 (defmethod get-client :gs
   ^{:doc "Retrieve a GenomeSpace client connection"}

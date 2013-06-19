@@ -3,8 +3,8 @@
   quality scores"
   (:import [bcbio.variation BaseVariantWalker])
   (:use [bcbio.variation.variantcontext :only [from-vc]])
-  (:require ;[incanter.charts :as icharts]
-            [incanter.core :as icore])
+  ;; (:require [incanter.charts :as icharts]
+  ;;           [incanter.core :as icore])
   (:gen-class
    :name bcbio.variation.vcfwalker.VcfSimpleStatsWalker
    :extends bcbio.variation.BaseVariantWalker))

@@ -16,7 +16,7 @@
                                                get-vcf-iterator has-variants?
                                                get-vcf-retriever variants-in-region]])
   (:require [clojure.string :as string]
-            [fs.core :as fs]
+            [me.raynes.fs :as fs]
             [bcbio.run.itx :as itx]
             [bcbio.variation.filter.trusted :as trusted]
             [bcbio.variation.filter.rules :as rules]

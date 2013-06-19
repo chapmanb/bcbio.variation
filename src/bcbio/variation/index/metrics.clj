@@ -8,7 +8,7 @@
         [bcbio.variation.web.db :only [get-sqlite-db]])
   (:require [clojure.string :as string]
             [clojure.java.jdbc :as sql]
-            [fs.core :as fs]
+            [me.raynes.fs :as fs]
             [bcbio.run.itx :as itx]))
 
 (def ^{:doc "Metrics to expose, ranked in order of priority with default min/max values."}

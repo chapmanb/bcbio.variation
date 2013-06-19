@@ -12,7 +12,7 @@
         [bcbio.align.ref :only [get-seq-dict]]
         [bcbio.variation.callable :only [get-callable-bed get-bed-iterator]]
         [bcbio.variation.variantcontext :only [get-vcf-header]])
-  (:require [fs.core :as fs]
+  (:require [me.raynes.fs :as fs]
             [bcbio.run.itx :as itx]
             [bcbio.run.broad :as broad]))
 

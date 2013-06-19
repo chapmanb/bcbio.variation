@@ -3,7 +3,7 @@
   (:use [bcbio.variation.filter :only [category-variant-filter]]
         [bcbio.variation.api.shared :only [web-config]])
   (:require [clojure.string :as string]
-            [fs.core :as fs]
+            [me.raynes.fs :as fs]
             [bcbio.run.itx :as itx]
             [bcbio.variation.api.file :as file-api]
             [bcbio.variation.remote.core :as remote]

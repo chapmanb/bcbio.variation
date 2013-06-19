@@ -8,7 +8,7 @@
    has knobs to generalize for diploid merging with appropriate phasing
    of variants."
   (:require [clojure.java.io :as io]
-            [fs.core :as fs]
+            [me.raynes.fs :as fs]
             [bcbio.run.itx :as itx]
             [bcbio.variation.combine :as combine]
             [bcbio.variation.filter.intervals :as intervals]

@@ -2,7 +2,7 @@
   "Test retrieval and analysis of BAM alignment data"
   (:use [midje.sweet]
         [bcbio.align.reorder])
-  (:require [fs.core :as fs]
+  (:require [me.raynes.fs :as fs]
             [bcbio.run.itx :as itx]))
 
 (let [data-dir (str (fs/file "." "test" "data"))

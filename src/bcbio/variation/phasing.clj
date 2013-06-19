@@ -24,7 +24,7 @@
                                                write-vcf-w-template]]
         [bcbio.align.ref :only [get-seq-dict]]
         [ordered.map :only [ordered-map]])
-  (:require [fs.core :as fs]
+  (:require [me.raynes.fs :as fs]
             [bcbio.run.itx :as itx]))
 
 ;; ## Find phased haplotypes in VCF

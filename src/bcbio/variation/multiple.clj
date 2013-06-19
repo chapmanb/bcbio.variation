@@ -11,7 +11,7 @@
                                                variants-in-region
                                                get-vcf-iterator write-vcf-w-template]])
   (:require [clojure.string :as string]
-            [fs.core :as fs]
+            [me.raynes.fs :as fs]
             [bcbio.run.itx :as itx]
             [bcbio.run.broad :as broad]))
 

@@ -8,7 +8,7 @@
         [bcbio.variation.filter]
         [bcbio.variation.validate]
         [bcbio.variation.variantcontext :exclude [-main]])
-  (:require [fs.core :as fs]
+  (:require [me.raynes.fs :as fs]
             [bcbio.run.itx :as itx]))
 
 (background
@@ -60,16 +60,16 @@
                           top-vcf)
           ctype {:variant-type :snp :attr-key :all :zygosity :hom}]
       (first (#'bcbio.variation.filter.classify/get-train-inputs
-              1 top-vcf ctype xtra-attrs normalizer ref)) => (contains [0.0 (roughly 0.621) 1.0 1]
+              1 top-vcf ctype xtra-attrs normalizer ref)) => (contains [0.0 (roughly 0.351) 1.0 1]
                                                                       :in-any-order :gaps-ok)
-      (-> (get-vc-attr-ranges attrs top-vcf ref {}) (get "DP")) => [193.5 250.0]
-      (-> (get-vc-attr-ranges attrs fb-vcf ref {}) (get "AD")) => (just [0.0
-                                                                      (roughly 0.41239)])
+      (-> (get-vc-attr-ranges attrs top-vcf ref {}) (get "DP")) => [231.0 244.5]
+      (-> (get-vc-attr-ranges attrs fb-vcf ref {}) (get "AD")) => (just [(roughly 0.21588)
+                                                                         (roughly 0.002153)])
       (get-vc-attrs (first vcf-iter) xtra-attrs {}) => (just {"gms_illumina" nil
                                                               "AD" 0.0 "QUAL" 5826.09 "DP" 250.0
                                                               "PL" -582.0 "PLratio" (roughly 9.023)})
       (get-vc-attr (first vcf-iter) [:format "DP"] {}) => 250.0
-      (-> (first vcf-iter) normalizer (get "QUAL")) => (roughly 0.621)
+      (-> (first vcf-iter) normalizer (get "QUAL")) => (roughly 0.351)
       (-> (first vcf-iter) log-normalizer (get "DP")) => (roughly 5.521))))
 
 (facts "Provide genotype likelihoods from non-Bayesian callers like VarScan."

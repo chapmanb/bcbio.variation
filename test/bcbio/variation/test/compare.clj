@@ -15,7 +15,7 @@
         [bcbio.variation.report]
         [bcbio.variation.recall :exclude [-main]]
         [bcbio.variation.variantcontext :exclude [-main]])
-  (:require [fs.core :as fs]
+  (:require [me.raynes.fs :as fs]
             [bcbio.run.itx :as itx]))
 
 (background

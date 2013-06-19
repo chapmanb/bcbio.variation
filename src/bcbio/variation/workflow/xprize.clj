@@ -9,7 +9,7 @@
         [bcbio.variation.report :only [prep-scoring-table]])
   (:require [clj-yaml.core :as yaml]
             [doric.core :as doric]
-            [fs.core :as fs]
+            [me.raynes.fs :as fs]
             [hiccup.core :as hiccup]
             [net.cgrand.enlive-html :as html]))
 

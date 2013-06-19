@@ -8,7 +8,7 @@
         [bcbio.variation.normalize]
         [bcbio.variation.structural]
         [bcbio.variation.variantcontext])
-  (:require [fs.core :as fs]
+  (:require [me.raynes.fs :as fs]
             [bcbio.run.itx :as itx]
             [bcbio.variation.utils.svmerge :as svmerge]))
 

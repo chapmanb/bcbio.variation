@@ -6,7 +6,7 @@
             [clojure.tools.logging :as log]
             [clj-stacktrace.repl :as stacktrace]
             [clj-yaml.core :as yaml]
-            [fs.core :as fs]
+            [me.raynes.fs :as fs]
             [pallet.algo.fsm.fsm :as fsm-base]
             [pallet.algo.fsm.fsm-dsl :as fsm]
             [pallet.algo.fsm.event-machine :as event-machine]))

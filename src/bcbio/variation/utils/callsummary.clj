@@ -5,7 +5,7 @@
         [bcbio.variation.variantcontext :only [parse-vcf get-vcf-iterator
                                                get-vcf-retriever variants-in-region]])
   (:require [clojure.string :as string]
-            [fs.core :as fs]
+            [me.raynes.fs :as fs]
             [bcbio.run.itx :as itx]))
 
 (defn- get-prepped-fname

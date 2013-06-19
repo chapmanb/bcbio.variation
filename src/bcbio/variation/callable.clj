@@ -8,7 +8,7 @@
         [bcbio.align.ref :only [sort-bed-file]]
         [bcbio.variation.variantcontext :only [get-vcf-source]])
   (:require [clojure.string :as string]
-            [fs.core :as fs]
+            [me.raynes.fs :as fs]
             [bcbio.run.itx :as itx]
             [bcbio.run.broad :as broad]))
 

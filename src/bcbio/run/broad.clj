@@ -5,7 +5,7 @@
            [net.sf.picard.sam BuildBamIndex])
   (:use [clojure.java.io]
         [bcbio.align.ref :only [sort-bed-file create-ref-dict]])
-  (:require [fs.core :as fs]
+  (:require [me.raynes.fs :as fs]
             [bcbio.run.itx :as itx]))
 
 (defn- create-ref-dict-gatk

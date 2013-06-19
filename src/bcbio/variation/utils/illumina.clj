@@ -5,7 +5,7 @@
    - Remove illegal gap characters from indel files.
    - Convert into GRCh37 sorted coordinates.
    - Merge SNP and Indels into single callset."
-  (:require [fs.core :as fs]
+  (:require [me.raynes.fs :as fs]
             [bcbio.run.itx :as itx]
             [bcbio.variation.combine :refer [gatk-normalize]]))
 

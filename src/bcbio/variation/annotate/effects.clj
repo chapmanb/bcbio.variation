@@ -5,7 +5,7 @@
            [bcbio.variation.util ThreadLocalPrintStream])
   (:require [clojure.java.io :as io]
             [clojure.java.shell :as shell]
-            [fs.core :as fs]
+            [me.raynes.fs :as fs]
             [bcbio.run.itx :as itx]))
 
 ;; ## snpEff

@@ -2,7 +2,7 @@
   "Explore variant calling from fosmid data against NIST whole genome datasets"
   (:use [bcbio.variation.filter.attr :only [prep-vc-attr-retriever]])
   (:require [clojure.string :as string]
-            [incanter.stats :as istats]
+            [criterium.stats :as stats]
             [bcbio.variation.variantcontext :as gvc]))
 
 (defn- get-nist-filter
@@ -63,4 +63,5 @@
       (println k (get-in stats [:filters k])))
     (doseq [[k v] (counts-to-individual-filters (:filters stats))]
       (println k v))
-    (println "GMS" (count (:gms stats)) (count ready-gms) (istats/quantile ready-gms))))
+    (println "GMS" (count (:gms stats)) (count ready-gms)
+             (map #(stats/quantile % ready-gms) [0.0 0.25 0.5 0.75 1.0]))))

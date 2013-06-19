@@ -17,7 +17,7 @@
         [ordered.map :only (ordered-map)]
         [ordered.set :only (ordered-set)])
   (:require [clojure.string :as string]
-            [fs.core :as fs]
+            [me.raynes.fs :as fs]
             [lonocloud.synthread :as ->]
             [bcbio.run.itx :as itx]))
 

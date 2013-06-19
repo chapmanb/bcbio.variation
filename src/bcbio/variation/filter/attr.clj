@@ -4,7 +4,7 @@
   (:use [bcbio.variation.haploid :only [get-likelihoods]]
         [bcbio.variation.metrics :only [to-float]])
   (:require [clojure.string :as string]
-            [incanter.stats :as stats]
+            [criterium.stats :as stats]
             [lonocloud.synthread :as ->]
             [bcbio.variation.variantcontext :as gvc]
             [bcbio.variation.index.gemini :as gemini]))
@@ -184,7 +184,7 @@
   "Retrieve quantile ranges of attributes for min/max normalization."
   [attrs in-vcf ref retrievers]
   (letfn [(get-quartiles [[k v]]
-            [k (stats/quantile (remove nil? v) :probs [0.05 0.95])])]
+            [k (map #(stats/quantile % (remove nil? v)) [0.05 0.95])])]
     (with-open [vcf-iter (gvc/get-vcf-iterator in-vcf ref)]
       (->> (reduce (fn [coll vc]
                     (reduce (fn [icoll [k v]]

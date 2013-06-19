@@ -3,7 +3,7 @@
 (ns bcbio.variation.test.run
   (:use [midje.sweet]
         [bcbio.run.itx])
-  (:require [fs.core :as fs]))
+  (:require [me.raynes.fs :as fs]))
 
 (fact "Idempotent processing of files"
   (needs-run? "project.clj") => false

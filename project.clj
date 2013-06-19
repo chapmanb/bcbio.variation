@@ -2,9 +2,8 @@
   :description "Toolkit to analyze genomic variation data, built on the GATK with Clojure"
   :license {:name "MIT" :url "http://www.opensource.org/licenses/mit-license.html"}
   :dependencies [[org.clojure/clojure "1.5.1"]
-                 [org.clojure/math.combinatorics "0.0.2" :exclusions [org.clojure/clojure]]
+                 [org.clojure/math.combinatorics "0.0.3" :exclusions [org.clojure/clojure]]
                  [org.clojure/data.csv "0.1.2" :exclusions [org.clojure/clojure]]
-                 [org.clojure/core.match "0.2.0-alpha9"]
                  [org.clojure/tools.cli "0.2.2"]
                  [clj-stacktrace "0.2.5"]
                  ;; GATK requirements
@@ -15,22 +14,17 @@
                  [org.clojars.chapmanb/variant "1.90"]
                  ;; [org.clojars.chapmanb/cofoja "1.0-r139"]
                  [org.clojars.chapmanb/jama "1.0.2"]
+                 [colt/colt "1.2.0"]
+                 [log4j "1.2.17"]
                  [org.apache.commons/commons-jexl "2.1.1"]
                  [org.apache.commons/commons-math "2.2"]
                  [org.reflections/reflections "0.9.8"]
                  [org.simpleframework/simple-xml "2.0.4"]
-                 [colt/colt "1.2.0"]
                  [it.unimi.dsi/fastutil "6.5.3"]
                  ;;
-                 [org.clojars.chapmanb/snpeff "3.1"]
                  [org.biojava/biojava3-core "3.0.4"]
                  [org.biojava/biojava3-alignment "3.0.4"]
-                 [org.clojars.chapmanb/circdesigna "0.0.2"]
-                 [clj-genomespace "0.1.3"]
-                 [clj-blend "0.1.1-SNAPSHOT"]
-                 [incanter/incanter-core "1.4.0" :exclusions [org.clojure/clojure]]
-                 [incanter/incanter-charts "1.4.0" :exclusions [org.clojure/clojure]]
-                 [incanter/incanter-excel "1.4.0" :exclusions [org.clojure/clojure]]
+                 [org.clojars.chapmanb/circdesigna "0.0.2" :exclusions [net.sf.beaver/beaver-ant]]
                  [nz.ac.waikato.cms.weka/weka-stable "3.6.6"]
                  [org.clojars.chapmanb/fast-random-forest "0.98"]
                  [com.leadtune/clj-ml "0.2.4" :exclusions [cs.waikato.ac.nz/weka
@@ -38,16 +32,15 @@
                                                            org.clojure/clojure
                                                            incanter/incanter-core
                                                            incanter/incanter-charts]]
-                 [fs "1.1.2" :exclusions [org.clojure/clojure]]
-                 [clj-yaml "0.3.1"]
+                 [me.raynes/fs "1.4.3" :exclusions [org.clojure/clojure]]
+                 [clj-yaml "0.4.0"]
                  [doric "0.8.0" :exclusions [org.clojure/clojure]]
                  [ordered "1.3.2" :exclusions [org.clojure/clojure]]
-                 [de.kotka/lazymap "3.1.0"]
-                 [lonocloud/synthread "1.0.3"]
+                 [de.kotka/lazymap "3.1.1"]
+                 [lonocloud/synthread "1.0.4"]
                  [pallet-fsm "0.1.0"]
-                 [clj-time "0.4.3"]
-                 [clj-aws-s3 "0.3.1" :exclusions [org.codehaus.jackson/jackson-mapper-asl
-                                                  org.codehaus.jackson/jackson-core-asl]]
+                 [criterium "0.4.1" :exclusions [org.clojure/clojure]]
+                 [clj-time "0.5.0"]
                  [org.clojure/java.jdbc "0.2.2"]
                  [org.xerial/sqlite-jdbc "3.7.2"]
                  [c3p0/c3p0 "0.9.1.2"]
@@ -55,9 +48,20 @@
                  [enlive "1.0.1" :exclusions [org.clojure/clojure]]]
   :min-lein-version "2.0.0"
   :plugins [[lein-marginalia "0.7.1"]
-            [lein-midje "3.0-RC1"]]
+            [lein-midje "3.0.1"]]
   :profiles {:dev {:dependencies
-                   [[midje "1.5-RC1" :exclusions [org.clojure/clojure ordered]]]}}
+                   ;; Testing dependencies
+                   [[midje "1.5.1" :exclusions [org.clojure/clojure ordered]]
+                    ;; Non-uberjar dependencies we should extract into separate functionality
+                    [incanter/incanter-core "1.5.1" :exclusions [org.clojure/clojure junit]]
+                    [incanter/incanter-charts "1.5.1" :exclusions [org.clojure/clojure junit]]
+                    [incanter/incanter-excel "1.5.1" :exclusions [org.clojure/clojure junit]]
+                    [org.clojars.chapmanb/snpeff "3.1" :exclusions [com.googlecode.charts4j/charts4j
+                                                                    junit]]
+                    [clj-genomespace "0.1.3"]
+                    [clj-blend "0.1.1-SNAPSHOT"]
+                    [clj-aws-s3 "0.3.1" :exclusions [org.codehaus.jackson/jackson-mapper-asl
+                                                     org.codehaus.jackson/jackson-core-asl]]]}}
   :repositories {"biojava" {:url "http://www.biojava.org/download/maven/"
                             :snapshots false}}
   :java-source-paths ["src/java"]

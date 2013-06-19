@@ -9,7 +9,7 @@
   (:import [org.broadinstitute.sting.gatk.walkers.annotator.interfaces.InfoFieldAnnotation]
            [org.broadinstitute.variant.vcf VCFInfoHeaderLine VCFHeaderLineType]
            [org.broadinstitute.sting.utils BaseUtils])
-  (:require [incanter.stats :as istats])
+  (:require [criterium.stats :as stats])
   (:gen-class
    :name bcbio.variation.annotate.nbq.MeanNeighboringBaseQuality
    :extends org.broadinstitute.sting.gatk.walkers.annotator.interfaces.InfoFieldAnnotation))
@@ -64,5 +64,6 @@
                     (map (partial pileup-qualities alt-bases))
                     flatten
                     (remove nil?)
-                    istats/mean
+                    stats/mean
+                    float
                     (format "%.2f"))}))))

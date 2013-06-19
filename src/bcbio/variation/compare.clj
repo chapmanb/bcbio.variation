@@ -30,7 +30,7 @@
                                                get-vcf-iterator]])
   (:require [clojure.string :as string]
             [clj-yaml.core :as yaml]
-            [fs.core :as fs]
+            [me.raynes.fs :as fs]
             [lonocloud.synthread :as ->]
             [bcbio.run.itx :as itx]
             [bcbio.run.broad :as broad]

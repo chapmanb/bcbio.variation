@@ -19,7 +19,7 @@
         [bcbio.variation.variantcontext :only [get-vcf-header write-vcf-w-template
                                                get-vcf-iterator parse-vcf
                                                get-vcf-retriever variants-in-region]])
-  (:require [fs.core :as fs]
+  (:require [me.raynes.fs :as fs]
             [clojure.string :as string]
             [bcbio.run.itx :as itx]
             [bcbio.run.broad :as broad]))

@@ -4,7 +4,7 @@
         [bcbio.variation.normalize :only [prep-vcf]]
         [bcbio.variation.utils.cgmetrics]
         [bcbio.variation.utils.summarize :only [vcf-to-table-config]])
-  (:require [fs.core :as fs]
+  (:require [me.raynes.fs :as fs]
             [bcbio.run.itx :as itx]))
 
 (background

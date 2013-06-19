@@ -8,7 +8,7 @@
   (:require [clojure.java.jdbc :as sql]
             [clojure.java.shell :as shell]
             [clojure.string :as string]
-            [fs.core :as fs]
+            [me.raynes.fs :as fs]
             [bcbio.run.itx :as itx]))
 
 ;; ## Gemini

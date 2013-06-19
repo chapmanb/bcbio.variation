@@ -6,7 +6,7 @@
         [bcbio.variation.api.shared :only [set-config-from-file!]]
         [bcbio.variation.index.metrics :only [get-raw-metrics-linear]]
         [bcbio.variation.index.subsample])
-  (:require [fs.core :as fs]
+  (:require [me.raynes.fs :as fs]
             [bcbio.run.itx :as itx]
             [bcbio.variation.index.gemini :as gemini]
             [bcbio.variation.index.metrics :as im]))

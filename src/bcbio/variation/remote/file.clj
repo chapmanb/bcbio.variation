@@ -3,7 +3,7 @@
   (:use [clojure.java.io]
         [bcbio.variation.api.shared :only [web-config url->dir]])
   (:require [clojure.string :as string]
-            [fs.core :as fs]
+            [me.raynes.fs :as fs]
             [blend.galaxy.core :as galaxy]
             [clj-genomespace.core :as gs]
             [bcbio.run.itx :as itx]))

@@ -3,7 +3,7 @@
   (:import [com.mchange.v2.c3p0 ComboPooledDataSource])
   (:require [clojure.string :as string]
             [clojure.java.jdbc :as sql]
-            [fs.core :as fs]))
+            [me.raynes.fs :as fs]))
 
 (defn get-sqlite-db [fname & {:as opts}]
   "Retrieve SQLite database connection"

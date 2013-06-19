@@ -8,7 +8,7 @@
         [bcbio.variation.filter.train :only [extract-train-cases]]
         [bcbio.variation.multiple]
         [bcbio.variation.variantcontext :exclude [-main]])
-  (:require [fs.core :as fs]
+  (:require [me.raynes.fs :as fs]
             [bcbio.run.itx :as itx]))
 
 (defn- prep-variant-comparison* [out-dir config-file]

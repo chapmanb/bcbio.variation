@@ -9,7 +9,7 @@
         [clj-ml.data :only [make-dataset]]
         [clj-ml.classifiers :only [make-classifier classifier-train]]
         [ordered.set :only [ordered-set]])
-  (:require [incanter.stats :as istats]
+  (:require [criterium.stats :as stats]
             [doric.core :as doric]))
 
 ;; ## Convenience functions
@@ -57,7 +57,7 @@
   "Provide summary statistics on a list of values."
   (zipmap (map :name header)
           (concat [key (count vals)]
-                  (istats/quantile vals))))
+                  (map #(stats/quantile % vals) [0.0 0.25 0.5 0.75 1.0]))))
 
 (defn- raw-vcf-stats
   "Accumulate raw statistics associated with variant calls from input VCF."

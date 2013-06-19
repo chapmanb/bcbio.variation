@@ -1,7 +1,7 @@
 (ns bcbio.variation.test.variantcontext
   (:use [midje.sweet]
         [bcbio.variation.variantcontext])
-  (:require [fs.core :as fs]))
+  (:require [me.raynes.fs :as fs]))
 
 (let [data-dir (str (fs/file "." "test" "data"))
       ref (str (fs/file data-dir "GRCh37.fa"))

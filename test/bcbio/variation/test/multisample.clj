@@ -4,7 +4,7 @@
         [clojure.java.io]
         [bcbio.variation.compare :only [variant-comparison-from-config]]
         [bcbio.variation.multisample])
-  (:require [fs.core :as fs]
+  (:require [me.raynes.fs :as fs]
             [bcbio.run.itx :as itx]))
 
 (background

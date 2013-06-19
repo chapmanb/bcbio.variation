@@ -2,7 +2,7 @@
   "Annotate variant calls with metrics for assessing false positives
   http://www.broadinstitute.org/gsa/wiki/index.php/VariantAnnotator"
   (:use [bcbio.variation.utils.cgmetrics :only [add-cgmetrics]])
-  (:require [fs.core :as fs]
+  (:require [me.raynes.fs :as fs]
             [bcbio.run.itx :as itx]
             [bcbio.run.broad :as broad]))
 

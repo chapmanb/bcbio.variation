@@ -7,7 +7,7 @@
   (:import (java.io File))
   (:use [clojure.java.io])
   (:require [clojure.string :as string]
-            [fs.core :as fs]))
+            [me.raynes.fs :as fs]))
 
 ;; ## Idempotent processing
 ;; avoid re-running when output files exist

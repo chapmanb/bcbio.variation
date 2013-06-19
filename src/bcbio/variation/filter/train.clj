@@ -4,7 +4,7 @@
   and false negatives to further tweak classifiers."
   (:use [clojure.java.io]
         [bcbio.variation.multiple :only [prep-cmp-name-lookup]])
-  (:require [fs.core :as fs]
+  (:require [me.raynes.fs :as fs]
             [bcbio.run.broad :as broad]
             [bcbio.run.itx :as itx]))
 

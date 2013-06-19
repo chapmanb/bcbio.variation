@@ -9,7 +9,7 @@
         [bcbio.variation.annotation :only [add-gatk-annotations]])
   (:require [clojure.java.shell :as shell]
             [clojure.string :as string]
-            [fs.core :as fs]
+            [me.raynes.fs :as fs]
             [aws.sdk.s3 :as s3]
             [bcbio.run.itx :as itx]))
 

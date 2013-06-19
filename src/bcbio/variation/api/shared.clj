@@ -1,7 +1,6 @@
 (ns bcbio.variation.api.shared
   "Shared functionality useful across multiple API calls."
   (:use [clojure.java.io]
-        [bcbio.variation.remote.client :only [gs-default-server]]
         [bcbio.variation.web.db :only [prepare-web-db]])
   (:require [clojure.string :as string]
             [clj-yaml.core :as yaml]))
@@ -11,6 +10,8 @@
 
 (def ^{:doc "Hold directory of remote files by user and filetype."}
   remote-file-cache (atom {}))
+
+(def ^{:private true} gs-default-server "http://www.genomespace.org/")
 
 (defn url->dir
   [url]

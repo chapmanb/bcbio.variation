@@ -15,7 +15,7 @@
         [bcbio.variation.utils.background :only [make-work-dirs]])
   (:require [clojure.java.shell :as shell]
             [clojure.string :as string]
-            [fs.core :as fs]
+            [me.raynes.fs :as fs]
             [bcbio.run.itx :as itx]))
 
 (defn- download-chrom-gms-data

@@ -12,7 +12,7 @@
             [clojure.java.io :as io]
             [incanter.excel :as excel]
             [incanter.core :as icore]
-            [fs.core :as fs]
+            [me.raynes.fs :as fs]
             [bcbio.align.ref :refer [get-seq-dict]]
             [bcbio.run.itx :as itx]))
 
