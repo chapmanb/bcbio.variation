@@ -9,6 +9,8 @@
   additional tricky cases. Thanks to David Mittelman and Jason Wang for example
   cases.
 
+- Work towards slimming down main distribution to remove larger external dependencies.
+
 ## 0.0.8 (6 May 2013)
 
 - Provide detailed breakdown of variant evaluation and grading to interface with

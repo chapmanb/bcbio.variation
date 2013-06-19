@@ -18,6 +18,8 @@
                  [log4j "1.2.17"]
                  [org.apache.commons/commons-jexl "2.1.1"]
                  [org.apache.commons/commons-math "2.2"]
+                 [commons-lang "2.5"]
+                 [org.apache.servicemix.bundles/org.apache.servicemix.bundles.jets3t "0.8.1_1"]
                  [org.reflections/reflections "0.9.8"]
                  [org.simpleframework/simple-xml "2.0.4"]
                  [it.unimi.dsi/fastutil "6.5.3"]
