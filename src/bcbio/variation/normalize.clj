@@ -413,9 +413,13 @@
   [ref-file prev-pad xs]
   (letfn [(get-ref-alts [xs]
             [(nth xs 3) (string/split (nth xs 4) #",")])
+          (is-alt-sv? [alt]
+            (or (.startsWith alt "<")
+                (.contains alt "[")
+                (.contains alt "]")))
           (indel? [xs]
             (let [[vc-ref vc-alts] (get-ref-alts xs)]
-              (some #(and (not (.startsWith % "<"))
+              (some #(and (not (is-alt-sv? %))
                           (not= (count vc-ref) (count %)))
                     vc-alts)))
           (is-5pad-n? [xs]
@@ -429,7 +433,7 @@
                                         (map #(str (prev-pad xs) (subs % 1)) vc-alts))))))
           (no-pad? [xs]
             (let [[vc-ref vc-alts] (get-ref-alts xs)]
-              (some #(and (not (.startsWith % "<"))
+              (some #(and (not (is-alt-sv? %))
                           (not= (first vc-ref) (first %)))
                     vc-alts)))
           (fix-nopad [xs]
@@ -466,15 +470,15 @@
      (is-bad-ref? xs) []
      :else xs)))
 
-(defn clean-problem-vcf
-  "Clean VCF file which GATK parsers cannot handle due to illegal characters.
-  Fixes:
-    - Gap characters (-) found in REF or ALT indels.
-    - Fixes indels without reference padding or N padding.
-    - Removes spaces in INFO fields.
-    - Handles Illumina special case of SNPs with MAXGT and POLY calls.
-      Uses the MAXGT calls which make no prior assumptions about polymorphism"
-  [in-vcf-file ref-file sample & {:keys [out-dir]}]
+(defn- clean-header-line
+  "Fixes problematic information in header lines:
+  - Handle renaming of sample names to expected.
+  - Handles Illumina special case of SNPs with MAXGT and POLY calls.
+    Uses the MAXGT calls which make no prior assumptions about polymorphism.
+  - Adds sample names for reads without samples.
+  - Problem Number specifications with Number=-1
+  - Multiple different uses of BKPT flag in Illumina indel and SV files."
+  [line sample]
   (letfn [(fix-bad-alt-header [x]
             (str "##ALT=<ID" (string/replace-first x "##ALT=Type" "") ">"))
           (rename-samples [xs want]
@@ -486,20 +490,46 @@
                (.contains (first xs) "_MAXGT") (cons want (rest xs))
                :else xs)))
           (fix-sample-names [x]
-            (if (> (count (string/split x #"\t")) 8)
-              (let [[stay-parts samples] (split-at 9 (string/split x #"\t"))
-                    fix-samples (if (contains? (set samples) sample)
-                                  samples
-                                  (rename-samples samples sample))]
-                (string/join "\t" (concat stay-parts fix-samples)))
-              x))
+            (let [parts (string/split x #"\t")]
+              (cond
+               (> (count parts) 8) (let [[stay-parts samples] (split-at 9 parts)
+                                         fix-samples (if (contains? (set samples) sample)
+                                                       samples
+                                                       (rename-samples samples sample))]
+                                     (string/join "\t" (concat stay-parts fix-samples)))
+               (= (count parts) 8) (string/join "\t" (concat parts ["FORMAT" sample]))
+               :else x)))
           (clean-header [x]
             (cond
              (.startsWith x "##ALT=Type=") (fix-bad-alt-header x)
              (.startsWith x "##FORMAT=<ID=GL,Number=.,Type=String") ""
              (.startsWith x "#CHROM") (fix-sample-names x)
              :else x))
-          (remove-gap [n xs]
+          (fix-bad-info-number [x]
+            (string/replace-first x "Number=-1" "Number=."))
+          (fix-bad-bkpt [x]
+            (string/replace-first x "ID=BKPT,Number=0,Type=Flag" "ID=BKPT,Number=.,Type=String"))]
+    (-> line
+        fix-bad-info-number
+        fix-bad-bkpt
+        clean-header)))
+
+(defn- add-missing-genotypes
+  "Add genotypes to samples with no-calls. This handles assumed or non-genotyped
+   variations like those that come from many structural variant callers."
+  [call parts]
+  (if (= (count parts) 8)
+    (vec (concat parts ["GT" (string/join "/" (repeat (get call :prep-allele-count 2) "1"))]))
+    parts))
+
+(defn clean-problem-vcf
+  "Clean VCF file which GATK parsers cannot handle due to illegal characters.
+  Fixes:
+    - Gap characters (-) found in REF or ALT indels.
+    - Fixes indels without reference padding or N padding.
+    - Removes spaces in INFO fields."
+  [in-vcf-file ref-file sample call & {:keys [out-dir]}]
+  (letfn [(remove-gap [n xs]
             (assoc xs n
                    (-> (nth xs n)
                        (string/replace "-" "")
@@ -521,11 +551,12 @@
                    (string/replace (nth xs 7) " " "_")))
           (clean-line [line]
             (if (.startsWith line "#")
-              (clean-header line)
+              (clean-header-line line sample)
               (->> (string/split line #"\t")
                    (remove-gap 3)
                    (remove-gap 4)
                    (fix-info-spaces)
+                   (add-missing-genotypes call)
                    remove-problem-alts
                    (remove-bad-ref ref-file)
                    (maybe-add-indel-pad-base ref-file (get-prev-pad ref-file))

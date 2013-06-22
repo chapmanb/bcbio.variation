@@ -30,7 +30,8 @@
     (when (itx/needs-run? out-file)
       (itx/with-temp-dir [out-dir base-dir]
         (let [call {:name "iprep" :file [(get-illumina-vcf base-dir "SNPs")
-                                         (get-illumina-vcf base-dir "Indels")]
+                                         (get-illumina-vcf base-dir "Indels")
+                                         (get-illumina-vcf base-dir "SVs")]
                     :preclean true :prep true :normalize true
                     :ref orig-ref-file}
               exp {:sample sample-name :ref ref-file}

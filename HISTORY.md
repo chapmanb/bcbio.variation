@@ -1,3 +1,8 @@
+## 0.1.0 (in progress)
+
+- Handle merging of Illumina structural variant calls (SVs.vcf) during
+  preparation of Illumina VCFs to GATK friendly VCFs.
+
 ## 0.0.9 (22 June 2013)
 
 - Move to GATK 2.5-2 from GATK 2.3 lite. Required using new GATK framework and
