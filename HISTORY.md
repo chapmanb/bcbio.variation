@@ -1,4 +1,4 @@
-## 0.0.9 (in progress)
+## 0.0.9 (22 June 2013)
 
 - Move to GATK 2.5-2 from GATK 2.3 lite. Required using new GATK framework and
   porting of used walkers (LeftAlignVariants) and annotators from GATK-lite code
@@ -9,7 +9,8 @@
   additional tricky cases. Thanks to David Mittelman and Jason Wang for example
   cases.
 
-- Work towards slimming down main distribution to remove larger external dependencies.
+- Work towards slimming down main distribution to remove larger external
+  dependencies. Next releases will move external functionality into own packages.
 
 ## 0.0.8 (6 May 2013)
 

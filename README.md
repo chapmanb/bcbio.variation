@@ -33,7 +33,7 @@ associated with different variant representations.
 
 ### Download
 
-The latest release is 0.0.8 (6 May 2013): [bcbio.variation-0.0.8-standalone.jar][dl].
+The latest release is 0.0.9 (22 June 2013): [bcbio.variation-0.0.9-standalone.jar][dl].
 Run from the command line:
 
     $ java -jar bcbio.variation-VERSION-standalone.jar [arguments]
@@ -41,7 +41,7 @@ Run from the command line:
 The jar contains a full GATK commandline with additional walkers, as well as
 custom command line programs. See the usage section below for more details.
 
-[dl]: https://s3.amazonaws.com/bcbio.variation/bcbio.variation-0.0.8-standalone.jar
+[dl]: https://s3.amazonaws.com/bcbio.variation/bcbio.variation-0.0.9-standalone.jar
  
 ### As a library
 
