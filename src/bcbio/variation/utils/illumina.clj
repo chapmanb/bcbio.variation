@@ -23,19 +23,20 @@
                 Assembly, Consensus and Variations)
     - sample-name: The name to include in updated VCF headers
     - ref-file: Reference file we want to sort to
-    - orig-ref-file: Original reference file (hg19 for Illumina)"
-  [base-dir sample-name ref-file orig-ref-file]
+    - orig-ref-file: Original reference file (hg19 for Illumina)
+    - out-dir: Output directory to write to."
+  [base-dir sample-name ref-file orig-ref-file out-dir]
   (let [base-dir (fs/expand-home base-dir)
-        out-file (str (fs/file base-dir "Variations" (str sample-name ".vcf")))]
+        out-file (str (fs/file out-dir (str sample-name ".vcf")))]
     (when (itx/needs-run? out-file)
-      (itx/with-temp-dir [out-dir base-dir]
+      (itx/with-temp-dir [tmp-dir out-dir]
         (let [call {:name "iprep" :file [(get-illumina-vcf base-dir "SNPs")
                                          (get-illumina-vcf base-dir "Indels")
                                          (get-illumina-vcf base-dir "SVs")]
                     :preclean true :prep true :normalize true
                     :ref orig-ref-file}
               exp {:sample sample-name :ref ref-file}
-              out-info (gatk-normalize call exp [] out-dir
+              out-info (gatk-normalize call exp [] tmp-dir
                                        (fn [_ x] (println x)))]
           (fs/rename (:file out-info) out-file))))
     out-file))
