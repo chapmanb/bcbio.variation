@@ -318,22 +318,6 @@
                               ref :header-update-fn (update-header sample {}))))
     out-file))
 
-(defn remove-ref-alts
-  "Check a VCF file for alternative alleles that match reference, removing them.
-   This avoids issues where callers output alleles that match expected reference
-   causing GATK errors."
-  [in-file ref-file]
-  (letfn [(alt-matches-ref? [vc]
-            (when-let [ref-seq (extract-sequence ref-file (:chr vc) (:start vc) (:end vc))]
-              (contains? (set (map #(.getBaseString %) (:alt-alleles vc))) ref-seq)))]
-    (let [out-file (itx/add-file-part in-file "callprep")]
-      (when (itx/needs-run? out-file)
-        (with-open [vcf-iter (get-vcf-iterator in-file ref-file)]
-          (write-vcf-w-template in-file {:out out-file}
-                                (map :vc (remove alt-matches-ref? (parse-vcf vcf-iter)))
-                                ref-file)))
-      out-file)))
-
 (defn- write-prepped-vcf
   "Write VCF file with correctly ordered and cleaned variants."
   [vcf-file out-info ref-file orig-ref-file sample config]
@@ -412,45 +396,38 @@
   lacks a shared padding base for indels."
   [ref-file prev-pad xs]
   (letfn [(get-ref-alts [xs]
-            [(nth xs 3) (string/split (nth xs 4) #",")])
+            {:ref (nth xs 3) :alts (string/split (nth xs 4) #",")})
           (is-alt-sv? [alt]
             (or (.startsWith alt "<")
                 (.contains alt "[")
                 (.contains alt "]")))
-          (indel? [xs]
-            (let [[vc-ref vc-alts] (get-ref-alts xs)]
-              (some #(and (not (is-alt-sv? %))
-                          (not= (count vc-ref) (count %)))
-                    vc-alts)))
-          (is-5pad-n? [xs]
-            (let [[vc-ref vc-alts] (get-ref-alts xs)]
-              (every? #(and (.startsWith vc-ref "N") (.startsWith % "N")) vc-alts)))
-          (fix-5pad-n [xs]
-            (let [[vc-ref vc-alts] (get-ref-alts xs)]
-              (-> xs
-                  (assoc 3 (str (prev-pad xs) (subs vc-ref 1)))
-                  (assoc 4 (string/join ","
-                                        (map #(str (prev-pad xs) (subs % 1)) vc-alts))))))
-          (no-pad? [xs]
-            (let [[vc-ref vc-alts] (get-ref-alts xs)]
-              (some #(and (not (is-alt-sv? %))
-                          (not= (first vc-ref) (first %)))
-                    vc-alts)))
-          (fix-nopad [xs]
-            (let [[vc-ref vc-alts] (get-ref-alts xs)]
-              (-> xs
-                  (assoc 1 (dec (Integer/parseInt (second xs))))
-                  (assoc 3 (str (prev-pad xs) vc-ref))
-                  (assoc 4 (string/join ","
-                                        (map #(str (prev-pad xs) %) vc-alts))))))]
+          (indel? [a]
+            (some #(and (not (is-alt-sv? %))
+                        (not= (count (:ref a)) (count %)))
+                  (:alts a)))
+          (is-5pad-n? [a]
+            (every? #(and (.startsWith (:ref a) "N") (.startsWith % "N")) (:alts a)))
+          (fix-5pad-n [xs a]
+            (-> xs
+                (assoc 3 (str (prev-pad xs) (subs (:ref a) 1)))
+                (assoc 4 (string/join ","
+                                      (map #(str (prev-pad xs) (subs % 1)) (:alts a))))))
+          (no-pad? [a]
+            (some #(and (not (is-alt-sv? %))
+                        (not= (first (:ref a)) (first %)))
+                  (:alts a)))
+          (fix-nopad [xs a]
+            (-> xs
+                (assoc 1 (dec (Integer/parseInt (second xs))))
+                (assoc 3 (str (prev-pad xs) (:ref a)))
+                (assoc 4 (string/join ","
+                                      (map #(str (prev-pad xs) %) (:alts a))))))]
     (if (empty? xs) []
-        (-> xs
-            (->/as cur-xs
-              (->/when (and (indel? cur-xs) (is-5pad-n? cur-xs))
-                fix-5pad-n))
-            (->/as cur-xs
-              (->/when (and (indel? cur-xs) (no-pad? cur-xs))
-                fix-nopad))))))
+        (let [alleles (get-ref-alts xs)]
+          (cond
+           (and (indel? alleles) (is-5pad-n? alleles)) (fix-5pad-n xs alleles)
+           (and (indel? alleles) (no-pad? alleles)) (fix-nopad xs alleles)
+           :else xs)))))
 
 (defn- remove-bad-ref
   "Remove calls where the reference base does not match expected reference allele."
@@ -522,6 +499,20 @@
     (vec (concat parts ["GT" (string/join "/" (repeat (get call :prep-allele-count 2) "1"))]))
     parts))
 
+(defn- remove-problem-alts
+  "Remove lines containing alternative alleles that are duplicated, missing or match reference."
+  [xs]
+  (let [ref (nth xs 3)
+        alts (string/split (nth xs 4) #",")]
+    (letfn [(has-duplicate-alts? [alts]
+              (not= (count alts) (count (set alts))))]
+      (cond
+       (empty? xs) []
+       (some #(= ref %) alts) []
+       (some #(= "." %) alts) []
+       (has-duplicate-alts? alts) []
+       :else xs))))
+
 (defn clean-problem-vcf
   "Clean VCF file which GATK parsers cannot handle due to illegal characters.
   Fixes:
@@ -529,39 +520,28 @@
     - Fixes indels without reference padding or N padding.
     - Removes spaces in INFO fields."
   [in-vcf-file ref-file sample call & {:keys [out-dir]}]
-  (letfn [(remove-gap [n xs]
-            (assoc xs n
-                   (-> (nth xs n)
-                       (string/replace "-" "")
-                       (string/replace "." ""))))
-          (has-duplicate-alts? [alt]
-            (let [alts (string/split alt #",")]
-              (not= (count alts) (count (set alts)))))
-          (remove-problem-alts [xs]
-            (let [ref (nth xs 3)
-                  alt (nth xs 4)]
-              (cond
-               (empty? xs) []
-               (= ref alt) []
-               (= "." alt) []
-               (has-duplicate-alts? alt) []
-               :else xs)))
-          (fix-info-spaces [xs]
-            (assoc xs 7
-                   (string/replace (nth xs 7) " " "_")))
-          (clean-line [line]
-            (if (.startsWith line "#")
-              (clean-header-line line sample)
-              (->> (string/split line #"\t")
-                   (remove-gap 3)
-                   (remove-gap 4)
-                   (fix-info-spaces)
-                   (add-missing-genotypes call)
-                   remove-problem-alts
-                   (remove-bad-ref ref-file)
-                   (maybe-add-indel-pad-base ref-file (get-prev-pad ref-file))
-                   (string/join "\t"))))]
-    (let [out-file (itx/add-file-part in-vcf-file "preclean" out-dir)]
+  (let [prev-pad (get-prev-pad ref-file)
+        out-file (itx/add-file-part in-vcf-file "preclean" out-dir)]
+    (letfn [(remove-gap [n xs]
+              (assoc xs n
+                     (-> (nth xs n)
+                         (string/replace "-" "")
+                         (string/replace "." ""))))
+            (fix-info-spaces [xs]
+              (assoc xs 7
+                     (string/replace (nth xs 7) " " "_")))
+            (clean-line [line]
+              (if (.startsWith line "#")
+                (clean-header-line line sample)
+                (->> (string/split line #"\t")
+                     (remove-gap 3)
+                     (remove-gap 4)
+                     fix-info-spaces
+                     (add-missing-genotypes call)
+                     remove-problem-alts
+                     (remove-bad-ref ref-file)
+                     (maybe-add-indel-pad-base ref-file prev-pad)
+                     (string/join "\t"))))]
       (when (itx/needs-run? out-file)
         (itx/with-tx-file [tx-out-file out-file]
           (with-open [rdr (reader in-vcf-file)
