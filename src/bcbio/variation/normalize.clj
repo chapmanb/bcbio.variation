@@ -120,14 +120,12 @@
         ref-chrs (set (chrs-from-fasta-file ref-file))
         vcf-chrs (when (and orig-ref-file (not= orig-ref-file ref-file))
                    (chrs-from-fasta-file orig-ref-file))]
-    (letfn [(maybe-remap-name [x]
-              (let [remap-x (get rename-map x)]
+    (reduce (fn [coll x]
+              (let [remap-x (get coll x)]
                 (if (and remap-x (contains? ref-chrs remap-x))
-                  remap-x x)))]
-      (if vcf-chrs
-        (zipmap vcf-chrs
-                (map maybe-remap-name vcf-chrs))
-        rename-map))))
+                  (assoc coll x remap-x)
+                  (assoc coll x x))))
+            rename-map vcf-chrs)))
 
 ;; ## Resort and normalize variants
 
