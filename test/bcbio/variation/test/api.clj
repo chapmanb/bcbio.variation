@@ -34,7 +34,7 @@
   (let [out (plot-ready-metrics vcf1)
         {:keys [raw metrics]} (get-raw-metrics vcf1)]
     (-> raw first keys) => (contains ["QUAL" "DP" :id] :in-any-order :gaps-ok)
-    (->> metrics (filter #(= "zygosity" (:id %))) first :choices) => #(or (nil? %)
+    (->> metrics (filter #(= "zygosity" (:id %))) first :choices) => #(or (= % #{})
                                                                           (= % #{"heterozygous" "homozygous"}))
     (:filename out) => vcf1
     (-> out :metrics first :id) => "QUAL"
