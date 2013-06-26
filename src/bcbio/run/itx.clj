@@ -84,8 +84,9 @@
     `(do ~@body)
     `(let [~tx-file-info (safe-tx-files ~file-info ~need-tx)]
        (try
-         ~@body
-         (rename-tx-files ~tx-file-info ~file-info ~need-tx ~exts)
+         (let [out# (do ~@body)]
+           (rename-tx-files ~tx-file-info ~file-info ~need-tx ~exts)
+           out#)
          (finally
           (fs/delete-dir (fs/parent (get ~tx-file-info (first ~need-tx)))))))))
 
@@ -94,8 +95,9 @@
   [[tx-file orig-file] & body]
   `(let [~tx-file (:out (safe-tx-files {:out ~orig-file} [:out]))]
      (try
-       ~@body
-       (rename-tx-files {:out ~tx-file} {:out ~orig-file} [:out] [])
+       (let [out# (do ~@body)]
+         (rename-tx-files {:out ~tx-file} {:out ~orig-file} [:out] [])
+         out#)
        (finally
         (fs/delete-dir (fs/parent ~tx-file))))))
 

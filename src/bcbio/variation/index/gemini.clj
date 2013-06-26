@@ -31,20 +31,27 @@
          count
          pos?)))
 
+(defn- create-gemini-db
+  "Create gemini database, catching errors if there are gemini installation problems"
+  [in-file index-file]
+  (when-let [gemini-cmd (get-gemini-cmd)]
+    (itx/with-tx-file [tx-index index-file]
+      (let [info (apply shell/sh
+                        (concat [gemini-cmd "load" "-v" in-file]
+                                (when (has-snpeff-anns? in-file)
+                                  ["-t" "snpEff"])
+                                [tx-index]))]
+        (when (zero? (:exit info))
+          index-file)))))
+
 (defn index-variant-file
   "Pre-index a variant file with gemini, handling snpEff annotations."
   [in-file _ & {:keys [re-index?]}]
-  (when-let [gemini-cmd (get-gemini-cmd)]
-    (when in-file
-      (let [index-file (str (itx/file-root in-file) "-gemini.db")]
-        (when (or (itx/needs-run? index-file) re-index?)
-          (itx/with-tx-file [tx-index index-file]
-            (apply shell/sh
-                   (concat [gemini-cmd "load" "-v" in-file]
-                           (when (has-snpeff-anns? in-file)
-                             ["-t" "snpEff"])
-                           [tx-index]))))
-        index-file))))
+  (when in-file
+    (let [index-file (str (itx/file-root in-file) "-gemini.db")]
+        (if (or (itx/needs-run? index-file) re-index?)
+          (create-gemini-db in-file index-file)
+          index-file))))
 
 (def ^{:doc "Gemini metrics to expose for query and visualization."
        :private true}
@@ -219,16 +226,16 @@
 (defn vc-attr-retriever
   "Retrieve metrics by name from a gemini index for provided VariantContexts."
   [in-file ref-file]
-  (if-let [index-db (index-variant-file in-file ref-file)]
-    (let [pool (get-sqlite-db-pool index-db)]
-      (fn [vc attr]
-        (sql/with-connection pool
+  (let [pool (future (when-let [index-db (index-variant-file in-file ref-file)]
+                       (get-sqlite-db-pool index-db)))]
+    (fn [vc attr]
+      (when @pool
+        (sql/with-connection @pool
           (sql/with-query-results rows
             [(str "SELECT " (string/join "," (attr->colnames attr))
                   " FROM variants WHERE chrom = ? AND start = ? and ref = ?")
              (str "chr" (:chr vc)) (dec (:start vc)) (.getBaseString (:ref-allele vc))]
-            (gemini-metric-from-row (first rows) attr)))))
-    (fn [vc attr] nil)))
+            (gemini-metric-from-row (first rows) attr)))))))
 
 (defn get-raw-metrics
   "Retrieve table of Gemini metrics keyed on variant names."
