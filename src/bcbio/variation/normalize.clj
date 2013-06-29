@@ -375,24 +375,25 @@
 ;; Handle cleanup for VCF files before feeding to any verifying
 ;; parser.
 
-(defn- get-prev-pad
-  "Given a VCF line, retrieve the reference base prior to the variant.
-   Used to include the required reference padding in indels missing them."
+(defn- ref-base-getter
+  "Given a VCF line, retrieve the reference base. Second optional
+   function allows you adjust which base is retrieved to get previous
+   bases for indels missing reference padding."
   [ref-file]
   (let [chr-map (prep-rename-map :GRCh37 ref-file)
         get-ref-chrom (fn [chrom]
                         (get chr-map chrom chrom))]
-    (fn [xs]
-      (let [before-start (dec (Integer/parseInt (second xs)))]
+    (fn [xs adjust-fn]
+      (let [i (adjust-fn (Integer/parseInt (second xs)))]
         (string/upper-case
          (str
-          (or (extract-sequence ref-file (get-ref-chrom (first xs)) before-start before-start) "N")))))))
+          (or (extract-sequence ref-file (get-ref-chrom (first xs)) i i) "N")))))))
 
 (defn- maybe-add-indel-pad-base
   "Check reference and alt alleles for lack of a padding base on indels.
   The VCF spec requires this and GATK will parse incorrectly when a variant
   lacks a shared padding base for indels."
-  [ref-file prev-pad xs]
+  [ref-file ref-base-get xs]
   (letfn [(get-ref-alts [xs]
             {:ref (nth xs 3) :alts (string/split (nth xs 4) #",")})
           (is-alt-sv? [alt]
@@ -406,20 +407,22 @@
           (is-5pad-n? [a]
             (every? #(and (.startsWith (:ref a) "N") (.startsWith % "N")) (:alts a)))
           (fix-5pad-n [xs a]
-            (-> xs
-                (assoc 3 (str (prev-pad xs) (subs (:ref a) 1)))
-                (assoc 4 (string/join ","
-                                      (map #(str (prev-pad xs) (subs % 1)) (:alts a))))))
+            (let [base (ref-base-get xs identity)]
+              (-> xs
+                  (assoc 3 (str base (subs (:ref a) 1)))
+                  (assoc 4 (string/join ","
+                                        (map #(str base (subs % 1)) (:alts a)))))))
           (no-pad? [a]
             (some #(and (not (is-alt-sv? %))
                         (not= (first (:ref a)) (first %)))
                   (:alts a)))
           (fix-nopad [xs a]
-            (-> xs
-                (assoc 1 (dec (Integer/parseInt (second xs))))
-                (assoc 3 (str (prev-pad xs) (:ref a)))
-                (assoc 4 (string/join ","
-                                      (map #(str (prev-pad xs) %) (:alts a))))))]
+            (let [base (ref-base-get xs dec)]
+              (-> xs
+                  (assoc 1 (dec (Integer/parseInt (second xs))))
+                  (assoc 3 (str base (:ref a)))
+                  (assoc 4 (string/join ","
+                                        (map #(str base %) (:alts a)))))))]
     (if (empty? xs) []
         (let [alleles (get-ref-alts xs)]
           (cond
@@ -518,7 +521,7 @@
     - Fixes indels without reference padding or N padding.
     - Removes spaces in INFO fields."
   [in-vcf-file ref-file sample call & {:keys [out-dir]}]
-  (let [prev-pad (get-prev-pad ref-file)
+  (let [get-ref-base (ref-base-getter ref-file)
         out-file (itx/add-file-part in-vcf-file "preclean" out-dir)]
     (letfn [(remove-gap [n xs]
               (assoc xs n
@@ -538,7 +541,7 @@
                      (add-missing-genotypes call)
                      remove-problem-alts
                      (remove-bad-ref ref-file)
-                     (maybe-add-indel-pad-base ref-file prev-pad)
+                     (maybe-add-indel-pad-base ref-file get-ref-base)
                      (string/join "\t"))))]
       (when (itx/needs-run? out-file)
         (itx/with-tx-file [tx-out-file out-file]
