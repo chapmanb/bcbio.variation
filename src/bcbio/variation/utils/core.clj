@@ -10,7 +10,7 @@
   (apply (case (keyword cur-type)
            :callsummary callsummary/annotate-with-callsummary
            ;:gms gms/prepare-gms-vcfs-from-config
-           :illumina illumina/prep-illumina-variants
+           :illumina illumina/cl-entry
            :popfreq popfreq/annotate-with-popfreq
            :summarize summarize/vcf-to-table-config
            :svmerge svmerge/into-calls)

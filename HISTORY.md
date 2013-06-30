@@ -1,5 +1,8 @@
 ## 0.1.0 (in progress)
 
+- Speed improvements for normalizing input VCFs in preparation for comparison or
+  downstream manipulation.
+
 - Handle merging of Illumina structural variant calls (SVs.vcf) during
   preparation of Illumina VCFs to GATK friendly VCFs.
 

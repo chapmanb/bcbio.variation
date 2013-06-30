@@ -194,10 +194,10 @@
 
 (defn full-prep-vcf
   "Provide convenient entry to fully normalize a variant file for comparisons."
-  [vcf-file ref-file & {:keys [max-indel resort keep-ref]}]
+  [vcf-file ref-file & {:keys [max-indel resort keep-ref tmp-dir keep-filtered]}]
   (let [out-file (itx/add-file-part vcf-file "fullprep")]
     (when (itx/needs-run? out-file)
-      (itx/with-temp-dir [out-dir (fs/parent vcf-file)]
+      (itx/with-temp-dir [out-dir (or tmp-dir (fs/parent vcf-file))]
         (let [exp {:sample (-> vcf-file get-vcf-header .getGenotypeSamples first)
                    :ref ref-file :params {:max-indel max-indel}}
               call {:name "fullprep" :file vcf-file :preclean true
@@ -219,7 +219,9 @@
              ["-i" "--max-indel" "Maximum indel size to include" :default nil
               :parse-fn #(Integer. %)]
              ["-s" "--resort" "Resort input file by coordinate position" :default false :flag true]
-             ["-r" "--keep-ref" "Keep reference (0/0) calls" :default false :flag true])]
+             ["-r" "--keep-ref" "Keep reference (0/0) and filtered (not PASS) calls"
+              :default false :flag true]
+             ["-t" "--tmpdir" "Temporary directory to work in" :default nil])]
     (when (or (:help options) (nil? vcf-file) (nil? ref-file))
       (println "Required arguments:")
       (println "    <vcf-file> VCF input file to prepare.")
@@ -228,6 +230,7 @@
       (println banner)
       (System/exit 0))
     (let [out-file (full-prep-vcf vcf-file ref-file :max-indel (:max-indel options)
-                                  :resort (:resort options) :keep-ref (:keep-ref options))]
+                                  :resort (:resort options) :keep-ref (:keep-ref options)
+                                  :tmp-dir (:tmpdir options))]
       (println out-file)
       (System/exit 0))))
