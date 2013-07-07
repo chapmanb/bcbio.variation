@@ -8,7 +8,8 @@
   (:require [me.raynes.fs :as fs]
             [bcbio.run.itx :as itx]
             [bcbio.variation.grade :as grade]
-            [bcbio.variation.report :as report]))
+            [bcbio.variation.report :as report]
+            [bcbio.variation.utils.quickcompare :as qcmp]))
 
 (background
  (around :facts
@@ -54,3 +55,9 @@
                    first)]
       (-> cmp :grade-breakdown :discordant :snp :shared :hethom) => 1
       (-> cmp :c-files :eval-discordant) => out-file)))
+
+(facts "Perform quick comparisons between smaller variant files that can fit in memory."
+  (let [base-dir (fs/file data-dir "digrade")
+        c1 (str (fs/file base-dir "NA12878-cmp-r1.vcf"))
+        c2 (str (fs/file base-dir "NA12878-cmp-r2.vcf"))]
+    (qcmp/two-vcfs c1 c2 ref-file) => {:concordant 14 :discordant 2}))
