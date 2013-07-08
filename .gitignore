@@ -50,6 +50,7 @@ test/data/phased/*-illumina.bed
 test/data/phased/*-cmp*.vcf
 test/data/phased/work/
 test/data/digrade/*.idx
+test/data/digrade/*.csv
 test/data/digrade/work/
 test/data/svs/*.idx
 test/data/svs/*-sorted.bed

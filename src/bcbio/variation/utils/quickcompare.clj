@@ -5,7 +5,11 @@
    can be loaded into memory.
    This could also be split by chromosome to reduce memory requirement but
    first pass uses the entire file."
-  (:require [bcbio.variation.variantcontext :as gvc]))
+  (:require [clojure.data.csv :as csv]
+            [clojure.java.io :as io]
+            [me.raynes.fs :as fs]
+            [bcbio.run.itx :as itx]
+            [bcbio.variation.variantcontext :as gvc]))
 
 ;; ## Sample names from headers
 
@@ -57,7 +61,7 @@
       :concordant
       :discordant)))
 
-;; ## Access functions
+;; ## Top level access
 
 (defn two-vcfs
   "Compare two VCFs, base VCF will be loaded into memory and used to subset cmp-vcf."
@@ -69,4 +73,26 @@
                 (if-let [cmp (cmp-vc-to-base-call vc sample base-genotypes)]
                   (assoc coll cmp (inc (get coll cmp 0)))
                   coll))
-              {} (gvc/parse-vcf vcf-iter)))))
+              {:sample sample}
+              (gvc/parse-vcf vcf-iter)))))
+
+(defn- percent-concordant
+  [cmp]
+  (* 100.0
+     (/ (:concordant cmp)
+        (apply + (vals (dissoc cmp :sample))))))
+
+(defn vcfdir-to-base
+  "Compare a directory of single-sample VCFs to a multi-sample base VCF."
+  [base-vcf vcf-dir ref-file]
+  (let [out-file (-> (itx/add-file-part base-vcf "cmp" vcf-dir)
+                     itx/file-root
+                     (str ".csv"))
+        vcf-files (map str (fs/glob (fs/file vcf-dir "*.vcf")))]
+    (itx/with-tx-file [tx-out-file out-file]
+      (with-open [wtr (io/writer tx-out-file)]
+        (csv/write-csv wtr [["sample" "concordant" "discordant" "percent"]])
+        (doseq [cmp (map #(two-vcfs base-vcf % ref-file) vcf-files)]
+          (csv/write-csv wtr [[(:sample cmp) (get cmp :concordant 0) (get cmp :discordant 0)
+                               (percent-concordant cmp)]]))))
+    out-file))

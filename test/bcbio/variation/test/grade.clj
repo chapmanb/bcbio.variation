@@ -59,5 +59,8 @@
 (facts "Perform quick comparisons between smaller variant files that can fit in memory."
   (let [base-dir (fs/file data-dir "digrade")
         c1 (str (fs/file base-dir "NA12878-cmp-r1.vcf"))
-        c2 (str (fs/file base-dir "NA12878-cmp-r2.vcf"))]
-    (qcmp/two-vcfs c1 c2 ref-file) => {:concordant 14 :discordant 2}))
+        c2 (str (fs/file base-dir "NA12878-cmp-r2.vcf"))
+        dir-out-file (str (fs/file base-dir "NA12878-cmp-r1-cmp.csv"))]
+    (itx/remove-path dir-out-file)
+    (qcmp/two-vcfs c1 c2 ref-file) => {:concordant 14 :discordant 2 :sample "NA12878"}
+    (qcmp/vcfdir-to-base c1 base-dir ref-file) => dir-out-file))
