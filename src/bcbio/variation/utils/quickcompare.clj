@@ -7,8 +7,10 @@
    first pass uses the entire file."
   (:require [clojure.data.csv :as csv]
             [clojure.java.io :as io]
+            [clojure.tools.cli :refer [cli]]
             [me.raynes.fs :as fs]
             [bcbio.run.itx :as itx]
+            [bcbio.run.parallel :refer [rmap]]
             [bcbio.variation.variantcontext :as gvc]))
 
 ;; ## Sample names from headers
@@ -84,7 +86,7 @@
 
 (defn vcfdir-to-base
   "Compare a directory of single-sample VCFs to a multi-sample base VCF."
-  [base-vcf vcf-dir ref-file]
+  [base-vcf vcf-dir ref-file cores]
   (let [out-file (-> (itx/add-file-part base-vcf "cmp" vcf-dir)
                      itx/file-root
                      (str ".csv"))
@@ -92,7 +94,18 @@
     (itx/with-tx-file [tx-out-file out-file]
       (with-open [wtr (io/writer tx-out-file)]
         (csv/write-csv wtr [["sample" "concordant" "discordant" "percent"]])
-        (doseq [cmp (map #(two-vcfs base-vcf % ref-file) vcf-files)]
+        (doseq [cmp (rmap #(two-vcfs base-vcf % ref-file) vcf-files cores)]
           (csv/write-csv wtr [[(:sample cmp) (get cmp :concordant 0) (get cmp :discordant 0)
                                (percent-concordant cmp)]]))))
     out-file))
+
+(defn -main [& args]
+  (let [[options args banner]
+        (cli args
+             ["-c" "--cores" "Number of cores to use" :default 1
+              :parse-fn #(Integer. %)])]
+    (when (not= (count args) 3)
+      (println banner)
+      (println "Usage: quickcompare <base-vcf> <directory of VCFs> <genome reference>")
+      (System/exit 1))
+    (vcfdir-to-base (first args) (second args) (nth args 2) (:cores options))))

@@ -63,4 +63,4 @@
         dir-out-file (str (fs/file base-dir "NA12878-cmp-r1-cmp.csv"))]
     (itx/remove-path dir-out-file)
     (qcmp/two-vcfs c1 c2 ref-file) => {:concordant 14 :discordant 2 :sample "NA12878"}
-    (qcmp/vcfdir-to-base c1 base-dir ref-file) => dir-out-file))
+    (qcmp/vcfdir-to-base c1 base-dir ref-file 2) => dir-out-file))

@@ -29,5 +29,6 @@
   (if-let [alt-fn (get-altmain-fn (first args))]
     (do
       (apply alt-fn (rest args))
+      (shutdown-agents)
       (System/exit 0))
     (CommandLineGATK/main (into-array (if-not (nil? args) args ["-h"])))))
