@@ -432,16 +432,15 @@
 
 (defn- remove-bad-ref
   "Remove calls where the reference base does not match expected reference allele."
-  [ref-file xs]
+  [ref-base-get xs]
   (letfn [(is-bad-ref? [xs]
             (let [check-bases #{"A" "C" "G" "T"}
                   [chrom start _ vc-ref] (take 4 xs)
-                  real-ref (extract-sequence ref-file chrom (Integer/parseInt start)
-                                             (Integer/parseInt start))]
+                  real-ref (ref-base-get xs identity)]
               (and (= 1 (count vc-ref))
                    (not (nil? real-ref))
-                   (contains? check-bases (string/upper-case real-ref))
                    (contains? check-bases (string/upper-case vc-ref))
+                   (contains? check-bases (string/upper-case real-ref))
                    (not= (string/upper-case vc-ref) (string/upper-case real-ref)))))]
     (cond
      (empty? xs) []
@@ -540,7 +539,7 @@
                      fix-info-spaces
                      (add-missing-genotypes call)
                      remove-problem-alts
-                     (remove-bad-ref ref-file)
+                     (remove-bad-ref get-ref-base)
                      (maybe-add-indel-pad-base ref-file get-ref-base)
                      (string/join "\t"))))]
       (when (itx/needs-run? out-file)
