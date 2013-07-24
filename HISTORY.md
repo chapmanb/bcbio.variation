@@ -2,9 +2,11 @@
 
 - Speed improvements for normalizing input VCFs in preparation for comparison or
   downstream manipulation.
-
 - Handle merging of Illumina structural variant calls (SVs.vcf) during
   preparation of Illumina VCFs to GATK friendly VCFs.
+- Bug fixes for removing variants that don't match reference as part of the
+  variant preparation. Now handle hg19 -> GRCh37 chromosome swaps and
+  multibase deletions.
 
 ## 0.0.9 (22 June 2013)
 

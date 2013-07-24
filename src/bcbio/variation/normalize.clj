@@ -383,11 +383,12 @@
   (let [chr-map (prep-rename-map :GRCh37 ref-file)
         get-ref-chrom (fn [chrom]
                         (get chr-map chrom chrom))]
-    (fn [xs adjust-fn]
+    (fn [xs adjust-fn extra-bases]
       (let [i (adjust-fn (Integer/parseInt (second xs)))]
         (string/upper-case
          (str
-          (or (extract-sequence ref-file (get-ref-chrom (first xs)) i i) "N")))))))
+          (or (extract-sequence ref-file (get-ref-chrom (first xs)) i (+ i extra-bases))
+              "N")))))))
 
 (defn- maybe-add-indel-pad-base
   "Check reference and alt alleles for lack of a padding base on indels.
@@ -407,7 +408,7 @@
           (is-5pad-n? [a]
             (every? #(and (.startsWith (:ref a) "N") (.startsWith % "N")) (:alts a)))
           (fix-5pad-n [xs a]
-            (let [base (ref-base-get xs identity)]
+            (let [base (ref-base-get xs identity 0)]
               (-> xs
                   (assoc 3 (str base (subs (:ref a) 1)))
                   (assoc 4 (string/join ","
@@ -417,7 +418,7 @@
                         (not= (first (:ref a)) (first %)))
                   (:alts a)))
           (fix-nopad [xs a]
-            (let [base (ref-base-get xs dec)]
+            (let [base (ref-base-get xs dec 0)]
               (-> xs
                   (assoc 1 (dec (Integer/parseInt (second xs))))
                   (assoc 3 (str base (:ref a)))
@@ -434,13 +435,12 @@
   "Remove calls where the reference base does not match expected reference allele."
   [ref-base-get xs]
   (letfn [(is-bad-ref? [xs]
-            (let [check-bases #{"A" "C" "G" "T"}
-                  [chrom start _ vc-ref] (take 4 xs)
-                  real-ref (ref-base-get xs identity)]
-              (and (= 1 (count vc-ref))
-                   (not (nil? real-ref))
-                   (contains? check-bases (string/upper-case vc-ref))
-                   (contains? check-bases (string/upper-case real-ref))
+            (let [check-bases #{\A \C \G \T}
+                  vc-ref (nth xs 3)
+                  real-ref (ref-base-get xs identity (dec (count vc-ref)))]
+              (and (not (nil? real-ref))
+                   (every? check-bases (string/upper-case vc-ref))
+                   (every? check-bases (string/upper-case real-ref))
                    (not= (string/upper-case vc-ref) (string/upper-case real-ref)))))]
     (cond
      (empty? xs) []
