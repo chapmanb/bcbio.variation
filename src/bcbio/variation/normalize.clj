@@ -517,9 +517,10 @@
 (defn- remove-non-ascii
   "Remove lines containing non-ascii characters, normally due to corrupted files."
   [xs]
-  (letfn [(ascii? [^Character c] (CharUtils/isAscii c))
+  (letfn [(ascii? [^Character c]
+            (CharUtils/isAsciiPrintable c))
           (all-ascii? [s] (every? ascii? s))]
-    (if (all-ascii? (string/join "\t" xs)) xs [])))
+    (if (all-ascii? (string/join " " xs)) xs [])))
 
 (defn clean-problem-vcf
   "Clean VCF file which GATK parsers cannot handle due to illegal characters.
