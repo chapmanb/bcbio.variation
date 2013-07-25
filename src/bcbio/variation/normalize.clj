@@ -7,7 +7,8 @@
   organisms."
   (:import [org.broadinstitute.variant.variantcontext VariantContextBuilder GenotypeBuilder]
            [org.broadinstitute.variant.vcf VCFHeader]
-           [org.broad.tribble.readers AsciiLineReader])
+           [org.broad.tribble.readers AsciiLineReader]
+           [org.apache.commons.lang CharUtils])
   (:use [clojure.java.io]
         [bcbio.variation.variantcontext :only [write-vcf-w-template
                                                get-vcf-iterator parse-vcf
@@ -513,6 +514,13 @@
        (has-duplicate-alts? alts) []
        :else xs))))
 
+(defn- remove-non-ascii
+  "Remove lines containing non-ascii characters, normally due to corrupted files."
+  [xs]
+  (letfn [(ascii? [^Character c] (CharUtils/isAscii c))
+          (all-ascii? [s] (every? ascii? s))]
+    (if (all-ascii? (string/join "\t" xs)) xs [])))
+
 (defn clean-problem-vcf
   "Clean VCF file which GATK parsers cannot handle due to illegal characters.
   Fixes:
@@ -539,6 +547,7 @@
                      fix-info-spaces
                      (add-missing-genotypes call)
                      remove-problem-alts
+                     remove-non-ascii
                      (remove-bad-ref get-ref-base)
                      (maybe-add-indel-pad-base ref-file get-ref-base)
                      (string/join "\t"))))]
