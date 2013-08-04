@@ -1,0 +1,83 @@
+(ns bcbio.variation.ensemble
+  "Generate a single set of variant calls from multiple approaches.
+   Provides a nicer front end to ensemble based calling which exposes
+   the most useful knobs for combining multiple VCFs.
+   Automates the two step configuration process for ensemble calling:
+    - combine all variant calls together into a consensus set
+    - filter this consensus set using ensemble approaches"
+  (:require [clojure.java.io :as io]
+            [clj-yaml.core :as yaml]
+            [lonocloud.synthread :as ->]
+            [me.raynes.fs :as fs]
+            [bcbio.run.itx :as itx]
+            [bcbio.variation.compare :as compare]))
+
+(defn- setup-work-dir
+  "Create working directory for ensemble consensus calling."
+  [out-file]
+  (let [work-dir (str (itx/file-root out-file) "-work")
+        config-dir (str (io/file work-dir "config"))]
+    (doseq [dir [config-dir work-dir]]
+      (when-not (fs/exists? dir)
+        (fs/mkdirs dir)))
+    {:config config-dir :out work-dir :base work-dir
+     :prep (str (io/file work-dir "prep"))}))
+
+(defn- prep-sample
+  "Prepare base information for preparing a variation sample.
+   Normalization ensures all samples are similarly represented for comparison."
+  [config i vrn-file]
+  {:name (if (string? i) i (str "v" i))
+   :file vrn-file
+   :remove-refcalls true})
+
+(defn- get-combo-recall
+  "Prepare a combined set of recalled variants from all inputs."
+  [config n vrn-file]
+  (-> (prep-sample config n vrn-file)
+      (assoc :recall true)
+      (assoc :annotate true)
+      (->/when-let [ffilters (get-in config [:ensemble :format-filters])]
+        (assoc :format-filters ffilters))))
+
+(defn- create-ready-config
+  "Create a ensemble configuration to prep and combine the input variation files.
+   config specifies ensemble specific parameters to use."
+  [vrn-files ref-file config dirs]
+  (let [combo-name "combo"
+        out-file (str (fs/file (:config dirs) "ensemble.yaml"))]
+    (->> {:dir dirs
+          :experiments
+          [{:name "ensemble"
+            :ref ref-file
+            :calls (cons (get-combo-recall config combo-name (first vrn-files))
+                         (map-indexed (partial prep-sample config) vrn-files))
+            :finalize [{:method "multiple"
+                        :target combo-name}
+                       {:method "recal-filter"
+                        :target [combo-name "v0"]
+                        :params {:support combo-name
+                                 :classifiers (get-in config [:ensemble :classifiers])
+                                 :classifier-type (get-in config [:ensemble :classifier-params :type]
+                                                          "svm")
+                                 :normalize "default"
+                                 :log-attrs []
+                                 :xspecific true
+                                 :trusted (get-in config [:ensemble :trusted-pct] 0.65)}}]}]}
+         yaml/generate-string
+         (spit out-file))
+    out-file))
+
+(defn consensus-calls
+  "Provide a finalized set of consensus calls from multiple inputs.
+   Handles cleaning up and normalizing input files, generating consensus
+   calls and returns ensemble output."
+  [vrn-files ref-file out-file in-config]
+  (let [dirs (setup-work-dir out-file)
+        config-file (create-ready-config vrn-files ref-file in-config dirs)]
+    (compare/variant-comparison-from-config config-file))
+  out-file)
+
+(defn -main [config-file ref-file out-file & vrn-files]
+  (consensus-calls vrn-files out-file
+                   (-> config-file slurp yaml/parse-string)))

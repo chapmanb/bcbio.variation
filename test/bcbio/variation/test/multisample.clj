@@ -5,7 +5,8 @@
         [bcbio.variation.compare :only [variant-comparison-from-config]]
         [bcbio.variation.multisample])
   (:require [me.raynes.fs :as fs]
-            [bcbio.run.itx :as itx]))
+            [bcbio.run.itx :as itx]
+            [bcbio.variation.ensemble :as ensemble]))
 
 (background
  (around :facts
@@ -42,3 +43,11 @@
     (itx/remove-path (get-in config [:dir :out]))
     (fs/mkdir (get-in config [:dir :out]))
     (-> (compare-two-vcf-flexible c1 c2 exp config) keys) => (contains :c-files)))
+
+(facts "Ensemble consensus preparation from multiple sample inputs."
+  (let [out-file (itx/add-file-part vcf-m1 "ensemble")
+        work-dir (str (itx/file-root out-file) "-work")
+        config {:ensemble {:classifiers {:base ["AD" "DP"]}}}]
+    (itx/remove-path work-dir)
+    (itx/remove-path out-file)
+    (ensemble/consensus-calls [vcf-m1 vcf-m2] ref-file out-file config) =future=> out-file))

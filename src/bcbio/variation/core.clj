@@ -3,6 +3,7 @@
   (:require [clojure.string :as string]
             [bcbio.variation.compare]
             [bcbio.variation.combine]
+            [bcbio.variation.ensemble]
             [bcbio.variation.haploid]
             [bcbio.align.reorder]
             [bcbio.variation.utils.core])
@@ -12,8 +13,9 @@
        :private true}
   altmain-map
   {:compare bcbio.variation.compare/-main
-   :prep bcbio.variation.combine/-main
+   :ensemble bcbio.variation.ensemble/-main
    :haploid bcbio.variation.haploid/-main
+   :prep bcbio.variation.combine/-main
    :reorder bcbio.align.reorder/-main
    :utils bcbio.variation.utils.core/-main})
 

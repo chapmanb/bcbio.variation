@@ -17,7 +17,9 @@
 ;; ## Utilities
 
 (defn- set-header-to-sample [sample _ header]
-  (VCFHeader. (.getMetaDataInInputOrder header) (ordered-set sample)))
+  (if (nil? sample)
+    header
+    (VCFHeader. (.getMetaDataInInputOrder header) (ordered-set sample))))
 
 (defn- no-recall-vcfs
   "Retrieve inputs VCFs not involved in preparing a recall VCF.
