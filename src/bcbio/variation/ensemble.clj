@@ -75,9 +75,22 @@
   [vrn-files ref-file out-file in-config]
   (let [dirs (setup-work-dir out-file)
         config-file (create-ready-config vrn-files ref-file in-config dirs)]
-    (compare/variant-comparison-from-config config-file))
+    (compare/variant-comparison-from-config config-file)
+    (let [prep-file (first (fs/glob (str (io/file (:prep dirs) "*cfilter.vcf"))))]
+      (fs/copy prep-file out-file)
+      (fs/copy (str prep-file ".idx") (str out-file ".idx"))))
   out-file)
 
-(defn -main [config-file ref-file out-file & vrn-files]
-  (consensus-calls vrn-files out-file
-                   (-> config-file slurp yaml/parse-string)))
+(defn -main [& args]
+  (if (< (count args) 5)
+    (do
+      (println "ERROR: Incorrect arguments")
+      (println "variant-ensemble: Perform ensemble calling on multiple variant calls")
+      (println "Arguments:")
+      (println "  config-file -- YAML configuration file with paramters")
+      (println "  ref-file -- The genome fasta reference")
+      (println "  out-file -- Name of output VCF file to write ensemble calls.")
+      (println "  [vrn-file-1 vrn-file-2] -- List of multiple inputs to use for ensemble unification."))
+    (let [[config-file ref-file out-file & vrn-files] args]
+      (consensus-calls vrn-files out-file
+                       (-> config-file slurp yaml/parse-string)))))

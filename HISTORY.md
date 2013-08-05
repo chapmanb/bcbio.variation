@@ -1,5 +1,9 @@
 ## 0.1.0 (in progress)
 
+- Provide `ensemble` run target to allow easier normalization of inputs from
+  multiple variant files.
+- Generalize filtering and combining metrics for multi-sample inputs. Allows
+  ensemble calls on jointly called VCFs.
 - Speed improvements for normalizing input VCFs in preparation for comparison or
   downstream manipulation.
 - Handle merging of Illumina structural variant calls (SVs.vcf) during

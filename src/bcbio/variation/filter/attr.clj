@@ -23,8 +23,7 @@
           Also calculates allele depth from AO and DP used by FreeBayes.
           AO is the count of the alternative allele."}
   [vc attr _]
-  {:pre [(= 1 (:num-samples vc))
-         (contains? #{1 2} (-> vc :genotypes first :alleles count))]}
+  {:pre [(every? #(contains? #{1 2} (-> % :alleles count)) (:genotypes vc))]}
   (letfn [(calc-expected [g ref-count allele-count]
             {:pre [(not (neg? ref-count))]}
             (when (or (pos? ref-count) (pos? allele-count))
@@ -39,15 +38,19 @@
             (let [alt-count (apply + (map #(Float/parseFloat %)
                                           (string/split (get-in g [:attributes "AO"]) #",")))
                   total-count (float (get-in g [:attributes "DP"]))]
-              (calc-expected g (- total-count alt-count) alt-count)))]
-    (let [g (-> vc :genotypes first)]
-      (cond
-       (get-in g [:attributes "AO"]) (from-ao g)
-       (seq (get-in g [:attributes attr])) (from-ad g)
-       :else nil
-       ;; (println (format "AD not found in attributes %s %s %s"
-       ;;                  (:attributes g) (:chr vc) (:start vc)))
-       ))))
+              (calc-expected g (- total-count alt-count) alt-count)))
+          (g->ad [g]
+            (cond
+             (get-in g [:attributes "AO"]) (from-ao g)
+             (seq (get-in g [:attributes attr])) (from-ad g)
+             :else nil
+             ;; (println (format "AD not found in attributes %s %s %s"
+             ;;                  (:attributes g) (:chr vc) (:start vc)))
+             ))]
+    (when-let [ads (seq (remove nil? (map g->ad (:genotypes vc))))]
+      (if (= 1 (count ads))
+        (first ads)
+        (stats/quantile 0.5 (sort ads))))))
 
 (defmethod get-vc-attr [:format "AD"]
   [vc attr retrievers]
@@ -61,11 +64,9 @@
 
 (defn get-pls
   "Retrieve PLs, handling non-Bayesian callers by conversion of p-values to phred scores."
-  [vc]
-  {:pre [(= 1 (:num-samples vc))
-         (contains? #{1 2} (-> vc :genotypes first :alleles count))]}
-  (let [g (-> vc :genotypes first)
-        pls (dissoc (get-likelihoods (:genotype g) :no-convert true)
+  [g]
+  {:pre [(contains? #{1 2} (-> g :alleles count))]}
+  (let [pls (dissoc (get-likelihoods (:genotype g) :no-convert true)
                     (:type g))
         pval (when-let [pval (get-in g [:attributes "PVAL"])]
                (convert-pval-to-phred pval))]
@@ -75,32 +76,44 @@
         (->/when pval
           (assoc "HOM_REF" pval)))))
 
-(defmethod get-vc-attr "PL"
-  ^{:doc "Provide likelihood confidence for the called genotype.
-          For reference calls, retrieve the likelihood of the most likely
-          variant (least negative). For variant calls, retrieve
-          the reference likelihood.
-          Handles non-Bayesian callers by conversion of p-values for phred scores."}
-  [vc attr _]
-  (let [g (-> vc :genotypes first)
-        pls (get-pls vc)]
+(defn get-pl
+  "Retrieve likelihood confidence for a single called genotype.
+   For reference calls, retrieve the likelihood of the most likely
+   variant (least negative). For variant calls, retrieve
+   the reference likelihood.
+   Handles non-Bayesian callers by conversion of p-values for phred scores."
+  [g]
+  (let [pls (get-pls g)]
     (when-not (empty? pls)
       (if (= (:type g) "HOM_REF")
         (apply max (vals pls))
         (get pls "HOM_REF")))))
 
+(defmethod get-vc-attr "PL"
+  ^{:doc "Provide likelihood confidence for all samples, median for multi-sample inputs."}
+  [vc attr _]
+  (when-let [pls (seq (remove nil? (map get-pl (:genotypes vc))))]
+    (if (= 1 (count pls))
+      (first pls)
+      (stats/quantile 0.5 (sort pls)))))
+
 (defmethod get-vc-attr "PLratio"
   ^{:doc "Calculate ratio of reference likelihood call to alternative variant calls.
           This helps measure whether a call is increasingly likely to be reference
-          compared with variant choices."}
+          compared with variant choices.
+          For multisample inputs, calculates the median ratio across all samples."}
   [vc attr _]
-  {:pre [(= 1 (:num-samples vc))]}
-  (let [g (-> vc :genotypes first)
-        pls (dissoc (get-likelihoods (:genotype g) :no-convert true)
-                    (:type g))]
-    (when-not (zero? (count pls))
-      (/ (get pls "HOM_REF")
-         (apply min (cons -1.0 (-> pls (dissoc "HOM_REF") vals)))))))
+  (letfn [(g->plratio [g]
+            (let [pls (dissoc (get-likelihoods (:genotype g) :no-convert true)
+                      (:type g))]
+              (when (contains? pls "HOM_REF")
+                (when-not (zero? (count pls))
+                  (/ (get pls "HOM_REF")
+                     (apply min (cons -1.0 (-> pls (dissoc "HOM_REF") vals))))))))]
+    (when-let [pls (seq (remove nil? (map g->plratio (:genotypes vc))))]
+      (if (= 1 (count pls))
+        (first pls)
+        (stats/quantile 0.5 (sort pls))))))
 
 (defmethod get-vc-attr "QUAL"
   [vc attr _]
@@ -111,26 +124,27 @@
           Handles custom cases like cortex_var with alternative
           depth attributes, and Illumina with (DPU and DPI)."}
   [vc attr _]
-  {:pre [(= 1 (:num-samples vc))]}
   (letfn [(contains-good? [xs x]
             (and (contains? xs x)
                  (not= (get xs x) -1)
-                 (not= (get xs x) [])))]
-    (let [g-attrs (-> vc :genotypes first :attributes)]
-      (cond
-       (contains-good? g-attrs "DP") (to-float (get g-attrs "DP"))
-       (contains-good? g-attrs "AD") (to-float (apply + (get g-attrs "AD")))
-       (contains-good? g-attrs "COV") (int (apply + (map to-float (string/split (get g-attrs "COV") #","))))
-       (contains-good? g-attrs "DPU") (to-float (get g-attrs "DPU"))
-       (contains-good? g-attrs "DPI") (to-float (get g-attrs "DPI"))
-       :else nil))))
+                 (not= (get xs x) [])))
+          (g->dp [g]
+            (let [g-attrs (:attributes g)]
+              (cond
+               (contains-good? g-attrs "DP") (to-float (get g-attrs "DP"))
+               (contains-good? g-attrs "AD") (to-float (apply + (get g-attrs "AD")))
+               (contains-good? g-attrs "COV") (int (apply + (map to-float (string/split (get g-attrs "COV") #","))))
+               (contains-good? g-attrs "DPU") (to-float (get g-attrs "DPU"))
+               (contains-good? g-attrs "DPI") (to-float (get g-attrs "DPI"))
+               :else nil)))]
+    (when-let [dps (remove nil? (map g->dp (:genotypes vc)))]
+      (apply + dps))))
 
 (defmethod get-vc-attr "DP"
   ^{:doc "Retrieve depth for an allele, first trying genotype information
           then falling back on information in INFO column."}
   [vc attr rets]
-  (if-let [gt-dp (when (= 1 (:num-samples vc))
-                   (get-vc-attr vc [:format attr] rets))]
+  (if-let [gt-dp (get-vc-attr vc [:format attr] rets)]
     gt-dp
     (to-float (get-in vc [:attributes attr]))))
 

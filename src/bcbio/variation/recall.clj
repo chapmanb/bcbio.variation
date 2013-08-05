@@ -61,7 +61,7 @@
                     (if (seq (get-in g [:attributes "PVAL"])) 1 0)
                     (if (seq (get-in g [:attributes "AD"])) 1 0)
                     (if (get-in g [:attributes "DP"]) 1 0))
-     :pl nil ;(attr/get-vc-attr vc "PL" nil)
+     :pl (attr/get-pl g)
      }))
 
 (defn- best-supported-alleles

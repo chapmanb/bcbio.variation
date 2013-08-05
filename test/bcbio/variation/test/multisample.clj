@@ -45,11 +45,10 @@
     (fs/mkdir (get-in config [:dir :out]))
     (-> (compare-two-vcf-flexible c1 c2 exp config) keys) => (contains :c-files)))
 
-
 (facts "Ensemble consensus preparation from multiple sample inputs."
   (let [out-file (itx/add-file-part vcf-m1 "ensemble")
         work-dir (str (itx/file-root out-file) "-work")
         config {:ensemble {:classifiers {:base ["DP"]}}}]
     (itx/remove-path work-dir)
     (itx/remove-path out-file)
-    (ensemble/consensus-calls [vcf-m1 vcf-m2] ref-file out-file config) =future=> out-file))
+    (ensemble/consensus-calls [vcf-m1 vcf-m2] ref-file out-file config) => out-file))

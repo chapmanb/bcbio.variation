@@ -159,8 +159,9 @@
    :discordant-missing -- probability that grading standard is actually reference.
    :discordant-hethom  -- probability that grading standard is alternative variant."
   [ref-vc cat]
+  {:pre [(or (nil? ref-vc) (= 1 (:num-samples ref-vc)))]}
   (let [pls (when ref-vc
-              (attr/get-pls ref-vc))]
+              (attr/get-pls (-> ref-vc :genotypes first)))]
     (case cat
       :discordant-missing (get pls "HOM_REF")
       :discordant-hethom (first (vals (dissoc pls "HOM_REF")))

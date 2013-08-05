@@ -44,6 +44,7 @@ test/data/*-gemini.db
 test/data/gatk-nocalls-*
 test/data/*sum.csv
 test/data/method-comparison-summary*
+test/data/1000genome-multi-ensemble*
 test/data/phased/*.idx
 test/data/phased/*-sorted.bed
 test/data/phased/*-illumina.bed
@@ -69,3 +70,4 @@ test/data/fosmid/
 test/data/web-test/
 test/data/single/
 test/data/tmp*
+test/data/txtmp*
