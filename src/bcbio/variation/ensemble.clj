@@ -63,7 +63,7 @@
                                  :normalize "default"
                                  :log-attrs []
                                  :xspecific true
-                                 :trusted (get-in config [:ensemble :trusted-pct] 0.65)}}]}]}
+                                 :trusted {:total (get-in config [:ensemble :trusted-pct] 0.65)}}}]}]}
          yaml/generate-string
          (spit out-file))
     out-file))

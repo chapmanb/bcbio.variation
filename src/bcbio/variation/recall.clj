@@ -16,10 +16,8 @@
 
 ;; ## Utilities
 
-(defn- set-header-to-sample [sample _ header]
-  (if (nil? sample)
-    header
-    (VCFHeader. (.getMetaDataInInputOrder header) (ordered-set sample))))
+(defn- set-header-to-samples [samples _ header]
+  (VCFHeader. (.getMetaDataInInputOrder header) samples))
 
 (defn- no-recall-vcfs
   "Retrieve inputs VCFs not involved in preparing a recall VCF.
@@ -63,7 +61,8 @@
                     (if (seq (get-in g [:attributes "PVAL"])) 1 0)
                     (if (seq (get-in g [:attributes "AD"])) 1 0)
                     (if (get-in g [:attributes "DP"]) 1 0))
-     :pl (attr/get-vc-attr vc "PL" nil)}))
+     :pl nil ;(attr/get-vc-attr vc "PL" nil)
+     }))
 
 (defn- best-supported-alleles
   "Retrieve alleles with best support from multiple inputs.
@@ -92,20 +91,29 @@
          last ; Extract the alleles
          )))
 
+(defn- best-supported-sample-gs
+  "Identify the best supported genotypes for a sample from multiple variant calls."
+  [vcs sample]
+  (->> vcs
+       (map (partial get-sample-call sample))
+       best-supported-alleles))
+
 (defn- update-vc-w-consensus
   "Update a variant context with consensus genotype from multiple inputs.
    Calculates the consensus set of calls, swapping calls to that if it
    exists. If there is no consensus default to the existing allele call."
-  [vc sample input-vc-getter]
+  [vc samples input-vc-getter]
   (let [match-fn (juxt :start :ref-allele)
-        most-likely (->> (gvc/variants-in-region input-vc-getter vc)
-                         (filter #(= (match-fn %) (match-fn vc)))
-                         (map (partial get-sample-call sample))
-                         best-supported-alleles)]
-    (when most-likely
+        other-vcs (filter #(= (match-fn %) (match-fn vc))
+                          (gvc/variants-in-region input-vc-getter vc))
+        most-likely-gs (->> samples
+                            (map (partial best-supported-sample-gs other-vcs))
+                            (remove nil?))]
+    (when (seq most-likely-gs)
       (-> (VariantContextBuilder. (:vc vc))
-          (.alleles (set (cons (:ref-allele vc) (:alleles most-likely))))
-          (.genotypes (gvc/create-genotypes [most-likely] :attrs {"PL" "PVAL" "DP" "AD"}))
+          (.alleles (conj (set (remove #(.isNoCall %) (mapcat :alleles most-likely-gs)))
+                          (:ref-allele vc)))
+          (.genotypes (gvc/create-genotypes most-likely-gs :attrs #{"PL" "PVAL" "DP" "AD"}))
           .make))))
 
 (defn- recall-w-consensus
@@ -115,11 +123,14 @@
     (when (itx/needs-run? out-file)
       (with-open [in-vcf-iter (gvc/get-vcf-iterator base-vcf ref-file)
                   input-vc-getter (apply gvc/get-vcf-retriever (cons ref-file input-vcfs))]
-        (gvc/write-vcf-w-template base-vcf {:out out-file}
-                                  (remove nil? (map #(update-vc-w-consensus % sample input-vc-getter)
-                                                    (gvc/parse-vcf in-vcf-iter)))
-                                  ref-file
-                                  :header-update-fn (partial set-header-to-sample sample))))
+        (let [samples (into (ordered-set) (if sample
+                                            [sample]
+                                            (-> input-vcfs first gvc/get-vcf-header .getGenotypeSamples)))]
+          (gvc/write-vcf-w-template base-vcf {:out out-file}
+                                    (remove nil? (map #(update-vc-w-consensus % samples input-vc-getter)
+                                                      (gvc/parse-vcf in-vcf-iter)))
+                                    ref-file
+                                    :header-update-fn (partial set-header-to-samples samples)))))
     out-file))
 
 (defn- get-min-merged
@@ -156,7 +167,7 @@
                             :approach (get-in exp [:params :recall-approach] :consensus)
                             :file v :bam b}
                  merged (recall-vcf base-info vcfs exp out-dir intervals)]
-             (if (get vcf-config :remove-refcalls true)
+             (if (and (:sample exp) (get vcf-config :remove-refcalls true))
                (select-by-sample (:sample exp) merged nil (:ref exp)
                                  :remove-refcalls true :ext "cleaned")
                merged))
