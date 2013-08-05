@@ -522,6 +522,19 @@
           (all-ascii? [s] (every? ascii? s))]
     (if (all-ascii? (string/join " " xs)) xs [])))
 
+(defn- remove-incorrect-qual
+  "Remove lines with impossible negative quality values. QUAL is a phred/log scaled score."
+  [xs]
+  (letfn [(neg-qual? [xs]
+            (let [qual (try
+                         (Float/parseFloat (nth xs 5))
+                         (catch Exception e 1.0))]
+              (< qual 0.0)))]
+    (cond
+     (empty? xs) []
+     (neg-qual? xs) []
+     :else xs)))
+
 (defn clean-problem-vcf
   "Clean VCF file which GATK parsers cannot handle due to illegal characters.
   Fixes:
@@ -549,6 +562,7 @@
                      (add-missing-genotypes call)
                      remove-problem-alts
                      remove-non-ascii
+                     remove-incorrect-qual
                      (remove-bad-ref get-ref-base)
                      (maybe-add-indel-pad-base ref-file get-ref-base)
                      (string/join "\t"))))]

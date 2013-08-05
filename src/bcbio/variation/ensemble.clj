@@ -29,7 +29,10 @@
   [config i vrn-file]
   {:name (if (string? i) i (str "v" i))
    :file vrn-file
-   :remove-refcalls true})
+   :remove-refcalls true
+   :preclean true
+   :prep true
+   :normalize true})
 
 (defn- get-combo-recall
   "Prepare a combined set of recalled variants from all inputs."
@@ -73,7 +76,10 @@
    Handles cleaning up and normalizing input files, generating consensus
    calls and returns ensemble output."
   [vrn-files ref-file out-file in-config]
-  (let [dirs (setup-work-dir out-file)
+  (let [vrn-files (map itx/abspath vrn-files)
+        out-file (itx/abspath out-file)
+        ref-file (itx/abspath ref-file)
+        dirs (setup-work-dir out-file)
         config-file (create-ready-config vrn-files ref-file in-config dirs)]
     (compare/variant-comparison-from-config config-file)
     (let [prep-file (first (fs/glob (str (io/file (:prep dirs) "*cfilter.vcf"))))]
@@ -92,5 +98,5 @@
       (println "  out-file -- Name of output VCF file to write ensemble calls.")
       (println "  [vrn-file-1 vrn-file-2] -- List of multiple inputs to use for ensemble unification."))
     (let [[config-file ref-file out-file & vrn-files] args]
-      (consensus-calls vrn-files out-file
+      (consensus-calls vrn-files ref-file out-file
                        (-> config-file slurp yaml/parse-string)))))

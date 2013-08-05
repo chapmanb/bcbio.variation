@@ -146,3 +146,11 @@
     (if (fs/directory? x)
       (fs/delete-dir x)
       (fs/delete x))))
+
+(defn abspath
+  "Produce a normalized file path, expanding home directories."
+  [f]
+  (-> (file f)
+      fs/expand-home
+      fs/absolute-path
+      str))
