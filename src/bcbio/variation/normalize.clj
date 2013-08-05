@@ -389,6 +389,7 @@
         (string/upper-case
          (str
           (or (extract-sequence ref-file (get-ref-chrom (first xs)) i (+ i extra-bases))
+              (extract-sequence ref-file (first xs) i (+ i extra-bases))
               "N")))))))
 
 (defn- maybe-add-indel-pad-base
@@ -470,11 +471,12 @@
           (fix-sample-names [x]
             (let [parts (string/split x #"\t")]
               (cond
-               (> (count parts) 8) (let [[stay-parts samples] (split-at 9 parts)
-                                         fix-samples (if (contains? (set samples) sample)
-                                                       samples
-                                                       (rename-samples samples sample))]
-                                     (string/join "\t" (concat stay-parts fix-samples)))
+               (and sample
+                    (> (count parts) 8)) (let [[stay-parts samples] (split-at 9 parts)
+                                               fix-samples (if (contains? (set samples) sample)
+                                                             samples
+                                                             (rename-samples samples sample))]
+                                           (string/join "\t" (concat stay-parts fix-samples)))
                (= (count parts) 8) (string/join "\t" (concat parts ["FORMAT" sample]))
                :else x)))
           (clean-header [x]

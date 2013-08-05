@@ -146,7 +146,9 @@
                                       [(string/replace x "-" "") i])
                                     orig-alleles))]
               (fn [old-allele]
-                (nth new-alleles (get old-map (.getDisplayString old-allele))))))
+                (if (.isNoCall old-allele)
+                  old-allele
+                  (nth new-alleles (get old-map (.getDisplayString old-allele)))))))
           (add-new-genotype [allele-mapper context genotype]
             (doto context
               (.replace (-> (GenotypeBuilder. genotype)

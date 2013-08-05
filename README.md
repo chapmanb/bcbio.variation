@@ -66,29 +66,49 @@ variant files that demonstrate the features of the library.
 
 An example of scoring a phased diploid genome against a haploid reference
 genome:
-    
-    $ lein variant-compare config/reference-grading.yaml
+
+    $ java bcbio.variation.jar variant-compare config/reference-grading.yaml
 
 An example of assessing variant calls produced by different calling algorithms:
 
-    $ lein variant-compare config/method-comparison.yaml
-    
+    $ java bcbio.variation.jar variant-compare config/method-comparison.yaml
+
 ### Normalize a variant file
 
 A tricky part of variant comparisons is that VCF format is flexible enough to
 allow multiple representations. As a result two files may contain the same
 variants, but one might have it present in a multi-nucleotide polymorphism while
-another represents it as an individual variant. 
+another represents it as an individual variant.
 
 To produce a stable, decomposed variant file for comparison run:
 
-    $ lein variant-prep your_variants.vcf your_reference.fasta
-    
+    $ java bcbio.variation.jar variant-prep your_variants.vcf your_reference.fasta
+
 This will also handle re-ordering variants to match the reference file ordering,
 essential for feeding into tools like GATK, and remapping hg19 to GRCh37
 chromosome names. To additionally filter outputs by indel size, pass an argument
 specifying the maximum indel size to include: `--max-indel 30`. To retain
 reference (`0/0`) and no calls in the prepped file, use `--keep-ref`.
+
+### Ensemble variant calls
+
+bcbio.variation contains approaches to merge variant calls from multiple
+approaches. It normalizes all input VCFs, prepares a combined variant file with
+variants from all approaches, and then filter the combined file to produce a
+final set of calls.
+
+To combine multiple variant calls into a single combined ensemble callset:
+
+    $ java bcbio.variation.jar variant-ensemble params.yaml reference.fa
+                               out.vcf in1.vcf in2.vcf in3.vcf
+
+- `params.yaml` -- parameters to us in preparing the ensemble set. See
+  [the example config][e1] for options.
+- `reference.fa` -- The reference FASTA file.
+- `out.vcf` -- Name of the final combined dataset.
+- `in1.vcf`... -- The input variant callsets to combine.
+
+[e1]: https://github.com/chapmanb/bcbio.variation/blob/master/config/ensemble/combine-callers.yaml
 
 ### Web interface
 
