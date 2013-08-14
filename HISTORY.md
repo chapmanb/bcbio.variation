@@ -11,6 +11,8 @@
 - Bug fixes for removing variants that don't match reference as part of the
   variant preparation. Now handle hg19 -> GRCh37 chromosome swaps and
   multibase deletions.
+- Bug fix for Neighboring Base Quality annotation metric for regions with no
+  quality scores. Thanks to Zhengqiu Cai.
 
 ## 0.0.9 (22 June 2013)
 

@@ -26,6 +26,10 @@
                        (format "Mean Neighboring Base Quality, includes %sbp on both sides"
                                flank-bp))])
 
+(defn- safe-mean
+  [xs]
+  (if (empty? xs) 0.0 (stats/mean xs)))
+
 (defn -annotate
   "Provide Mean Neighboring Base Quality calculations at a position.
 
@@ -64,6 +68,6 @@
                     (map (partial pileup-qualities alt-bases))
                     flatten
                     (remove nil?)
-                    stats/mean
+                    safe-mean
                     float
                     (format "%.2f"))}))))
