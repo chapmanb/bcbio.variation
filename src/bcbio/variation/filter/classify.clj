@@ -146,8 +146,10 @@
   (letfn [(check-attrgroup-classifier [[attr-key attrs]]
             (let [c (get cs (get-classifier-type vc attr-key attr-get))
                   val (get-vc-inputs attrs normalizer :fail vc)
-                  score (classifier-classify c (-> (get-dataset attrs 1)
-                                                   (make-instance val)))]
+                  score (if c
+                          (classifier-classify c (-> (get-dataset attrs 1)
+                                                     (make-instance val)))
+                            -1)]
               (when (pos? score) attr-key)))]
     (let [c-filters (->> (:classifiers config)
                          (map check-attrgroup-classifier)

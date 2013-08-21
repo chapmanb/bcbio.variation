@@ -49,20 +49,21 @@
         g (->> (:genotypes vc)
                    (filter #(= sample (:sample-name %)))
                    first)]
-    {:sample-name sample
-     :qual (:qual vc)
-     :vc-type (:type vc)
-     :call-type (:type g)
-     :ref-allele (:ref-allele vc)
-     :alleles (sort-by allele-order (:alleles g))
-     :attributes (select-keys (:attributes g) ["PL" "DP" "AD" "PVAL"])
-     :has-likelihood (if (seq (get-in g [:attributes "PL"])) 1 0)
-     :attr-count (+ (if (seq (get-in g [:attributes "PL"])) 1 0)
-                    (if (seq (get-in g [:attributes "PVAL"])) 1 0)
-                    (if (seq (get-in g [:attributes "AD"])) 1 0)
-                    (if (get-in g [:attributes "DP"]) 1 0))
-     :pl (attr/get-pl g)
-     }))
+    (when g
+      {:sample-name sample
+       :qual (:qual vc)
+       :vc-type (:type vc)
+       :call-type (:type g)
+       :ref-allele (:ref-allele vc)
+       :alleles (sort-by allele-order (:alleles g))
+       :attributes (select-keys (:attributes g) ["PL" "DP" "AD" "PVAL"])
+       :has-likelihood (if (seq (get-in g [:attributes "PL"])) 1 0)
+       :attr-count (+ (if (seq (get-in g [:attributes "PL"])) 1 0)
+                      (if (seq (get-in g [:attributes "PVAL"])) 1 0)
+                      (if (seq (get-in g [:attributes "AD"])) 1 0)
+                      (if (get-in g [:attributes "DP"]) 1 0))
+       :pl (attr/get-pl g)
+       })))
 
 (defn- best-supported-alleles
   "Retrieve alleles with best support from multiple inputs.
@@ -96,6 +97,7 @@
   [vcs sample]
   (->> vcs
        (map (partial get-sample-call sample))
+       (remove nil?)
        best-supported-alleles))
 
 (defn- update-vc-w-consensus
