@@ -1,4 +1,4 @@
-## 0.1.0 (in progress)
+## 0.1.0 (25 August 2013)
 
 - Provide `ensemble` run target to allow easier normalization of inputs from
   multiple variant files.
