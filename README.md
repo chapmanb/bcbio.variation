@@ -60,18 +60,20 @@ required dependencies.
 
 ### Generate summary of concordance between variant calls
 
-A [YAML configuration file][u2] specifies the variant files for
+A [YAML][u2] configuration file specifies the variant files for
 comparison. The project contains example configuration and associated
 variant files that demonstrate the features of the library.
 
-An example of scoring a phased diploid genome against a haploid reference
-genome:
+An example of [scoring a phased diploid genome against a haploid reference genome][grade-ref]:
 
     $ java bcbio.variation.jar variant-compare config/reference-grading.yaml
 
-An example of assessing variant calls produced by different calling algorithms:
+An example of [assessing variant calls produced by different calling algorithms][grade-alg]:
 
     $ java bcbio.variation.jar variant-compare config/method-comparison.yaml
+
+[grade-ref]: https://github.com/chapmanb/bcbio.variation/blob/master/config/reference-grading.yaml
+[grade-alg]: https://github.com/chapmanb/bcbio.variation/blob/master/config/method-comparison.yaml
 
 ### Normalize a variant file
 
@@ -112,11 +114,11 @@ To combine multiple variant calls into a single combined ensemble callset:
 
 ### Web interface
 
-Aahru is a web interface to this toolkit, providing interaction with Galaxy and
-GenomeSpace, visualization of biological metrics associated with variants,
-reactive filtering and automated scoring: [GitHub project][w1].
+The [o8 visualization framework][w1] provides a web interface to this toolkit,
+providing interaction with Galaxy and GenomeSpace, visualization of biological
+metrics associated with variants, reactive filtering and automated scoring.
 
-[w1]: https://github.com/lynaghk/vcf
+[w1]: https://github.com/chapmanb/o8
 
 ### Run GATK walker for variant statistics
 
