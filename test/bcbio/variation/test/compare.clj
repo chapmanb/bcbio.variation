@@ -84,7 +84,8 @@
                          {:name "freebayes" :file vcf2} ref
                          :interval-file intervals) => select-out
   (combine-variants [vcf1 vcf2] ref) => combo-out
-  (add-gatk-annotations vcf2 align-bam ref) => annotated-out)
+  ;; Functionality to be moved to bcbio.variation.plus since a heavy dependency
+  (add-gatk-annotations vcf2 align-bam ref) =future=> annotated-out)
 
 (facts "Variant assessment with GATK"
   (calc-variant-eval-metrics vcf1 vcf2 ref :intervals intervals) => compare-out

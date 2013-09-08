@@ -211,7 +211,7 @@
     #{val}))
 
 (defmethod finalize-gemini-attr :default
-  [_ row]
+  [attr row]
   (let [val (first (vals row))]
     val))
 
