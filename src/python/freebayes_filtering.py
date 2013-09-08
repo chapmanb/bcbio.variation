@@ -42,6 +42,10 @@ def main(concordant_vcf, discordant_vcf):
         cur_df["QR_QA"].hist(by=cur_df["target"])
         plt.savefig("strandbias-%s.pdf" % name)
 
+        plt.figure()
+        cur_df["AD"].hist(by=cur_df["target"])
+        plt.savefig("ad-%s.pdf" % name)
+
         if name == "hom":
             plot_dp_qual_box(cur_df, name)
         else:
@@ -50,10 +54,12 @@ def main(concordant_vcf, discordant_vcf):
 # ## Filters
 
 def het_filter(x):
-    return (x["DP"] < 4) or (x["QUAL"] < 20 and x["QR_QA"] > 10)
+    return ((x["DP"] < 4) or
+            (x["DP"] < 13 and x["QUAL"] < 20 and x["QR_QA"] > 10 and x["AD"] > 0.1))
 
 def hom_filter(x):
-    return (x["DP"] < 4 and x["QUAL"] < 50) or x["QR_QA"] > -90
+    return ((x["DP"] < 4 and x["QUAL"] < 50) or
+            (x["DP"] < 13 and (x["QR_QA"] > -90 or x["AD"] > 0.1)))
 
 def check_filtering(df, fn):
     print fn
@@ -75,8 +81,9 @@ def plot_dp_qual_box(df, name):
         plt.savefig("box-%s-%s.pdf" % (name, calltype))
 
 def plot_qual_scatter(cur_df, name):
-    x, y = "QR_QA", "QUAL"
+    x, y = "QR_QA", "AD"
     cur_df = cur_df[cur_df["DP"] > 3]
+    cur_df = cur_df[cur_df["QUAL"] < 20]
     plt.figure()
     for color, calltype in [("b", "tp"), ("r", "fp")]:
         c_df = cur_df[cur_df["target"] == calltype]
@@ -122,6 +129,12 @@ def strand_bias(data):
         qa = 0
     return (qr - qa ) / float(max([qr, qa])) * 100.0
 
+def percent_ad_deviation(data):
+    altc = float(sum(data.AO) if isinstance(data.AO, list) else data.AO)
+    refc = float(data.DP - altc)
+    expected = 0.5 if data.GT == "0/1" else 1.0
+    return abs(expected - (float(altc) / float(altc + refc)))
+
 def vcf_to_stats(in_handle, target):
     d = collections.defaultdict(list)
     for rec in vcf.VCFReader(in_handle):
@@ -129,8 +142,8 @@ def vcf_to_stats(in_handle, target):
         d["target"] = target
         d["DP"].append(data.DP)
         d["QUAL"].append(rec.QUAL)
-        d["RPP"].append(rec.INFO["RPP"][0])
         d["GT"].append(data.GT)
+        d["AD"].append(percent_ad_deviation(data))
         d["QR_QA"].append(strand_bias(data))
     return pd.DataFrame(d)
 
