@@ -9,6 +9,7 @@ file.dot
 .lein-deps-sum
 .lein-*
 .clojurescript-output
+.ropeproject
 test/data/*.idx
 test/data/*.eval
 test/data/gatk-calls-combine*

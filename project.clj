@@ -33,6 +33,7 @@
                  [me.raynes/fs "1.4.3" :exclusions [org.clojure/clojure]]
                  [clj-yaml "0.4.0"]
                  [doric "0.8.0" :exclusions [org.clojure/clojure]]
+                 [iota "1.1.1"]
                  [ordered "1.3.2" :exclusions [org.clojure/clojure]]
                  [de.kotka/lazymap "3.1.1"]
                  [lonocloud/synthread "1.0.4"]

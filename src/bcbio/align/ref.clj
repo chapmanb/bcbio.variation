@@ -7,6 +7,7 @@
         [ordered.map :only [ordered-map]])
   (:require [clojure.string :as string]
             [clojure.java.shell :as shell]
+            [iota]
             [me.raynes.fs :as fs]
             [bcbio.run.itx :as itx]))
 
@@ -68,44 +69,34 @@
           (#(map char %))
           (#(apply str %))))))
 
+(defn- prep-bedline-sort
+  "Convert a line in a BED file into sort coordinates"
+  [bed-file ref-file]
+  (let [ref-map (get-seq-name-map ref-file)
+        is-tab? (with-open [rdr (reader bed-file)]
+                  (.contains (first (drop-while #(.startsWith % "track") (line-seq rdr))) "\t"))]
+    (fn [line]
+      (when-not (.startsWith line "track")
+        (let [parts (if is-tab?
+                      (string/split line #"\t")
+                      (string/split line #" "))]
+          (let [[chr start end] (take 3 parts)]
+            [(get ref-map chr) (Integer/parseInt start) (Integer/parseInt end)]))))))
+
 (defn sort-bed-file
   "Sort a BED file relative to the input reference.
-   Takes a IO intensive approach over memory intensive by sorting in blocks
-   of chromosomes. `same-time-chrs` handles the tradeoff between speed and
-   memory by determining how many chromosomes to process simultaneously."
+   Uses memory mapped indexed files to avoid high memory requirements."
   [bed-file ref-file]
-  (letfn [(process-line [cur-chrs line]
-            (let [tab-parts (string/split line #"\t")
-                  parts (if (> (count tab-parts) 1)
-                          tab-parts
-                          (string/split line #" "))]
-              (let [[chr start end] (take 3 parts)]
-                (when (or (nil? cur-chrs) (contains? cur-chrs chr))
-                  [[chr (Integer/parseInt start) (Integer/parseInt end)] line]))))
-          (get-input-chrs [bed-file]
-            (with-open [rdr (reader bed-file)]
-              (->> (line-seq rdr)
-                   (map (partial process-line nil))
-                   (map ffirst)
-                   set)))]
-    (let [out-file (itx/add-file-part bed-file "sorted")
-          input-chrs (get-input-chrs bed-file)
-          same-time-chrs 5]
-      (when (or (itx/needs-run? out-file)
-                (> (fs/mod-time bed-file) (fs/mod-time out-file)))
+  (let [out-file (itx/add-file-part bed-file "sorted")]
+    (when (or (itx/needs-run? out-file)
+              (> (fs/mod-time bed-file) (fs/mod-time out-file)))
+      (let [bedline->sort (prep-bedline-sort bed-file ref-file)
+            bed-vec (iota/vec bed-file)]
         (itx/with-tx-file [tx-out out-file]
           (with-open [wtr (writer tx-out)]
-            (doseq [cur-chrs (->> (get-seq-dict ref-file)
-                                  .getSequences
-                                  (map #(.getSequenceName %))
-                                  (filter input-chrs)
-                                  (partition-all same-time-chrs)
-                                  (map set))]
-              (with-open [rdr (reader bed-file)]
-                (doseq [[_ line] (->> (line-seq rdr)
-                                      (map (partial process-line cur-chrs))
-                                      (remove nil?)
-                                      (sort-by first))]
-                  (.write wtr (str line "\n"))))))))
-      out-file)))
-
+            (doseq [idx (sort-by #(bedline->sort (nth bed-vec %))
+                                 (range (count bed-vec)))]
+              (let [outl (nth bed-vec idx)]
+                (when-not (.startsWith outl "track")
+                  (.write wtr (str outl "\n")))))))))
+    out-file))

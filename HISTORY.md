@@ -1,3 +1,9 @@
+## 0.1.1 (in progress)
+
+- Improve sorting of BED files to be faster and less memory dependent. Thanks to
+  Zhengqiu Cai for problem report.
+- Move to GATK 2.7 framework. Eliminated dependencies to reduce size of final jar.
+
 ## 0.1.0 (25 August 2013)
 
 - Provide `ensemble` run target to allow easier normalization of inputs from
