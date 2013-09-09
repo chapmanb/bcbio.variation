@@ -3,7 +3,6 @@
    objects, which represent variant data stored in VCF files."
   (:import [org.broad.tribble.index IndexFactory]
            [org.broad.tribble AbstractFeatureReader]
-           [org.broad.tribble.readers AsciiLineReader]
            [org.broad.tribble.util LittleEndianOutputStream]
            [org.broadinstitute.variant.vcf
             VCFCodec VCFUtils VCFHeader VCFFilterHeaderLine]
@@ -133,25 +132,11 @@
   [vcf-source]
   (map from-vc (iterator-seq (.iterator vcf-source))))
 
-(defn get-vcf-line-parser
-  "Retrieve parser to do line-by-line parsing of VCF files."
-  [vcf-reader]
-  (let [codec (VCFCodec.)]
-    (.readHeader codec vcf-reader)
-    (fn [line]
-      (from-vc (.decode codec line)))))
-
-(defn- line-vcf-parser
-  [vcf]
-  (let [parser (with-open [rdr (AsciiLineReader. (input-stream vcf))]
-                 (get-vcf-line-parser rdr))]
-    (map parser (drop-while #(.startsWith % "#") (line-seq (reader vcf))))))
-
 (defn get-vcf-header
   "Retrieve header from input VCF file."
   [vcf-file]
-  (with-open [vcf-reader (AsciiLineReader. (input-stream vcf-file))]
-    (.readHeader (VCFCodec.) vcf-reader)))
+  (with-open [vcf-reader (.makeSourceFromStream (VCFCodec.) (input-stream vcf-file))]
+    (.readActualHeader (VCFCodec.) vcf-reader)))
 
 ;; ## Writing VCF files
 
@@ -276,7 +261,6 @@
   (with-open [vcf-iter (get-vcf-iterator vcf ref)]
     (letfn [(item-iter []
               (case approach
-                "line" (map :vc (line-vcf-parser vcf))
                 "gatk" (iterator-seq (.iterator vcf-iter))
                 "orig" (map :vc (parse-vcf vcf-iter))))]
       (write-vcf-w-template vcf {:out "vctest.vcf"} (item-iter) ref)

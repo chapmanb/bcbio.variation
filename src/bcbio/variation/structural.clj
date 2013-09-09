@@ -4,7 +4,6 @@
   (:import [org.broadinstitute.variant.vcf VCFCodec]
            [org.broadinstitute.variant.variantcontext VariantContextBuilder
             Allele]
-           [org.broad.tribble.readers AsciiLineReader PositionalBufferedStream]
            [net.sf.picard.util IntervalTree])
   (:use [clojure.set :only [intersection]]
         [ordered.map :only [ordered-map]]

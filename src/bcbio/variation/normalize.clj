@@ -7,20 +7,16 @@
   organisms."
   (:import [org.broadinstitute.variant.variantcontext VariantContextBuilder GenotypeBuilder]
            [org.broadinstitute.variant.vcf VCFHeader]
-           [org.broad.tribble.readers AsciiLineReader]
            [org.apache.commons.lang CharUtils])
   (:use [clojure.java.io]
-        [bcbio.variation.variantcontext :only [write-vcf-w-template
-                                               get-vcf-iterator parse-vcf
-                                               get-vcf-line-parser
-                                               from-genotype]]
         [bcbio.align.ref :only [get-seq-dict get-seq-name-map extract-sequence]]
         [ordered.map :only (ordered-map)]
         [ordered.set :only (ordered-set)])
   (:require [clojure.string :as string]
             [me.raynes.fs :as fs]
             [lonocloud.synthread :as ->]
-            [bcbio.run.itx :as itx]))
+            [bcbio.run.itx :as itx]
+            [bcbio.variation.variantcontext :as gvc]))
 
 ;; ## Chromosome name remapping
 
@@ -185,14 +181,22 @@
   Requires loading the entire file into memory during the sort-by phase
   so will not work on massive files. Should be feasible with files
   split by chromosome."
-  [line-seq]
+  [in-file]
   (letfn [(add-position [line]
             (let [[chrom start] (take 2 (string/split line #"\t"))]
               [[chrom (Integer/parseInt start)] line]))]
-    (->> line-seq
-         (map add-position)
-         (sort-by first)
-         (map second))))
+  (let [out-file (itx/add-file-part in-file "sorted")]
+    (with-open [rdr (reader in-file)
+                wtr (writer out-file)]
+      (let [[header rest] (split-with #(.startsWith % "#") (line-seq rdr))]
+        (doseq [l header]
+          (.write wtr (str l "\n")))
+        (doseq [l (->> rest
+                       (map add-position)
+                       (sort-by first)
+                       (map second))]
+          (.write wtr (str l "\n")))))
+    out-file)))
 
 (defn- normalize-sv-genotype
   "Provide genotype calls for structural variants to a single ref call.
@@ -225,17 +229,13 @@
               (-> (VariantContextBuilder. (:vc orig))
                   (.genotypes new-gs)
                   .make))
-            (assoc :genotypes (map from-genotype new-gs))))
+            (assoc :genotypes (map gvc/from-genotype new-gs))))
       orig)))
 
-(defn- ordered-vc-iter
-  "Provide VariantContexts ordered by chromosome and normalized."
-  [rdr vcf-decoder sample config]
-  (->> rdr
-       line-seq
-       (#(if (:prep-sort-pos config) (sort-by-position %) %))
-       (remove nochange-alt?)
-       (map vcf-decoder)
+(defn- cleaned-vc-iter
+  "Provide normalize and cleaned VariantContexts from an iterator."
+  [iter sample config]
+  (->> (gvc/parse-vcf iter)
        (remove #(no-call-genotype? % config))
        (map (partial normalize-sv-genotype config sample))
        (map (partial fix-vc sample config))
@@ -281,14 +281,17 @@
           ref-wrtrs (zipmap (keys ref-chrs) (map writer (vals ref-chrs)))
           chr-map (chr-name-remap (:prep-org config) ref-file orig-ref-file)]
       (with-open [rdr (reader vcf-file)]
-        (->> rdr
-             line-seq
-             (drop-while #(.startsWith % "#"))
-             (map (partial write-by-chrom ref-wrtrs chr-map))
-             doall)
+        (let [[header rest] (split-with #(.startsWith % "#") (line-seq rdr))]
+          (doseq [wtr (vals ref-wrtrs)]
+            (doseq [line header]
+              (.write wtr (str line "\n"))))
+          (doseq [line rest]
+            (write-by-chrom ref-wrtrs chr-map line)))
         (doseq [x (vals ref-wrtrs)]
           (.close x)))
-      ref-chrs)))
+      (if (:prep-sort-pos config)
+        (map sort-by-position (vals ref-chrs))
+        (vals ref-chrs)))))
 
 ;; ## Top level functionality to manage inputs and writing.
 
@@ -311,28 +314,24 @@
   [in-file sample ref]
   (let [out-file (itx/add-file-part in-file "samplefix")]
     (when (itx/needs-run? out-file)
-      (with-open [vcf-iter (get-vcf-iterator in-file ref)]
-        (write-vcf-w-template in-file {:out out-file}
-                              (map #(:vc (fix-vc sample {} %)) (parse-vcf vcf-iter))
-                              ref :header-update-fn (update-header sample {}))))
+      (with-open [vcf-iter (gvc/get-vcf-iterator in-file ref)]
+        (gvc/write-vcf-w-template in-file {:out out-file}
+                                  (map #(:vc (fix-vc sample {} %)) (gvc/parse-vcf vcf-iter))
+                                  ref :header-update-fn (update-header sample {}))))
     out-file))
 
 (defn- write-prepped-vcf
   "Write VCF file with correctly ordered and cleaned variants."
   [vcf-file out-info ref-file orig-ref-file sample config]
   (itx/with-temp-dir [tmp-dir (fs/parent (:out out-info))]
-    (let [reader-by-chr (into (ordered-map) (map (fn [[k v]] [k (reader v)])
-                                                 (vcf-by-chrom vcf-file ref-file orig-ref-file
-                                                               tmp-dir config)))]
-      (with-open [vcf-reader (AsciiLineReader. (input-stream vcf-file))]
-        (let [vcf-decoder (get-vcf-line-parser vcf-reader)]
-          (write-vcf-w-template vcf-file out-info
-                                (flatten
-                                 (for [rdr (vals reader-by-chr)]
-                                   (ordered-vc-iter rdr vcf-decoder sample config)))
+    (let [chr-iters (map #(gvc/get-vcf-iterator % ref-file)
+                         (vcf-by-chrom vcf-file ref-file orig-ref-file
+                                       tmp-dir config))]
+      (gvc/write-vcf-w-template vcf-file out-info
+                                (mapcat #(cleaned-vc-iter % sample config) chr-iters)
                                 ref-file
-                                :header-update-fn (update-header sample config))))
-      (doseq [x (vals reader-by-chr)]
+                                :header-update-fn (update-header sample config))
+      (doseq [x chr-iters]
         (.close x)))))
 
 (defn prep-vcf
