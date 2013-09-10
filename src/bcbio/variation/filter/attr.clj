@@ -17,6 +17,20 @@
         :gemini
         attr))))
 
+(defn- multi-genotype-metric
+  "Generate a single summary metric for single and multi-genotype cases.
+   For single cases, returns the metric. For multi, returns the median. For no values, nil."
+  [orig-xs]
+  (when-let [xs (seq (remove nil? orig-xs))]
+      (if (= 1 (count xs))
+        (first xs)
+        (stats/quantile 0.5 (sort xs)))))
+
+(defn- sum-list-attr
+  "Provide summary value for a potential list attribute encoded as comma separate string."
+  [attr]
+  (apply + (map #(Float/parseFloat %) (string/split attr #","))))
+
 (defmethod get-vc-attr "AD"
   ^{:doc "AD: Allelic depth for ref and alt alleles. Converted to percent
           deviation from expected for haploid/diploid calls.
@@ -35,8 +49,7 @@
                   allele-count (apply + (rest ads))]
               (calc-expected g ref-count allele-count)))
           (from-ao [g]
-            (let [alt-count (apply + (map #(Float/parseFloat %)
-                                          (string/split (get-in g [:attributes "AO"]) #",")))
+            (let [alt-count (sum-list-attr (get-in g [:attributes "AO"]))
                   total-count (float (get-in g [:attributes "DP"]))]
               (calc-expected g (- total-count alt-count) alt-count)))
           (g->ad [g]
@@ -47,14 +60,31 @@
              ;; (println (format "AD not found in attributes %s %s %s"
              ;;                  (:attributes g) (:chr vc) (:start vc)))
              ))]
-    (when-let [ads (seq (remove nil? (map g->ad (:genotypes vc))))]
-      (if (= 1 (count ads))
-        (first ads)
-        (stats/quantile 0.5 (sort ads))))))
+    (multi-genotype-metric (map g->ad (:genotypes vc)))))
 
 (defmethod get-vc-attr [:format "AD"]
   [vc attr retrievers]
   (get-vc-attr vc "AD" retrievers))
+
+(defmethod get-vc-attr "QR_QA"
+  ^{:doc "Strand bias metric based on percent different between ref and alt base qualities.
+          From Micha Bayer and Erik Garrison's discussion on the FreeBayes mailing list:
+          https://groups.google.com/d/msg/freebayes/fX4TOAqXJrA/VTNf-xXKSB8J"}
+  [vc attr _]
+  (letfn [(safe-avg [total n]
+            (if (zero? n) 0 (/ total n)))
+          (g->qr-qa [g]
+            (let [attrs (reduce (fn [coll x]
+                                  (assoc coll x (get-in g [:attributes x])))
+                                {} ["AO" "DP" "QA" "QR"])]
+              (when (not-any? nil? (vals attrs))
+                (let [altc (sum-list-attr (get attrs "AO"))
+                      refc (- (get attrs "DP") altc)
+                      qr (safe-avg (sum-list-attr (get attrs "QR")) refc)
+                      qa (safe-avg (sum-list-attr (get attrs "QA")) altc)]
+                  (/ (* (- qr qa) 100.0)
+                     (max qr qa))))))]
+    (multi-genotype-metric (map g->qr-qa (:genotypes vc)))))
 
 (defn convert-pval-to-phred
   "Convert p-value into Phred scores compatible with bayesian likelihoods"

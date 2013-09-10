@@ -14,15 +14,18 @@
    - QR_QA: Sequence quality relationships between reference and alternative alleles."
   [vc]
   {:pre [(= 1 (count (:genotypes vc)))]}
-  (let [attrs (keywordize-keys (attr/get-vc-attrs vc ["DP" "QUAL" "AD"] {}))]
-    (case (-> vc :genotypes first :type)
-      "HET" (or (< (:DP attrs) 4)
-                (and (< (:DP attrs) 13)
-                     (< (:QUAL attrs) 20)
-                     (> (:AD attrs) 0.1)))
-      "HOM_VAR" (or (and (< (:DP attrs) 4) (< (:QUAL attrs) 50))
-                    (and (< (:DP attrs) 13) (> (:AD attrs) 0.1)))
-      false)))
+  (let [attrs (keywordize-keys (attr/get-vc-attrs vc ["DP" "QUAL" "AD" "QR_QA"] {}))]
+    (when (not-any? nil? (vals attrs))
+      (case (-> vc :genotypes first :type)
+        "HET" (or (< (:DP attrs) 4)
+                  (and (< (:DP attrs) 13)
+                       (< (:QUAL attrs) 20)
+                       (> (:AD attrs) 0.1)
+                       (> (:QR_QA attrs) 10)))
+        "HOM_VAR" (or (and (< (:DP attrs) 4) (< (:QUAL attrs) 50))
+                      (and (< (:DP attrs) 13) (or (> (:AD attrs) 0.1)
+                                                  (> (:QR_QA attrs) -90))))
+        false))))
 
 (defn freebayes-filter
   "Custom filtering of FreeBayes handling depth, strand bias and quality."

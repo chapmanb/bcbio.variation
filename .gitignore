@@ -9,6 +9,7 @@ file.dot
 .lein-deps-sum
 .lein-*
 .clojurescript-output
+.nrepl-port
 .ropeproject
 test/data/*.idx
 test/data/*.eval
