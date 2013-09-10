@@ -9,7 +9,8 @@
         [bcbio.variation.validate]
         [bcbio.variation.variantcontext :exclude [-main]])
   (:require [me.raynes.fs :as fs]
-            [bcbio.run.itx :as itx]))
+            [bcbio.run.itx :as itx]
+            [bcbio.variation.filter.custom :as cf]))
 
 (background
  (around :facts
@@ -32,9 +33,10 @@
                sorted-out (itx/add-file-part exclude-bed "sorted")
                region-multi-out (itx/add-file-part region-bed "multicombine")
                region-out (fs/glob (fs/file data-dir "aligned-reads-callable*"))
-               ffilter-out (itx/add-file-part top-vcf "ffilter")]
+               ffilter-out (itx/add-file-part top-vcf "ffilter")
+               fb-filter-out (itx/add-file-part fb-vcf "filter")]
            (doseq [x (concat [top-out dip-out c-out cbin-out region-multi-out ffilter-out
-                              sorted-out]
+                              sorted-out fb-filter-out]
                              region-out c-out-extras)]
              (itx/remove-path x))
            ?form)))
@@ -87,6 +89,9 @@
     (filter-vcf-w-classifier top-vcf {:tps top-vcf :fps c-neg-vcf} {:recall false} exp
                              {:classifiers {:all ["AD" "QUAL" "DP" "PL"]}
                               :trusted {:total 0.5}})) => c-out)
+
+(facts "Custom filtration of specific variantcaller"
+  (cf/freebayes-filter fb-vcf ref) => fb-filter-out)
 
 (facts "Prepare combined interval lists based on filtering criteria"
   (combine-multiple-intervals region-bed [align-bam] ref

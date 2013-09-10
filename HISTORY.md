@@ -2,7 +2,10 @@
 
 - Improve sorting of BED files to be faster and less memory dependent. Thanks to
   Zhengqiu Cai for problem report.
-- Move to GATK 2.7 framework. Eliminated dependencies to reduce size of final jar.
+- Move to GATK 2.7 framework. Eliminated dependencies to reduce size of final
+  jar.
+- Custom filtering with complex attribute comparisons, allowing usage as a
+  commandline program.
 
 ## 0.1.0 (25 August 2013)
 

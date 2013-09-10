@@ -1,11 +1,12 @@
 (ns bcbio.variation.core
   (:import [org.broadinstitute.sting.gatk CommandLineGATK])
   (:require [clojure.string :as string]
-            [bcbio.variation.compare]
-            [bcbio.variation.combine]
-            [bcbio.variation.ensemble]
-            [bcbio.variation.haploid]
             [bcbio.align.reorder]
+            [bcbio.variation.combine]
+            [bcbio.variation.compare]
+            [bcbio.variation.ensemble]
+            [bcbio.variation.filter.custom]
+            [bcbio.variation.haploid]
             [bcbio.variation.utils.core])
   (:gen-class))
 
@@ -14,6 +15,7 @@
   altmain-map
   {:compare bcbio.variation.compare/-main
    :ensemble bcbio.variation.ensemble/-main
+   :filter bcbio.variation.filter.custom/-main
    :haploid bcbio.variation.haploid/-main
    :prep bcbio.variation.combine/-main
    :reorder bcbio.align.reorder/-main
