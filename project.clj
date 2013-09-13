@@ -19,6 +19,7 @@
                  [org.apache.commons/commons-jexl "2.1.1"]
                  [org.reflections/reflections "0.9.8"]
                  [org.simpleframework/simple-xml "2.0.4"]
+                 [org.apache.servicemix.bundles/org.apache.servicemix.bundles.jets3t "0.8.1_1"]
                  ;;
                  [org.biojava/biojava3-core "3.0.4"]
                  [org.biojava/biojava3-alignment "3.0.4"]
