@@ -75,13 +75,14 @@
                 vcf-iter2 (get-vcf-iterator sv-vcf2 ref)]
       (doall (map #(get-sv-type % params) (parse-vcf vcf-iter1))) =>
       (concat [:INS] (repeat 6 :BND)
-              [nil :DEL :INS :DEL :DUP :INV :INS])
+              [nil nil nil :DEL :INS :DEL :DUP :INV :INS])
       (doall (map #(get-sv-type % params) (parse-vcf vcf-iter2))) =>
-      [:DUP :UNASSEMBLED_EVENT :BND :BND :INS :CNV :DEL :INV])))
+      [:DUP :UNASSEMBLED_EVENT :BND :BND :INS nil nil :CNV :DEL :INV])))
 
 (facts "Compare structural variation calls from two inputs."
   (compare-sv {:name "sv1000g" :file sv-vcf1}
-              {:name "svIll" :file sv-vcf2} ref) => (contains sv-out)
+              {:name "svIll" :file sv-vcf2} ref
+              :params {:default-cis [[200 10]] :max-indel 30}) => (contains sv-out)
   (compare-sv {:name "sv1" :file sv-vcf1}
               {:name "sv2" :file sv-vcf1} ref) => (contains sv-out2))
 
