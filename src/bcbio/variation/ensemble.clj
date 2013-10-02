@@ -27,7 +27,9 @@
   "Prepare base information for preparing a variation sample.
    Normalization ensures all samples are similarly represented for comparison."
   [config i vrn-file]
-  {:name (if (string? i) i (str "v" i))
+  {:name (if (string? i) i
+             (or (get (:names config) i)
+                 (str "v" i)))
    :file vrn-file
    :remove-refcalls true
    :preclean true
@@ -48,17 +50,17 @@
    config specifies ensemble specific parameters to use."
   [vrn-files ref-file config dirs]
   (let [combo-name "combo"
-        out-file (str (fs/file (:config dirs) "ensemble.yaml"))]
+        out-file (str (fs/file (:config dirs) "ensemble.yaml"))
+        calls (map-indexed (partial prep-sample config) vrn-files)]
     (->> {:dir dirs
           :experiments
           [{:name "ensemble"
             :ref ref-file
-            :calls (cons (get-combo-recall config combo-name (first vrn-files))
-                         (map-indexed (partial prep-sample config) vrn-files))
+            :calls (cons (get-combo-recall config combo-name (first vrn-files)) calls)
             :finalize [{:method "multiple"
                         :target combo-name}
                        {:method "recal-filter"
-                        :target [combo-name "v0"]
+                        :target [combo-name (-> calls first :name)]
                         :params {:support combo-name
                                  :classifiers (get-in config [:ensemble :classifiers])
                                  :classifier-type (get-in config [:ensemble :classifier-params :type]

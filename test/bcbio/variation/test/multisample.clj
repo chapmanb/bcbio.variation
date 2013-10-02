@@ -35,7 +35,6 @@
 (facts "Perform comparisons between multiple sample variant files."
   (-> (variant-comparison-from-config config-file-m) first :c-files) => (contains compare-out))
 
-
 (facts "Perform flexible comparisons between two variant files."
   (let [c1 {:name "gatk" :file vcf-single}
         c2 {:name "freebayes" :file vcf-single2}
@@ -48,7 +47,8 @@
 (facts "Ensemble consensus preparation from multiple sample inputs."
   (let [out-file (itx/add-file-part vcf-m1 "ensemble")
         work-dir (str (itx/file-root out-file) "-work")
-        config {:ensemble {:classifiers {:base ["DP"]}}}]
+        config {:ensemble {:classifiers {:base ["DP"]}}
+                :names ["T1" "T2"]}]
     (itx/remove-path work-dir)
     (itx/remove-path out-file)
     (ensemble/consensus-calls [vcf-m1 vcf-m2] ref-file out-file config) => out-file))

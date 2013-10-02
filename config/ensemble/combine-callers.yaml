@@ -13,3 +13,6 @@ ensemble:
     general: [AD, PL, DP]
   classifier-params:
     type: svm
+# Optional names to label the input variant calls
+# If not supplied, default to numbers matched with the VCF inputs (v0, v1)
+names: ['gatk', 'freebayes']

@@ -124,8 +124,9 @@
       (-> (VariantContextBuilder. (:vc vc))
           (.alleles (conj (set (remove #(.isNoCall %) (mapcat :alleles most-likely-gs)))
                           (:ref-allele vc)))
-          (.attribute "set" (update-set-info (get-in vc [:attributes "set"]) calls))
-          (.attributes (apply merge (map :attributes (reverse other-vcs))))
+          (.attributes (-> (map :attributes (reverse other-vcs))
+                           (#(apply merge %))
+                           (assoc "set" (update-set-info (get-in vc [:attributes "set"]) calls))))
           (.genotypes (gvc/create-genotypes most-likely-gs :attrs #{"PL" "PVAL" "DP" "AD" "AO"}))
           .make))))
 
