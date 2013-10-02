@@ -24,6 +24,7 @@
    Avoid double pulling inputs with the same initial call files."
   [all-vcfs vcf-configs]
   (let [include-names (->> vcf-configs
+                           (remove :recall)
                            (group-by :file)
                            (map second)
                            (map first)
@@ -100,11 +101,19 @@
        (remove nil?)
        best-supported-alleles))
 
+(defn- update-set-info
+  "Provide more friendly set intersection information reported by GATK CombineVariants."
+  [old calls]
+  (string/join "-"
+               (if (= old "Intersection")
+                 (map :name (remove :recall calls))
+                 (remove #(= "combo" %) (string/split old #"-")))))
+
 (defn- update-vc-w-consensus
   "Update a variant context with consensus genotype from multiple inputs.
    Calculates the consensus set of calls, swapping calls to that if it
    exists. If there is no consensus default to the existing allele call."
-  [vc samples input-vc-getter]
+  [vc samples calls input-vc-getter]
   (let [match-fn (juxt :start :ref-allele)
         other-vcs (filter #(= (match-fn %) (match-fn vc))
                           (gvc/variants-in-region input-vc-getter vc))
@@ -115,12 +124,14 @@
       (-> (VariantContextBuilder. (:vc vc))
           (.alleles (conj (set (remove #(.isNoCall %) (mapcat :alleles most-likely-gs)))
                           (:ref-allele vc)))
-          (.genotypes (gvc/create-genotypes most-likely-gs :attrs #{"PL" "PVAL" "DP" "AD"}))
+          (.attribute "set" (update-set-info (get-in vc [:attributes "set"]) calls))
+          (.attributes (apply merge (map :attributes (reverse other-vcs))))
+          (.genotypes (gvc/create-genotypes most-likely-gs :attrs #{"PL" "PVAL" "DP" "AD" "AO"}))
           .make))))
 
 (defn- recall-w-consensus
   "Recall variants in a combined set of variants based on consensus of all inputs."
-  [base-vcf input-vcfs sample ref-file]
+  [base-vcf input-vcfs calls sample ref-file]
   (let [out-file (itx/add-file-part base-vcf "consensus")]
     (when (itx/needs-run? out-file)
       (with-open [in-vcf-iter (gvc/get-vcf-iterator base-vcf ref-file)
@@ -129,7 +140,7 @@
                                             [sample]
                                             (-> input-vcfs first gvc/get-vcf-header .getGenotypeSamples)))]
           (gvc/write-vcf-w-template base-vcf {:out out-file}
-                                    (remove nil? (map #(update-vc-w-consensus % samples input-vc-getter)
+                                    (remove nil? (map #(update-vc-w-consensus % samples calls input-vc-getter)
                                                       (gvc/parse-vcf in-vcf-iter)))
                                     ref-file
                                     :header-update-fn (partial set-header-to-samples samples)))))
@@ -140,7 +151,8 @@
   [vcfs exp out-dir intervals]
   (-> (combine-variants vcfs (:ref exp) :merge-type :minimal :intervals intervals
                         :out-dir out-dir :check-ploidy? false
-                        :name-map (zipmap vcfs (map :name (:calls exp))))
+                        :name-map (zipmap vcfs (map :name (:calls exp)))
+                        :quiet-out? false)
       (fix-minimal-combined vcfs (:ref exp))))
 
 (defmulti recall-vcf
@@ -156,7 +168,7 @@
   (-> vcfs
       (get-min-merged exp out-dir intervals)
       (recall-w-consensus (no-recall-vcfs vcfs (:calls exp))
-                          (:sample exp) (:ref exp))))
+                          (:calls exp) (:sample exp) (:ref exp))))
 
 (defn create-merged
   "Create merged VCF files with no-call/ref-calls for each of the inputs.
