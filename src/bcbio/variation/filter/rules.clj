@@ -11,7 +11,7 @@
 (defn- below-support-thresh?
   "Check if a variant context has a low amount of supporting variant calls."
   [vc _ call exp]
-  (let [freq (get call :fp-freq 0.25)
+  (let [freq (get call :fp-freq 0.4)
         thresh (Math/ceil (* freq (dec (count (:calls exp)))))]
     (-> (multiple/get-vc-set-calls vc (:calls exp))
         (disj (:name call))
