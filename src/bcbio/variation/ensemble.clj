@@ -28,7 +28,7 @@
    Normalization ensures all samples are similarly represented for comparison."
   [config i vrn-file]
   {:name (if (string? i) i
-             (or (get (:names config) i)
+             (or (get (vec (:names config)) i)
                  (str "v" i)))
    :file vrn-file
    :remove-refcalls true
@@ -54,21 +54,23 @@
         calls (map-indexed (partial prep-sample config) vrn-files)]
     (->> {:dir dirs
           :experiments
-          [{:name "ensemble"
-            :ref ref-file
-            :calls (cons (get-combo-recall config combo-name (first vrn-files)) calls)
-            :finalize [{:method "multiple"
-                        :target combo-name}
-                       {:method "recal-filter"
-                        :target [combo-name (-> calls first :name)]
-                        :params {:support combo-name
-                                 :classifiers (get-in config [:ensemble :classifiers])
-                                 :classifier-type (get-in config [:ensemble :classifier-params :type]
-                                                          "svm")
-                                 :normalize "default"
-                                 :log-attrs []
-                                 :xspecific true
-                                 :trusted {:total (get-in config [:ensemble :trusted-pct] 0.65)}}}]}]}
+          [(-> {:name "ensemble"
+                :ref ref-file
+                :calls (cons (get-combo-recall config combo-name (first vrn-files)) calls)
+                :finalize [{:method "multiple"
+                            :target combo-name}
+                           {:method "recal-filter"
+                            :target [combo-name (-> calls first :name)]
+                            :params {:support combo-name
+                                     :classifiers (get-in config [:ensemble :classifiers])
+                                     :classifier-type (get-in config [:ensemble :classifier-params :type]
+                                                              "svm")
+                                     :normalize "default"
+                                     :log-attrs []
+                                     :xspecific true
+                                     :trusted {:total (get-in config [:ensemble :trusted-pct] 0.65)}}}]}
+               (->/when-let [int-file (:intervals config)]
+                 (assoc :intervals int-file)))]}
          yaml/generate-string
          (spit out-file))
     out-file))
