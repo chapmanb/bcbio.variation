@@ -45,7 +45,10 @@
 ;; ## Summarize grading results
 
 (defn- pick-discordant-reason
-  "Decide on a likely reason for a discordant variant call"
+  "Decide on a likely reason for a discordant variant call.
+  Low coverage threshold taken from work modeling variant detection at
+  different coverages:
+  http://www.ncbi.nlm.nih.gov/pubmed/23773188"
   [vc attr-getter]
   (letfn [(is-repeat-region? [attrs]
             (or (< (or (get attrs "gms_illumina") 100.0) 50.0)
@@ -54,7 +57,7 @@
             (contains? (or (get attrs "in_cse") #{}) "error-prone"))]
     (let [attrs (attr-getter ["DP" "rmsk" "gms_illumina" "in_cse"] vc)]
       (cond
-       (< (or (get attrs "DP") 500) 10) :low-coverage
+       (< (or (get attrs "DP") 500) 13) :low-coverage
        (is-error-prone? attrs) :error-prone
        (is-repeat-region? attrs) :repeat
        :else :other))))

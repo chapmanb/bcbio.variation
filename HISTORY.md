@@ -6,6 +6,8 @@
   jar.
 - Custom filtering with complex attribute comparisons, allowing usage as a
   commandline program.
+- Move threshold for low-coverage in discordant identification to 13 based on
+  http://www.ncbi.nlm.nih.gov/pubmed/23773188
 
 ## 0.1.0 (25 August 2013)
 
