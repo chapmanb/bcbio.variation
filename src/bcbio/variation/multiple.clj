@@ -110,7 +110,7 @@
   [target-cmps target-name _ target-overlap-vcf call ref out-dir]
   (let [calls (vec (set (mapcat (juxt :c1 :c2) (vals target-cmps))))
         out-file (itx/add-file-part target-overlap-vcf "lowcounts" out-dir)
-        freq (get call :fp-freq 0.25)
+        freq (get call :fp-freq 0.4)
         thresh (Math/ceil (* freq (dec (count calls))))]
     (letfn [(is-lowcount-fp? [vc]
               (-> (get-vc-set-calls vc calls)

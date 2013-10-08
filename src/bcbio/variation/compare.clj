@@ -36,7 +36,8 @@
             [bcbio.run.broad :as broad]
             [bcbio.variation.grade :as grade]
             [bcbio.variation.phasing :as phasing]
-            [bcbio.variation.report :as report]))
+            [bcbio.variation.report :as report]
+            [bcbio.variation.variantcontext :as gvc]))
 
 ;; ## Variance assessment
 
@@ -45,7 +46,8 @@
   [sample call1 call2 ref & {:keys [out-dir intervals]}]
   (let [base-dir (if (nil? out-dir) (fs/parent (:file call1)) out-dir)
         ready-intervals (remove nil? (flatten [intervals (:intervals call1)
-                                               (:intervals call2)]))]
+                                               (:intervals call2)]))
+        sample (or sample (-> call1 :file gvc/get-vcf-header .getGenotypeSamples first))]
     (if-not (fs/exists? base-dir)
       (fs/mkdirs base-dir))
     (doall

@@ -16,8 +16,9 @@
 
 (def ^{:private true
        :doc "Default maximum indel size for exact comparisons.
-             Based on assessment by Gavin Oliver: http://f1000r.es/MsY1QZ"}
-  max-indel 30)
+             Initially based on assessment by Gavin Oliver: http://f1000r.es/MsY1QZ
+             Increased to work with longer default read sizes where we expect exact matches"}
+  max-indel 100)
 
 ;; ## Interval tree lookup
 
@@ -258,28 +259,36 @@
           :itree (prep-itree vs-iter :start-ci :end-ci)
           (vec vs-iter))))))
 
+(defn- best-sv-match
+  "Extract the best SV matches with many overlapping matches"
+  [vc matches]
+  (letfn [(overlapping-bases [m]
+            (count (intersection (set (range (:start vc) (:end vc)))
+                                 (set (range (:start m) (:end m))))))]
+    (first (sort-by overlapping-bases > matches))))
+
 (defn- find-concordant-svs
   "Compare two structural variant files, returning variant contexts keyed by concordance."
   [fname1 fname2 disc-kwds ref interval-file params]
   (let [cmp-tree (atom (parse-vcf-sv fname2 ref :out-format :itree :interval-file interval-file
                                      :params params))]
     (letfn [(check-sv-concordance [vc]
-              (let [matches (filter (partial sv-concordant? params vc)
-                                    (get-itree-overlap @cmp-tree (:chr vc)
-                                                       (:start-ci vc) (inc (:end-ci vc))))]
-                (doseq [m-vc matches]
-                  (reset! cmp-tree (remove-itree-vc @cmp-tree (:chr m-vc)
-                                                    (:start m-vc) (:end m-vc))))
-                (if-let [match (first matches)]
-                  [:sv-concordant (:vc match)]
-                  [(:1 disc-kwds) (:vc vc)])))
+              (let [match (->> (get-itree-overlap @cmp-tree (:chr vc)
+                                                  (:start-ci vc) (inc (:end-ci vc)))
+                               (filter (partial sv-concordant? params vc))
+                               (best-sv-match vc))]
+                (when match
+                  (reset! cmp-tree (remove-itree-vc @cmp-tree (:chr match)
+                                                    (:start-ci match) (:end-ci match))))
+                [(if match :sv-concordant (:1 disc-kwds))
+                 (:vc vc)]))
             (remaining-cmp-svs [itree]
               (partition 2
                          (interleave (repeat (:2 disc-kwds)) (map :vc (get-itree-all itree)))))]
 
       (concat
-       (map check-sv-concordance (parse-vcf-sv fname1 ref :interval-file interval-file
-                                               :params params))
+       (vec (map check-sv-concordance (parse-vcf-sv fname1 ref :interval-file interval-file
+                                                    :params params)))
        (remaining-cmp-svs @cmp-tree)))))
 
 (defn find-non-svs

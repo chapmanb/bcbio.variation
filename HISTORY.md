@@ -1,5 +1,12 @@
 ## 0.1.1 (in progress)
 
+- Better defaults for selecting false positives during Ensemble calling to
+  handle common 3-caller use cases.
+- Improve output for Ensemble based calling, providing useful `set` INFO
+  attribute. Thanks to Shalabh Suman for discussions.
+- Increase length requirement for exact comparisons to 100bp to account for
+  improved resolution at longer read sizes.
+- Correctly handle overlapping structural variations of same type.
 - Improve sorting of BED files to be faster and less memory dependent. Thanks to
   Zhengqiu Cai for problem report.
 - Move to GATK 2.7 framework. Eliminated dependencies to reduce size of final
