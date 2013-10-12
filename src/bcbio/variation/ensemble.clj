@@ -27,14 +27,13 @@
   "Prepare base information for preparing a variation sample.
    Normalization ensures all samples are similarly represented for comparison."
   [config i vrn-file]
-  {:name (if (string? i) i
-             (or (get (vec (:names config)) i)
-                 (str "v" i)))
-   :file vrn-file
-   :remove-refcalls true
-   :preclean true
-   :prep true
-   :normalize true})
+  (-> {:name (if (string? i) i
+                 (or (get (vec (:names config)) i)
+                     (str "v" i)))
+       :file vrn-file
+       :normalize true}
+      (->/when (get config :prep-inputs true)
+        (merge {:preclean true :prep true}))))
 
 (defn- get-combo-recall
   "Prepare a combined set of recalled variants from all inputs."
@@ -97,7 +96,7 @@
       (println "ERROR: Incorrect arguments")
       (println "variant-ensemble: Perform ensemble calling on multiple variant calls")
       (println "Arguments:")
-      (println "  config-file -- YAML configuration file with paramters")
+      (println "  config-file -- YAML configuration file with analysis parameters")
       (println "  ref-file -- The genome fasta reference")
       (println "  out-file -- Name of output VCF file to write ensemble calls.")
       (println "  [vrn-file-1 vrn-file-2] -- List of multiple inputs to use for ensemble unification."))
