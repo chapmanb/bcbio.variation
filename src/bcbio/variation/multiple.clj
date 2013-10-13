@@ -52,9 +52,9 @@
     (if (= set-val "Intersection")
       (set (map :name calls))
       (->> (string/split set-val #"-")
+           (mapcat #(string/split % #"AND"))
            (remove #(and remove-filtered? (.startsWith % "filter")))
-           (map #(string/split % #"AND"))
-           (apply concat)
+           (map #(string/replace-first % "filterIn" ""))
            set))))
 
 (defmulti select-variant-by-set
