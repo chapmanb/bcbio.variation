@@ -46,12 +46,13 @@
 
 (defn get-vc-set-calls
   "Retrieve all called items from a variant context 'set' attribute."
-  [vc calls]
+  [vc calls & {:keys [remove-filtered?]
+               :or {remove-filtered? true}}]
   (when-let [set-val (get-in vc [:attributes "set"])]
     (if (= set-val "Intersection")
       (set (map :name calls))
       (->> (string/split set-val #"-")
-           (remove #(.startsWith % "filter"))
+           (remove #(and remove-filtered? (.startsWith % "filter")))
            (map #(string/split % #"AND"))
            (apply concat)
            set))))

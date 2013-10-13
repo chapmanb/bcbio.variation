@@ -107,7 +107,7 @@
   (string/join "-"
                (if (= old "Intersection")
                  (map :name (remove :recall calls))
-                 (remove #(= "combo" %) (string/split old #"-")))))
+                 (remove #(.endsWith % "combo") (string/split old #"-")))))
 
 (defn- update-vc-w-consensus
   "Update a variant context with consensus genotype from multiple inputs.

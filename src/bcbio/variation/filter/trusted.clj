@@ -32,7 +32,7 @@
 (defn variant-set-metadata
   "Retrieve metadata associated with overlapping variants from combined set attribute."
   [vc calls]
-  (when-let [set-calls (get-vc-set-calls vc calls)]
+  (when-let [set-calls (get-vc-set-calls vc calls :remove-filtered? false)]
     (reduce (fn [coll x]
               (let [cur-name (string/replace (:name x) "-" "_")]
                 (if-not (contains? set-calls cur-name)
