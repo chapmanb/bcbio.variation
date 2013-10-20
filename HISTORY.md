@@ -1,4 +1,4 @@
-## 0.1.1 (in progress)
+## 0.1.1 (20 October 2013)
 
 - Better defaults for selecting false positives during Ensemble calling to
   handle common 3-caller use cases.
