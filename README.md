@@ -282,6 +282,10 @@ preparation and analysis:
 
         $ lein variant-utils callsummary variants.vcf original-combined-config.yaml
 
+- Sort a variant VCF file to reference ordering defined in a FASTA file
+
+        $ lein variant-utils sort-vcf variants.vcf reference.fa
+
 - Convert an Illumina directory of variant calls into a single, cleaned VCF:
 
         $ lein variant-utils illumina /path/to/IlluminaDir sample-name GRCh37.fa hg19.fa
