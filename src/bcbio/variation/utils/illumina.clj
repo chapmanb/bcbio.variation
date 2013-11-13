@@ -8,7 +8,8 @@
   (:require [clojure.tools.cli :refer [cli]]
             [me.raynes.fs :as fs]
             [bcbio.run.itx :as itx]
-            [bcbio.variation.combine :refer [gatk-normalize]]))
+            [bcbio.variation.combine :refer [gatk-normalize]]
+            [clojure.java.io :as io]))
 
 (defn- get-illumina-vcf
   [base-dir base-name]
@@ -18,23 +19,28 @@
       first
       str))
 
+(defn get-vcf-files [path]
+  (if (.isDirectory (io/file path))
+      [(get-illumina-vcf path "SNPs")
+       (get-illumina-vcf path "Indels")
+       (get-illumina-vcf path "SVs")]
+      [path]))
+
 (defn prep-illumina-variants
   "Prepare Illumina variants from a standard directory structure.
-    - base-dir: Directory containing Illumina information (will have subdirs like
-                Assembly, Consensus and Variations)
+    - base-dir: Single VCF file or directory containing Illumina information
+                (will have subdirs like Assembly, Consensus and Variations)
     - sample-name: The name to include in updated VCF headers
     - ref-file: Reference file we want to sort to
     - orig-ref-file: Original reference file (hg19 for Illumina)
     - out-dir: Output directory to write to.
     - base-tmp-dir: Base temporary directory to work in."
   [base-dir sample-name ref-file orig-ref-file out-dir base-tmp-dir]
-  (let [base-dir (fs/expand-home base-dir)
+  (let [files (get-vcf-files base-dir)
         out-file (str (fs/file out-dir (str sample-name ".vcf")))]
     (when (itx/needs-run? out-file)
       (itx/with-temp-dir [tmp-dir base-tmp-dir]
-        (let [call {:name "iprep" :file [(get-illumina-vcf base-dir "SNPs")
-                                         (get-illumina-vcf base-dir "Indels")
-                                         (get-illumina-vcf base-dir "SVs")]
+        (let [call {:name "iprep" :file files
                     :preclean true :prep true :normalize true
                     :ref orig-ref-file}
               exp {:sample sample-name :ref ref-file}
@@ -50,7 +56,7 @@
              ["-t" "--tmpdir" "Temporary directory (defaults to output director)" :default nil])]
     (when (or (:help options) (some nil? [base-dir sample-name ref-file orig-ref-file]))
       (println "Required arguments:")
-      (println "    <base-dir> VCF input file to prepare.")
+      (println "    <base-dir> VCF input file or Illumina directory to prepare.")
       (println "    <sample-name> Genome reference file (GRCh37/b37 coordinates)")
       (println "    <ref-file> Genome reference file (GRCh37/b37 coordinates)")
       (println "    <orig-ref-file> Original genome reference file (hg19 coordinates)")
