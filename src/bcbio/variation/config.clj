@@ -114,6 +114,31 @@
             (every? (fn [[_ x]] (= 1 x)) (frequencies (map :name (:calls exp)))))]
     (every? exp-no-duplicate? (:experiments config))))
 
+(defn- check-keys
+  "Check input keys for potential typos."
+  [config config-file]
+  (let [exp-keys #{:sample :ref :intervals :align :summary-level :params :approach :calls :finalize}
+        call-keys #{:name :file :align :ref :type :intervals :metadata :filters :format-filters
+                    :recall :annotate :normalize :prep :prep-sort-pos :fix-sample-header
+                    :prep-sv-genotype :prep-allele-count :preclean :remove-refcalls :make-haploid
+                    :summary}
+        problems (reduce (fn [coll [item allowed]]
+                           (concat coll
+                                   (map (fn [k] {:name (get item :sample (:name item)) :key k})
+                                        (remove #(contains? allowed %) (keys item)))))
+                         [] (concat (map (fn [e] [e exp-keys]) (:experiments config))
+                                    (map (fn [c] [c call-keys]) (mapcat :calls (:experiments config)))))]
+    (if (empty? problems)
+      config
+      (throw (Exception. (format "Unexpected keys found in configuration input file %s:\n%s\n%s\n%s\n%s\n"
+                                 config-file
+                                 "Available configuration inputs documented at:"
+                                 "https://github.com/chapmanb/bcbio.variation#configuration-file"
+                                 "Problems:"
+                                 (string/join "\n" (map #(format "key '%s' in section '%s'"
+                                                                 (name (:key %)) (:name %))
+                                                        problems))))))))
+
 (defn load-config
   "Load configuration file, handling conversion of relative to absolute paths."
   [config-file]
@@ -150,4 +175,5 @@
       (-> config
           (update-tree [])
           (add-dir-files #{".vcf"})
+          (check-keys config-file)
           (#(assoc % :fsm (prep-comparison-fsm %)))))))

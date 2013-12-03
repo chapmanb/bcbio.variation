@@ -2,6 +2,8 @@
 
 - Handle metrics evaluation with GATK where input calls have haploid chromosomes,
   in the case of mitochondrial and chrY for males.
+- Check configuration input keys for comparisons to try and provide useful error
+  messages for unexpected keys.
 - Provide `variant-utils sort-vcf`, which sorts a VCF file to match a reference
   genome file.
 

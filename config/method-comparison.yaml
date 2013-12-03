@@ -14,7 +14,7 @@ experiments:
           technology: illumina
         file: test/data/gatk-calls.vcf
         align: test/data/aligned-reads.bam
-        refcalls: false
+        remove-refcalls: true
         normalize: false
         annotate: true
       - name: freebayes

@@ -53,8 +53,7 @@
         calls (map-indexed (partial prep-sample config) vrn-files)]
     (->> {:dir dirs
           :experiments
-          [(-> {:name "ensemble"
-                :ref ref-file
+          [(-> {:ref ref-file
                 :calls (cons (get-combo-recall config combo-name (first vrn-files)) calls)
                 :finalize [{:method "multiple"
                             :target combo-name}
