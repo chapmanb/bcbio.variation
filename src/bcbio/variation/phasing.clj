@@ -454,7 +454,7 @@
   "Is the provided VCF file a haploid genome (one genotype or all homozygous).
   Samples the first set of variants, checking for haploid calls."
   [vcf-file ref-file]
-  (let [sample-size 1000]
+  (let [sample-size 10]
     (letfn [(is-vc-haploid? [vc]
               (when-not (= 0 (:num-samples vc))
                 (= 1 (apply max (map #(count (:alleles %)) (:genotypes vc))))))]

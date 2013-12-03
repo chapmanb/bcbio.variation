@@ -1,0 +1,18 @@
+dir:
+  out: ./test/data/giab-comparison/grading
+  prep: ./test/data/giab-comparison/grading/prep
+experiments:
+  - sample: NA12878
+    ref: ./test/data/GRCh37.fa
+    intervals: ./test/data/giab-comparison/regions.bed
+    approach: grade
+    calls:
+      - name: ref
+        file: ./test/data/giab-comparison/nist-giab.vcf
+        type: grading-ref
+        intervals: ./test/data/giab-comparison/nist-giab-regions.bed
+        remove-refcalls: true
+      - name: eval
+        file: ./test/data/giab-comparison/freebayes-calls.vcf
+        intervals: ./test/data/giab-comparison/freebayes-callable.bed
+        remove-refcalls: true

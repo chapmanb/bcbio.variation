@@ -7,6 +7,7 @@
         [bcbio.variation.variantcontext :exclude [-main]])
   (:require [me.raynes.fs :as fs]
             [bcbio.run.itx :as itx]
+            [bcbio.variation.compare :as compare]
             [bcbio.variation.grade :as grade]
             [bcbio.variation.report :as report]
             [bcbio.variation.utils.quickcompare :as qcmp]))
@@ -20,6 +21,13 @@
              (when (.endsWith x ".vcf")
                (itx/remove-path (str x ".idx"))))
            ?form)))
+
+(facts "Compare correct-ploidy sex and mito calls against GIAB reference"
+  (let [config-dir (str (fs/file data-dir "giab-comparison"))
+        out-dir (str (fs/file config-dir "grading"))
+        config-file (str (fs/file config-dir "giab-comparison.yaml"))]
+    (itx/remove-path out-dir)
+    (compare/variant-comparison-from-config config-file)))
 
 (facts "Compare diploid phased and haploid callsets."
   (let [base-dir (fs/file data-dir "phased")

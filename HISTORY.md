@@ -1,3 +1,10 @@
+## 0.1.2 (In progress)
+
+- Handle metrics evaluation with GATK where input calls have haploid chromosomes,
+  in the case of mitochondrial and chrY for males.
+- Provide `variant-utils sort-vcf`, which sorts a VCF file to match a reference
+  genome file.
+
 ## 0.1.1 (20 October 2013)
 
 - Better defaults for selecting false positives during Ensemble calling to
