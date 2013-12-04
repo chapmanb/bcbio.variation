@@ -1,4 +1,4 @@
-## 0.1.2 (In progress)
+## 0.1.2 (4 December 2013)
 
 - Handle metrics evaluation with GATK where input calls have haploid chromosomes,
   in the case of mitochondrial and chrY for males.
