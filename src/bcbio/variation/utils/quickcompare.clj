@@ -80,9 +80,10 @@
 
 (defn- percent-concordant
   [cmp]
-  (* 100.0
-     (/ (:concordant cmp)
-        (apply + (vals (dissoc cmp :sample))))))
+  (when-not (zero? (apply + (vals (dissoc cmp :sample))))
+    (* 100.0
+       (/ (:concordant cmp)
+          (apply + (vals (dissoc cmp :sample)))))))
 
 (defn vcfdir-to-base
   "Compare a directory of single-sample VCFs to a multi-sample base VCF."
