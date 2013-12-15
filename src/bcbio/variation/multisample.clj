@@ -5,6 +5,7 @@
         [clojure.set :only [intersection]]
         [ordered.map :only [ordered-map]])
   (:require [clojure.string :as string]
+            [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]
             [bcbio.variation.variantcontext :as gvc]))
 
@@ -31,10 +32,10 @@
         base-out (str (file out-dir (format "%s-%s.vcf"
                                             (get-out-basename exp c1 [(:file c1)])
                                             (:name c2))))
-        out-files (into (ordered-map :concordant (itx/add-file-part base-out "concordant"))
+        out-files (into (ordered-map :concordant (fsp/add-file-part base-out "concordant"))
                         (map (fn [c]
                                [(keyword (str (:name c) "-discordant"))
-                                (itx/add-file-part base-out (str (:name c) "-discordant"))])
+                                (fsp/add-file-part base-out (str (:name c) "-discordant"))])
                              [c1 c2]))]
     out-files))
 

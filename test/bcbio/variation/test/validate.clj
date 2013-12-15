@@ -9,6 +9,7 @@
         [bcbio.variation.validate]
         [bcbio.variation.variantcontext :exclude [-main]])
   (:require [me.raynes.fs :as fs]
+            [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]
             [bcbio.variation.filter.custom :as cf]))
 
@@ -20,25 +21,25 @@
                fb-vcf (str (fs/file data-dir "freebayes-calls.vcf"))
                varscan-vcf (str (fs/file data-dir "varscan-calls.vcf"))
                c-neg-vcf (str (fs/file data-dir "sv-indels-gatk.vcf"))
-               top-out (itx/add-file-part top-vcf "topsubset")
+               top-out (fsp/add-file-part top-vcf "topsubset")
                dip-vcf (str (fs/file data-dir "phasing-input-diploid.vcf"))
-               dip-out (itx/add-file-part dip-vcf "haploid")
-               c-out (itx/add-file-part top-vcf "cfilter")
-               c-out-extras (concat (map #(itx/add-file-part top-vcf %) ["fps" "tps" "trusted"])
+               dip-out (fsp/add-file-part dip-vcf "haploid")
+               c-out (fsp/add-file-part top-vcf "cfilter")
+               c-out-extras (concat (map #(fsp/add-file-part top-vcf %) ["fps" "tps" "trusted"])
                                     (fs/glob (fs/file data-dir "gatk-calls-*.bin")))
-               cbin-out (str (itx/file-root top-vcf) "-classifier.bin")
+               cbin-out (str (fsp/file-root top-vcf) "-classifier.bin")
                align-bam (str (fs/file data-dir "aligned-reads.bam"))
                region-bed (str (fs/file data-dir "aligned-reads-regions.bed"))
                exclude-bed (str (fs/file data-dir "aligned-reads-regions-exclude.bed"))
-               sorted-out (itx/add-file-part exclude-bed "sorted")
-               region-multi-out (itx/add-file-part region-bed "multicombine")
+               sorted-out (fsp/add-file-part exclude-bed "sorted")
+               region-multi-out (fsp/add-file-part region-bed "multicombine")
                region-out (fs/glob (fs/file data-dir "aligned-reads-callable*"))
-               ffilter-out (itx/add-file-part top-vcf "ffilter")
-               fb-filter-out (itx/add-file-part fb-vcf "filter")]
+               ffilter-out (fsp/add-file-part top-vcf "ffilter")
+               fb-filter-out (fsp/add-file-part fb-vcf "filter")]
            (doseq [x (concat [top-out dip-out c-out cbin-out region-multi-out ffilter-out
                               sorted-out fb-filter-out]
                              region-out c-out-extras)]
-             (itx/remove-path x))
+             (fsp/remove-path x))
            ?form)))
 
 (let [finalizer {:target "gatk"

@@ -6,6 +6,7 @@
   (:require [clojure.java.io :as io]
             [clojure.java.shell :as shell]
             [me.raynes.fs :as fs]
+            [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]))
 
 ;; ## snpEff
@@ -48,7 +49,7 @@
   "Annotate the input file with snpEff, providing predictions of variant effects. "
   [in-file genome base-dir & {:keys [out-dir]}]
   (let [config-file (download-genome genome base-dir)
-        out-file (itx/add-file-part in-file "effects" out-dir)]
+        out-file (fsp/add-file-part in-file "effects" out-dir)]
     (when (itx/needs-run? out-file)
       ;; snpEff prints to standard out so we need to safely redirect that to a file.
       (itx/with-tx-file [tx-out out-file]
@@ -76,7 +77,7 @@
    Re-annotates the input file with CSQ field compatible with Gemini."
   [in-file vep-dir & {:keys [re-run?]}]
   (when-let [vep-cmd (get-vep-cmd vep-dir)]
-    (let [out-file (itx/add-file-part in-file "vep")]
+    (let [out-file (fsp/add-file-part in-file "vep")]
       (when (or (itx/needs-run? out-file) re-run?)
         (itx/with-tx-file [tx-out out-file]
           (shell/sh "perl" vep-cmd "-i" in-file "-o" tx-out "--vcf" "--cache"

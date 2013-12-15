@@ -7,6 +7,7 @@
         [bcbio.variation.index.metrics :only [get-raw-metrics-linear]]
         [bcbio.variation.index.subsample])
   (:require [me.raynes.fs :as fs]
+            [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]
             [bcbio.variation.index.gemini :as gemini]
             [bcbio.variation.index.metrics :as im]))
@@ -17,14 +18,14 @@
                web-yaml (str (fs/file "." "config" "web-processing.yaml"))
                ref (str (fs/file data-dir "GRCh37.fa"))
                vcf1 (str (fs/file data-dir "gatk-calls.vcf"))
-               out-index (str (itx/file-root vcf1) "-metrics.db")
-               gemini-index (str (itx/file-root vcf1) "-gemini.db")
+               out-index (str (fsp/file-root vcf1) "-metrics.db")
+               gemini-index (str (fsp/file-root vcf1) "-gemini.db")
                mvcf (str (fs/file data-dir "bissnp-methyl.vcf"))
-               mvcf-out (map #(str (itx/file-root mvcf) %) ["-metrics.db" "-gemini.db"])
-               vep-out (itx/add-file-part vcf1 "vep")
+               mvcf-out (map #(str (fsp/file-root mvcf) %) ["-metrics.db" "-gemini.db"])
+               vep-out (fsp/add-file-part vcf1 "vep")
                sub-params {:subsample {:method :k-means :count 5}}]
            (doseq [x (concat mvcf-out [out-index gemini-index vep-out])]
-             (itx/remove-path x))
+             (fsp/remove-path x))
            (binding [*skip-prep* true]
              ?form))))
 

@@ -10,6 +10,7 @@
         [bcbio.variation.filter.intervals :only [select-by-sample]]
         [bcbio.variation.multisample :only [multiple-samples?]])
   (:require [clojure.string :as string]
+            [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]
             [bcbio.variation.filter.attr :as attr]
             [bcbio.variation.variantcontext :as gvc]))
@@ -133,7 +134,7 @@
 (defn- recall-w-consensus
   "Recall variants in a combined set of variants based on consensus of all inputs."
   [base-vcf input-vcfs calls sample ref-file]
-  (let [out-file (itx/add-file-part base-vcf "consensus")]
+  (let [out-file (fsp/add-file-part base-vcf "consensus")]
     (when (itx/needs-run? out-file)
       (with-open [in-vcf-iter (gvc/get-vcf-iterator base-vcf ref-file)
                   input-vc-getter (apply gvc/get-vcf-retriever (cons ref-file input-vcfs))]
@@ -233,7 +234,7 @@
   "Create individual sample variant files from input VCF."
   [vcf-file & {:keys [out-dir]}]
   (let [samples (-> vcf-file gvc/get-vcf-header .getGenotypeSamples)
-        out-files (into (ordered-map) (map (fn [x] [x (itx/add-file-part vcf-file x out-dir)])
+        out-files (into (ordered-map) (map (fn [x] [x (fsp/add-file-part vcf-file x out-dir)])
                                            samples))]
     (when (itx/needs-run? (vals out-files))
       (with-open [rdr (reader vcf-file)]
@@ -275,7 +276,7 @@
              (.startsWith line "#CHROM") (split-variant-line line)
              (.startsWith line "#") nil
              :else (split-variant-line line)))]
-    (let [out-file (itx/add-file-part in-vcf "nosamples" out-dir)]
+    (let [out-file (fsp/add-file-part in-vcf "nosamples" out-dir)]
       (when (itx/needs-run? out-file)
         (with-open [rdr (reader in-vcf)
                     wtr (writer out-file)]
@@ -319,7 +320,7 @@
           (convert-vcs [vcf-source call-source]
             (for [vc (gvc/parse-vcf vcf-source)]
               [:out (maybe-callable-vc vc call-source)]))]
-    (let [out-file (itx/add-file-part in-vcf "wrefs")]
+    (let [out-file (fsp/add-file-part in-vcf "wrefs")]
       (when (itx/needs-run? out-file)
         (with-open [in-vcf-iter (gvc/get-vcf-iterator in-vcf ref)
                     call-source (get-callable-checker align-bam ref :out-dir out-dir

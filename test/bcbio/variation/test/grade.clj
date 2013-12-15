@@ -6,6 +6,7 @@
         [bcbio.variation.phasing]
         [bcbio.variation.variantcontext :exclude [-main]])
   (:require [me.raynes.fs :as fs]
+            [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]
             [bcbio.variation.compare :as compare]
             [bcbio.variation.grade :as grade]
@@ -17,16 +18,16 @@
          (let [data-dir (str (fs/file "." "test" "data"))
                ref-file (str (fs/file data-dir "GRCh37.fa"))]
            (doseq [x []]
-             (itx/remove-path x)
+             (fsp/remove-path x)
              (when (.endsWith x ".vcf")
-               (itx/remove-path (str x ".idx"))))
+               (fsp/remove-path (str x ".idx"))))
            ?form)))
 
 (facts "Compare correct-ploidy sex and mito calls against GIAB reference"
   (let [config-dir (str (fs/file data-dir "giab-comparison"))
         out-dir (str (fs/file config-dir "grading"))
         config-file (str (fs/file config-dir "giab-comparison.yaml"))]
-    (itx/remove-path out-dir)
+    (fsp/remove-path out-dir)
     (compare/variant-comparison-from-config config-file)))
 
 (facts "Compare diploid phased and haploid callsets."
@@ -42,7 +43,7 @@
     (doseq [x (concat [(get-in config [:dir :out])]
                       (fs/glob (str (fs/file base-dir "NA12878-cmp-regions-*")))
                       (fs/glob (str (fs/file base-dir "NA12878-fosfinal-cmp*"))))]
-      (itx/remove-path x))
+      (fsp/remove-path x))
     (-> (compare-two-vcf-phased calls exp config) :c-files keys) => [:concordant :discordant
                                                                      :discordant-missing :phasing-error]))
 
@@ -56,7 +57,7 @@
         config {:dir {:out (str (fs/file base-dir "work"))}}
         out-file (str (file (get-in config [:dir :out])
                             "NA12878-eval-ref-discordance-annotate.vcf"))]
-    (itx/remove-path (get-in config [:dir :out]))
+    (fsp/remove-path (get-in config [:dir :out]))
     (fs/mkdirs (get-in config [:dir :out]))
     (let [cmp (-> [(compare-two-vcf c1 c2 exp config)]
                    (finalize-comparisons exp config)
@@ -69,6 +70,6 @@
         c1 (str (fs/file base-dir "NA12878-cmp-r1.vcf"))
         c2 (str (fs/file base-dir "NA12878-cmp-r2.vcf"))
         dir-out-file (str (fs/file base-dir "NA12878-cmp-r1-cmp.csv"))]
-    (itx/remove-path dir-out-file)
+    (fsp/remove-path dir-out-file)
     (qcmp/two-vcfs c1 c2 ref-file) => {:concordant 14 :discordant 2 :sample "NA12878"}
     (qcmp/vcfdir-to-base c1 base-dir ref-file 2) => dir-out-file))

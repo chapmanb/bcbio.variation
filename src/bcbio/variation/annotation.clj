@@ -3,6 +3,7 @@
   http://www.broadinstitute.org/gsa/wiki/index.php/VariantAnnotator"
   (:use [bcbio.variation.utils.cgmetrics :only [add-cgmetrics]])
   (:require [me.raynes.fs :as fs]
+            [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]
             [bcbio.run.broad :as broad]))
 
@@ -23,7 +24,7 @@
   "Add GATK annotation metrics to variant calls."
   [in-vcf align-bam ref & {:keys [out-dir intervals annos]}]
   {:pre [(not (nil? align-bam))]}
-  (let [file-info {:out-vcf (itx/add-file-part in-vcf "annotated" out-dir)}
+  (let [file-info {:out-vcf (fsp/add-file-part in-vcf "annotated" out-dir)}
         ready-annos (if annos annos std-annotations)
         args (concat ["-R" ref
                       "-I" align-bam

@@ -14,6 +14,7 @@
                                                get-vcf-iterator]])
   (:require [clojure.string :as string]
             [bcbio.run.broad :as broad]
+            [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]
             [me.raynes.fs :as fs]))
 
@@ -386,7 +387,7 @@
   (letfn [(line-count [f]
             (with-open [rdr (reader f)]
               (count (remove #(.startsWith % "#") (line-seq rdr)))))]
-    (let [file-info {:out-vcf (itx/add-file-part in-file "leftalign" out-dir)}
+    (let [file-info {:out-vcf (fsp/add-file-part in-file "leftalign" out-dir)}
           args ["-R" ref "-o" :out-vcf "--variant" in-file]]
       (when (and rerun? (fs/exists? (:out-vcf file-info)))
         (fs/delete (:out-vcf file-info)))
@@ -400,9 +401,9 @@
   ([in-file ref]
      (normalize-variants in-file ref nil))
   ([in-file ref out-dir & {:keys [out-fname]}]
-     (let [base-name (if (nil? out-fname) (itx/remove-zip-ext in-file) out-fname)
-           out-file (itx/add-file-part base-name "nomnp" out-dir)
-           out-pre-file (itx/add-file-part base-name "worknomnp" out-dir)]
+     (let [base-name (if (nil? out-fname) (fsp/remove-zip-ext in-file) out-fname)
+           out-file (fsp/add-file-part base-name "nomnp" out-dir)
+           out-pre-file (fsp/add-file-part base-name "worknomnp" out-dir)]
        (when (itx/needs-run? out-file)
          (when (fs/exists? out-pre-file)
            (fs/delete out-pre-file))

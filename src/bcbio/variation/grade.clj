@@ -8,6 +8,7 @@
             [clojure.string :as string]
             [clojure.math.combinatorics :as combo]
             [lonocloud.synthread :as ->]
+            [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]
             [bcbio.variation.annotation :as annotation]
             [bcbio.variation.combine :as combine]
@@ -105,7 +106,7 @@
 (defn- to-refcalls
   "Convert truth discordants into reference calls "
   [f ref-file]
-  (let [out-file (itx/add-file-part f "asref")]
+  (let [out-file (fsp/add-file-part f "asref")]
     (when (itx/needs-run? out-file)
       (with-open [in-vcf-iter (gvc/get-vcf-iterator f ref-file)]
         (gvc/write-vcf-w-template f {:out out-file}
@@ -202,7 +203,7 @@
         ref-file (get-in cmp [:exp :ref])
         align-bam (get-in cmp [:exp :align])
         base-eval-vcf (merge-discordants eval-vcf truth-vcf align-bam ref-file)
-        out-vcf (itx/add-file-part eval-vcf "annotate")]
+        out-vcf (fsp/add-file-part eval-vcf "annotate")]
     (when (itx/needs-run? out-vcf)
       (with-open [ref-get (gvc/get-vcf-retriever ref-file truth-vcf)
                   eval-iter (gvc/get-vcf-iterator base-eval-vcf ref-file)]

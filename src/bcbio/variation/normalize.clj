@@ -15,6 +15,7 @@
   (:require [clojure.string :as string]
             [me.raynes.fs :as fs]
             [lonocloud.synthread :as ->]
+            [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]
             [bcbio.variation.variantcontext :as gvc]))
 
@@ -185,7 +186,7 @@
   (letfn [(add-position [line]
             (let [[chrom start] (take 2 (string/split line #"\t"))]
               [[chrom (Integer/parseInt start)] line]))]
-  (let [out-file (itx/add-file-part in-file "sorted")]
+  (let [out-file (fsp/add-file-part in-file "sorted")]
     (with-open [rdr (reader in-file)
                 wtr (writer out-file)]
       (let [[header rest] (split-with #(.startsWith % "#") (line-seq rdr))]
@@ -312,7 +313,7 @@
 (defn fix-vcf-sample
   "Update a VCF file with one item to have the given sample name."
   [in-file sample ref]
-  (let [out-file (itx/add-file-part in-file "samplefix")]
+  (let [out-file (fsp/add-file-part in-file "samplefix")]
     (when (itx/needs-run? out-file)
       (with-open [vcf-iter (gvc/get-vcf-iterator in-file ref)]
         (gvc/write-vcf-w-template in-file {:out out-file}
@@ -346,8 +347,8 @@
                             :prep-sort-pos false :prep-sv-genotype false
                             :fix-sample-header false
                             :remove-refcalls true})
-        base-name (if (nil? out-fname) (itx/remove-zip-ext in-vcf-file) out-fname)
-        out-file (itx/add-file-part base-name "prep" out-dir)]
+        base-name (if (nil? out-fname) (fsp/remove-zip-ext in-vcf-file) out-fname)
+        out-file (fsp/add-file-part base-name "prep" out-dir)]
     (when (itx/needs-run? out-file)
       (write-prepped-vcf in-vcf-file {:out out-file}
                          ref-file orig-ref-file
@@ -544,7 +545,7 @@
     - Removes spaces in INFO fields."
   [in-vcf-file ref-file sample call & {:keys [out-dir]}]
   (let [get-ref-base (ref-base-getter ref-file)
-        out-file (itx/add-file-part in-vcf-file "preclean" out-dir)]
+        out-file (fsp/add-file-part in-vcf-file "preclean" out-dir)]
     (letfn [(remove-gap [n xs]
               (assoc xs n
                      (-> (nth xs n)

@@ -9,6 +9,7 @@
                                                get-comparison-fullcombine]])
   (:require [bcbio.variation.variantcontext :as gvc])
   (:require [clojure.string :as string]
+            [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]))
 
 (defn- get-specific
@@ -65,7 +66,7 @@
   "Filter VCF file generating output only variants specific to a technology or caller."
   [cmps support exp config]
   (when-let [base-vcf (get-comparison-fullcombine cmps support config)]
-    (let [out-file (itx/add-file-part base-vcf "xspecific")]
+    (let [out-file (fsp/add-file-part base-vcf "xspecific")]
       (when (itx/needs-run? out-file)
         (with-open [base-vcf-iter (gvc/get-vcf-iterator base-vcf (:ref exp))]
           (gvc/write-vcf-w-template base-vcf {:out out-file}

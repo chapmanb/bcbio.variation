@@ -9,6 +9,7 @@
             [clojure.java.shell :as shell]
             [iota]
             [me.raynes.fs :as fs]
+            [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]))
 
 (defn create-ref-dict
@@ -16,7 +17,7 @@
    Requires samtools command to create *.fai if missing, since
    code to create these is no longer present in GATK."
   [ref-file]
-  (let [dict-file (str (itx/file-root ref-file) ".dict")
+  (let [dict-file (str (fsp/file-root ref-file) ".dict")
         fai-file (str ref-file ".fai")]
     (when (itx/needs-run? dict-file)
       (.instanceMain (CreateSequenceDictionary.)
@@ -87,7 +88,7 @@
   "Sort a BED file relative to the input reference.
    Uses memory mapped indexed files to avoid high memory requirements."
   [bed-file ref-file]
-  (let [out-file (itx/add-file-part bed-file "sorted")]
+  (let [out-file (fsp/add-file-part bed-file "sorted")]
     (when (or (itx/needs-run? out-file)
               (> (fs/mod-time bed-file) (fs/mod-time out-file)))
       (let [bedline->sort (prep-bedline-sort bed-file ref-file)

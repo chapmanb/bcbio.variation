@@ -13,6 +13,7 @@
         [bcbio.variation.callable :only [get-callable-bed get-bed-iterator]]
         [bcbio.variation.variantcontext :only [get-vcf-header]])
   (:require [me.raynes.fs :as fs]
+            [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]
             [bcbio.run.broad :as broad]))
 
@@ -42,7 +43,7 @@
                                      exclude-intervals]
                               :or {remove-refcalls false}}]
   (let [base-dir (if (nil? out-dir) (fs/parent in-file) out-dir)
-        file-info {:out-vcf (if ext (itx/add-file-part in-file ext out-dir)
+        file-info {:out-vcf (if ext (fsp/add-file-part in-file ext out-dir)
                                 (str (fs/file base-dir
                                               (format "%s-%s.vcf" sample name))))}
         args (concat ["-R" ref
@@ -117,7 +118,7 @@
                                                  :intervals initial-bed)
                               align-bams))
         loc-parser (GenomeLocParser. (get-seq-dict ref))
-        out-file (itx/add-file-part initial-bed
+        out-file (fsp/add-file-part initial-bed
                                     (str (if name (str name "-") "") "multicombine")
                                     out-dir)]
     (when (itx/needs-run? out-file)

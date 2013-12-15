@@ -23,12 +23,13 @@
         [bcbio.variation.variantcontext :only [parse-vcf get-vcf-iterator
                                                write-vcf-w-template]])
   (:require [bcbio.run.broad :as broad]
+            [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]))
 
 (defn- select-by-general
   "Base functionality for subsetting a file with SelectVariants."
   [select-args ext in-vcf ref]
-  (let [file-info {:out-vcf (itx/add-file-part in-vcf ext)}
+  (let [file-info {:out-vcf (fsp/add-file-part in-vcf ext)}
         args (concat ["-R" ref
                       "--variant" in-vcf
                       "-o" :out-vcf]
@@ -89,7 +90,7 @@
 
 (defmethod get-to-validate :top
   [in-vcf finalizer ref]
-  (let [out-file (itx/add-file-part in-vcf "topsubset")]
+  (let [out-file (fsp/add-file-part in-vcf "topsubset")]
     (when (itx/needs-run? out-file)
       (let [to-keep (get-top-variants in-vcf finalizer ref)]
         (with-open [vcf-iter (get-vcf-iterator in-vcf ref)]

@@ -1,12 +1,12 @@
-(defproject bcbio.variation "0.1.2"
+(defproject bcbio.variation "0.1.3-SNAPSHOT"
   :description "Toolkit to analyze genomic variation data, built on the GATK with Clojure"
   :license {:name "MIT" :url "http://www.opensource.org/licenses/mit-license.html"}
   :dependencies [[org.clojure/clojure "1.5.1"]
-                 [org.codehaus.jsr166-mirror/jsr166y "1.7.0"] ;; reducers support for Java 1.6
                  [org.clojure/math.combinatorics "0.0.3" :exclusions [org.clojure/clojure]]
                  [org.clojure/data.csv "0.1.2" :exclusions [org.clojure/clojure]]
                  [org.clojure/tools.cli "0.2.2"]
                  [clj-stacktrace "0.2.5"]
+                 [bcbio.run "0.0.1-SNAPSHOT"]
                  ;; GATK requirements
                  [org.clojars.chapmanb/gatk-lite "2.7.2"]
                  [org.clojars.chapmanb/picard "1.96"]
@@ -31,7 +31,6 @@
                                                            org.clojure/clojure
                                                            incanter/incanter-core
                                                            incanter/incanter-charts]]
-                 [me.raynes/fs "1.4.3" :exclusions [org.clojure/clojure]]
                  [clj-yaml "0.4.0"]
                  [doric "0.8.0" :exclusions [org.clojure/clojure]]
                  [iota "1.1.1"]

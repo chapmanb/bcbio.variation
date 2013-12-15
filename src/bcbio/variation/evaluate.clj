@@ -5,6 +5,7 @@
         [ordered.map :only [ordered-map]])
   (:require [clojure.string :as string]
             [doric.core :as doric]
+            [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]
             [bcbio.run.broad :as broad]
             [bcbio.variation.variantcontext :as gvc]))
@@ -19,7 +20,7 @@
   "Compare two variant files with GenotypeConcordance in VariantEval.
    Restricted to diploid genotype comparisons."
   [vcf1 vcf2 ref & {:keys [out-base intervals]}]
-  (let [file-info {:out-eval (str (itx/file-root (if (nil? out-base) vcf1 out-base)) ".eval")}
+  (let [file-info {:out-eval (str (fsp/file-root (if (nil? out-base) vcf1 out-base)) ".eval")}
         args (concat
               ["-R" ref
                "--out" :out-eval
@@ -33,7 +34,7 @@
 (defn- calc-summary-eval-metrics
   "Run VariantEval providing summary information for a VCF file"
   [vcf ref dbsnp intervals cmp-interval-file]
-  (let [file-info {:out-eval (str (itx/file-root vcf) "-summary.eval")}
+  (let [file-info {:out-eval (str (fsp/file-root vcf) "-summary.eval")}
         args (concat
               ["-R" ref
                "--out" :out-eval
@@ -100,7 +101,7 @@
 (defn write-summary-eval-metrics
   "Write high level summary metrics to CSV file."
   [vcf ref & {:keys [intervals cmp-intervals dbsnp]}]
-  (let [out-file (str (itx/file-root vcf) "-summary.csv")]
+  (let [out-file (str (fsp/file-root vcf) "-summary.csv")]
     (let [metrics (summary-eval-metrics vcf ref :intervals intervals :cmp-intervals cmp-intervals
                                         :dbsnp dbsnp)]
       (with-open [wtr (writer out-file)]

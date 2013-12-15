@@ -12,6 +12,7 @@
         [bcbio.variation.callable :only [get-bed-source features-in-region]])
   (:require [clojure.string :as string]
             [me.raynes.fs :as fs]
+            [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]))
 
 (def ^{:private true
@@ -304,7 +305,7 @@
 (defn write-non-svs
   "Write output file containing only non-structural variants"
   [in-file ref params]
-  (let [out-file (itx/add-file-part in-file "nosv")]
+  (let [out-file (fsp/add-file-part in-file "nosv")]
     (with-open [vcf-iter (get-vcf-iterator in-file ref)]
     (write-vcf-w-template in-file {:out out-file}
                           (find-non-svs :out vcf-iter params #{})
@@ -338,8 +339,8 @@
                    :sv-concordant (format base-out (:name c1) (:name c2) "svconcordance")
                    (:1 disc-kwds) (format base-out (:name c1) (:name c2) "svdiscordance")
                    (:2 disc-kwds) (format base-out (:name c2) (:name c1) "svdiscordance")
-                   :nosv1 (itx/add-file-part (:file c1) "nosv" out-dir)
-                   :nosv2 (itx/add-file-part (:file c2) "nosv" out-dir))]
+                   :nosv1 (fsp/add-file-part (:file c1) "nosv" out-dir)
+                   :nosv2 (fsp/add-file-part (:file c2) "nosv" out-dir))]
     (when (itx/needs-run? (vals out-files))
       (with-open [vcf1-iter (get-vcf-iterator (:file c1) ref)
                   vcf2-iter (get-vcf-iterator (:file c2) ref)]
@@ -393,8 +394,8 @@
 (defn overlapping-svs
   "Prepare VCF files of only overlapping structural variants present in both."
   [f1 f2 ref params]
-  (let [out-files {:out1 (itx/add-file-part f1 "overlap")
-                   :out2 (itx/add-file-part f2 "overlap")}]
+  (let [out-files {:out1 (fsp/add-file-part f1 "overlap")
+                   :out2 (fsp/add-file-part f2 "overlap")}]
     (when (itx/needs-run? (vals out-files))
       (write-vcf-w-template f1 out-files (find-overlapping-svs f1 f2 ref params) ref
                             :header-update-fn (merge-headers f2)))

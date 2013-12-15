@@ -21,6 +21,7 @@
                                                get-vcf-retriever variants-in-region]])
   (:require [me.raynes.fs :as fs]
             [clojure.string :as string]
+            [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]
             [bcbio.run.broad :as broad]))
 
@@ -40,15 +41,15 @@
             (if quiet-out?
               (str "v" i)
               (string/replace (get name-map f
-                                   (-> f fs/base-name itx/file-root))
+                                   (-> f fs/base-name fsp/file-root))
                               "-" "_")))]
     (let [base-dir (if (nil? out-dir) (fs/parent (first vcfs)) out-dir)
-          full-base-name (-> vcfs first fs/base-name itx/remove-zip-ext)
+          full-base-name (-> vcfs first fs/base-name fsp/remove-zip-ext)
           base-name (if (nil? base-ext) full-base-name
                         (format "%s-%s.vcf" (first (string/split full-base-name #"-"))
                                 base-ext))
           file-info {:out-vcf (str (fs/file base-dir
-                                            (itx/add-file-part base-name
+                                            (fsp/add-file-part base-name
                                                                (case merge-type
                                                                  :minimal "mincombine"
                                                                  :full "fullcombine"
@@ -104,7 +105,7 @@
    This combines calls present at multiple positions and removes multi-alleles
    not present in input calls."
   [combined-vcf vcfs ref]
-  (let [out-file (itx/add-file-part combined-vcf "fix")]
+  (let [out-file (fsp/add-file-part combined-vcf "fix")]
     (when (itx/needs-run? out-file)
       (with-open [vcf-iter (get-vcf-iterator combined-vcf ref)]
         (write-vcf-w-template combined-vcf {:out out-file}
@@ -195,7 +196,7 @@
 (defn full-prep-vcf
   "Provide convenient entry to fully normalize a variant file for comparisons."
   [vcf-file ref-file & {:keys [max-indel resort keep-ref tmp-dir keep-filtered]}]
-  (let [out-file (itx/add-file-part vcf-file "fullprep")]
+  (let [out-file (fsp/add-file-part vcf-file "fullprep")]
     (when (itx/needs-run? out-file)
       (itx/with-temp-dir [out-dir (or tmp-dir (fs/parent vcf-file))]
         (let [exp {:sample (-> vcf-file get-vcf-header .getGenotypeSamples first)

@@ -8,6 +8,7 @@
         [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template
                                                get-vcf-iterator]])
   (:require [clojure.string :as string]
+            [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]))
 
 (defn- pairwise-only?
@@ -81,7 +82,7 @@
   "Retrieve VCF file of trusted variants based on specific parameters."
   [cmps support params exp config]
   (when-let [base-vcf (get-comparison-fullcombine cmps support config)]
-    (let [out-file (itx/add-file-part base-vcf "trusted")]
+    (let [out-file (fsp/add-file-part base-vcf "trusted")]
       (when (itx/needs-run? out-file)
         (with-open [base-vcf-iter (get-vcf-iterator base-vcf (:ref exp))]
           (write-vcf-w-template base-vcf {:out out-file}

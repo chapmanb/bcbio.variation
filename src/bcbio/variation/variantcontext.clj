@@ -18,6 +18,7 @@
         [bcbio.align.ref :only [get-seq-dict]])
   (:require [clojure.string :as string]
             [lonocloud.synthread :as ->]
+            [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]))
 
 ;; ## Represent VariantContext objects
@@ -199,7 +200,7 @@
 (defn write-vcf-from-filter
   "Write VCF file from input using a filter function."
   [vcf ref out-part fname fdesc passes?]
-  (let [out-file (itx/add-file-part vcf out-part)]
+  (let [out-file (fsp/add-file-part vcf out-part)]
     (when (itx/needs-run? out-file)
       (with-open [vcf-iter (get-vcf-iterator vcf ref)]
         (write-vcf-w-template vcf {:out out-file}
@@ -211,7 +212,7 @@
 (defn select-variants
   "Select variants from an input file with supplied filter."
   [in-file passes? file-out-part ref-file & {:keys [out-dir]}]
-  (let [out-file (itx/add-file-part in-file file-out-part out-dir)]
+  (let [out-file (fsp/add-file-part in-file file-out-part out-dir)]
     (when (itx/needs-run? out-file)
       (with-open [in-iter (get-vcf-iterator in-file ref-file)]
         (write-vcf-w-template in-file {:out out-file}

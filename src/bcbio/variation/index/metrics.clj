@@ -9,6 +9,7 @@
   (:require [clojure.string :as string]
             [clojure.java.jdbc :as sql]
             [me.raynes.fs :as fs]
+            [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]))
 
 (def ^{:doc "Metrics to expose, ranked in order of priority with default min/max values."}
@@ -154,7 +155,7 @@
   [in-file ref-file & {:keys [re-index? subsample-params]}]
   (let [batch-size 10000
         metrics (available-metrics in-file)
-        index-file (str (itx/file-root in-file) "-metrics.db")]
+        index-file (str (fsp/file-root in-file) "-metrics.db")]
     (when (or re-index?
               (itx/needs-run? index-file)
               (index-needs-update? index-file metrics))

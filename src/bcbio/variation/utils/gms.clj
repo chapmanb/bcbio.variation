@@ -16,6 +16,7 @@
   (:require [clojure.java.shell :as shell]
             [clojure.string :as string]
             [me.raynes.fs :as fs]
+            [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]))
 
 (defn- download-chrom-gms-data
@@ -24,7 +25,7 @@
   (letfn [(download-gms [chrom tech]
             (let [dl-url (format (:gms-url ftp-config) (:genome-build ftp-config)
                                  tech chrom)
-                  final-file (itx/add-file-part (itx/remove-zip-ext (fs/base-name dl-url))
+                  final-file (fsp/add-file-part (fsp/remove-zip-ext (fs/base-name dl-url))
                                                 tech out-dir)
                   dl-file (str final-file ".gz")]
               (when (itx/needs-run? final-file)
@@ -98,7 +99,7 @@
           (doseq [x readers]
             (.close x)))
         (doseq [x (vals gms-files)]
-          (itx/remove-path x))))
+          (fsp/remove-path x))))
     (str out-file)))
 
 (defn prepare-gms-vcfs

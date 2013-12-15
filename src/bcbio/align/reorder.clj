@@ -7,7 +7,8 @@
         [bcbio.align.ref :only [get-seq-dict]]
         [bcbio.run.broad :only [index-bam]]
         [bcbio.variation.normalize :only [prep-rename-map]])
-  (:require [bcbio.run.itx :as itx]))
+  (:require [bcbio.run.fsp :as fsp]
+            [bcbio.run.itx :as itx]))
 
 (defn- updated-bam-header
   "Add updated sequence dictionary and run group information to header."
@@ -80,7 +81,7 @@
 (defn reorder-bam
   "Reorder and remap BAM file to match supplied reference file."
   [bam-file ref-file call exp & {:keys [out-dir]}]
-  (let [out-file (itx/add-file-part bam-file "reorder" out-dir)]
+  (let [out-file (fsp/add-file-part bam-file "reorder" out-dir)]
     (when (itx/needs-run? out-file)
       (index-bam bam-file)
       (SAMFileReader/setDefaultValidationStringency SAMFileReader$ValidationStringency/LENIENT)

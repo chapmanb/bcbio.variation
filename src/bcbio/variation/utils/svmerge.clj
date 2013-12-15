@@ -9,6 +9,7 @@
    of variants."
   (:require [clojure.java.io :as io]
             [me.raynes.fs :as fs]
+            [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]
             [bcbio.variation.combine :as combine]
             [bcbio.variation.filter.intervals :as intervals]
@@ -19,7 +20,7 @@
 (defn- sv->bed
   "Create a BED file of structural variant regions from input VCF."
   [sv-file ref-file]
-  (let [out-file (str (itx/file-root sv-file) "-regions.bed")]
+  (let [out-file (str (fsp/file-root sv-file) "-regions.bed")]
     (with-open [wtr (io/writer out-file)]
       (doseq [vc (structural/parse-vcf-sv sv-file ref-file)]
         (when (contains? #{:DEL :INS} (:sv-type vc))
@@ -29,8 +30,8 @@
 (defn into-calls
   "Merge structural variants into calls, updating variants and BED regions to assess."
   [call-file region-file sv-file ref-file]
-  (let [out-files {:calls (itx/add-file-part call-file "wsvs")
-                   :regions (itx/add-file-part region-file "wsvs")}]
+  (let [out-files {:calls (fsp/add-file-part call-file "wsvs")
+                   :regions (fsp/add-file-part region-file "wsvs")}]
     (when (itx/needs-run? (vals out-files))
       (let [sample (first (intervals/get-sample-names call-file))
             svready-file (normalize/prep-vcf sv-file ref-file sample

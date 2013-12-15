@@ -8,6 +8,7 @@
             [clojure.string :as string]
             [clj-stacktrace.repl :as stacktrace]
             [me.raynes.fs :as fs]
+            [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]
             [bcbio.variation.annotate.effects :as effects]
             [bcbio.variation.index.metrics :as metrics]
@@ -53,9 +54,9 @@
   (letfn [(download-and-unpack [gs-id]
             (let [zip-file (remote/get-file gs-id rclient)]
               (when (and (fs/exists? zip-file)
-                         (itx/needs-run? (itx/remove-zip-ext zip-file)))
+                         (itx/needs-run? (fsp/remove-zip-ext zip-file)))
                 (shell/sh "gunzip" zip-file)
-                (spit zip-file (str "unzipped to " (itx/remove-zip-ext zip-file))))))]
+                (spit zip-file (str "unzipped to " (fsp/remove-zip-ext zip-file))))))]
     (doall (map #(download-and-unpack (:id %))
                 (remote/list-files rclient biodata-dir :gz)))))
 
@@ -79,7 +80,7 @@
 (defn- prep-file
   "Setup preparation for preparing downloading input files."
   [in-file ref-info is-new?]
-  (let [out-file (if *skip-prep* in-file (itx/add-file-part in-file "prep"))
+  (let [out-file (if *skip-prep* in-file (fsp/add-file-part in-file "prep"))
         cache-dir (get-in @web-config [:dir :cache])]
     (when (or (itx/needs-run? out-file) is-new?)
       (when-not (contains? @prep-queue in-file)

@@ -11,6 +11,7 @@
         [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template
                                                get-vcf-iterator]])
   (:require [clojure.data.csv :as csv]
+            [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]))
 
 (defn- get-masterVar-metrics
@@ -74,7 +75,7 @@
 (defn add-cgmetrics
   "Add metrics from Complete Genomics masterVar file to VCF."
   [vcf-file mastervar-file ref-file & {:keys [out-dir]}]
-  (let [out-file (itx/add-file-part vcf-file "cgmetrics" out-dir)]
+  (let [out-file (fsp/add-file-part vcf-file "cgmetrics" out-dir)]
     (when (itx/needs-run? out-file)
       (with-open [vcf-iter (get-vcf-iterator vcf-file ref-file)]
         (write-vcf-w-template vcf-file {:out out-file}

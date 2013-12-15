@@ -9,13 +9,14 @@
             [clj-yaml.core :as yaml]
             [lonocloud.synthread :as ->]
             [me.raynes.fs :as fs]
+            [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]
             [bcbio.variation.compare :as compare]))
 
 (defn- setup-work-dir
   "Create working directory for ensemble consensus calling."
   [out-file]
-  (let [work-dir (str (itx/file-root out-file) "-work")
+  (let [work-dir (str (fsp/file-root out-file) "-work")
         config-dir (str (io/file work-dir "config"))]
     (doseq [dir [config-dir work-dir]]
       (when-not (fs/exists? dir)
@@ -78,9 +79,9 @@
    Handles cleaning up and normalizing input files, generating consensus
    calls and returns ensemble output."
   [vrn-files ref-file out-file in-config]
-  (let [vrn-files (map itx/abspath vrn-files)
-        out-file (itx/abspath out-file)
-        ref-file (itx/abspath ref-file)
+  (let [vrn-files (map fsp/abspath vrn-files)
+        out-file (fsp/abspath out-file)
+        ref-file (fsp/abspath ref-file)
         dirs (setup-work-dir out-file)
         config-file (create-ready-config vrn-files ref-file in-config dirs)]
     (compare/variant-comparison-from-config config-file)

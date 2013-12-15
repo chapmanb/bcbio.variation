@@ -9,6 +9,7 @@
         [bcbio.variation.variantcontext :only [get-vcf-source]])
   (:require [clojure.string :as string]
             [me.raynes.fs :as fs]
+            [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]
             [bcbio.run.broad :as broad]))
 
@@ -19,7 +20,7 @@
                          (fs/writeable? (fs/parent align-bam)))
                    (fs/parent align-bam)
                    out-dir)
-        base-fname (str (file base-dir (-> align-bam fs/base-name itx/file-root)))
+        base-fname (str (file base-dir (-> align-bam fs/base-name fsp/file-root)))
         file-info {:out-bed (format "%s-callable.bed" base-fname)
                    :out-summary (format "%s-callable-summary.txt" base-fname)}
         args (concat ["-R" ref
@@ -61,7 +62,7 @@
   [align-bam ref & {:keys [out-dir intervals]}]
   (let [orig-bed-file (identify-callable align-bam ref :out-dir out-dir
                                          :intervals intervals)
-        out-file (itx/add-file-part orig-bed-file "intervals")]
+        out-file (fsp/add-file-part orig-bed-file "intervals")]
     (with-open [bed-iter (get-bed-iterator orig-bed-file ref)
                 wtr (writer out-file)]
       (doseq [f bed-iter]
@@ -73,7 +74,7 @@
 (defn limit-bed-intervals
   "Limit input BED intervals to only chromosomes found in a VCF file."
   [intervals call exp config]
-  (let [out-file (itx/add-file-part intervals (:name call) (get-in config [:dir :prep]))]
+  (let [out-file (fsp/add-file-part intervals (:name call) (get-in config [:dir :prep]))]
     (when (or (itx/needs-run? out-file)
               (> (fs/mod-time intervals) (fs/mod-time out-file)))
       (with-open [rdr (reader intervals)

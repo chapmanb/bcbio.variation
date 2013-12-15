@@ -13,6 +13,7 @@
   (:require [clojure.set :as set]
             [clojure.string :as string]
             [bcbio.run.broad :as broad]
+            [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]))
 
 (defn jexl-from-config [jexl-filters]
@@ -25,7 +26,7 @@
 (defn variant-filter
   "Perform hard variant filtering with supplied JEXL expression criteria."
   [in-vcf jexl-filters ref]
-  (let [file-info {:out-vcf (itx/add-file-part in-vcf "filter")}
+  (let [file-info {:out-vcf (fsp/add-file-part in-vcf "filter")}
         args (concat ["-R" ref
                       "--variant" in-vcf
                       "-o" :out-vcf

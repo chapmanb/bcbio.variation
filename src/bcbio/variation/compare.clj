@@ -32,6 +32,7 @@
             [clj-yaml.core :as yaml]
             [me.raynes.fs :as fs]
             [lonocloud.synthread :as ->]
+            [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]
             [bcbio.run.broad :as broad]
             [bcbio.variation.grade :as grade]
@@ -88,8 +89,8 @@
   "Provide concordant and discordant variants for two variant files."
   [vcf1 vcf2 ref]
   (let [combo-file (combine-variants [vcf1 vcf2] ref)
-        out-map {:concordant (itx/add-file-part combo-file "concordant")
-                 :discordant (itx/add-file-part combo-file "discordant")}]
+        out-map {:concordant (fsp/add-file-part combo-file "concordant")
+                 :discordant (fsp/add-file-part combo-file "discordant")}]
     (if-not (fs/exists? (:concordant out-map))
       (with-open [combo-vcf-iter (get-vcf-iterator combo-file ref)]
         (write-vcf-w-template combo-file out-map (vc-by-match-category combo-vcf-iter)
@@ -160,7 +161,7 @@
                                           :out-base (first c-files)
                                           :intervals (:intervals exp))
           c-eval (calc-variant-eval-metrics (:file c1) (:file c2) (:ref exp)
-                                            :out-base (itx/add-file-part (first c-files) "callable")
+                                            :out-base (fsp/add-file-part (first c-files) "callable")
                                             :intervals (callable-intervals exp c1 c2))]
       {:c-files (zipmap-ordered (map keyword
                                      ["concordant" (discordant-name c1) (discordant-name c2)])
@@ -240,7 +241,7 @@
         (fs/mkdirs (get-in config :dir :out)))
       (writer (str (fs/file (get-in config [:dir :out])
                             (format "%s-%s"
-                                    (itx/file-root (fs/base-name config-file)) ext)))))
+                                    (fsp/file-root (fs/base-name config-file)) ext)))))
     (writer System/out)))
 
 (defn variant-comparison-from-config
@@ -253,7 +254,7 @@
                                     (compare-two-vcf c1 c2 exp config))]
                          (finalize-comparisons cmps exp config))))
         grading-file (str (fs/file (get-in config [:dir :out])
-                                   (format "%s-grading.yaml" (itx/file-root (fs/base-name config-file)))))]
+                                   (format "%s-grading.yaml" (fsp/file-root (fs/base-name config-file)))))]
     (do-transition config :summary "Summarize comparisons")
     (with-open [w (get-summary-writer config config-file "summary.txt")]
       (report/write-summary-txt w comparisons))
