@@ -5,6 +5,7 @@
         [bcbio.variation.utils.cgmetrics]
         [bcbio.variation.utils.summarize :only [vcf-to-table-config]])
   (:require [me.raynes.fs :as fs]
+            [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]))
 
 (background
@@ -15,12 +16,12 @@
                alt-ref (str (fs/file data-dir "hg19.fa"))
                vcf (str (fs/file data-dir "gatk-calls.vcf"))
                cg-vcf (str (fs/file data-dir "cg-normalize.vcf"))
-               cg-vcf-prep (itx/add-file-part cg-vcf "prep")
+               cg-vcf-prep (fsp/add-file-part cg-vcf "prep")
                cg-var (str (fs/file data-dir "cg-masterVar-NA19239.tsv"))
-               out-cg-var (itx/add-file-part cg-vcf "prep-cgmetrics")
-               out-sum-var (str (itx/file-root vcf) "-variantsum.csv")]
+               out-cg-var (fsp/add-file-part cg-vcf "prep-cgmetrics")
+               out-sum-var (str (fsp/file-root vcf) "-variantsum.csv")]
            (doseq [x [out-cg-var out-sum-var cg-vcf-prep]]
-             (itx/remove-path x))
+             (fsp/remove-path x))
            ?form)))
 
 (facts "Add Complete Genomics metrics to VCF file."

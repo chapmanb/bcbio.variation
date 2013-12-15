@@ -9,6 +9,7 @@
   (:require [clojure.string :as string]
             [clojure.data.csv :as csv]
             [criterium.stats :as stats]
+            [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]))
 
 (defn- to-float [x]
@@ -93,7 +94,7 @@
 (defn vcf-to-table
   "Convert a VCF input to flattened CSV table with provided attributes."
   [vcf ref config]
-  (let [out-file (str (itx/file-root vcf) "-variantsum.csv")]
+  (let [out-file (str (fsp/file-root vcf) "-variantsum.csv")]
     (when (itx/needs-run? out-file)
       (itx/with-tx-files [tx-out-files {:out out-file} [:out] []]
         (with-open [vcf-iter (get-vcf-iterator vcf ref)

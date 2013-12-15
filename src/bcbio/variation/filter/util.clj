@@ -2,7 +2,8 @@
   "Provide useful utilities dealing with filtering of variants"
   (:import [org.broadinstitute.variant.variantcontext
             VariantContextBuilder])
-(:require [bcbio.run.itx :as itx]
+(:require [bcbio.run.fsp :as fsp]
+          [bcbio.run.itx :as itx]
           [bcbio.variation.variantcontext :as gvc]))
 
 (defn remove-cur-filters
@@ -12,7 +13,7 @@
             [:out (-> (VariantContextBuilder. (:vc vc))
                       (.passFilters)
                       (.make))])]
-    (let [out-file (itx/add-file-part in-vcf "nofilter")]
+    (let [out-file (fsp/add-file-part in-vcf "nofilter")]
       (when (itx/needs-run? out-file)
         (with-open [vcf-iter (gvc/get-vcf-iterator in-vcf ref)]
           (gvc/write-vcf-w-template in-vcf {:out out-file}

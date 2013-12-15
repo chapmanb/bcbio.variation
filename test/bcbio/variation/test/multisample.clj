@@ -5,7 +5,9 @@
         [bcbio.variation.compare :only [variant-comparison-from-config]]
         [bcbio.variation.multisample])
   (:require [me.raynes.fs :as fs]
-            [bcbio.run.itx :as itx]))
+            [bcbio.run.fsp :as fsp]
+            [bcbio.run.itx :as itx]
+            [bcbio.variation.ensemble :as ensemble]))
 
 (background
  (around :facts
@@ -22,9 +24,9 @@
                             :c1-discordant (str (fs/file multi-outdir "HG00101multi-c1-c2-c1-discordant.vcf"))
                             :c2-discordant (str (fs/file multi-outdir "HG00101multi-c1-c2-c2-discordant.vcf"))}]
            (doseq [x (concat [] (vals compare-out))]
-             (itx/remove-path x)
+             (fsp/remove-path x)
              (when (.endsWith x ".vcf")
-               (itx/remove-path (str x ".idx"))))
+               (fsp/remove-path (str x ".idx"))))
            ?form)))
 
 (facts "Check for multiple samples in a VCF file"
@@ -39,6 +41,15 @@
         c2 {:name "freebayes" :file vcf-single2}
         exp {:sample "Test1" :ref ref-file :params {:compare-approach :approximate}}
         config {:dir {:out (str (fs/file data-dir "flex"))}}]
-    (itx/remove-path (get-in config [:dir :out]))
+    (fsp/remove-path (get-in config [:dir :out]))
     (fs/mkdir (get-in config [:dir :out]))
     (-> (compare-two-vcf-flexible c1 c2 exp config) keys) => (contains :c-files)))
+
+(facts "Ensemble consensus preparation from multiple sample inputs."
+  (let [out-file (fsp/add-file-part vcf-m1 "ensemble")
+        work-dir (str (fsp/file-root out-file) "-work")
+        config {:ensemble {:classifiers {:base ["DP"]}}
+                :names ["T1" "T2"]}]
+    (fsp/remove-path work-dir)
+    (fsp/remove-path out-file)
+    (ensemble/consensus-calls [vcf-m1 vcf-m2] ref-file out-file config) => out-file))

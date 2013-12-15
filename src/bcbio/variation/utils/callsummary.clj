@@ -6,6 +6,7 @@
                                                get-vcf-retriever variants-in-region]])
   (:require [clojure.string :as string]
             [me.raynes.fs :as fs]
+            [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]))
 
 (defn- get-prepped-fname
@@ -39,7 +40,7 @@
         orig-files (filter fs/exists? (map #(get-prepped-fname % exp config) (:calls exp)))
         fname-map (zipmap orig-files (map :name (:calls exp)))
         retriever (apply get-vcf-retriever (cons (:ref exp) orig-files))
-        out-file (str (itx/file-root in-file) ".csv")]
+        out-file (str (fsp/file-root in-file) ".csv")]
     (with-open [vrn-iter (get-vcf-iterator in-file (:ref exp))
                 wtr (writer out-file)]
       (doseq [vc (filter #(empty? (:filters %)) (parse-vcf vrn-iter))]

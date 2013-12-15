@@ -9,6 +9,7 @@
   (:use [clojure.java.io]
         [bcbio.variation.variantcontext :only [parse-vcf get-vcf-iterator write-vcf-w-template]])
   (:require [clojure.string :as string]
+            [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]))
 
 ;; ## Convert diploid -> haploid
@@ -96,8 +97,8 @@
 (defn diploid-calls-to-haploid
   "Convert set of diploid GATK calls on a haploid genome based on likelihoods."
   [vcf ref & {:keys [out-dir]}]
-  (let [out-files {:haploid (itx/add-file-part vcf "haploid" out-dir)
-                   :unchanged (itx/add-file-part vcf "nonhaploid" out-dir)}]
+  (let [out-files {:haploid (fsp/add-file-part vcf "haploid" out-dir)
+                   :unchanged (fsp/add-file-part vcf "nonhaploid" out-dir)}]
     (when (itx/needs-run? (vals out-files))
       (with-open [vcf-iter (get-vcf-iterator vcf ref)]
         (write-vcf-w-template vcf out-files
@@ -116,7 +117,7 @@
                 (let [in-map (-> (.getLikelihoods g) (.getAsMap true))]
                   (get (zipmap (map #(.name %) (keys in-map)) (vals in-map))
                        "HOM_VAR")))))]
-  (let [out-file (str (itx/file-root vcf-file) "-het-pls.csv")]
+  (let [out-file (str (fsp/file-root vcf-file) "-het-pls.csv")]
     (with-open [vcf-iter (get-vcf-iterator vcf-file ref-file)
                 wtr (writer out-file)]
       (doseq [val (->> (parse-vcf vcf-iter)

@@ -9,6 +9,8 @@ file.dot
 .lein-deps-sum
 .lein-*
 .clojurescript-output
+.nrepl-port
+.ropeproject
 test/data/*.idx
 test/data/*.eval
 test/data/gatk-calls-combine*
@@ -44,6 +46,7 @@ test/data/*-gemini.db
 test/data/gatk-nocalls-*
 test/data/*sum.csv
 test/data/method-comparison-summary*
+test/data/1000genome-multi-ensemble*
 test/data/phased/*.idx
 test/data/phased/*-sorted.bed
 test/data/phased/*-illumina.bed
@@ -55,6 +58,9 @@ test/data/digrade/work/
 test/data/svs/*.idx
 test/data/svs/*-sorted.bed
 test/data/svs/*-safesv.vcf
+test/data/giab-comparison/*.idx
+test/data/giab-comparison/*-sorted.bed
+test/data/giab-comparison/grading
 test/data/svs/reference-calls-sv-prep.vcf
 test/data/svs/reference-calls-sv-prep-regions.bed
 test/data/svs/reference-regions-wsvs.bed
@@ -69,3 +75,4 @@ test/data/fosmid/
 test/data/web-test/
 test/data/single/
 test/data/tmp*
+test/data/txtmp*

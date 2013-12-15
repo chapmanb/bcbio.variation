@@ -8,6 +8,7 @@
             [clojure.string :as string]
             [clojure.math.combinatorics :as combo]
             [lonocloud.synthread :as ->]
+            [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]
             [bcbio.variation.annotation :as annotation]
             [bcbio.variation.combine :as combine]
@@ -45,7 +46,10 @@
 ;; ## Summarize grading results
 
 (defn- pick-discordant-reason
-  "Decide on a likely reason for a discordant variant call"
+  "Decide on a likely reason for a discordant variant call.
+  Low coverage threshold taken from work modeling variant detection at
+  different coverages:
+  http://www.ncbi.nlm.nih.gov/pubmed/23773188"
   [vc attr-getter]
   (letfn [(is-repeat-region? [attrs]
             (or (< (or (get attrs "gms_illumina") 100.0) 50.0)
@@ -54,7 +58,7 @@
             (contains? (or (get attrs "in_cse") #{}) "error-prone"))]
     (let [attrs (attr-getter ["DP" "rmsk" "gms_illumina" "in_cse"] vc)]
       (cond
-       (< (or (get attrs "DP") 500) 10) :low-coverage
+       (< (or (get attrs "DP") 500) 13) :low-coverage
        (is-error-prone? attrs) :error-prone
        (is-repeat-region? attrs) :repeat
        :else :other))))
@@ -102,7 +106,7 @@
 (defn- to-refcalls
   "Convert truth discordants into reference calls "
   [f ref-file]
-  (let [out-file (itx/add-file-part f "asref")]
+  (let [out-file (fsp/add-file-part f "asref")]
     (when (itx/needs-run? out-file)
       (with-open [in-vcf-iter (gvc/get-vcf-iterator f ref-file)]
         (gvc/write-vcf-w-template f {:out out-file}
@@ -159,8 +163,9 @@
    :discordant-missing -- probability that grading standard is actually reference.
    :discordant-hethom  -- probability that grading standard is alternative variant."
   [ref-vc cat]
+  {:pre [(or (nil? ref-vc) (= 1 (:num-samples ref-vc)))]}
   (let [pls (when ref-vc
-              (attr/get-pls ref-vc))]
+              (attr/get-pls (-> ref-vc :genotypes first)))]
     (case cat
       :discordant-missing (get pls "HOM_REF")
       :discordant-hethom (first (vals (dissoc pls "HOM_REF")))
@@ -198,7 +203,7 @@
         ref-file (get-in cmp [:exp :ref])
         align-bam (get-in cmp [:exp :align])
         base-eval-vcf (merge-discordants eval-vcf truth-vcf align-bam ref-file)
-        out-vcf (itx/add-file-part eval-vcf "annotate")]
+        out-vcf (fsp/add-file-part eval-vcf "annotate")]
     (when (itx/needs-run? out-vcf)
       (with-open [ref-get (gvc/get-vcf-retriever ref-file truth-vcf)
                   eval-iter (gvc/get-vcf-iterator base-eval-vcf ref-file)]

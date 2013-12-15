@@ -9,10 +9,11 @@
         [bcbio.variation.multiple]
         [bcbio.variation.variantcontext :exclude [-main]])
   (:require [me.raynes.fs :as fs]
+            [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]))
 
 (defn- prep-variant-comparison* [out-dir config-file]
-  (itx/remove-path out-dir)
+  (fsp/remove-path out-dir)
   (variant-comparison-from-config config-file))
 (def prep-variant-comparison (memoize prep-variant-comparison*))
 
@@ -24,10 +25,10 @@
                union-file (str (fs/file (get-in config [:dir :prep]) "multiple"
                                         "Test1-multiall-fullcombine-gatk.vcf"))
                train-dir (str (fs/file (get-in config [:dir :prep]) "train"))
-               trusted-out (itx/add-file-part union-file "trusted")
+               trusted-out (fsp/add-file-part union-file "trusted")
                cmps (prep-variant-comparison out-dir config-file)]
            (doseq [x [trusted-out train-dir]]
-             (itx/remove-path x))
+             (fsp/remove-path x))
            ?form)))
 
 (defn get-out-files [out-dir x ext]

@@ -32,11 +32,13 @@
             [clj-yaml.core :as yaml]
             [me.raynes.fs :as fs]
             [lonocloud.synthread :as ->]
+            [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]
             [bcbio.run.broad :as broad]
             [bcbio.variation.grade :as grade]
             [bcbio.variation.phasing :as phasing]
-            [bcbio.variation.report :as report]))
+            [bcbio.variation.report :as report]
+            [bcbio.variation.variantcontext :as gvc]))
 
 ;; ## Variance assessment
 
@@ -45,7 +47,8 @@
   [sample call1 call2 ref & {:keys [out-dir intervals]}]
   (let [base-dir (if (nil? out-dir) (fs/parent (:file call1)) out-dir)
         ready-intervals (remove nil? (flatten [intervals (:intervals call1)
-                                               (:intervals call2)]))]
+                                               (:intervals call2)]))
+        sample (or sample (-> call1 :file gvc/get-vcf-header .getGenotypeSamples first))]
     (if-not (fs/exists? base-dir)
       (fs/mkdirs base-dir))
     (doall
@@ -86,8 +89,8 @@
   "Provide concordant and discordant variants for two variant files."
   [vcf1 vcf2 ref]
   (let [combo-file (combine-variants [vcf1 vcf2] ref)
-        out-map {:concordant (itx/add-file-part combo-file "concordant")
-                 :discordant (itx/add-file-part combo-file "discordant")}]
+        out-map {:concordant (fsp/add-file-part combo-file "concordant")
+                 :discordant (fsp/add-file-part combo-file "discordant")}]
     (if-not (fs/exists? (:concordant out-map))
       (with-open [combo-vcf-iter (get-vcf-iterator combo-file ref)]
         (write-vcf-w-template combo-file out-map (vc-by-match-category combo-vcf-iter)
@@ -158,7 +161,7 @@
                                           :out-base (first c-files)
                                           :intervals (:intervals exp))
           c-eval (calc-variant-eval-metrics (:file c1) (:file c2) (:ref exp)
-                                            :out-base (itx/add-file-part (first c-files) "callable")
+                                            :out-base (fsp/add-file-part (first c-files) "callable")
                                             :intervals (callable-intervals exp c1 c2))]
       {:c-files (zipmap-ordered (map keyword
                                      ["concordant" (discordant-name c1) (discordant-name c2)])
@@ -238,7 +241,7 @@
         (fs/mkdirs (get-in config :dir :out)))
       (writer (str (fs/file (get-in config [:dir :out])
                             (format "%s-%s"
-                                    (itx/file-root (fs/base-name config-file)) ext)))))
+                                    (fsp/file-root (fs/base-name config-file)) ext)))))
     (writer System/out)))
 
 (defn variant-comparison-from-config
@@ -251,7 +254,7 @@
                                     (compare-two-vcf c1 c2 exp config))]
                          (finalize-comparisons cmps exp config))))
         grading-file (str (fs/file (get-in config [:dir :out])
-                                   (format "%s-grading.yaml" (itx/file-root (fs/base-name config-file)))))]
+                                   (format "%s-grading.yaml" (fsp/file-root (fs/base-name config-file)))))]
     (do-transition config :summary "Summarize comparisons")
     (with-open [w (get-summary-writer config config-file "summary.txt")]
       (report/write-summary-txt w comparisons))

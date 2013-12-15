@@ -11,6 +11,7 @@
             [clojure.string :as string]
             [me.raynes.fs :as fs]
             [aws.sdk.s3 :as s3]
+            [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]))
 
 ;; ## Combine and annotate VCFs
@@ -42,7 +43,7 @@
       (let [sample-bam (download-sample-bam (:sample sample-info) ftp-config prep-dir)
             ann-vcf (add-gatk-annotations (:file sample-info) sample-bam ref)]
         (fs/rename ann-vcf final-file)
-        (itx/remove-path sample-bam)))
+        (fsp/remove-path sample-bam)))
     final-file))
 
 (defn- combine-samples
@@ -67,7 +68,7 @@
               (shell/sh "gunzip" (str (fs/base-name fname)))))]
     (let [dl-url (format (:vcf-url ftp-config) chrom)
           local-file (str (fs/file out-dir (fs/base-name dl-url)))
-          final-file (itx/remove-zip-ext local-file)]
+          final-file (fsp/remove-zip-ext local-file)]
       (when-not (fs/exists? final-file)
         (download-vcf dl-url local-file))
       final-file)))
@@ -83,7 +84,7 @@
         (doseq [sample samples]
           (select-by-sample sample chrom-vcf chrom ref :out-dir out-dir
                             :remove-refcalls true))
-        (itx/remove-path chrom-vcf)))
+        (fsp/remove-path chrom-vcf)))
     sample-info))
 
 ;; ## Create combined background file

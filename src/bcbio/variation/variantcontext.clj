@@ -3,7 +3,6 @@
    objects, which represent variant data stored in VCF files."
   (:import [org.broad.tribble.index IndexFactory]
            [org.broad.tribble AbstractFeatureReader]
-           [org.broad.tribble.readers AsciiLineReader]
            [org.broad.tribble.util LittleEndianOutputStream]
            [org.broadinstitute.variant.vcf
             VCFCodec VCFUtils VCFHeader VCFFilterHeaderLine]
@@ -19,6 +18,7 @@
         [bcbio.align.ref :only [get-seq-dict]])
   (:require [clojure.string :as string]
             [lonocloud.synthread :as ->]
+            [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]))
 
 ;; ## Represent VariantContext objects
@@ -133,25 +133,11 @@
   [vcf-source]
   (map from-vc (iterator-seq (.iterator vcf-source))))
 
-(defn get-vcf-line-parser
-  "Retrieve parser to do line-by-line parsing of VCF files."
-  [vcf-reader]
-  (let [codec (VCFCodec.)]
-    (.readHeader codec vcf-reader)
-    (fn [line]
-      (from-vc (.decode codec line)))))
-
-(defn- line-vcf-parser
-  [vcf]
-  (let [parser (with-open [rdr (AsciiLineReader. (input-stream vcf))]
-                 (get-vcf-line-parser rdr))]
-    (map parser (drop-while #(.startsWith % "#") (line-seq (reader vcf))))))
-
 (defn get-vcf-header
   "Retrieve header from input VCF file."
   [vcf-file]
-  (with-open [vcf-reader (AsciiLineReader. (input-stream vcf-file))]
-    (.readHeader (VCFCodec.) vcf-reader)))
+  (with-open [vcf-reader (.makeSourceFromStream (VCFCodec.) (input-stream vcf-file))]
+    (.readActualHeader (VCFCodec.) vcf-reader)))
 
 ;; ## Writing VCF files
 
@@ -214,7 +200,7 @@
 (defn write-vcf-from-filter
   "Write VCF file from input using a filter function."
   [vcf ref out-part fname fdesc passes?]
-  (let [out-file (itx/add-file-part vcf out-part)]
+  (let [out-file (fsp/add-file-part vcf out-part)]
     (when (itx/needs-run? out-file)
       (with-open [vcf-iter (get-vcf-iterator vcf ref)]
         (write-vcf-w-template vcf {:out out-file}
@@ -226,7 +212,7 @@
 (defn select-variants
   "Select variants from an input file with supplied filter."
   [in-file passes? file-out-part ref-file & {:keys [out-dir]}]
-  (let [out-file (itx/add-file-part in-file file-out-part out-dir)]
+  (let [out-file (fsp/add-file-part in-file file-out-part out-dir)]
     (when (itx/needs-run? out-file)
       (with-open [in-iter (get-vcf-iterator in-file ref-file)]
         (write-vcf-w-template in-file {:out out-file}
@@ -245,7 +231,8 @@
   (let [all-attrs [["PL" seq (fn [x _ v] (.PL x (int-array v)))]
                    ["PVAL" identity (fn [x k v] (.attribute x k v))]
                    ["DP" identity (fn [x _ v] (.DP x v))]
-                   ["AD" seq (fn [x _ v] (.AD x (int-array v)))]]]
+                   ["AD" seq (fn [x _ v] (.AD x (int-array v)))]
+                   ["AO" identity (fn [x a v] (.attribute x a v))]]]
     (letfn [(alleles->genotype [g]
               (-> (GenotypeBuilder. (:sample-name g) (:alleles g))
                   (->/for [[attr val-fn add-fn] all-attrs]
@@ -276,7 +263,6 @@
   (with-open [vcf-iter (get-vcf-iterator vcf ref)]
     (letfn [(item-iter []
               (case approach
-                "line" (map :vc (line-vcf-parser vcf))
                 "gatk" (iterator-seq (.iterator vcf-iter))
                 "orig" (map :vc (parse-vcf vcf-iter))))]
       (write-vcf-w-template vcf {:out "vctest.vcf"} (item-iter) ref)

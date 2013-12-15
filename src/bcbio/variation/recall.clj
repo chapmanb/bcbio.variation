@@ -10,20 +10,22 @@
         [bcbio.variation.filter.intervals :only [select-by-sample]]
         [bcbio.variation.multisample :only [multiple-samples?]])
   (:require [clojure.string :as string]
+            [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]
             [bcbio.variation.filter.attr :as attr]
             [bcbio.variation.variantcontext :as gvc]))
 
 ;; ## Utilities
 
-(defn- set-header-to-sample [sample _ header]
-  (VCFHeader. (.getMetaDataInInputOrder header) (ordered-set sample)))
+(defn- set-header-to-samples [samples _ header]
+  (VCFHeader. (.getMetaDataInInputOrder header) samples))
 
 (defn- no-recall-vcfs
   "Retrieve inputs VCFs not involved in preparing a recall VCF.
    Avoid double pulling inputs with the same initial call files."
   [all-vcfs vcf-configs]
   (let [include-names (->> vcf-configs
+                           (remove :recall)
                            (group-by :file)
                            (map second)
                            (map first)
@@ -49,19 +51,21 @@
         g (->> (:genotypes vc)
                    (filter #(= sample (:sample-name %)))
                    first)]
-    {:sample-name sample
-     :qual (:qual vc)
-     :vc-type (:type vc)
-     :call-type (:type g)
-     :ref-allele (:ref-allele vc)
-     :alleles (sort-by allele-order (:alleles g))
-     :attributes (select-keys (:attributes g) ["PL" "DP" "AD" "PVAL"])
-     :has-likelihood (if (seq (get-in g [:attributes "PL"])) 1 0)
-     :attr-count (+ (if (seq (get-in g [:attributes "PL"])) 1 0)
-                    (if (seq (get-in g [:attributes "PVAL"])) 1 0)
-                    (if (seq (get-in g [:attributes "AD"])) 1 0)
-                    (if (get-in g [:attributes "DP"]) 1 0))
-     :pl (attr/get-vc-attr vc "PL" nil)}))
+    (when g
+      {:sample-name sample
+       :qual (:qual vc)
+       :vc-type (:type vc)
+       :call-type (:type g)
+       :ref-allele (:ref-allele vc)
+       :alleles (sort-by allele-order (:alleles g))
+       :attributes (select-keys (:attributes g) ["PL" "DP" "AD" "PVAL"])
+       :has-likelihood (if (seq (get-in g [:attributes "PL"])) 1 0)
+       :attr-count (+ (if (seq (get-in g [:attributes "PL"])) 1 0)
+                      (if (seq (get-in g [:attributes "PVAL"])) 1 0)
+                      (if (seq (get-in g [:attributes "AD"])) 1 0)
+                      (if (get-in g [:attributes "DP"]) 1 0))
+       :pl (attr/get-pl g)
+       })))
 
 (defn- best-supported-alleles
   "Retrieve alleles with best support from multiple inputs.
@@ -90,34 +94,58 @@
          last ; Extract the alleles
          )))
 
+(defn- best-supported-sample-gs
+  "Identify the best supported genotypes for a sample from multiple variant calls."
+  [vcs sample]
+  (->> vcs
+       (map (partial get-sample-call sample))
+       (remove nil?)
+       best-supported-alleles))
+
+(defn- update-set-info
+  "Provide more friendly set intersection information reported by GATK CombineVariants."
+  [old calls]
+  (string/join "-"
+               (if (= old "Intersection")
+                 (map :name (remove :recall calls))
+                 (remove #(.endsWith % "combo") (string/split old #"-")))))
+
 (defn- update-vc-w-consensus
   "Update a variant context with consensus genotype from multiple inputs.
    Calculates the consensus set of calls, swapping calls to that if it
    exists. If there is no consensus default to the existing allele call."
-  [vc sample input-vc-getter]
+  [vc samples calls input-vc-getter]
   (let [match-fn (juxt :start :ref-allele)
-        most-likely (->> (gvc/variants-in-region input-vc-getter vc)
-                         (filter #(= (match-fn %) (match-fn vc)))
-                         (map (partial get-sample-call sample))
-                         best-supported-alleles)]
-    (when most-likely
+        other-vcs (filter #(= (match-fn %) (match-fn vc))
+                          (gvc/variants-in-region input-vc-getter vc))
+        most-likely-gs (->> samples
+                            (map (partial best-supported-sample-gs other-vcs))
+                            (remove nil?))]
+    (when (seq most-likely-gs)
       (-> (VariantContextBuilder. (:vc vc))
-          (.alleles (set (cons (:ref-allele vc) (:alleles most-likely))))
-          (.genotypes (gvc/create-genotypes [most-likely] :attrs {"PL" "PVAL" "DP" "AD"}))
+          (.alleles (conj (set (remove #(.isNoCall %) (mapcat :alleles most-likely-gs)))
+                          (:ref-allele vc)))
+          (.attributes (-> (map :attributes (reverse other-vcs))
+                           (#(apply merge %))
+                           (assoc "set" (update-set-info (get-in vc [:attributes "set"]) calls))))
+          (.genotypes (gvc/create-genotypes most-likely-gs :attrs #{"PL" "PVAL" "DP" "AD" "AO"}))
           .make))))
 
 (defn- recall-w-consensus
   "Recall variants in a combined set of variants based on consensus of all inputs."
-  [base-vcf input-vcfs sample ref-file]
-  (let [out-file (itx/add-file-part base-vcf "consensus")]
+  [base-vcf input-vcfs calls sample ref-file]
+  (let [out-file (fsp/add-file-part base-vcf "consensus")]
     (when (itx/needs-run? out-file)
       (with-open [in-vcf-iter (gvc/get-vcf-iterator base-vcf ref-file)
                   input-vc-getter (apply gvc/get-vcf-retriever (cons ref-file input-vcfs))]
-        (gvc/write-vcf-w-template base-vcf {:out out-file}
-                                  (remove nil? (map #(update-vc-w-consensus % sample input-vc-getter)
-                                                    (gvc/parse-vcf in-vcf-iter)))
-                                  ref-file
-                                  :header-update-fn (partial set-header-to-sample sample))))
+        (let [samples (into (ordered-set) (if sample
+                                            [sample]
+                                            (-> input-vcfs first gvc/get-vcf-header .getGenotypeSamples)))]
+          (gvc/write-vcf-w-template base-vcf {:out out-file}
+                                    (remove nil? (map #(update-vc-w-consensus % samples calls input-vc-getter)
+                                                      (gvc/parse-vcf in-vcf-iter)))
+                                    ref-file
+                                    :header-update-fn (partial set-header-to-samples samples)))))
     out-file))
 
 (defn- get-min-merged
@@ -125,7 +153,8 @@
   [vcfs exp out-dir intervals]
   (-> (combine-variants vcfs (:ref exp) :merge-type :minimal :intervals intervals
                         :out-dir out-dir :check-ploidy? false
-                        :name-map (zipmap vcfs (map :name (:calls exp))))
+                        :name-map (zipmap vcfs (map :name (:calls exp)))
+                        :quiet-out? false)
       (fix-minimal-combined vcfs (:ref exp))))
 
 (defmulti recall-vcf
@@ -141,7 +170,7 @@
   (-> vcfs
       (get-min-merged exp out-dir intervals)
       (recall-w-consensus (no-recall-vcfs vcfs (:calls exp))
-                          (:sample exp) (:ref exp))))
+                          (:calls exp) (:sample exp) (:ref exp))))
 
 (defn create-merged
   "Create merged VCF files with no-call/ref-calls for each of the inputs.
@@ -154,7 +183,7 @@
                             :approach (get-in exp [:params :recall-approach] :consensus)
                             :file v :bam b}
                  merged (recall-vcf base-info vcfs exp out-dir intervals)]
-             (if (get vcf-config :remove-refcalls true)
+             (if (and (:sample exp) (get vcf-config :remove-refcalls true))
                (select-by-sample (:sample exp) merged nil (:ref exp)
                                  :remove-refcalls true :ext "cleaned")
                merged))
@@ -205,7 +234,7 @@
   "Create individual sample variant files from input VCF."
   [vcf-file & {:keys [out-dir]}]
   (let [samples (-> vcf-file gvc/get-vcf-header .getGenotypeSamples)
-        out-files (into (ordered-map) (map (fn [x] [x (itx/add-file-part vcf-file x out-dir)])
+        out-files (into (ordered-map) (map (fn [x] [x (fsp/add-file-part vcf-file x out-dir)])
                                            samples))]
     (when (itx/needs-run? (vals out-files))
       (with-open [rdr (reader vcf-file)]
@@ -247,7 +276,7 @@
              (.startsWith line "#CHROM") (split-variant-line line)
              (.startsWith line "#") nil
              :else (split-variant-line line)))]
-    (let [out-file (itx/add-file-part in-vcf "nosamples" out-dir)]
+    (let [out-file (fsp/add-file-part in-vcf "nosamples" out-dir)]
       (when (itx/needs-run? out-file)
         (with-open [rdr (reader in-vcf)
                     wtr (writer out-file)]
@@ -291,7 +320,7 @@
           (convert-vcs [vcf-source call-source]
             (for [vc (gvc/parse-vcf vcf-source)]
               [:out (maybe-callable-vc vc call-source)]))]
-    (let [out-file (itx/add-file-part in-vcf "wrefs")]
+    (let [out-file (fsp/add-file-part in-vcf "wrefs")]
       (when (itx/needs-run? out-file)
         (with-open [in-vcf-iter (gvc/get-vcf-iterator in-vcf ref)
                     call-source (get-callable-checker align-bam ref :out-dir out-dir

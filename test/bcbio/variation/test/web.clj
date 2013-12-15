@@ -5,6 +5,7 @@
         [bcbio.variation.workflow.xprize])
   (:require [me.raynes.fs :as fs]
             [clj-yaml.core :as yaml]
+            [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]))
 
 (let [conf-file (str (fs/file "config" "web-processing.yaml"))
@@ -16,6 +17,6 @@
                  :comparison-genome "NA00001"
                  :in-files {:variant-file (str (fs/file test-dir "phasing-contestant.vcf"))
                             :region-file (str (fs/file test-dir "phasing-contestant-regions.bed"))}}]
-  (against-background [(before :facts (vec (map itx/remove-path [(:dir work-info)])))]
+  (against-background [(before :facts (vec (map fsp/remove-path [(:dir work-info)])))]
     (facts "Setup working directory for processing from configuration info."
       (create-work-config work-info config) => (has-suffix "process.yaml"))))

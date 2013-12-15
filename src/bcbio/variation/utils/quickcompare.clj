@@ -9,6 +9,7 @@
             [clojure.java.io :as io]
             [clojure.tools.cli :refer [cli]]
             [me.raynes.fs :as fs]
+            [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]
             [bcbio.run.parallel :refer [rmap]]
             [bcbio.variation.variantcontext :as gvc]))
@@ -88,8 +89,8 @@
 (defn vcfdir-to-base
   "Compare a directory of single-sample VCFs to a multi-sample base VCF."
   [base-vcf vcf-dir ref-file cores]
-  (let [out-file (-> (itx/add-file-part base-vcf "cmp" vcf-dir)
-                     itx/file-root
+  (let [out-file (-> (fsp/add-file-part base-vcf "cmp" vcf-dir)
+                     fsp/file-root
                      (str ".csv"))
         vcf-files (map str (fs/glob (fs/file vcf-dir "*.vcf")))]
     (itx/with-tx-file [tx-out-file out-file]

@@ -3,13 +3,13 @@
   (:use [midje.sweet]
         [bcbio.align.reorder])
   (:require [me.raynes.fs :as fs]
-            [bcbio.run.itx :as itx]))
+            [bcbio.run.fsp :as fsp]))
 
 (let [data-dir (str (fs/file "." "test" "data"))
       ref (str (fs/file data-dir "GRCh37.fa"))
       align-bam (str (fs/file data-dir "aligned-needfix.bam"))
-      out-bam (itx/add-file-part align-bam "reorder")]
-  (against-background [(before :facts (doall (map itx/remove-path
+      out-bam (fsp/add-file-part align-bam "reorder")]
+  (against-background [(before :facts (doall (map fsp/remove-path
                                                   [out-bam (str align-bam ".bai")])))]
     (facts "Reorder BAM files to match contigs."
       (get-new-chr-order ["22" "MT"] ["22" "MT" "X"] ref) => nil

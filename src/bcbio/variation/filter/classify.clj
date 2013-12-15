@@ -17,6 +17,7 @@
                                                get-vcf-retriever variants-in-region]])
   (:require [clojure.string :as string]
             [me.raynes.fs :as fs]
+            [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]
             [bcbio.variation.filter.trusted :as trusted]
             [bcbio.variation.filter.rules :as rules]
@@ -146,8 +147,10 @@
   (letfn [(check-attrgroup-classifier [[attr-key attrs]]
             (let [c (get cs (get-classifier-type vc attr-key attr-get))
                   val (get-vc-inputs attrs normalizer :fail vc)
-                  score (classifier-classify c (-> (get-dataset attrs 1)
-                                                   (make-instance val)))]
+                  score (if c
+                          (classifier-classify c (-> (get-dataset attrs 1)
+                                                     (make-instance val)))
+                            -1)]
               (when (pos? score) attr-key)))]
     (let [c-filters (->> (:classifiers config)
                          (map check-attrgroup-classifier)
@@ -180,7 +183,7 @@
             (->> (variants-in-region retriever (:chr vc) (:start vc) (:end vc))
                  (filter #(= (:start %) (:start vc)))
                  (map :vc)))]
-    (let [out-file (itx/add-file-part orig-file ext out-dir)
+    (let [out-file (fsp/add-file-part orig-file ext out-dir)
           target-file (get target-files (keyword ext))]
       (when (itx/needs-run? out-file)
         (with-open [vcf-iter (get-vcf-iterator target-file (:ref exp))
@@ -271,7 +274,7 @@
           that pass the previous round of filtering."}
   [orig-file train-files call exp params ext out-dir]
   (let [passes-rules? (rules/vc-checker orig-file call exp)
-        out-file (itx/add-file-part orig-file "tps" out-dir)]
+        out-file (fsp/add-file-part orig-file "tps" out-dir)]
     (letfn [(low-support-novel? [vc]
               (passes-rules? vc
                              :yes [:below-call-support :het-snp :novel :low-depth]))
@@ -298,7 +301,7 @@
           that fail the previous round of filtering."}
   [orig-file train-files call exp params ext out-dir]
   (let [passes-rules? (rules/vc-checker orig-file call exp)
-        out-file (itx/add-file-part orig-file "fps" out-dir)]
+        out-file (fsp/add-file-part orig-file "fps" out-dir)]
     (letfn [(well-supported-known? [vc]
               (passes-rules? vc
                              :yes [:below-call-support :het-snp]
@@ -329,7 +332,7 @@
   [base-vcf train-files call exp config]
   (let [out-dir (when-let [tround (:round train-files)]
                   (str (fs/file (fs/parent base-vcf) "trainround") tround))
-        out-file (itx/add-file-part base-vcf "cfilter" out-dir)]
+        out-file (fsp/add-file-part base-vcf "cfilter" out-dir)]
     (when (and out-dir (not (fs/exists? out-dir)))
       (fs/mkdirs out-dir))
     (when (itx/needs-run? out-file)

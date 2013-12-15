@@ -16,6 +16,7 @@
         [bcbio.variation.recall :exclude [-main]]
         [bcbio.variation.variantcontext :exclude [-main]])
   (:require [me.raynes.fs :as fs]
+            [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]))
 
 (background
@@ -26,57 +27,57 @@
                vcf1 (str (fs/file data-dir "gatk-calls.vcf"))
                vcf2 (str (fs/file data-dir "freebayes-calls.vcf"))
                nocall-vcf (str (fs/file data-dir "gatk-nocalls.vcf"))
-               nocall-out (itx/add-file-part nocall-vcf "wrefs")
+               nocall-out (fsp/add-file-part nocall-vcf "wrefs")
                pvcf (str (fs/file data-dir "phasing-contestant.vcf"))
                ref-vcf (str (fs/file data-dir "phasing-reference.vcf"))
                ref2-vcf (str (fs/file data-dir "phasing-reference2.vcf"))
                align-bam (str (fs/file data-dir "aligned-reads.bam"))
                sample "Test1"
-               annotated-out (itx/add-file-part vcf2 "annotated")
-               combo-out (itx/add-file-part vcf1 "combine")
-               compare-out (str (itx/file-root vcf1) ".eval")
-               out-sum-compare (str (itx/file-root vcf1) "-summary.eval")
-               filter-out (itx/add-file-part vcf1 "filter")
-               nofilter-out (itx/add-file-part filter-out "nofilter")
-               combine-out [(itx/add-file-part vcf1 "fullcombine-wrefs-cleaned")]
-               combine-out-cons [(itx/add-file-part vcf1
+               annotated-out (fsp/add-file-part vcf2 "annotated")
+               combo-out (fsp/add-file-part vcf1 "combine")
+               compare-out (str (fsp/file-root vcf1) ".eval")
+               out-sum-compare (str (fsp/file-root vcf1) "-summary.eval")
+               filter-out (fsp/add-file-part vcf1 "filter")
+               nofilter-out (fsp/add-file-part filter-out "nofilter")
+               combine-out [(fsp/add-file-part vcf1 "fullcombine-wrefs-cleaned")]
+               combine-out-cons [(fsp/add-file-part vcf1
                                                     "mincombine-fix-consensus-cleaned")]
-               combine-out-xtra [(itx/add-file-part vcf1 "mincombine")
-                                 (itx/add-file-part vcf1 "mincombine-fix")
-                                 (itx/add-file-part vcf1 "mincombine-fix-consensus")
-                                 (itx/add-file-part vcf1 "mincombine-fix-consensus-cleaned")
-                                 (itx/add-file-part vcf1 "mincombine-fix-consensus-singles")
-                                 (itx/add-file-part vcf1 "mincombine-fix-consensus-recallfilter")
-                                 (itx/add-file-part vcf1 "mincombine-fix-consensus-recallfilter-cleaned")
-                                 (itx/add-file-part vcf1 "mincombine-fix-consensus-singles-wrefs")
-                                 (itx/add-file-part vcf1 "fullcombine")
-                                 (itx/add-file-part vcf1 "fullcombine-Test1-called")
-                                 (itx/add-file-part vcf1 "fullcombine-Test1-nocall")
-                                 (itx/add-file-part vcf1 "fullcombine-Test1-nocall-wrefs")
-                                 (itx/add-file-part vcf2 "fullcombine")
-                                 (itx/add-file-part vcf1 "fullcombine-wrefs")
-                                 (itx/add-file-part vcf2 "fullcombine-wrefs")
-                                 (itx/add-file-part vcf2 "fullcombine-Test1-called")
-                                 (itx/add-file-part vcf2 "fullcombine-Test1-nocall")
-                                 (itx/add-file-part vcf2 "fullcombine-Test1-nocall-wrefs")]
-               match-out {:concordant (itx/add-file-part combo-out "concordant")
-                          :discordant (itx/add-file-part combo-out "discordant")}
+               combine-out-xtra [(fsp/add-file-part vcf1 "mincombine")
+                                 (fsp/add-file-part vcf1 "mincombine-fix")
+                                 (fsp/add-file-part vcf1 "mincombine-fix-consensus")
+                                 (fsp/add-file-part vcf1 "mincombine-fix-consensus-cleaned")
+                                 (fsp/add-file-part vcf1 "mincombine-fix-consensus-singles")
+                                 (fsp/add-file-part vcf1 "mincombine-fix-consensus-recallfilter")
+                                 (fsp/add-file-part vcf1 "mincombine-fix-consensus-recallfilter-cleaned")
+                                 (fsp/add-file-part vcf1 "mincombine-fix-consensus-singles-wrefs")
+                                 (fsp/add-file-part vcf1 "fullcombine")
+                                 (fsp/add-file-part vcf1 "fullcombine-Test1-called")
+                                 (fsp/add-file-part vcf1 "fullcombine-Test1-nocall")
+                                 (fsp/add-file-part vcf1 "fullcombine-Test1-nocall-wrefs")
+                                 (fsp/add-file-part vcf2 "fullcombine")
+                                 (fsp/add-file-part vcf1 "fullcombine-wrefs")
+                                 (fsp/add-file-part vcf2 "fullcombine-wrefs")
+                                 (fsp/add-file-part vcf2 "fullcombine-Test1-called")
+                                 (fsp/add-file-part vcf2 "fullcombine-Test1-nocall")
+                                 (fsp/add-file-part vcf2 "fullcombine-Test1-nocall-wrefs")]
+               match-out {:concordant (fsp/add-file-part combo-out "concordant")
+                          :discordant (fsp/add-file-part combo-out "discordant")}
                select-out (doall (map #(str (fs/file data-dir (format "%s-%s.vcf" sample %)))
                                       ["gatk-freebayes-concordance"
                                        "gatk-freebayes-discordance"
                                        "freebayes-gatk-discordance"]))
-               out-callable (map #(format "%s-%s.bed" (itx/file-root align-bam) %)
+               out-callable (map #(format "%s-%s.bed" (fsp/file-root align-bam) %)
                                  ["callable" "callable-intervals" "callable-sorted"
                                   "callable-intervals-sorted"])
-               out-intervals (itx/add-file-part (first out-callable) "intervals")]
+               out-intervals (fsp/add-file-part (first out-callable) "intervals")]
            (doseq [x (concat [combo-out compare-out annotated-out filter-out nofilter-out
                               out-sum-compare out-intervals nocall-out]
                              (map str (fs/glob (str (fs/file (fs/parent nocall-vcf)
                                                              (fs/name nocall-vcf)) "-*vcf")))
                              out-callable combine-out combine-out-cons combine-out-xtra (vals match-out) select-out)]
-             (itx/remove-path x)
+             (fsp/remove-path x)
              (when (.endsWith x ".vcf")
-               (itx/remove-path (str x ".idx"))))
+               (fsp/remove-path (str x ".idx"))))
            ?form)))
 
 (facts "Variant manipulation with GATK: selection, combination and annotation."
@@ -174,10 +175,10 @@
 (let [data-dir (str (fs/file "." "test" "data"))
       ref (str (fs/file data-dir "GRCh37.fa"))
       vcf (str (fs/file data-dir "cg-normalize.vcf"))
-      out-vcf (itx/add-file-part vcf "prep")
+      out-vcf (fsp/add-file-part vcf "prep")
       prevcf (str (fs/file data-dir "illumina-needclean.vcf"))
-      out-prevcf (itx/add-file-part prevcf "preclean")]
-  (against-background [(before :facts (vec (map itx/remove-path [out-vcf out-prevcf
+      out-prevcf (fsp/add-file-part prevcf "preclean")]
+  (against-background [(before :facts (vec (map fsp/remove-path [out-vcf out-prevcf
                                                              (str vcf ".idx")])))]
     (facts "Normalize variant representation of chromosomes, order, genotypes and samples."
       (prep-vcf vcf ref "Test1" :config {:prep-sort-pos true}) => out-vcf)

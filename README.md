@@ -33,7 +33,7 @@ associated with different variant representations.
 
 ### Download
 
-The latest release is 0.0.9 (22 June 2013): [bcbio.variation-0.0.9-standalone.jar][dl].
+The latest release is 0.1.2 (4 December 2013): [bcbio.variation-0.1.2-standalone.jar][dl].
 Run from the command line:
 
     $ java -jar bcbio.variation-VERSION-standalone.jar [arguments]
@@ -41,7 +41,7 @@ Run from the command line:
 The jar contains a full GATK commandline with additional walkers, as well as
 custom command line programs. See the usage section below for more details.
 
-[dl]: https://s3.amazonaws.com/bcbio.variation/bcbio.variation-0.0.9-standalone.jar
+[dl]: https://github.com/chapmanb/bcbio.variation/releases/download/v0.1.2/bcbio.variation-0.1.2-standalone.jar
  
 ### As a library
 
@@ -60,43 +60,65 @@ required dependencies.
 
 ### Generate summary of concordance between variant calls
 
-A [YAML configuration file][u2] specifies the variant files for
+A [YAML][u2] configuration file specifies the variant files for
 comparison. The project contains example configuration and associated
 variant files that demonstrate the features of the library.
 
-An example of scoring a phased diploid genome against a haploid reference
-genome:
-    
-    $ lein variant-compare config/reference-grading.yaml
+An example of [scoring a phased diploid genome against a haploid reference genome][grade-ref]:
 
-An example of assessing variant calls produced by different calling algorithms:
+    $ java bcbio.variation.jar variant-compare config/reference-grading.yaml
 
-    $ lein variant-compare config/method-comparison.yaml
-    
+An example of [assessing variant calls produced by different calling algorithms][grade-alg]:
+
+    $ java bcbio.variation.jar variant-compare config/method-comparison.yaml
+
+[grade-ref]: https://github.com/chapmanb/bcbio.variation/blob/master/config/reference-grading.yaml
+[grade-alg]: https://github.com/chapmanb/bcbio.variation/blob/master/config/method-comparison.yaml
+
 ### Normalize a variant file
 
 A tricky part of variant comparisons is that VCF format is flexible enough to
 allow multiple representations. As a result two files may contain the same
 variants, but one might have it present in a multi-nucleotide polymorphism while
-another represents it as an individual variant. 
+another represents it as an individual variant.
 
 To produce a stable, decomposed variant file for comparison run:
 
-    $ lein variant-prep your_variants.vcf your_reference.fasta
-    
+    $ java bcbio.variation.jar variant-prep your_variants.vcf your_reference.fasta
+
 This will also handle re-ordering variants to match the reference file ordering,
 essential for feeding into tools like GATK, and remapping hg19 to GRCh37
 chromosome names. To additionally filter outputs by indel size, pass an argument
 specifying the maximum indel size to include: `--max-indel 30`. To retain
 reference (`0/0`) and no calls in the prepped file, use `--keep-ref`.
 
+### Ensemble variant calls
+
+bcbio.variation contains approaches to merge variant calls from multiple
+approaches. It normalizes all input VCFs, prepares a combined variant file with
+variants from all approaches, and then filter the combined file to produce a
+final set of calls.
+
+To combine multiple variant calls into a single combined ensemble callset:
+
+    $ java bcbio.variation.jar variant-ensemble params.yaml reference.fa
+                               out.vcf in1.vcf in2.vcf in3.vcf
+
+- `params.yaml` -- parameters to us in preparing the ensemble set. See
+  [the example config][e1] for options.
+- `reference.fa` -- The reference FASTA file.
+- `out.vcf` -- Name of the final combined dataset.
+- `in1.vcf`... -- The input variant callsets to combine.
+
+[e1]: https://github.com/chapmanb/bcbio.variation/blob/master/config/ensemble/combine-callers.yaml
+
 ### Web interface
 
-Aahru is a web interface to this toolkit, providing interaction with Galaxy and
-GenomeSpace, visualization of biological metrics associated with variants,
-reactive filtering and automated scoring: [GitHub project][w1].
+The [o8 visualization framework][w1] provides a web interface to this toolkit,
+providing interaction with Galaxy and GenomeSpace, visualization of biological
+metrics associated with variants, reactive filtering and automated scoring.
 
-[w1]: https://github.com/lynaghk/vcf
+[w1]: https://github.com/chapmanb/o8
 
 ### Run GATK walker for variant statistics
 
@@ -259,6 +281,10 @@ preparation and analysis:
   mappings back to an original set of pairwise analyses:
 
         $ lein variant-utils callsummary variants.vcf original-combined-config.yaml
+
+- Sort a variant VCF file to reference ordering defined in a FASTA file
+
+        $ lein variant-utils sort-vcf variants.vcf reference.fa
 
 - Convert an Illumina directory of variant calls into a single, cleaned VCF:
 

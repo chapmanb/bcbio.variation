@@ -9,6 +9,7 @@
         [bcbio.variation.structural]
         [bcbio.variation.variantcontext])
   (:require [me.raynes.fs :as fs]
+            [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]
             [bcbio.variation.utils.svmerge :as svmerge]))
 
@@ -20,7 +21,7 @@
                sv-vcf1 (str (fs/file data-dir "sv-1000g.vcf"))
                sv-vcf2 (str (fs/file data-dir "sv-illumina.vcf"))
                multi-vcf (str (fs/file data-dir "1000genome-multi.vcf"))
-               multi-out (itx/add-file-part multi-vcf "nomnp")
+               multi-out (fsp/add-file-part multi-vcf "nomnp")
                sv-out {:sv-concordant
                        (str (fs/file data-dir "sv-sv1000g-svIll-svconcordance.vcf"))
                        :sv-sv1000g-discordant
@@ -33,29 +34,29 @@
                 :sv-sv2-discordant (str (fs/file data-dir "sv-sv2-sv1-svdiscordance.vcf"))}
                mnp-vcf (str (fs/file data-dir "freebayes-calls-indels.vcf"))
                cindel-vcf (str (fs/file data-dir "freebayes-calls-complexindels.vcf"))
-               cindel-out (itx/add-file-part cindel-vcf "nomnp")
-               cindel-extras (map #(itx/add-file-part cindel-vcf %)
+               cindel-out (fsp/add-file-part cindel-vcf "nomnp")
+               cindel-extras (map #(fsp/add-file-part cindel-vcf %)
                                   ["leftalign" "worknomnp" "worknomnp-leftalign"])
                indel-vcf1 (str (fs/file data-dir "sv-indels-fb.vcf"))
                indel-vcf2 (str (fs/file data-dir "sv-indels-gatk.vcf"))
                indel-out (str (fs/file data-dir "Test-svindfb-svindgatk-svconcordance.vcf"))
-               nomnp-out (itx/add-file-part mnp-vcf "nomnp")
-               fullprep-out (itx/add-file-part mnp-vcf "fullprep")
-               headerfix-out (itx/add-file-part mnp-vcf "samplefix")
+               nomnp-out (fsp/add-file-part mnp-vcf "nomnp")
+               fullprep-out (fsp/add-file-part mnp-vcf "fullprep")
+               headerfix-out (fsp/add-file-part mnp-vcf "samplefix")
                ;; SV testing
                presv-orig (str (fs/file data-dir "svs" "reference-calls.vcf"))
                sv-calls (str (fs/file data-dir "svs" "reference-calls-sv.vcf"))
                presv-regions (str (fs/file data-dir "svs" "reference-regions.bed"))
-               sv-out-calls (itx/add-file-part presv-orig "wsvs")
-               sv-out-regions (itx/add-file-part presv-regions "wsvs")
+               sv-out-calls (fsp/add-file-part presv-orig "wsvs")
+               sv-out-regions (fsp/add-file-part presv-regions "wsvs")
                sv-workdir (str (fs/file data-dir "svs" "work"))
-               presv-extras [(itx/add-file-part sv-calls "prep")
-                             (itx/add-file-part presv-orig "safesv")]
+               presv-extras [(fsp/add-file-part sv-calls "prep")
+                             (fsp/add-file-part presv-orig "safesv")]
                params {:max-indel 100}]
            (doseq [x (concat [nomnp-out indel-out cindel-out headerfix-out fullprep-out
                               multi-out sv-workdir sv-out-calls sv-out-regions]
                              presv-extras cindel-extras (vals sv-out) (vals sv-out2))]
-             (itx/remove-path x))
+             (fsp/remove-path x))
            ?form)))
 
 (facts "Deal with multi-nucleotide polymorphisms"
@@ -75,13 +76,14 @@
                 vcf-iter2 (get-vcf-iterator sv-vcf2 ref)]
       (doall (map #(get-sv-type % params) (parse-vcf vcf-iter1))) =>
       (concat [:INS] (repeat 6 :BND)
-              [nil :DEL :INS :DEL :DUP :INV :INS])
+              [nil nil nil :DEL :INS :DEL :DUP :INV :INS])
       (doall (map #(get-sv-type % params) (parse-vcf vcf-iter2))) =>
-      [:DUP :UNASSEMBLED_EVENT :BND :BND :INS :CNV :DEL :INV])))
+      [:DUP :UNASSEMBLED_EVENT :BND :BND :INS nil nil :CNV :DEL :INV])))
 
 (facts "Compare structural variation calls from two inputs."
   (compare-sv {:name "sv1000g" :file sv-vcf1}
-              {:name "svIll" :file sv-vcf2} ref) => (contains sv-out)
+              {:name "svIll" :file sv-vcf2} ref
+              :params {:default-cis [[200 10]] :max-indel 30}) => (contains sv-out)
   (compare-sv {:name "sv1" :file sv-vcf1}
               {:name "sv2" :file sv-vcf1} ref) => (contains sv-out2))
 
@@ -113,6 +115,6 @@
 
 (facts "Normalize problematic input VCF files, handling special cases"
   (let [inp-vcf (str (fs/file data-dir "phasing-comparison-needprep.vcf"))
-        outp-vcf (itx/add-file-part inp-vcf "fullprep")]
-    (itx/remove-path outp-vcf)
+        outp-vcf (fsp/add-file-part inp-vcf "fullprep")]
+    (fsp/remove-path outp-vcf)
     (full-prep-vcf inp-vcf ref :keep-ref true) => outp-vcf))

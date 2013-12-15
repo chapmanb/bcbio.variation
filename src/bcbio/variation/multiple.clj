@@ -12,6 +12,7 @@
                                                get-vcf-iterator write-vcf-w-template]])
   (:require [clojure.string :as string]
             [me.raynes.fs :as fs]
+            [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]
             [bcbio.run.broad :as broad]))
 
@@ -46,14 +47,15 @@
 
 (defn get-vc-set-calls
   "Retrieve all called items from a variant context 'set' attribute."
-  [vc calls]
+  [vc calls & {:keys [remove-filtered?]
+               :or {remove-filtered? true}}]
   (when-let [set-val (get-in vc [:attributes "set"])]
     (if (= set-val "Intersection")
       (set (map :name calls))
       (->> (string/split set-val #"-")
-           (remove #(.startsWith % "filter"))
-           (map #(string/split % #"AND"))
-           (apply concat)
+           (mapcat #(string/split % #"AND"))
+           (remove #(and remove-filtered? (.startsWith % "filter")))
+           (map #(string/replace-first % "filterIn" ""))
            set))))
 
 (defmulti select-variant-by-set
@@ -62,7 +64,7 @@
 
 (defmethod select-variant-by-set :Intersection
   [vcf-in ref set-name]
-  (let [file-info {:out-vcf (itx/add-file-part vcf-in set-name nil)}
+  (let [file-info {:out-vcf (fsp/add-file-part vcf-in set-name nil)}
         args ["-R" ref
               "-o" :out-vcf
               "--variant" vcf-in
@@ -77,7 +79,7 @@
   (letfn [(in-set? [vc]
             (contains? (get-vc-set-calls vc [{:name set-name}])
                        set-name))]
-    (let [out-file (itx/add-file-part vcf-in set-name nil)]
+    (let [out-file (fsp/add-file-part vcf-in set-name nil)]
       (when (itx/needs-run? out-file)
         (with-open [in-iter (get-vcf-iterator vcf-in ref)]
           (write-vcf-w-template vcf-in {:out out-file}
@@ -109,8 +111,8 @@
           Report calls with low support across inputs callsets."}
   [target-cmps target-name _ target-overlap-vcf call ref out-dir]
   (let [calls (vec (set (mapcat (juxt :c1 :c2) (vals target-cmps))))
-        out-file (itx/add-file-part target-overlap-vcf "lowcounts" out-dir)
-        freq (get call :fp-freq 0.25)
+        out-file (fsp/add-file-part target-overlap-vcf "lowcounts" out-dir)
+        freq (get call :fp-freq 0.4)
         thresh (Math/ceil (* freq (dec (count calls))))]
     (letfn [(is-lowcount-fp? [vc]
               (-> (get-vc-set-calls vc calls)
@@ -145,7 +147,7 @@
           disc-vcf (-> (combine-variants disc-vcfs ref :merge-type :full :out-dir out-dir
                                          :base-ext (format "dis%s" target-name))
                        (select-variant-by-set ref "Intersection"))
-          out-file (itx/add-file-part disc-vcf "shared")
+          out-file (fsp/add-file-part disc-vcf "shared")
           align-bams (->> (vals target-cmps)
                           (map (juxt :c1 :c2))
                           flatten

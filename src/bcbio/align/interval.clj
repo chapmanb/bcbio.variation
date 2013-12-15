@@ -5,6 +5,7 @@
         [bcbio.align.ref :only [get-seq-name-map]]
         [bcbio.variation.normalize :only [prep-rename-map]])
   (:require [clojure.string :as string]
+            [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]))
 
 (defn- update-contig-name
@@ -18,7 +19,7 @@
 (defn rename-bed
   "Rename BED coordinates to match supplied reference file"
   [bed-file ref-file & {:keys [out-dir]}]
-  (let [out-file (itx/add-file-part bed-file "remap" out-dir)]
+  (let [out-file (fsp/add-file-part bed-file "remap" out-dir)]
     (when (itx/needs-run? out-file)
       (let [name-map (prep-rename-map :GRCh37 ref-file)]
         (with-open [rdr (reader bed-file)

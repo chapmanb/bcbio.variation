@@ -8,6 +8,7 @@
         [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template
                                                get-vcf-iterator]])
   (:require [clojure.string :as string]
+            [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]))
 
 (defn- pairwise-only?
@@ -32,7 +33,7 @@
 (defn variant-set-metadata
   "Retrieve metadata associated with overlapping variants from combined set attribute."
   [vc calls]
-  (when-let [set-calls (get-vc-set-calls vc calls)]
+  (when-let [set-calls (get-vc-set-calls vc calls :remove-filtered? false)]
     (reduce (fn [coll x]
               (let [cur-name (string/replace (:name x) "-" "_")]
                 (if-not (contains? set-calls cur-name)
@@ -81,7 +82,7 @@
   "Retrieve VCF file of trusted variants based on specific parameters."
   [cmps support params exp config]
   (when-let [base-vcf (get-comparison-fullcombine cmps support config)]
-    (let [out-file (itx/add-file-part base-vcf "trusted")]
+    (let [out-file (fsp/add-file-part base-vcf "trusted")]
       (when (itx/needs-run? out-file)
         (with-open [base-vcf-iter (get-vcf-iterator base-vcf (:ref exp))]
           (write-vcf-w-template base-vcf {:out out-file}

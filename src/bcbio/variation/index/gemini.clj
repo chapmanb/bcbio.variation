@@ -9,6 +9,7 @@
             [clojure.java.shell :as shell]
             [clojure.string :as string]
             [me.raynes.fs :as fs]
+            [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]))
 
 ;; ## Gemini
@@ -48,7 +49,7 @@
   "Pre-index a variant file with gemini, handling snpEff annotations."
   [in-file _ & {:keys [re-index?]}]
   (when in-file
-    (let [index-file (str (itx/file-root in-file) "-gemini.db")]
+    (let [index-file (str (fsp/file-root in-file) "-gemini.db")]
         (if (or (itx/needs-run? index-file) re-index?)
           (create-gemini-db in-file index-file)
           index-file))))
@@ -211,7 +212,7 @@
     #{val}))
 
 (defmethod finalize-gemini-attr :default
-  [_ row]
+  [attr row]
   (let [val (first (vals row))]
     val))
 

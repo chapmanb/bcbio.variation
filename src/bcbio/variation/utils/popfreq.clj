@@ -16,7 +16,8 @@
         [bcbio.variation.combine :only [combine-variants]]
         [bcbio.variation.variantcontext :only [parse-vcf write-vcf-w-template
                                                get-vcf-iterator]])
-  (:require [bcbio.run.itx :as itx]))
+  (:require [bcbio.run.fsp :as fsp]
+            [bcbio.run.itx :as itx]))
 
 (defn get-rsids
   "Retrieve all rsIDs from the input vcf-file"
@@ -71,7 +72,7 @@
   (let [orig-vcf (if (coll? (:file call))
                    (combine-variants (:file call) ref :out-dir out-dir :merge-type :full)
                    (:file call))
-        out-file (itx/add-file-part orig-vcf "popfreq" out-dir)
+        out-file (fsp/add-file-part orig-vcf "popfreq" out-dir)
         allele-freqs (get-allele-freqs (get-in call [:annotate :file]) ref
                                        (get-rsids orig-vcf ref)
                                        (get-in call [:annotate :targets]))]

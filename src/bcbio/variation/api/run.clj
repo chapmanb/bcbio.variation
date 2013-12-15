@@ -4,6 +4,7 @@
         [bcbio.variation.api.shared :only [web-config]])
   (:require [clojure.string :as string]
             [me.raynes.fs :as fs]
+            [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]
             [bcbio.variation.api.file :as file-api]
             [bcbio.variation.remote.core :as remote]
@@ -14,10 +15,10 @@
   (fn [atype params rclient] (keyword atype)))
 
 (defn- to-prep-file [x]
-  (itx/add-file-part x "prep"))
+  (fsp/add-file-part x "prep"))
 
 (defn- from-prep-file [x]
-  (itx/remove-file-part x "prep"))
+  (fsp/remove-file-part x "prep"))
 
 (defn- run-filter
   "Run filtering, pushing results to remote file store.
