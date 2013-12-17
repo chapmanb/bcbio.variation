@@ -86,6 +86,8 @@
         config-file (create-ready-config vrn-files ref-file in-config dirs)]
     (compare/variant-comparison-from-config config-file)
     (let [prep-file (first (fs/glob (str (io/file (:prep dirs) "*cfilter.vcf"))))]
+      (assert prep-file (str "Did not find prepped and filtered consensus file. "
+                             "Do you have classifiers specified in the input YAML file?"))
       (fs/copy prep-file out-file)
       (fs/copy (str prep-file ".idx") (str out-file ".idx"))))
   out-file)

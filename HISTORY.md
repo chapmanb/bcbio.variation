@@ -1,3 +1,10 @@
+## 0.1.3 (in progress)
+
+- Move to external bcbio.run tool to help abstract out some core functionality
+  useful in other contexts.
+- Additional flexibility for Illumina to valid VCF preparation. Allow ignoring
+  SVs or other file types.
+
 ## 0.1.2 (4 December 2013)
 
 - Handle metrics evaluation with GATK where input calls have haploid chromosomes,
