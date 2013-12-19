@@ -39,7 +39,10 @@ Run from the command line:
     $ java -jar bcbio.variation-VERSION-standalone.jar [arguments]
 
 The jar contains a full GATK commandline with additional walkers, as well as
-custom command line programs. See the usage section below for more details.
+custom command line programs. The usage section below contains examples of using
+the library for variant comparison, normalization and ensemble calling.  Note
+that bcbio.variation requires Java 1.7 since the underlying GATK libraries are
+not compatible with earlier versions.
 
 [dl]: https://github.com/chapmanb/bcbio.variation/releases/download/v0.1.2/bcbio.variation-0.1.2-standalone.jar
  
