@@ -1,5 +1,10 @@
 ## 0.1.3 (in progress)
 
+- Avoid errors on converting hg19 to GRCh37 where hg19 variants contain hg19 hap
+  contigs with no equivalent in GRCh37. It now drops these variants instead
+  of generating an error. Thanks to Severine Catreux.
+- Avoid issues with running LeftAlignVariants on indels with END tags. Thanks to
+  Justin Johnson.
 - Move to external bcbio.run tool to help abstract out some core functionality
   useful in other contexts.
 - Additional flexibility for Illumina to valid VCF preparation. Allow ignoring
