@@ -9,6 +9,7 @@
             [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]
             [bcbio.variation.compare :as compare]
+            [bcbio.variation.combine :as combine]
             [bcbio.variation.grade :as grade]
             [bcbio.variation.report :as report]
             [bcbio.variation.utils.quickcompare :as qcmp]))
@@ -47,7 +48,8 @@
     (-> (compare-two-vcf-phased calls exp config) :c-files keys) => [:concordant :discordant
                                                                      :discordant-missing :phasing-error]))
 
-(facts "Compare diploid callset against a diploid reference"
+(facts "Compare diploid callset against a diploid reference.
+        Includes comparison of calls with END tags which can be out of sync following comparison."
   (let [base-dir (fs/file data-dir "digrade")
         c1 {:file (str (fs/file base-dir "NA12878-cmp-r1.vcf"))
             :name "ref" :type "grading-ref"}
@@ -65,11 +67,21 @@
       (-> cmp :grade-breakdown :discordant :snp :shared :hethom) => 1
       (-> cmp :c-files :eval-discordant) => out-file)))
 
+(facts "Normalize input VCFs containing END tags"
+  (let [base-dir (fs/file data-dir "digrade")
+        c1 {:file (str (fs/file base-dir "NA12878-cmp-r1.vcf"))
+            :name "ref" :type "grading-ref" :prep true}
+        exp {:ref ref-file :sample "NA12878" :approach "grade"}
+        out-dir (str (fs/file base-dir "work"))]
+    (fsp/remove-path out-dir)
+    (fs/mkdirs out-dir)
+    (combine/gatk-normalize c1 exp nil out-dir (fn [& xs] (println xs)))))
+
 (facts "Perform quick comparisons between smaller variant files that can fit in memory."
   (let [base-dir (fs/file data-dir "digrade")
         c1 (str (fs/file base-dir "NA12878-cmp-r1.vcf"))
         c2 (str (fs/file base-dir "NA12878-cmp-r2.vcf"))
         dir-out-file (str (fs/file base-dir "NA12878-cmp-r1-cmp.csv"))]
     (fsp/remove-path dir-out-file)
-    (qcmp/two-vcfs c1 c2 ref-file) => {:concordant 14 :discordant 2 :sample "NA12878"}
+    (qcmp/two-vcfs c1 c2 ref-file) => {:concordant 14 :discordant 3 :sample "NA12878"}
     (qcmp/vcfdir-to-base c1 base-dir ref-file 2) => dir-out-file))
