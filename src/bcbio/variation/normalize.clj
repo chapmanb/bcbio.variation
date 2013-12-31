@@ -276,8 +276,8 @@
             (let [line-info (fix-vcf-line line chr-map config)]
               (if-let [wtr (get ref-wrtrs (:chrom line-info))]
                 (.write wtr (str (:line line-info) "\n"))
-                (throw (Exception. (format "Could not find remapping of chromosome %s in reference: %s"
-                                           (:chrom line-info) (keys ref-wrtrs)))))))]
+                (println (format "Could not find remapping of chromosome %s in reference. Removing variant."
+                                 (:chrom line-info))))))]
     (let [ref-chrs (ref-chr-files ref-file)
           ref-wrtrs (zipmap (keys ref-chrs) (map writer (vals ref-chrs)))
           chr-map (chr-name-remap (:prep-org config) ref-file orig-ref-file)]
