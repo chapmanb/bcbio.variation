@@ -4,14 +4,14 @@
         [bcbio.variation.haploid :exclude [-main]]
         [bcbio.variation.filter.attr]
         [bcbio.variation.filter.classify]
-        [bcbio.variation.filter.intervals]
         [bcbio.variation.filter]
         [bcbio.variation.validate]
         [bcbio.variation.variantcontext :exclude [-main]])
   (:require [me.raynes.fs :as fs]
             [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]
-            [bcbio.variation.filter.custom :as cf]))
+            [bcbio.variation.filter.custom :as cf]
+            [bcbio.variation.filter.intervals :as fintervals]))
 
 (background
  (around :facts
@@ -95,5 +95,5 @@
   (cf/freebayes-filter fb-vcf ref) => fb-filter-out)
 
 (facts "Prepare combined interval lists based on filtering criteria"
-  (combine-multiple-intervals region-bed [align-bam] ref
-                              :exclude-intervals exclude-bed) => region-multi-out)
+  (fintervals/combine-multiple region-bed [align-bam] ref
+                               :exclude-intervals exclude-bed) => region-multi-out)

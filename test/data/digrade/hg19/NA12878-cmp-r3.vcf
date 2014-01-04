@@ -1,0 +1,166 @@
+##fileformat=VCFv4.1
+##FILTER=<ID=CScoreFilter,Description="Based on classifcation CFILTERS">
+##FILTER=<ID=FormatRanges,Description="DP < 4">
+##FILTER=<ID=GATKStandardDP,Description="DP < 5">
+##FILTER=<ID=GATKStandardFS,Description="FS > 60.0">
+##FILTER=<ID=GATKStandardHaplotypeScore,Description="HaplotypeScore > 13.0">
+##FILTER=<ID=GATKStandardMQ,Description="MQ < 40.0">
+##FILTER=<ID=GATKStandardMQRankSum,Description="MQRankSum < -12.5">
+##FILTER=<ID=GATKStandardQD,Description="QD < 2.0">
+##FILTER=<ID=GATKStandardQUAL,Description="QUAL < 20.0">
+##FILTER=<ID=GATKStandardReadPosRankSum,Description="ReadPosRankSum < -8.0">
+##FILTER=<ID=LowQual,Description="Low quality">
+##FILTER=<ID=indelError,Description="Likely artifact due to indel reads at this position">
+##FILTER=<ID=str10,Description="Less than 10% or more than 90% of variant supporting reads on one strand">
+##FORMAT=<ID=ABQ,Number=1,Type=Integer,Description="Average quality of variant-supporting bases (qual2)">
+##FORMAT=<ID=AD,Number=.,Type=Integer,Description="Allelic depths for the ref and alt alleles in the order listed">
+##FORMAT=<ID=ADF,Number=1,Type=Integer,Description="Depth of variant-supporting bases on forward strand (reads2plus)">
+##FORMAT=<ID=ADR,Number=1,Type=Integer,Description="Depth of variant-supporting bases on reverse strand (reads2minus)">
+##FORMAT=<ID=AO,Number=A,Type=Integer,Description="Alternate allele observation count">
+##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Quality Read Depth of bases with Phred score >= 15">
+##FORMAT=<ID=FREQ,Number=1,Type=String,Description="Variant allele frequency">
+##FORMAT=<ID=GL,Number=.,Type=Float,Description="Likelihoods for RR,RA,AA genotypes (R=ref,A=alt)">
+##FORMAT=<ID=GLE,Number=1,Type=String,Description="Genotype Likelihood Explicit, same as GL, but with tags to indicate the specific genotype.  For instance, 0^-75.22|1^-223.42|0/0^-323.03|1/0^-99.29|1/1^-802.53 represents both haploid and diploid genotype likilehoods in a biallelic context">
+##FORMAT=<ID=GQ,Number=1,Type=Integer,Description="Genotype Quality">
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+##FORMAT=<ID=PL,Number=G,Type=Integer,Description="List of Phred-scaled genotype likelihoods">
+##FORMAT=<ID=PQ,Number=1,Type=Float,Description="Read-backed phasing quality">
+##FORMAT=<ID=PVAL,Number=1,Type=String,Description="P-value from Fisher's Exact Test">
+##FORMAT=<ID=QA,Number=A,Type=Integer,Description="Sum of quality of the alternate observations">
+##FORMAT=<ID=QR,Number=1,Type=Integer,Description="Sum of quality of the reference observations">
+##FORMAT=<ID=RBQ,Number=1,Type=Integer,Description="Average quality of reference-supporting bases (qual1)">
+##FORMAT=<ID=RD,Number=1,Type=Integer,Description="Depth of reference-supporting bases (reads1)">
+##FORMAT=<ID=RDF,Number=1,Type=Integer,Description="Depth of reference-supporting bases on forward strand (reads1plus)">
+##FORMAT=<ID=RDR,Number=1,Type=Integer,Description="Depth of reference-supporting bases on reverse strand (reads1minus)">
+##FORMAT=<ID=RO,Number=1,Type=Integer,Description="Reference allele observation count">
+##FORMAT=<ID=SDP,Number=1,Type=Integer,Description="Raw Read Depth as reported by SAMtools">
+##FORMAT=<ID=SP,Number=1,Type=Integer,Description="Phred-scaled strand bias P-value">
+##INFO=<ID=AB,Number=A,Type=Float,Description="Allele balance at heterozygous sites: a number between 0 and 1 representing the ratio of reads showing the reference allele to all reads, considering only reads from individuals called as heterozygous">
+##INFO=<ID=ABCI5,Number=1,Type=Float,Description="Allele Balance lower 5% confidence interval">
+##INFO=<ID=ABCI50,Number=1,Type=Float,Description="Allele Balance middle 50% confidence interval">
+##INFO=<ID=ABCI95,Number=1,Type=Float,Description="Allele Balance upper 5% confidence interval">
+##INFO=<ID=ABHet,Number=1,Type=Float,Description="Allele Balance for hets (ref/(ref+alt))">
+##INFO=<ID=ABHom,Number=1,Type=Float,Description="Allele Balance for homs (A/(A+O))">
+##INFO=<ID=ABP,Number=A,Type=Float,Description="Allele balance probability at heterozygous sites: Phred-scaled upper-bounds estimate of the probability of observing the deviation between ABR and ABA given E(ABR/ABA) ~ 0.5, derived using Hoeffding's inequality">
+##INFO=<ID=AC,Number=A,Type=Integer,Description="Allele count in genotypes, for each ALT allele, in the same order as listed">
+##INFO=<ID=AC1,Number=1,Type=Float,Description="Max-likelihood estimate of the first ALT allele count (no HWE assumption)">
+##INFO=<ID=ADP,Number=1,Type=Integer,Description="Average per-sample depth of bases with Phred score >= 15">
+##INFO=<ID=AF,Number=A,Type=Float,Description="Allele Frequency, for each ALT allele, in the same order as listed">
+##INFO=<ID=AF1,Number=1,Type=Float,Description="Max-likelihood estimate of the first ALT allele frequency (assuming HWE)">
+##INFO=<ID=AN,Number=1,Type=Integer,Description="Total number of alleles in called genotypes">
+##INFO=<ID=AO,Number=A,Type=Integer,Description="Alternate allele observations">
+##INFO=<ID=BVAR,Number=0,Type=Flag,Description="The best genotype combination in the posterior is variant (non homozygous).">
+##INFO=<ID=BaseQRankSum,Number=1,Type=Float,Description="Z-score from Wilcoxon rank sum test of Alt Vs. Ref base qualities">
+##INFO=<ID=CFILTERS,Number=.,Type=String,Description="Classification filters based on true/false positives for: balance: AD,FS,Entropy; calling: ReadPosEndDist,PL,PLratio,Entropy,NBQ">
+##INFO=<ID=CGT,Number=1,Type=String,Description="The most probable constrained genotype configuration in the trio">
+##INFO=<ID=CIGAR,Number=A,Type=String,Description="The extended CIGAR representation of each alternate allele, with the exception that '=' is replaced by 'M' to ease VCF parsing.  Note that INDEL alleles do not have the first matched base (which is provided by default, per the spec) referred to by the CIGAR.">
+##INFO=<ID=CLR,Number=1,Type=Integer,Description="Log ratio of genotype likelihoods with and without the constraint">
+##INFO=<ID=CpG,Number=0,Type=Flag,Description="CpG site (either CpG, TpG or CpA)">
+##INFO=<ID=DB,Number=0,Type=Flag,Description="dbSNP Membership">
+##INFO=<ID=DP,Number=1,Type=Integer,Description="Approximate read depth; some reads may have been filtered">
+##INFO=<ID=DP4,Number=4,Type=Integer,Description="# high-quality ref-forward bases, ref-reverse, alt-forward and alt-reverse bases">
+##INFO=<ID=DPRA,Number=A,Type=Float,Description="Alternate allele depth ratio.  Ratio between depth in samples with each called alternate allele and those without.">
+##INFO=<ID=DS,Number=0,Type=Flag,Description="Were any of the samples downsampled?">
+##INFO=<ID=Dels,Number=1,Type=Float,Description="Fraction of Reads Containing Spanning Deletions">
+##INFO=<ID=EFF,Number=.,Type=String,Description="Predicted effects for this variant.Format: 'Effect ( Effect_Impact | Functional_Class | Codon_Change | Amino_Acid_change| Amino_Acid_length | Gene_Name | Gene_BioType | Coding | Transcript | Exon [ | ERRORS | WARNINGS ] )'">
+##INFO=<ID=EPP,Number=A,Type=Float,Description="End Placement Probability: Phred-scaled upper-bounds estimate of the probability of observing the deviation between EL and ER given E(EL/ER) ~ 0.5, derived using Hoeffding's inequality">
+##INFO=<ID=EPPR,Number=1,Type=Float,Description="End Placement Probability for reference observations: Phred-scaled upper-bounds estimate of the probability of observing the deviation between EL and ER given E(EL/ER) ~ 0.5, derived using Hoeffding's inequality">
+##INFO=<ID=Entropy,Number=1,Type=Float,Description="Shannon entropy of variant flanking regions, 12bp on both sides">
+##INFO=<ID=FQ,Number=1,Type=Float,Description="Phred probability of all samples being the same">
+##INFO=<ID=FS,Number=1,Type=Float,Description="Phred-scaled p-value using Fisher's exact test to detect strand bias">
+##INFO=<ID=G3,Number=3,Type=Float,Description="ML estimate of genotype frequencies">
+##INFO=<ID=GC,Number=1,Type=Integer,Description="GC content within 20 bp +/- the variant">
+##INFO=<ID=HET,Number=1,Type=Integer,Description="Number of samples called heterozygous-variant">
+##INFO=<ID=HOM,Number=1,Type=Integer,Description="Number of samples called homozygous-variant">
+##INFO=<ID=HRun,Number=1,Type=Integer,Description="Largest Contiguous Homopolymer Run of Variant Allele In Either Direction">
+##INFO=<ID=HWE,Number=1,Type=Float,Description="Chi^2 based HWE test P-value based on G3">
+##INFO=<ID=HaplotypeScore,Number=1,Type=Float,Description="Consistency of the site with at most two segregating haplotypes">
+##INFO=<ID=INDEL,Number=0,Type=Flag,Description="Indicates that the variant is an INDEL.">
+##INFO=<ID=InbreedingCoeff,Number=1,Type=Float,Description="Inbreeding coefficient as estimated from the genotype likelihoods per-sample when compared against the Hardy-Weinberg expectation">
+##INFO=<ID=LEN,Number=A,Type=Integer,Description="allele length">
+##INFO=<ID=MEANALT,Number=A,Type=Float,Description="Mean number of unique non-reference allele observations per sample with the corresponding alternate alleles.">
+##INFO=<ID=MFE,Number=1,Type=Float,Description="delta G minimum free energy of the most problematic secondary structure +/- 15bp around variant">
+##INFO=<ID=MLEAC,Number=A,Type=Integer,Description="Maximum likelihood expectation (MLE) for the allele counts (not necessarily the same as the AC), for each ALT allele, in the same order as listed">
+##INFO=<ID=MLEAF,Number=A,Type=Float,Description="Maximum likelihood expectation (MLE) for the allele frequency (not necessarily the same as the AF), for each ALT allele, in the same order as listed">
+##INFO=<ID=MPGHetRef,Number=1,Type=Float,Description="Most Probable Genotype likelihood ratio for Het Ref">
+##INFO=<ID=MPGHomRef,Number=1,Type=Float,Description="Most Probable Genotype likelihood ratio for Hom Ref">
+##INFO=<ID=MPGHomVar,Number=1,Type=Float,Description="Most Probable Genotype likelihood ratio for Hom Var">
+##INFO=<ID=MPGLikHetRef,Number=1,Type=Float,Description="Raw likelihood for Het Ref">
+##INFO=<ID=MPGLikHomRef,Number=1,Type=Float,Description="Raw likelihood for Hom Ref">
+##INFO=<ID=MPGLikHomVar,Number=1,Type=Float,Description="Raw likelihood for Hom Var">
+##INFO=<ID=MQ,Number=1,Type=Float,Description="RMS Mapping Quality">
+##INFO=<ID=MQ0,Number=1,Type=Integer,Description="Total Mapping Quality Zero Reads">
+##INFO=<ID=MQM,Number=A,Type=Float,Description="Mean mapping quality of observed alternate alleles">
+##INFO=<ID=MQMR,Number=1,Type=Float,Description="Mean mapping quality of observed reference alleles">
+##INFO=<ID=MQRankSum,Number=1,Type=Float,Description="Z-score From Wilcoxon rank sum test of Alt vs. Ref read mapping qualities">
+##INFO=<ID=NBQ,Number=1,Type=Float,Description="Mean Neighboring Base Quality, includes 5bp on both sides">
+##INFO=<ID=NC,Number=1,Type=Integer,Description="Number of samples not called">
+##INFO=<ID=NS,Number=1,Type=Integer,Description="Number of samples with data">
+##INFO=<ID=NUMALT,Number=1,Type=Integer,Description="Number of unique non-reference alleles in called genotypes at this position.">
+##INFO=<ID=ODDS,Number=1,Type=Float,Description="The log odds ratio of the best genotype combination to the second-best.">
+##INFO=<ID=OND,Number=1,Type=Float,Description="Overall non-diploid ratio (alleles/(alleles+non-alleles))">
+##INFO=<ID=PAIRED,Number=A,Type=Float,Description="Proportion of observed alternate alleles which are supported by properly paired read fragments">
+##INFO=<ID=PAIREDR,Number=1,Type=Float,Description="Proportion of observed reference alleles which are supported by properly paired read fragments">
+##INFO=<ID=PC2,Number=2,Type=Integer,Description="Phred probability of the nonRef allele frequency in group1 samples being larger (,smaller) than in group2.">
+##INFO=<ID=PCHI2,Number=1,Type=Float,Description="Posterior weighted chi^2 P-value for testing the association between group1 and group2 samples.">
+##INFO=<ID=PR,Number=1,Type=Integer,Description="# permutations yielding a smaller PCHI2.">
+##INFO=<ID=PV4,Number=4,Type=Float,Description="P-values for strand bias, baseQ bias, mapQ bias and tail distance bias">
+##INFO=<ID=PhasingInconsistent,Number=0,Type=Flag,Description="Are the reads significantly haplotype-inconsistent?">
+##INFO=<ID=QCHI2,Number=1,Type=Integer,Description="Phred scaled PCHI2.">
+##INFO=<ID=QD,Number=1,Type=Float,Description="Variant Confidence/Quality by Depth">
+##INFO=<ID=RO,Number=1,Type=Integer,Description="Reference allele observations">
+##INFO=<ID=RPA,Number=.,Type=Integer,Description="Number of times tandem repeat unit is repeated, for each allele (including reference)">
+##INFO=<ID=RPP,Number=A,Type=Float,Description="Read Placement Probability: Phred-scaled upper-bounds estimate of the probability of observing the deviation between RPL and RPR given E(RPL/RPR) ~ 0.5, derived using Hoeffding's inequality">
+##INFO=<ID=RPPR,Number=1,Type=Float,Description="Read Placement Probability for reference observations: Phred-scaled upper-bounds estimate of the probability of observing the deviation between RPL and RPR given E(RPL/RPR) ~ 0.5, derived using Hoeffding's inequality">
+##INFO=<ID=RU,Number=1,Type=String,Description="Tandem repeat unit (bases)">
+##INFO=<ID=RUN,Number=A,Type=Integer,Description="Run length: the number of consecutive repeats of the alternate allele in the reference genome">
+##INFO=<ID=ReadMeanLen,Number=1,Type=Float,Description="Mean number of aligned bases for reads - low number indicate possible mis-alignments">
+##INFO=<ID=ReadMeanPos,Number=1,Type=Float,Description="Parameters indicating incorrect local alignments: Mean position inside read as a fraction of aligned read length">
+##INFO=<ID=ReadPosEndDist,Number=1,Type=Float,Description="Parameters indicating incorrect local alignments: 1. Mean distance from either end of read">
+##INFO=<ID=ReadPosRankSum,Number=1,Type=Float,Description="Z-score from Wilcoxon rank sum test of Alt vs. Ref read position bias">
+##INFO=<ID=SAP,Number=A,Type=Float,Description="Strand balance probability for the alternate allele: Phred-scaled upper-bounds estimate of the probability of observing the deviation between SAF and SAR given E(SAF/SAR) ~ 0.5, derived using Hoeffding's inequality">
+##INFO=<ID=SNPEFF_AMINO_ACID_CHANGE,Number=1,Type=String,Description="Old/New amino acid for the highest-impact effect resulting from the current variant (in HGVS style)">
+##INFO=<ID=SNPEFF_CODON_CHANGE,Number=1,Type=String,Description="Old/New codon for the highest-impact effect resulting from the current variant">
+##INFO=<ID=SNPEFF_EFFECT,Number=1,Type=String,Description="The highest-impact effect resulting from the current variant (or one of the highest-impact effects, if there is a tie)">
+##INFO=<ID=SNPEFF_EXON_ID,Number=1,Type=String,Description="Exon ID for the highest-impact effect resulting from the current variant">
+##INFO=<ID=SNPEFF_FUNCTIONAL_CLASS,Number=1,Type=String,Description="Functional class of the highest-impact effect resulting from the current variant: [NONE, SILENT, MISSENSE, NONSENSE]">
+##INFO=<ID=SNPEFF_GENE_BIOTYPE,Number=1,Type=String,Description="Gene biotype for the highest-impact effect resulting from the current variant">
+##INFO=<ID=SNPEFF_GENE_NAME,Number=1,Type=String,Description="Gene name for the highest-impact effect resulting from the current variant">
+##INFO=<ID=SNPEFF_IMPACT,Number=1,Type=String,Description="Impact of the highest-impact effect resulting from the current variant [MODIFIER, LOW, MODERATE, HIGH]">
+##INFO=<ID=SNPEFF_TRANSCRIPT_ID,Number=1,Type=String,Description="Transcript ID for the highest-impact effect resulting from the current variant">
+##INFO=<ID=SRP,Number=1,Type=Float,Description="Strand balance probability for the reference allele: Phred-scaled upper-bounds estimate of the probability of observing the deviation between SRF and SRR given E(SRF/SRR) ~ 0.5, derived using Hoeffding's inequality">
+##INFO=<ID=STR,Number=0,Type=Flag,Description="Variant is a short tandem repeat">
+##INFO=<ID=TYPE,Number=A,Type=String,Description="The type of allele, either snp, mnp, ins, del, or complex.">
+##INFO=<ID=UGT,Number=1,Type=String,Description="The most probable unconstrained genotype configuration in the trio">
+##INFO=<ID=VDB,Number=1,Type=Float,Description="Variant Distance Bias">
+##INFO=<ID=WT,Number=1,Type=Integer,Description="Number of samples called reference (wild-type)">
+##INFO=<ID=XAI,Number=A,Type=Float,Description="Alternate allele read INDEL rate: The rate of INDELs (gaps) in reads supporting the alternate allele, excluding the called variant.">
+##INFO=<ID=XAM,Number=A,Type=Float,Description="Alternate allele read mismatch rate: The rate of SNPs + MNPs + INDELs in reads supporting the alternate allele, excluding the called variant.">
+##INFO=<ID=XAS,Number=A,Type=Float,Description="Alternate allele read SNP rate: The rate of per-base mismatches (SNPs + MNPs) in reads supporting the alternate allele, excluding the called variant.">
+##INFO=<ID=XRI,Number=1,Type=Float,Description="Reference allele read INDEL rate: The rate of INDELs (gaps) in reads supporting the reference allele.">
+##INFO=<ID=XRM,Number=1,Type=Float,Description="Reference allele read mismatch rate: The rate of SNPs + MNPs + INDELs in reads supporting the reference allele.">
+##INFO=<ID=XRS,Number=1,Type=Float,Description="Reference allele read SNP rate: The rate of per-base mismatches (SNPs + MNPs) in reads supporting the reference allele.">
+##INFO=<ID=set,Number=1,Type=String,Description="Source VCF for the merged record in CombineVariants">
+##INFO=<ID=technology.illumina,Number=A,Type=Float,Description="Fraction of observations supporting the alternate observed in reads from illumina">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	NA12878
+chr22	55	.	G	T	.	CScoreFilter	ABCI5=0.052;ABCI50=0.180;ABCI95=0.383;AC=1;AF=0.500;AN=2;BaseQRankSum=0.067;CFILTERS=balance;DP=13;Entropy=2.77;FS=0.000;GC=75.25;HRun=1;HaplotypeScore=0.0000;MFE=-3.60;MPGHetRef=1.56;MPGHomRef=-2.999e+01;MPGHomVar=-1.564e+00;MPGLikHetRef=3.91;MPGLikHomRef=33.91;MPGLikHomVar=5.48;MQ=8.51;MQ0=0;MQRankSum=0.067;NBQ=32.80;OND=0.308;ReadMeanLen=95.3;ReadMeanPos=0.598;ReadPosEndDist=22.2;ReadPosRankSum=0.067;set=varscan	GT:AD:DP:PVAL	0/1:2,7:11:3.4965E-3
+chr22	61	.	G	T	.	.	ABCI5=0.388;ABCI50=0.620;ABCI95=0.818;AC=1;AF=0.500;AN=2;BaseQRankSum=-0.597;CFILTERS=None;DP=11;Entropy=2.89;FS=0.000;GC=74.26;HRun=0;HaplotypeScore=0.0000;MFE=-3.75;MPGHetRef=8.79;MPGHomRef=-8.790e+00;MPGHomVar=-2.050e+01;MPGLikHetRef=3.31;MPGLikHomRef=12.10;MPGLikHomVar=23.81;MQ=9.20;MQ0=0;MQRankSum=-1.034;NBQ=36.30;ReadMeanLen=94.9;ReadMeanPos=0.596;ReadPosEndDist=25.7;ReadPosRankSum=-0.278;set=varscan	GT:AD:DP:PVAL	0/1:7,4:11:4.5113E-2
+chr22	86	.	C	T	.	.	ABCI5=0.238;ABCI50=0.430;ABCI95=0.637;AC=1;AF=0.500;AN=2;BaseQRankSum=-1.468;CFILTERS=None;DP=14;Entropy=2.82;FS=0.000;GC=76.24;HRun=0;HaplotypeScore=0.0000;MFE=-1.73;MPGHetRef=14.69;MPGHomRef=-1.799e+01;MPGHomVar=-1.469e+01;MPGLikHetRef=4.21;MPGLikHomRef=22.20;MPGLikHomVar=18.91;MQ=13.41;MQ0=0;MQRankSum=-2.797;NBQ=34.35;ReadMeanLen=88.9;ReadMeanPos=0.457;ReadPosEndDist=19.4;ReadPosRankSum=0.715;set=varscan	GT:AD:DP:PVAL	0/1:6,8:14:9.6618E-4
+chr22	203	.	G	C	200.80	.	ABCI5=0.435;ABCI50=0.577;ABCI95=0.710;AC=2;AF=1.00;AN=2;BaseQRankSum=3.300;CFILTERS=None;DP=34;Entropy=3.27;FS=0.000;GC=75.25;HRun=3;HaplotypeScore=0.0000;MFE=-2.51;MPGHetRef=34.81;MPGHomRef=-3.481e+01;MPGHomVar=-4.225e+01;MPGLikHetRef=10.24;MPGLikHomRef=45.04;MPGLikHomVar=52.48;MQ=16.97;MQ0=0;MQRankSum=4.451;NBQ=33.58;OND=0.618;QD=5.91;ReadMeanLen=88.6;ReadMeanPos=0.343;ReadPosEndDist=19.5;ReadPosRankSum=1.343;set=filterIngatk-samtools-varscan	GT:AD:DP:PL	1/1:20,13:31:56,10,0
+chr22	235	.	G	A	.	.	ABCI5=0.616;ABCI50=0.715;ABCI95=0.801;AC=1;AF=0.500;AN=2;BaseQRankSum=5.507;CFILTERS=None;DP=62;Entropy=3.14;FS=0.000;GC=75.25;HRun=0;HaplotypeScore=0.0000;MFE=-4.22;MPGHetRef=39.73;MPGHomRef=-3.973e+01;MPGHomVar=-1.008e+02;MPGLikHetRef=18.66;MPGLikHomRef=58.40;MPGLikHomVar=119.50;MQ=11.18;MQ0=0;MQRankSum=-2.982;NBQ=34.61;ReadMeanLen=95.7;ReadMeanPos=0.337;ReadPosEndDist=23.9;ReadPosRankSum=0.158;set=varscan	GT:AD:DP:PVAL	0/1:45,17:59:4.7113E-6
+chr22	248	.	CCTT	C	201.05	CScoreFilter	AC=1;AF=0.500;AN=2;CFILTERS=balance,calling;DP=90;Entropy=2.82;GC=77.23;HRun=0;MFE=-1.13;MQ=11.90;NBQ=34.08;QD=2.23;ReadMeanLen=95.6;ReadMeanPos=0.334;ReadPosEndDist=20.5;set=freebayes-varscan	GT:DP:PL	0/1:89:215,0,217
+chr22	301	.	T	C	147.77	.	ABCI5=0.740;ABCI50=0.790;ABCI95=0.834;AC=1;AF=0.500;AN=2;BaseQRankSum=-1.302;CFILTERS=None;DP=201;Entropy=3.64;FS=0.000;GC=65.35;HRun=0;HaplotypeScore=0.0000;MFE=-1.35;MPGHetRef=73.64;MPGHomRef=-7.364e+01;MPGHomVar=-4.750e+02;MPGLikHetRef=60.51;MPGLikHomRef=134.15;MPGLikHomVar=535.52;MQ=12.44;MQ0=0;MQRankSum=1.855;NBQ=32.64;QD=0.74;ReadMeanLen=98.1;ReadMeanPos=0.400;ReadPosEndDist=24.4;ReadPosRankSum=0.095;set=filterIngatk-varscan	GT:AD:DP:PVAL	0/1:160,41:199:4.5655E-14
+chr22	427	.	C	G	540.77	.	ABCI5=0.553;ABCI50=0.619;ABCI95=0.682;AC=1;AF=0.500;AN=2;BaseQRankSum=7.334;CFILTERS=None;DP=155;Entropy=3.44;FS=0.765;GC=74.26;HRun=3;HaplotypeScore=0.0000;MFE=-2.04;MPGHetRef=157.55;MPGHomRef=-1.576e+02;MPGHomVar=-2.324e+02;MPGLikHetRef=46.66;MPGLikHomRef=204.21;MPGLikHomVar=279.11;MQ=20.20;MQ0=0;MQRankSum=0.572;NBQ=33.43;QD=3.49;ReadMeanLen=98.7;ReadMeanPos=0.607;ReadPosEndDist=24.0;ReadPosRankSum=-0.832;set=filterIngatk-samtools-varscan	GT:AD:DP:PL	0/1:98,57:149:78,0,166
+chr22	513	.	T	G	.	CScoreFilter	ABCI5=0.646;ABCI50=0.756;ABCI95=0.847;AC=1;AF=0.500;AN=2;BaseQRankSum=-1.445;CFILTERS=balance;DP=48;Entropy=2.95;FS=0.000;GC=72.28;HRun=0;HaplotypeScore=0.7340;MFE=-3.11;MPGHetRef=21.35;MPGHomRef=-2.135e+01;MPGHomVar=-1.075e+02;MPGLikHetRef=14.45;MPGLikHomRef=35.80;MPGLikHomVar=121.91;MQ=27.99;MQ0=0;MQRankSum=-2.776;NBQ=34.19;ReadMeanLen=97.3;ReadMeanPos=0.549;ReadPosEndDist=24.8;ReadPosRankSum=-0.691;set=varscan	GT:AD:DP:PVAL	0/1:37,11:46:2.4819E-4
+chr22	551	.	A	G	.	.	ABCI5=0.534;ABCI50=0.665;ABCI95=0.779;AC=1;AF=0.500;AN=2;BaseQRankSum=0.957;CFILTERS=None;DP=37;Entropy=3.49;FS=0.000;GC=71.29;HRun=1;HaplotypeScore=0.0000;MFE=-4.16;MPGHetRef=31.67;MPGHomRef=-3.167e+01;MPGHomVar=-7.786e+01;MPGLikHetRef=11.14;MPGLikHomRef=42.80;MPGLikHomVar=89.00;MQ=23.33;MQ0=0;MQRankSum=-2.417;NBQ=33.80;ReadMeanLen=94.7;ReadMeanPos=0.628;ReadPosEndDist=22.9;ReadPosRankSum=-0.568;set=varscan	GT:AD:DP:PVAL	0/1:25,12:37:8.4418E-5
+chr22	558	.	G	A	.	.	ABCI5=0.564;ABCI50=0.703;ABCI95=0.819;AC=1;AF=0.500;AN=2;BaseQRankSum=-3.521;CFILTERS=None;DP=32;Entropy=3.66;FS=0.000;GC=71.29;HRun=0;HaplotypeScore=0.0000;MFE=-2.04;MPGHetRef=20.04;MPGHomRef=-2.004e+01;MPGHomVar=-7.037e+01;MPGLikHetRef=9.63;MPGLikHomRef=29.68;MPGLikHomVar=80.00;MQ=22.77;MQ0=0;MQRankSum=-2.138;NBQ=32.31;ReadMeanLen=95.3;ReadMeanPos=0.652;ReadPosEndDist=23.2;ReadPosRankSum=-0.084;set=varscan	GT:AD:DP:PVAL	0/1:23,9:31:9.9376E-4
+chr22	567	.	T	C	.	.	ABCI5=0.501;ABCI50=0.654;ABCI95=0.787;AC=1;AF=0.500;AN=2;BaseQRankSum=1.929;CFILTERS=None;DP=27;Entropy=3.55;FS=0.000;GC=72.28;HRun=2;HaplotypeScore=0.0000;MFE=-5.31;MPGHetRef=25.28;MPGHomRef=-2.528e+01;MPGHomVar=-5.437e+01;MPGLikHetRef=8.13;MPGLikHomRef=33.41;MPGLikHomVar=62.50;MQ=15.47;MQ0=0;MQRankSum=-1.826;NBQ=34.67;ReadMeanLen=95.5;ReadMeanPos=0.695;ReadPosEndDist=22.0;ReadPosRankSum=0.797;set=varscan	GT:AD:DP:PVAL	0/1:18,9:26:2.076E-3
+chr22	575	.	A	G	.	.	ABCI5=0.412;ABCI50=0.589;ABCI95=0.750;AC=1;AF=0.500;AN=2;BaseQRankSum=0.424;CFILTERS=None;DP=20;Entropy=3.52;FS=0.000;GC=71.29;HRun=1;HaplotypeScore=0.0000;MFE=-3.02;MPGHetRef=22.78;MPGHomRef=-2.278e+01;MPGHomVar=-3.798e+01;MPGLikHetRef=6.02;MPGLikHomRef=28.80;MPGLikHomVar=44.00;MQ=9.86;MQ0=0;MQRankSum=-0.424;NBQ=34.36;ReadMeanLen=94.1;ReadMeanPos=0.695;ReadPosEndDist=24.4;ReadPosRankSum=0.656;set=varscan	GT:AD:DP:PVAL	0/1:12,8:19:3.9926E-3
+chr22	616	.	C	T	.	.	ABCI5=0.187;ABCI50=0.435;ABCI95=0.706;AC=1;AF=0.500;AN=2;BaseQRankSum=1.754;CFILTERS=None;DP=7;Entropy=3.20;FS=0.000;GC=65.35;HRun=0;HaplotypeScore=0.0000;MFE=-3.31;MPGHetRef=6.69;MPGHomRef=-1.189e+01;MPGHomVar=-6.693e+00;MPGLikHetRef=2.11;MPGLikHomRef=14.00;MPGLikHomVar=8.80;MQ=3.00;MQ0=0;MQRankSum=0.937;NBQ=35.80;ReadMeanLen=99.7;ReadMeanPos=0.639;ReadPosEndDist=16.7;ReadPosRankSum=-0.550;set=varscan	GT:AD:DP:PVAL	0/1:3,4:7:3.4965E-2
+chr22	1363	.	A	G	.	.	ABCI5=0.566;ABCI50=0.687;ABCI95=0.792;AC=1;AF=0.500;AN=2;BaseQRankSum=-1.547;CFILTERS=None;DP=43;Entropy=2.55;FS=0.000;GC=56.44;HRun=0;HaplotypeScore=0.0000;MFE=0.00;MPGHetRef=26.90;MPGHomRef=-2.690e+01;MPGHomVar=-8.387e+01;MPGLikHetRef=12.94;MPGLikHomRef=39.85;MPGLikHomVar=96.81;MQ=12.75;MQ0=0;MQRankSum=0.119;NBQ=33.49;ReadMeanLen=96.9;ReadMeanPos=0.392;ReadPosEndDist=25.4;ReadPosRankSum=0.278;set=varscan	GT:AD:DP:PVAL	0/1:30,13:42:4.0777E-5
+chr22	1375	.	ACCC	A	.	CScoreFilter	AC=1;AF=0.500;AN=2;CFILTERS=balance,calling;DP=54;Entropy=2.27;GC=54.46;HRun=0;MFE=0.00;MQ=18.11;NBQ=34.53;ReadMeanLen=97.6;ReadMeanPos=0.350;ReadPosEndDist=23.4;set=varscan	GT:AD:DP:PVAL	0/1:11:41:2.4398E-4
+chr22	1646	.	T	C	.	.	ABCI5=0.700;ABCI50=0.749;ABCI95=0.795;AC=1;AF=0.500;AN=2;BaseQRankSum=-6.734;CFILTERS=None;DP=224;Entropy=3.16;FS=0.000;GC=55.45;HRun=1;HaplotypeScore=3.7122;MFE=-5.58;MPGHetRef=97.82;MPGHomRef=-9.782e+01;MPGHomVar=-5.263e+02;MPGLikHetRef=67.43;MPGLikHomRef=165.25;MPGLikHomVar=593.70;MQ=49.83;MQ0=0;MQRankSum=-11.126;NBQ=35.55;OND=4.464e-03;ReadMeanLen=99.5;ReadMeanPos=0.562;ReadPosEndDist=24.0;ReadPosRankSum=0.492;set=varscan	GT:AD:DP:PVAL	0/1:168,55:216:8.2073E-17
+chr22	1660	rs72613662	G	A	4379.77	.	ABCI5=0.216;ABCI50=0.266;ABCI95=0.320;AC=2;AF=1.00;AN=2;BaseQRankSum=-3.484;CFILTERS=None;DP=196;Entropy=3.01;FS=0.000;GC=57.43;HRun=1;HaplotypeScore=1.1567;MFE=-5.00;MPGHetRef=136.64;MPGHomRef=-4.525e+02;MPGHomVar=-1.366e+02;MPGLikHetRef=59.00;MPGLikHomRef=511.54;MPGLikHomVar=195.64;MQ=48.23;MQ0=0;MQRankSum=10.660;NBQ=35.16;OND=0.270;QD=22.35;ReadMeanLen=99.5;ReadMeanPos=0.569;ReadPosEndDist=24.6;ReadPosRankSum=0.720;set=combo-gatk-freebayes-gatk_haplotype-varscan	GT:AD:DP:PL	1/1:53,143:196:4313,43,0
+chr22	1758	.	A	G	552.77	.	ABCI5=-7.241e-03;ABCI50=0.024;ABCI95=0.130;AC=2;AF=1.00;AN=2;CFILTERS=None;DP=19;Entropy=3.47;FS=0.000;GC=53.47;HRun=1;HaplotypeScore=0.0000;MFE=-1.72;MPGHetRef=-5.717e+00;MPGHomRef=-6.810e+01;MPGHomVar=5.72;MPGLikHetRef=5.72;MPGLikHomRef=68.10;MPGLikHomVar=2.228e-03;MQ=26.00;MQ0=0;NBQ=34.70;QD=29.09;ReadMeanLen=100.0;ReadMeanPos=0.666;ReadPosEndDist=20.9;set=filterIngatk-samtools-varscan	GT:AD:DP:PL	1/1:0,19:19:128,57,0
+chr22	14123	.	G	A	.	.	ABCI5=0.750;ABCI50=0.779;ABCI95=0.807;AC=1;AF=0.500;AN=2;BaseQRankSum=2.330;CFILTERS=None;DP=560;Entropy=3.57;FS=0.000;GC=51.49;HRun=1;HaplotypeScore=0.0000;MFE=-1.13;MPGHetRef=262.91;MPGHomRef=-2.629e+02;MPGHomVar=-1.301e+03;MPGLikHetRef=168.58;MPGLikHomRef=431.49;MPGLikHomVar=1469.79;MQ=1.97;MQ0=0;MQRankSum=-0.629;NBQ=36.02;OND=1.786e-03;ReadMeanLen=99.6;ReadMeanPos=0.559;ReadPosEndDist=23.9;ReadPosRankSum=0.653;set=varscan	GT:AD:DP:PVAL	0/1:439,120:546:7.4652E-37
+chr22	14364	.	G	T	.	.	ABCI5=0.692;ABCI50=0.778;ABCI95=0.850;AC=1;AF=0.500;AN=2;BaseQRankSum=-0.852;CFILTERS=None;DP=71;Entropy=3.29;FS=0.000;GC=54.46;HRun=1;HaplotypeScore=0.0000;MFE=-0.99;MPGHetRef=31.94;MPGHomRef=-3.194e+01;MPGHomVar=-1.751e+02;MPGLikHetRef=21.37;MPGLikHomRef=53.31;MPGLikHomVar=196.50;MQ=1.43;MQ0=0;MQRankSum=1.049;NBQ=34.53;ReadMeanLen=99.0;ReadMeanPos=0.561;ReadPosEndDist=22.3;ReadPosRankSum=0.556;set=varscan	GT:AD:DP:PVAL	0/1:56,15:66:2.8272E-5

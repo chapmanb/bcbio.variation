@@ -45,9 +45,8 @@
         (-> (combine/combine-variants [call-safesv svready-file] ref-file
                                       :merge-type :full)
             (fs/rename (:calls out-files)))
-        (-> (intervals/combine-multiple-intervals region-file [] ref-file
-                                                  :combine-rule :union
-                                                  :more-beds [sv-bed])
+        (-> (intervals/combine-multiple region-file [] ref-file
+                                        :combine-rule :union :more-beds [sv-bed])
             (fs/rename (:regions out-files)))
         ))
     out-files))

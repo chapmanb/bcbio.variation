@@ -80,6 +80,8 @@
                   (catch UserException$BadInput e []))
              (rest intervals)))))
 
+;; ## Merge BED files
+
 (defn- prep-intervals-by-contig
   "Intersect and exclude intervals on a contig."
   [start-intervals exclude-intervals loc-parser combine-rule]
@@ -109,7 +111,7 @@
                                          combine-rule)
               contigs))))
 
-(defn combine-multiple-intervals
+(defn combine-multiple
   "Combine intervals from an initial BED and coverage BAM files."
   [initial-bed align-bams ref & {:keys [out-dir name exclude-intervals combine-rule
                                         more-beds]}]
@@ -137,9 +139,8 @@
   (let [base-intervals (:intervals exp)
         all-aligns (set (remove nil? (map :align (cons exp (:calls exp)))))]
     (when (and base-intervals (seq all-aligns))
-      (combine-multiple-intervals base-intervals all-aligns
-                                  (:ref exp)
-                                  :exclude-intervals (:exclude-intervals exp)
-                                  :name (:sample exp)
-                                  :out-dir (get-in config [:dir :prep] (get-in config [:dir :out]))))))
-
+      (combine-multiple base-intervals all-aligns
+                        (:ref exp)
+                        :exclude-intervals (:exclude-intervals exp)
+                        :name (:sample exp)
+                        :out-dir (get-in config [:dir :prep] (get-in config [:dir :out]))))))

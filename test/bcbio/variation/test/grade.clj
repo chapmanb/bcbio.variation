@@ -67,6 +67,24 @@
       (-> cmp :grade-breakdown :discordant :snp :shared :hethom) => 1
       (-> cmp :c-files :eval-discordant) => out-file)))
 
+(facts "Comparisons where inputs have alternative reference sequence: hg19->GRCh37"
+  (let [base-dir (fs/file data-dir "digrade")
+        c1o {:file (str (fs/file base-dir "NA12878-cmp-r1.vcf"))
+             :prep true
+             :name "ref" :type "grading-ref"}
+        c2o {:file (str (fs/file base-dir "hg19" "NA12878-cmp-r3.vcf"))
+             :name "eval"
+             :prep true
+             :intervals (str (fs/file base-dir "hg19" "NA12878-cmp-r3-intervals.bed"))
+             :ref (str (fs/file data-dir "hg19.fa"))}
+        exp {:ref ref-file :sample "NA12878" :approach "grade"
+             :intervals (str (fs/file base-dir "NA12878-cmp-r1-intervals.bed"))}
+        config {:dir {:out (str (fs/file base-dir "work"))}}]
+    (fsp/remove-path (get-in config [:dir :out]))
+    (fs/mkdirs (get-in config [:dir :out]))
+    (let [[c1 c2] (#'compare/prepare-vcf-calls (assoc exp :calls [c1o c2o]) config)]
+      (compare-two-vcf c1 c2 exp config))))
+
 (facts "Normalize input VCFs containing END tags"
   (let [base-dir (fs/file data-dir "digrade")
         c1 {:file (str (fs/file base-dir "NA12878-cmp-r1.vcf"))
