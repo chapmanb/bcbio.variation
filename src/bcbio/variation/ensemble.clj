@@ -11,7 +11,8 @@
             [me.raynes.fs :as fs]
             [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]
-            [bcbio.variation.compare :as compare]))
+            [bcbio.variation.compare :as compare]
+            [bcbio.variation.variantcontext :as gvc]))
 
 (defn- setup-work-dir
   "Create working directory for ensemble consensus calling."
@@ -69,7 +70,12 @@
                                      :xspecific true
                                      :trusted {:total (get-in config [:ensemble :trusted-pct] 0.65)}}}]}
                (->/when-let [int-file (:intervals config)]
-                 (assoc :intervals int-file)))]}
+                 (assoc :intervals int-file))
+               (->/when-let [sample-name (let [samples (-> vrn-files first gvc/get-vcf-header
+                                                           .getGenotypeSamples)]
+                                           (when (= 1 (count samples))
+                                             (first samples)))]
+                 (assoc :sample sample-name)))]}
          yaml/generate-string
          (spit out-file))
     out-file))
