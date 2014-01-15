@@ -1,4 +1,4 @@
-## 0.1.3 (in progress)
+## 0.1.3 (15 January 2014)
 
 - Update dependencies to the GATK 2.8.1 MIT licensed framework and associated
   Picard, Tribble and variant libraries. Silence phone home events from library.
