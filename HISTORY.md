@@ -1,5 +1,7 @@
 ## 0.1.3 (in progress)
 
+- Update dependencies to the GATK 2.8.1 MIT licensed framework and associated
+  Picard, Tribble and variant libraries. Silence phone home events from library.
 - Avoid errors on converting hg19 to GRCh37 where hg19 variants contain hg19 hap
   contigs with no equivalent in GRCh37. It now drops these variants instead
   of generating an error. Thanks to Severine Catreux.
