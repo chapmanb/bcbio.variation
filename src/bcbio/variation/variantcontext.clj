@@ -230,6 +230,7 @@
   [gs & {:keys [attrs]}]
   (let [all-attrs [["PL" seq (fn [x _ v] (.PL x (int-array v)))]
                    ["PVAL" identity (fn [x k v] (.attribute x k v))]
+                   ["GQ" identity (fn [x _ v] (.GQ x v))]
                    ["DP" identity (fn [x _ v] (.DP x v))]
                    ["AD" seq (fn [x _ v] (.AD x (int-array v)))]
                    ["AO" identity (fn [x a v] (.attribute x a v))]]]
