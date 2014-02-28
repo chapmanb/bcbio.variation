@@ -63,6 +63,7 @@
        :attr-count (+ (if (seq (get-in g [:attributes "PL"])) 1 0)
                       (if (seq (get-in g [:attributes "PVAL"])) 1 0)
                       (if (seq (get-in g [:attributes "AD"])) 1 0)
+                      (if (get-in g [:attributes "GQ"]) 1 0)
                       (if (get-in g [:attributes "DP"]) 1 0))
        :pl (attr/get-pl g)
        })))
@@ -79,11 +80,13 @@
             (apply + (remove nil? (map k xs))))
           (sum-plus-call-type [i xs]
             (let [pls (safe-sum xs :pl)
-                  represent-x (last (sort-by #(vector (:has-likelihood %)
-                                                      (or (:pl %) (- Integer/MIN_VALUE))
-                                                      (:attr-count %))
+                  best-x (last (sort-by #(vector (:has-likelihood %)
+                                                 (or (:pl %) (- Integer/MIN_VALUE))
+                                                 (:attr-count %))
+                                        xs))
+                  represent-x (last (sort-by #(vector (:has-likelihood %) (:attr-count %))
                                              xs))
-                  call-code (if (= "HET" (:call-type represent-x)) 0 1)]
+                  call-code (if (= "HET" (:call-type best-x)) 0 1)]
               [(count xs) call-code (- pls) i represent-x]))]
     (->> alleles
          (group-by :alleles)
