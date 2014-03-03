@@ -1,3 +1,10 @@
+## 0.1.4 (in progress)
+
+- Allow bgzipped/tabix inputs to validation.
+- Improve representation of ensemble variants ensuring standard expected keys
+  are present when available in an individual genotype call. Thanks to Shalabh
+  Suman.
+
 ## 0.1.3 (15 January 2014)
 
 - Update dependencies to the GATK 2.8.1 MIT licensed framework and associated
