@@ -1,4 +1,4 @@
-## 0.1.4 (in progress)
+## 0.1.4 (5 March 2014)
 
 - Allow bgzipped/tabix inputs to validation.
 - Improve representation of ensemble variants ensuring standard expected keys
