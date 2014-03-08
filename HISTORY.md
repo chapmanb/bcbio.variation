@@ -1,3 +1,9 @@
+## 0.1.5 (In progress)
+
+- Move to MIT licensed GATK 3.0 framework.
+- Support lightweight loading options for gemini integration to avoid large load
+  times with new gene tables in gemini 0.6.5.
+
 ## 0.1.4 (5 March 2014)
 
 - Allow bgzipped/tabix inputs to validation.
