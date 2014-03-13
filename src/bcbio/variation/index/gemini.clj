@@ -38,7 +38,9 @@
   (when-let [gemini-cmd (get-gemini-cmd)]
     (itx/with-tx-file [tx-index index-file]
       (let [info (apply shell/sh
-                        (concat [gemini-cmd "load" "-v" in-file]
+                        (concat [gemini-cmd "load" "-v" in-file "--skip-gene-tables"]
+                                (when (.contains in-file "/test/data/")
+                                  ["--test-mode"])
                                 (when (has-snpeff-anns? in-file)
                                   ["-t" "snpEff"])
                                 [tx-index]))]
@@ -227,11 +229,11 @@
 (defn vc-attr-retriever
   "Retrieve metrics by name from a gemini index for provided VariantContexts."
   [in-file ref-file]
-  (let [pool (future (when-let [index-db (index-variant-file in-file ref-file)]
-                       (get-sqlite-db-pool index-db)))]
+  (let [pool (when-let [index-db (index-variant-file in-file ref-file)]
+               (get-sqlite-db-pool index-db))]
     (fn [vc attr]
-      (when @pool
-        (sql/with-connection @pool
+      (when pool
+        (sql/with-connection pool
           (sql/with-query-results rows
             [(str "SELECT " (string/join "," (attr->colnames attr))
                   " FROM variants WHERE chrom = ? AND start = ? and ref = ?")

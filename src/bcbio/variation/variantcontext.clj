@@ -85,16 +85,20 @@
   "Create a Tribble FeatureSource for VCF file.
    Handles indexing and parsing of VCF into VariantContexts.
    We treat gzipped files as tabix indexed VCFs."
-  [in-file ref-file]
-  (if (.endsWith in-file ".gz")
-    (AbstractFeatureReader/getFeatureReader in-file (VCFCodec.) false)
-    (AbstractFeatureReader/getFeatureReader (.getAbsolutePath (file in-file)) (VCFCodec.)
-                                            (create-vcf-index in-file))))
+  ([in-file]
+      (if (.endsWith in-file ".gz")
+        (AbstractFeatureReader/getFeatureReader in-file (VCFCodec.) false)
+        (AbstractFeatureReader/getFeatureReader (.getAbsolutePath (file in-file)) (VCFCodec.)
+                                                (create-vcf-index in-file))))
+  ([in-file ref-file]
+     (get-vcf-source in-file)))
 
 (defn get-vcf-iterator
   "Create an iterator over VCF VariantContexts."
-  [in-file ref-file]
-  (.iterator (get-vcf-source in-file ref-file)))
+  ([in-file]
+     (.iterator (get-vcf-source in-file)))
+  ([in-file ref-file]
+     (get-vcf-iterator in-file)))
 
 (defn variants-in-region
   "Retrieve variants located in potentially multiple variant files"
@@ -136,8 +140,8 @@
 (defn get-vcf-header
   "Retrieve header from input VCF file."
   [vcf-file]
-  (with-open [vcf-reader (.makeSourceFromStream (VCFCodec.) (input-stream vcf-file))]
-    (.readActualHeader (VCFCodec.) vcf-reader)))
+  (with-open [vcf-reader (AbstractFeatureReader/getFeatureReader vcf-file (VCFCodec.) false)]
+    (.getHeader vcf-reader)))
 
 ;; ## Writing VCF files
 
@@ -202,7 +206,7 @@
   [vcf ref out-part fname fdesc passes?]
   (let [out-file (fsp/add-file-part vcf out-part)]
     (when (itx/needs-run? out-file)
-      (with-open [vcf-iter (get-vcf-iterator vcf ref)]
+      (with-open [vcf-iter (get-vcf-iterator vcf)]
         (write-vcf-w-template vcf {:out out-file}
                               (map (partial maybe-add-filter fname passes?) (parse-vcf vcf-iter))
                               ref
@@ -214,7 +218,7 @@
   [in-file passes? file-out-part ref-file & {:keys [out-dir]}]
   (let [out-file (fsp/add-file-part in-file file-out-part out-dir)]
     (when (itx/needs-run? out-file)
-      (with-open [in-iter (get-vcf-iterator in-file ref-file)]
+      (with-open [in-iter (get-vcf-iterator in-file)]
         (write-vcf-w-template in-file {:out out-file}
                               (map :vc (filter passes? (parse-vcf in-iter)))
                               ref-file)))
@@ -230,6 +234,7 @@
   [gs & {:keys [attrs]}]
   (let [all-attrs [["PL" seq (fn [x _ v] (.PL x (int-array v)))]
                    ["PVAL" identity (fn [x k v] (.attribute x k v))]
+                   ["GQ" identity (fn [x _ v] (.GQ x v))]
                    ["DP" identity (fn [x _ v] (.DP x v))]
                    ["AD" seq (fn [x _ v] (.AD x (int-array v)))]
                    ["AO" identity (fn [x a v] (.attribute x a v))]]]
@@ -260,7 +265,7 @@
         .make)))
 
 (defn -main [vcf ref approach]
-  (with-open [vcf-iter (get-vcf-iterator vcf ref)]
+  (with-open [vcf-iter (get-vcf-iterator vcf)]
     (letfn [(item-iter []
               (case approach
                 "gatk" (iterator-seq (.iterator vcf-iter))

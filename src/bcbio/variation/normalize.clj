@@ -17,6 +17,7 @@
             [lonocloud.synthread :as ->]
             [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]
+            [bcbio.variation.structural :as structural]
             [bcbio.variation.variantcontext :as gvc]))
 
 ;; ## Chromosome name remapping
@@ -157,6 +158,18 @@
               (.genotypes (map normalize-allele-calls (update-genotype-sample (:vc orig) sample)))
               .make)))))
 
+(defn- remove-extra-end
+  "Remove END alleles present in non-structural variants.
+   END tags in indels cause issues downstream in LeftAlignVariants if moved."
+  [vc]
+  (if (and (contains? (:attributes vc) "END")
+           (nil? (structural/get-sv-type vc {:max-indel-size Integer/MAX_VALUE})))
+    (assoc vc :vc
+           (-> (VariantContextBuilder. (:vc vc))
+               (.rmAttribute "END")
+               .make))
+    vc))
+
 (defn- no-call-genotype?
   "Check if a variant has a non-informative no-call genotype."
   [vc config]
@@ -240,6 +253,7 @@
        (remove #(no-call-genotype? % config))
        (map (partial normalize-sv-genotype config sample))
        (map (partial fix-vc sample config))
+       (map remove-extra-end)
        (map :vc)))
 
 (defn- fix-vcf-line
@@ -276,8 +290,8 @@
             (let [line-info (fix-vcf-line line chr-map config)]
               (if-let [wtr (get ref-wrtrs (:chrom line-info))]
                 (.write wtr (str (:line line-info) "\n"))
-                (throw (Exception. (format "Could not find remapping of chromosome %s in reference: %s"
-                                           (:chrom line-info) (keys ref-wrtrs)))))))]
+                (println (format "Could not find remapping of chromosome %s in reference. Removing variant."
+                                 (:chrom line-info))))))]
     (let [ref-chrs (ref-chr-files ref-file)
           ref-wrtrs (zipmap (keys ref-chrs) (map writer (vals ref-chrs)))
           chr-map (chr-name-remap (:prep-org config) ref-file orig-ref-file)]

@@ -48,12 +48,12 @@
           base-name (if (nil? base-ext) full-base-name
                         (format "%s-%s.vcf" (first (string/split full-base-name #"-"))
                                 base-ext))
-          file-info {:out-vcf (str (fs/file base-dir
-                                            (fsp/add-file-part base-name
-                                                               (case merge-type
-                                                                 :minimal "mincombine"
-                                                                 :full "fullcombine"
-                                                                 "combine"))))}
+          file-info {:out-vcf (fsp/add-file-part base-name
+                                                 (case merge-type
+                                                   :minimal "mincombine"
+                                                   :full "fullcombine"
+                                                   "combine")
+                                                 base-dir)}
           args (concat ["-R" ref
                         "-o" :out-vcf
                         "--rod_priority_list" (string/join "," (map-indexed unique-name vcfs))]

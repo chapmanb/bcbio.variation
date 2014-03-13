@@ -54,6 +54,8 @@ test/data/phased/*-cmp*.vcf
 test/data/phased/work/
 test/data/digrade/*.idx
 test/data/digrade/*.csv
+test/data/digrade/*-sorted.bed
+test/data/digrade/hg19/*-sorted.bed
 test/data/digrade/work/
 test/data/svs/*.idx
 test/data/svs/*-sorted.bed

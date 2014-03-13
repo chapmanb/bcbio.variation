@@ -11,7 +11,8 @@
             [me.raynes.fs :as fs]
             [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]
-            [bcbio.variation.compare :as compare]))
+            [bcbio.variation.compare :as compare]
+            [bcbio.variation.variantcontext :as gvc]))
 
 (defn- setup-work-dir
   "Create working directory for ensemble consensus calling."
@@ -69,7 +70,12 @@
                                      :xspecific true
                                      :trusted {:total (get-in config [:ensemble :trusted-pct] 0.65)}}}]}
                (->/when-let [int-file (:intervals config)]
-                 (assoc :intervals int-file)))]}
+                 (assoc :intervals int-file))
+               (->/when-let [sample-name (let [samples (-> vrn-files first gvc/get-vcf-header
+                                                           .getGenotypeSamples)]
+                                           (when (= 1 (count samples))
+                                             (first samples)))]
+                 (assoc :sample sample-name)))]}
          yaml/generate-string
          (spit out-file))
     out-file))
@@ -86,6 +92,8 @@
         config-file (create-ready-config vrn-files ref-file in-config dirs)]
     (compare/variant-comparison-from-config config-file)
     (let [prep-file (first (fs/glob (str (io/file (:prep dirs) "*cfilter.vcf"))))]
+      (assert prep-file (str "Did not find prepped and filtered consensus file. "
+                             "Do you have classifiers specified in the input YAML file?"))
       (fs/copy prep-file out-file)
       (fs/copy (str prep-file ".idx") (str out-file ".idx"))))
   out-file)

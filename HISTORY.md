@@ -1,3 +1,32 @@
+## 0.1.5 (In progress)
+
+- Move to MIT licensed GATK 3.0 framework.
+- Support lightweight loading options for gemini integration to avoid large load
+  times with new gene tables in gemini 0.6.5.
+
+## 0.1.4 (5 March 2014)
+
+- Allow bgzipped/tabix inputs to validation.
+- Improve representation of ensemble variants ensuring standard expected keys
+  are present when available in an individual genotype call. Thanks to Shalabh
+  Suman.
+
+## 0.1.3 (15 January 2014)
+
+- Update dependencies to the GATK 2.8.1 MIT licensed framework and associated
+  Picard, Tribble and variant libraries. Silence phone home events from library.
+- Avoid errors on converting hg19 to GRCh37 where hg19 variants contain hg19 hap
+  contigs with no equivalent in GRCh37. It now drops these variants instead
+  of generating an error. Thanks to Severine Catreux.
+- Ensure BED files passed to evaluations are converted to reference material
+  coordinates when inputs differ (hg19->GRCh37). Thanks to Severine Catreux.
+- Avoid issues with running LeftAlignVariants on indels with END tags. Thanks to
+  Justin Johnson.
+- Move to external bcbio.run tool to help abstract out some core functionality
+  useful in other contexts.
+- Additional flexibility for Illumina to valid VCF preparation. Allow ignoring
+  SVs or other file types.
+
 ## 0.1.2 (4 December 2013)
 
 - Handle metrics evaluation with GATK where input calls have haploid chromosomes,

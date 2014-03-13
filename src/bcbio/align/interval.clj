@@ -30,3 +30,21 @@
                      (map (partial update-contig-name name-map))
                      (remove nil?)))))))
     out-file))
+
+(defn- maybe-remap-bed
+  [interval int-ref base-ref out-dir]
+  (when interval
+    (if (and (not (nil? int-ref)) (not= base-ref int-ref))
+      (rename-bed interval base-ref :out-dir out-dir)
+      interval)))
+
+(defn prep-multi
+  "Prepare multiple input intervals, remapping chromosome names as needed."
+  ([to-prep ref-file orig out-dir]
+     (->> to-prep
+          (map (juxt :intervals :ref))
+          (map (fn [[bed ref]] (maybe-remap-bed bed ref ref-file out-dir)))
+          (concat (flatten [orig]))
+          (remove nil?)))
+  ([to-prep ref-file out-dir]
+     (prep-multi to-prep ref-file [] out-dir)))

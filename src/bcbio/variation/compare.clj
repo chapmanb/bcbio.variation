@@ -19,7 +19,6 @@
         [bcbio.variation.evaluate :only [calc-variant-eval-metrics]]
         [bcbio.variation.filter :only [variant-filter variant-format-filter
                                        pipeline-recalibration]]
-        [bcbio.variation.filter.intervals :only [combine-multiple-intervals]]
         [bcbio.variation.multiple :only [prep-cmp-name-lookup pipeline-compare-multiple]]
         [bcbio.variation.multisample :only [compare-two-vcf-flexible
                                             multiple-samples?]]
@@ -32,9 +31,11 @@
             [clj-yaml.core :as yaml]
             [me.raynes.fs :as fs]
             [lonocloud.synthread :as ->]
+            [bcbio.align.interval :as ainterval]
             [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]
             [bcbio.run.broad :as broad]
+            [bcbio.variation.filter.intervals :as fintervals]
             [bcbio.variation.grade :as grade]
             [bcbio.variation.phasing :as phasing]
             [bcbio.variation.report :as report]
@@ -46,8 +47,7 @@
   "Variant comparison producing 3 files: concordant and both directions discordant"
   [sample call1 call2 ref & {:keys [out-dir intervals]}]
   (let [base-dir (if (nil? out-dir) (fs/parent (:file call1)) out-dir)
-        ready-intervals (remove nil? (flatten [intervals (:intervals call1)
-                                               (:intervals call2)]))
+        ready-intervals (ainterval/prep-multi [call1 call2] ref intervals out-dir)
         sample (or sample (-> call1 :file gvc/get-vcf-header .getGenotypeSamples first))]
     (if-not (fs/exists? base-dir)
       (fs/mkdirs base-dir))
@@ -116,7 +116,7 @@
   (let [out-dir (get-in config [:dir :prep] (get-in config [:dir :out]))
         transition (partial do-transition config)
         align-bams (prepare-input-bams exp out-dir)
-        all-intervals (remove nil? (map :intervals (cons exp (:calls exp))))
+        all-intervals (ainterval/prep-multi (cons exp (:calls exp)) (:ref exp) out-dir)
         start-vcfs (vec (map #(gatk-normalize % exp all-intervals out-dir transition)
                              (:calls exp)))
         _ (transition :combine "Creating merged VCF files for all comparisons")
@@ -148,8 +148,8 @@
             (let [out-dir (get-in config [:dir :prep] (get-in config [:dir :out]))
                   align-bams (remove nil? (map :align [c1 c2]))]
               (when (and (:intervals exp) (seq align-bams))
-                (combine-multiple-intervals (:intervals exp) align-bams (:ref exp)
-                                            :out-dir out-dir :name (:sample exp)))))
+                (fintervals/combine-multiple (:intervals exp) align-bams (:ref exp)
+                                             :out-dir out-dir :name (:sample exp)))))
           (discordant-name [x]
             (format "%s-discordant" (:name x)))
           (zipmap-ordered [xs1 xs2]

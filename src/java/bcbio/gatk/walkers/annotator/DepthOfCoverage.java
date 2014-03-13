@@ -56,7 +56,7 @@ public class DepthOfCoverage extends InfoFieldAnnotation implements StandardAnno
             for (PerReadAlleleLikelihoodMap maps : perReadAlleleLikelihoodMap.values() ) {
                 for (Map.Entry<GATKSAMRecord,Map<Allele,Double>> el : maps.getLikelihoodReadMap().entrySet()) {
                     final GATKSAMRecord read = el.getKey();
-                    depth += (read.isReducedRead() ? read.getReducedCount(ReadUtils.getReadCoordinateForReferenceCoordinate(read, vc.getStart(), ReadUtils.ClippingTail.RIGHT_TAIL)) : 1);
+                    depth += 1;
                 }
             }
         }

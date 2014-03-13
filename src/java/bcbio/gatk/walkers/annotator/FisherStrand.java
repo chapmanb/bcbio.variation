@@ -258,7 +258,7 @@ public class FisherStrand extends InfoFieldAnnotation implements StandardAnnotat
                 int column = isFW ? 0 : 1;
 
                 final GATKSAMRecord read = el.getKey();
-                table[row][column] += (read.isReducedRead() ? read.getReducedCount(ReadUtils.getReadCoordinateForReferenceCoordinate(read, vc.getStart(), ReadUtils.ClippingTail.RIGHT_TAIL)) : 1);
+                table[row][column] += 1;
             }
         }
 
@@ -280,11 +280,6 @@ public class FisherStrand extends InfoFieldAnnotation implements StandardAnnotat
         for ( Map.Entry<String, AlignmentContext> sample : stratifiedContexts.entrySet() ) {
             for (PileupElement p : sample.getValue().getBasePileup()) {
 
-                // ignore reduced reads because they are always on the forward strand!
-                // TODO -- when het compression is enabled in RR, we somehow need to allow those reads through into the Fisher test
-                if ( p.getRead().isReducedRead() )
-                    continue;
-
                 if ( ! RankSumTest.isUsableBase(p, false) ) // ignore deletions
                     continue;
 
@@ -300,7 +295,7 @@ public class FisherStrand extends InfoFieldAnnotation implements StandardAnnotat
                     int row = matchesRef ? 0 : 1;
                     int column = isFW ? 0 : 1;
 
-                    table[row][column] += p.getRepresentativeCount();
+                    table[row][column] += 1;
                 }
             }
         }
