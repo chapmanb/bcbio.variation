@@ -157,18 +157,20 @@
     (let [c-files (select-by-concordance (:sample exp) c1 c2 (:ref exp)
                                          :out-dir (get-in config [:dir :out])
                                          :intervals (:intervals exp))
-          eval (calc-variant-eval-metrics (:file c1) (:file c2) (:ref exp)
-                                          :out-base (first c-files)
-                                          :intervals (:intervals exp))
-          c-eval (calc-variant-eval-metrics (:file c1) (:file c2) (:ref exp)
-                                            :out-base (fsp/add-file-part (first c-files) "callable")
-                                            :intervals (callable-intervals exp c1 c2))]
+          ;; eval (calc-variant-eval-metrics (:file c1) (:file c2) (:ref exp)
+          ;;                                 :out-base (first c-files)
+          ;;                                 :intervals (:intervals exp))
+          ;; c-eval (calc-variant-eval-metrics (:file c1) (:file c2) (:ref exp)
+          ;;                                   :out-base (fsp/add-file-part (first c-files) "callable")
+          ;;                                   :intervals (callable-intervals exp c1 c2))
+          ]
       {:c-files (zipmap-ordered (map keyword
                                      ["concordant" (discordant-name c1) (discordant-name c2)])
                                 c-files)
        :c1 c1 :c2 c2 :exp exp :dir (config :dir)
-       :metrics (report/concordance-report-metrics (:sample exp) eval)
-       :callable-metrics (report/concordance-report-metrics (:sample exp) c-eval)})))
+       ;; :metrics (report/concordance-report-metrics (:sample exp) eval)
+       ;; :callable-metrics (report/concordance-report-metrics (:sample exp) c-eval)
+       })))
 
 (defn compare-two-vcf
   "Compare two VCF files, handling standard and haploid specific comparisons."

@@ -551,6 +551,14 @@
      (neg-qual? xs) []
      :else xs)))
 
+(defn zipsafe-reader
+  "Provide a reader, handling gzipped or plain text inputs."
+  [f]
+  (reader
+   (cond
+    (.endsWith f ".gz") (-> f input-stream java.util.zip.GZIPInputStream.)
+    :else f)))
+
 (defn clean-problem-vcf
   "Clean VCF file which GATK parsers cannot handle due to illegal characters.
   Fixes:
@@ -559,7 +567,7 @@
     - Removes spaces in INFO fields."
   [in-vcf-file ref-file sample call & {:keys [out-dir]}]
   (let [get-ref-base (ref-base-getter ref-file)
-        out-file (fsp/add-file-part in-vcf-file "preclean" out-dir)]
+        out-file (string/replace (fsp/add-file-part in-vcf-file "preclean" out-dir) ".vcf.gz" ".vcf")]
     (letfn [(remove-gap [n xs]
               (assoc xs n
                      (-> (nth xs n)
@@ -584,7 +592,7 @@
                      (string/join "\t"))))]
       (when (itx/needs-run? out-file)
         (itx/with-tx-file [tx-out-file out-file]
-          (with-open [rdr (reader in-vcf-file)
+          (with-open [rdr (zipsafe-reader in-vcf-file)
                       wtr (writer tx-out-file)]
             (doall
              (map #(.write wtr (str % "\n"))

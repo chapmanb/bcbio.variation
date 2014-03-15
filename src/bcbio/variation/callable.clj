@@ -31,7 +31,8 @@
     (if-not (fs/exists? base-dir)
       (fs/mkdirs base-dir))
     (broad/index-bam align-bam)
-    (broad/run-gatk "CallableLoci" args file-info {:out [:out-bed :out-summary]})
+    (when (itx/needs-run? (:out-bed file-info))
+      (broad/run-gatk "CallableLoci" args file-info {:out [:out-bed :out-summary]}))
     (:out-bed file-info)))
 
 (defn features-in-region [source space start end]

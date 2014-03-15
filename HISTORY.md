@@ -1,8 +1,12 @@
-## 0.1.5 (In progress)
+## 0.1.5 (15 March 2014)
 
 - Move to MIT licensed GATK 3.0 framework.
+- Support bgzipped inputs for variant assessment. Thanks to Severine Catreux.
 - Support lightweight loading options for gemini integration to avoid large load
   times with new gene tables in gemini 0.6.5.
+- Avoid running GATK VariantEval which causes intermittent java core dumps.
+- Avoid re-runs of callable regions when already prepared using non-GATK chanjo-based
+  methods.
 
 ## 0.1.4 (5 March 2014)
 
