@@ -143,6 +143,11 @@
   (with-open [vcf-reader (AbstractFeatureReader/getFeatureReader vcf-file (VCFCodec.) false)]
     (.getHeader vcf-reader)))
 
+(defn get-samples
+  "Retrieve samples from VCF header"
+  [vcf-file]
+  (.getGenotypeSamples (get-vcf-header vcf-file)))
+
 ;; ## Writing VCF files
 
 (defn merge-headers

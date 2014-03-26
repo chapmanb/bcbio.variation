@@ -49,8 +49,8 @@
                           (map vec)
                           (into {}))
         g (->> (:genotypes vc)
-                   (filter #(= sample (:sample-name %)))
-                   first)]
+               (filter #(= sample (:sample-name %)))
+               first)]
     (when g
       {:sample-name sample
        :qual (:qual vc)
@@ -64,7 +64,7 @@
                       (if (seq (get-in g [:attributes "PVAL"])) 1 0)
                       (if (seq (get-in g [:attributes "AD"])) 1 0)
                       (if (get-in g [:attributes "GQ"]) 1 0)
-                      (if (get-in g [:attributes "DP"]) 1 0))
+                      (if (pos? (get-in g [:attributes "DP"] -1)) 1 0))
        :pl (attr/get-pl g)
        })))
 
@@ -121,10 +121,8 @@
   (let [match-fn (juxt :start :ref-allele)
         other-vcs (filter #(= (match-fn %) (match-fn vc))
                           (gvc/variants-in-region input-vc-getter vc))
-        most-likely-gs (->> samples
-                            (map (partial best-supported-sample-gs other-vcs))
-                            (remove nil?))]
-    (when (seq most-likely-gs)
+        most-likely-gs (map (partial best-supported-sample-gs other-vcs) samples)]
+    (when (not-every? nil? most-likely-gs)
       (-> (VariantContextBuilder. (:vc vc))
           (.alleles (conj (set (remove #(.isNoCall %) (mapcat :alleles most-likely-gs)))
                           (:ref-allele vc)))

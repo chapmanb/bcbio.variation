@@ -1,3 +1,11 @@
+## 0.1.6 (in progress)
+
+- Ensure Ensemble input files have consistent VCF headers for multi population
+  variant calling. Thanks to Shalabh Suman.
+- Prioritize depth attribute when choosing representative callset from multiple
+  choices during Ensemble calling. Thanks to Shalabh Suman.
+- Avoid identifying mitochondrial-only test datasets as haploid reference genomes.
+
 ## 0.1.5 (15 March 2014)
 
 - Move to MIT licensed GATK 3.0 framework.

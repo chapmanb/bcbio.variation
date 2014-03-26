@@ -452,12 +452,14 @@
 
 (defn is-haploid?
   "Is the provided VCF file a haploid genome (one genotype or all homozygous).
-  Samples the first set of variants, checking for haploid calls."
+  Samples the first set of variants, checking for haploid calls.
+  Avoids calling haploid based on chrM-only calls, used during testing."
   [vcf-file ref-file]
   (let [sample-size 10]
     (letfn [(is-vc-haploid? [vc]
               (when-not (= 0 (:num-samples vc))
-                (= 1 (apply max (map #(count (:alleles %)) (:genotypes vc))))))]
+                (when-not (contains? #{"chrM" "MT" "M" "chrMT"} (:chr vc))
+                  (= 1 (apply max (map #(count (:alleles %)) (:genotypes vc)))))))]
       (with-open [vcf-iter (get-vcf-iterator vcf-file ref-file)]
         (let [vcf-iter (parse-vcf vcf-iter)]
           (if-not (empty? vcf-iter)

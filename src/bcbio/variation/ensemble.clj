@@ -80,6 +80,23 @@
          (spit out-file))
     out-file))
 
+(defn first-mismatch
+  "Return the first mismatched pair in the two sequences"
+  [c1 c2]
+  (first (drop-while (fn [[x1 x2]] (= x1 x2)) (map vector c1 c2))))
+
+(defn- check-vcf-headers
+  "Ensure consistent headers for multi-sample inputs to Ensemble calling."
+  [vcf-files]
+  (reduce (fn [samples cmp-vcf]
+            (let [cmp-samples (gvc/get-samples cmp-vcf)]
+              (if (= samples cmp-samples)
+                samples
+                (throw (Exception. (str "VCF files do not have consistent headers: "
+                                        (vec (map fs/base-name vcf-files))
+                                        "\nFirst mismatch:" (first-mismatch samples cmp-samples)))))))
+          (gvc/get-samples (first vcf-files)) (rest vcf-files)))
+
 (defn consensus-calls
   "Provide a finalized set of consensus calls from multiple inputs.
    Handles cleaning up and normalizing input files, generating consensus
@@ -90,6 +107,7 @@
         ref-file (fsp/abspath ref-file)
         dirs (setup-work-dir out-file)
         config-file (create-ready-config vrn-files ref-file in-config dirs)]
+    (check-vcf-headers vrn-files)
     (compare/variant-comparison-from-config config-file)
     (let [prep-file (first (fs/glob (str (io/file (:prep dirs) "*cfilter.vcf"))))]
       (assert prep-file (str "Did not find prepped and filtered consensus file. "
