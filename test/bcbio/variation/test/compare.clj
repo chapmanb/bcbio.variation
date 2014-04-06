@@ -63,7 +63,7 @@
                match-out {:concordant (fsp/add-file-part combo-out "concordant")
                           :discordant (fsp/add-file-part combo-out "discordant")}
                select-out (doall (map #(str (fs/file data-dir (format "%s-%s.vcf" sample %)))
-                                      ["gatk-freebayes-concordance"
+                                      ["freebayes-gatk-concordance"
                                        "gatk-freebayes-discordance"
                                        "freebayes-gatk-discordance"]))
                out-callable (map #(format "%s-%s.bed" (fsp/file-root align-bam) %)

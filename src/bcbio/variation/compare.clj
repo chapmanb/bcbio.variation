@@ -52,7 +52,7 @@
     (if-not (fs/exists? base-dir)
       (fs/mkdirs base-dir))
     (doall
-     (for [[c1 c2 cmp-type] [[call1 call2 "concordance"]
+     (for [[c1 c2 cmp-type] [[call2 call1 "concordance"]
                              [call1 call2 "discordance"]
                              [call2 call1 "discordance"]]]
        (let [file-info {:out-vcf (str (fs/file base-dir

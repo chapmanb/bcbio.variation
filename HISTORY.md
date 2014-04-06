@@ -4,6 +4,8 @@
   variant calling. Thanks to Shalabh Suman.
 - Prioritize depth attribute when choosing representative callset from multiple
   choices during Ensemble calling. Thanks to Shalabh Suman.
+- Use evaluation calls instead of reference calls in concordance output. Thanks
+  to Severine Catreux.
 - Avoid identifying mitochondrial-only test datasets as haploid reference genomes.
 
 ## 0.1.5 (15 March 2014)
