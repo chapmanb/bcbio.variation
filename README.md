@@ -126,7 +126,7 @@ metrics associated with variants, reactive filtering and automated scoring.
 ### Run GATK walker for variant statistics
 
     $ lein uberjar
-    $ java -jar target/bcbio.variation-0.0.1-SNAPSHOT-standalone.jar -T VcfSimpleStats
+    $ java -jar target/bcbio.variation-0.0.1-SNAPSHOT-standalone.jar -T VcfSimpleStatsWalker
       -R test/data/GRCh37.fa --variant test/data/gatk-calls.vcf --out test.png
 
 ### Run custom GATK annotator
