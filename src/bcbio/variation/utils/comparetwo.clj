@@ -8,6 +8,7 @@
             [bcbio.run.itx :as itx]
             [bcbio.run.fsp :as fsp]
             [bcbio.variation.compare :as compare]
+            [bcbio.variation.index.gemini :as gemini]
             [bcbio.variation.variantcontext :as gvc]
             [clojure.java.io :as io]))
 
@@ -61,5 +62,6 @@
       (println)
       (println banner)
       (System/exit 0))
-    (pprint/pprint (run eval-vcf refcall-vcf (:sample options) ref-file region-file))
+    (binding [gemini/*use-gemini?* false]
+      (pprint/pprint (run eval-vcf refcall-vcf (:sample options) ref-file region-file)))
     (System/exit 0)))

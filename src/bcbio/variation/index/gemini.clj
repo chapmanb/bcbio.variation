@@ -14,13 +14,16 @@
 
 ;; ## Gemini
 
+(def ^:dynamic *use-gemini?* true)
+
 (defn get-gemini-cmd []
-  (let [cmd (get-in @web-config [:program :gemini] "gemini")
-        info (try (shell/sh cmd "-h")
-                  (catch java.io.IOException _
-                    {:exit -1}))]
-    (when (zero? (:exit info))
-      cmd)))
+  (when *use-gemini?*
+    (let [cmd (get-in @web-config [:program :gemini] "gemini")
+          info (try (shell/sh cmd "-h")
+                    (catch java.io.IOException _
+                      {:exit -1}))]
+      (when (zero? (:exit info))
+        cmd))))
 
 (defn- has-snpeff-anns?
   "Check if the input file contains snpEff annotations."
