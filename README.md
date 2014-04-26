@@ -63,9 +63,14 @@ required dependencies.
 
 ### Generate summary of concordance between variant calls
 
-A [YAML][u2] configuration file specifies the variant files for
-comparison. The project contains example configuration and associated
-variant files that demonstrate the features of the library.
+To compare two GATK compatible VCF files in a specific region:
+
+    $ java bcbio.variation.jar variant-utils comparetwo eval.vcf refcall.vcf ref.fa regions.bed
+
+You can also tune many parameters with a [YAML][u2] configuration file specifies
+the variant files for comparison. The project contains example configuration and
+associated variant files that demonstrate the features of the library and the
+configuration below has a description of available options.
 
 An example of [scoring a phased diploid genome against a haploid reference genome][grade-ref]:
 

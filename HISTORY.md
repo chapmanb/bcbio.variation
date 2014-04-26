@@ -6,6 +6,8 @@
   choices during Ensemble calling. Thanks to Shalabh Suman.
 - Use evaluation calls instead of reference calls in concordance output. Thanks
   to Severine Catreux.
+- Provide comparetwo functionality to provide concordance/discordance output for
+  a pair of variants within defined regions.
 - Avoid identifying mitochondrial-only test datasets as haploid reference genomes.
 
 ## 0.1.5 (15 March 2014)

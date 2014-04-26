@@ -1,6 +1,7 @@
 (ns bcbio.variation.utils.core
   (:require [bcbio.variation.normalize :as normalize]
             [bcbio.variation.utils.callsummary :as callsummary]
+            [bcbio.variation.utils.comparetwo :as comparetwo]
             ;[bcbio.variation.utils.gms :as gms]
             [bcbio.variation.utils.illumina :as illumina]
             [bcbio.variation.utils.popfreq :as popfreq]
@@ -11,6 +12,7 @@
 (def ^{:private true} progs
   {:callsummary callsummary/annotate-with-callsummary
                                         ;:gms gms/prepare-gms-vcfs-from-config
+   :comparetwo comparetwo/cl-entry
    :illumina illumina/cl-entry
    :popfreq popfreq/annotate-with-popfreq
    :sort-vcf normalize/prep-vcf
