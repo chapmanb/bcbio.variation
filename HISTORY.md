@@ -1,4 +1,4 @@
-## 0.1.6 (in progress)
+## 0.1.6 (28 April 2014)
 
 - Ensure Ensemble input files have consistent VCF headers for multi population
   variant calling. Thanks to Shalabh Suman.
