@@ -1,4 +1,4 @@
-(defproject bcbio.variation "0.1.6"
+(defproject bcbio.variation "0.1.7-SNAPSHOT"
   :description "Toolkit to analyze genomic variation data, built on the GATK with Clojure"
   :license {:name "MIT" :url "http://www.opensource.org/licenses/mit-license.html"}
   :dependencies [[org.clojure/clojure "1.5.1"]
@@ -21,8 +21,8 @@
                  [org.simpleframework/simple-xml "2.0.4"]
                  [org.apache.servicemix.bundles/org.apache.servicemix.bundles.jets3t "0.8.1_1"]
                  ;;
-                 [org.biojava/biojava3-core "3.0.4"]
-                 [org.biojava/biojava3-alignment "3.0.4"]
+                 [org.biojava/biojava3-core "3.0.8"]
+                 [org.biojava/biojava3-alignment "3.0.8"]
                  [org.clojars.chapmanb/circdesigna "0.0.2" :exclusions [net.sf.beaver/beaver-ant]]
                  [nz.ac.waikato.cms.weka/weka-stable "3.6.6"]
                  [org.clojars.chapmanb/fast-random-forest "0.98"]

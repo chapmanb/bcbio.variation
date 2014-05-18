@@ -30,8 +30,9 @@
 (defn- get-vc-alleles [vc]
   (vec (map #(.getDisplayString %) (cons (:ref-allele vc) (:alt-alleles vc)))))
 
-(defn is-multi-indel?
-  "Identify complex indels that can be split into multiple calls."
+(defn- is-multi-indel?
+  "Identify complex indels that can be split into multiple calls.
+   Caps indels we can operate on at 5000bp to avoid realignment errors for longer."
   [vc]
   (letfn [(monomorphic-alleles? [vc]
             (= 1 (->> (get-vc-alleles vc)
@@ -44,8 +45,12 @@
                  (not (monomorphic-alleles? vc))))
           (has-ref-padding-mismatch? [vc]
             (let [alleles (get-vc-alleles vc)]
-              (not= (nth (first alleles) 0) (nth (second alleles) 0))))]
+              (not= (nth (first alleles) 0) (nth (second alleles) 0))))
+          (splittable-size? [vc]
+            (< (apply max (map count (get-vc-alleles vc)))
+               5000))]
     (and (= "INDEL" (:type vc))
+         (splittable-size? vc)
          (or (has-multiple-nonref-alleles? vc)
              (has-ref-padding-mismatch? vc)))))
 
