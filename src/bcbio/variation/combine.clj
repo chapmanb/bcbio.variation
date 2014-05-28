@@ -196,10 +196,11 @@
 (defn full-prep-vcf
   "Provide convenient entry to fully normalize a variant file for comparisons."
   [vcf-file ref-file & {:keys [max-indel resort keep-ref tmp-dir keep-filtered]}]
-  (let [out-file (fsp/add-file-part vcf-file "fullprep")]
+  (let [out-file (string/replace (fsp/add-file-part vcf-file "fullprep") ".vcf.gz" ".vcf")]
     (when (itx/needs-run? out-file)
       (itx/with-temp-dir [out-dir (or tmp-dir (fs/parent vcf-file))]
-        (let [exp {:sample (-> vcf-file get-vcf-header .getGenotypeSamples first)
+        (let [exp {:sample (when-not (multiple-samples? vcf-file)
+                             (-> vcf-file get-vcf-header .getGenotypeSamples first))
                    :ref ref-file :params {:max-indel max-indel}}
               call {:name "fullprep" :file vcf-file :preclean true
                     :prep true :normalize true :prep-sv-genotype false
