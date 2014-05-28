@@ -123,14 +123,15 @@
                           (gvc/variants-in-region input-vc-getter vc))
         most-likely-gs (map (partial best-supported-sample-gs other-vcs) samples)]
     (when (not-every? nil? most-likely-gs)
-      (-> (VariantContextBuilder. (:vc vc))
-          (.alleles (conj (set (remove #(.isNoCall %) (mapcat :alleles most-likely-gs)))
-                          (:ref-allele vc)))
-          (.attributes (-> (map :attributes (reverse other-vcs))
-                           (#(apply merge %))
-                           (assoc "set" (update-set-info (get-in vc [:attributes "set"]) calls))))
-          (.genotypes (gvc/create-genotypes most-likely-gs :attrs #{"PL" "PVAL" "DP" "AD" "AO" "GQ"}))
-          .make))))
+      (let [alleles (conj (set (remove #(.isNoCall %) (mapcat :alleles most-likely-gs)))
+                          (:ref-allele vc))]
+        (-> (VariantContextBuilder. (:vc vc))
+            (.alleles alleles)
+            (.attributes (-> (map :attributes (reverse other-vcs))
+                             (#(apply merge %))
+                             (assoc "set" (update-set-info (get-in vc [:attributes "set"]) calls))))
+            (.genotypes (gvc/create-genotypes most-likely-gs alleles :attrs #{"PL" "PVAL" "DP" "AD" "AO" "GQ"}))
+            .make)))))
 
 (defn- recall-w-consensus
   "Recall variants in a combined set of variants based on consensus of all inputs."

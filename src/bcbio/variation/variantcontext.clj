@@ -16,7 +16,8 @@
         [lazymap.core :only [lazy-hash-map]]
         [ordered.set :only [ordered-set]]
         [bcbio.align.ref :only [get-seq-dict]])
-  (:require [clojure.string :as string]
+  (:require [clojure.math.combinatorics :as combo]
+            [clojure.string :as string]
             [lonocloud.synthread :as ->]
             [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]))
@@ -231,12 +232,29 @@
 
 ;; ## Genotype manipulation
 
+(defmulti consistent-attr?
+  "Ensure attributes are consistent with merged alleles"
+  (fn [attr & args]
+    (keyword attr)))
+
+(defmethod consistent-attr? :PL
+  ^{:doc "Ensure PL likelihood match new alleles. These can get out of skew during ensemble calling
+          when the final genotype has less alternative alleles than the original.
+          galleles -- actual genotype alleles (to infer ploidy)
+          talleles -- total alleles for variant call (to ensure matches number of PL combos)"}
+  [attr val galleles talleles]
+  (= (count val) (count (set (map sort (combo/selections talleles (count galleles)))))))
+
+(defmethod consistent-attr? :default
+  [attr val & args]
+  true)
+
 (defn create-genotypes
   "Create Genotype objects for a samples with defined alleles,
    optionally including attributes from the parent genotype.
    gs is a list of genotype dictionaries, with the alleles modified
    to the new values desired. This converts them into GATK-ready objects."
-  [gs & {:keys [attrs]}]
+  [gs alleles & {:keys [attrs]}]
   (let [all-attrs [["PL" seq (fn [x _ v] (.PL x (int-array v)))]
                    ["PVAL" identity (fn [x k v] (.attribute x k v))]
                    ["GQ" identity (fn [x _ v] (.GQ x v))]
@@ -248,7 +266,8 @@
                   (->/for [[attr val-fn add-fn] all-attrs]
                     (->/when (contains? attrs attr)
                       (->/when-let [val (val-fn (get-in g [:attributes attr]))]
-                        (#(add-fn % attr val)))))
+                        (->/when (consistent-attr?  attr val (:alleles g) alleles)
+                          (#(add-fn % attr val))))))
                   .make))]
       (->> gs
            (map alleles->genotype)
@@ -266,6 +285,7 @@
                            (:ref-allele vc))))]
     (-> (VariantContextBuilder. (:vc vc))
         (.genotypes (create-genotypes (map make-refcall (:genotypes vc))
+                                      (cons (:ref-allele vc) (:alt-alleles vc))
                                       :attrs attrs))
         .make)))
 
