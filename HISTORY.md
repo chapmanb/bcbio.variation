@@ -1,3 +1,14 @@
+## 0.1.7 (in progress)
+
+- Support multi-sample inputs for variant-prep, by avoiding subset to the
+  first sample.
+- Correctly handle ensemble multi-allelic sites and posterior likelihoods,
+  dropping PLs when they don't match the final reference call alleles.
+- Enable sorting by reference position in `variant utils sort-vcf` to support
+  structural variation VCF preparation.
+- Skip realignment of very long structural variation indels during
+  preparation. Thanks to Severine Catreux.
+
 ## 0.1.6 (28 April 2014)
 
 - Ensure Ensemble input files have consistent VCF headers for multi population
