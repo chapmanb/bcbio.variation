@@ -1,4 +1,4 @@
-## 0.1.7 (in progress)
+## 0.1.7 (23 July 2014)
 
 - Support multi-sample inputs for variant-prep, by avoiding subset to the
   first sample.

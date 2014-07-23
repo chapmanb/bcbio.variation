@@ -33,7 +33,7 @@ associated with different variant representations.
 
 ### Download
 
-The latest release is 0.1.6 (28 April 2014): [bcbio.variation-0.1.6-standalone.jar][dl].
+The latest release is 0.1.7 (23 July 2014): [bcbio.variation-0.1.7-standalone.jar][dl].
 Run from the command line:
 
     $ java -jar bcbio.variation-VERSION-standalone.jar [arguments]
@@ -44,7 +44,7 @@ the library for variant comparison, normalization and ensemble calling.  Note
 that bcbio.variation requires Java 1.7 since the underlying GATK libraries are
 not compatible with earlier versions.
 
-[dl]: https://github.com/chapmanb/bcbio.variation/releases/download/v0.1.6/bcbio.variation-0.1.6-standalone.jar
+[dl]: https://github.com/chapmanb/bcbio.variation/releases/download/v0.1.7/bcbio.variation-0.1.7-standalone.jar
  
 ### As a library
 
