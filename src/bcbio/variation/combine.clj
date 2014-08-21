@@ -6,7 +6,7 @@
       a. Generate callability at each position
       b. Combine original calls with merged positions
       c. Walk through each no-call and set as reference if callable"
-  (:import [org.broadinstitute.variant.variantcontext 
+  (:import [htsjdk.variant.variantcontext 
             VariantContextBuilder])
   (:use [clojure.tools.cli :only [cli]]
         [bcbio.variation.complex :only [normalize-variants]]

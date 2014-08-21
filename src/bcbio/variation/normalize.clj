@@ -5,8 +5,8 @@
   match, enabling VCF comparisons.
   Currently implemented for human only, with hooks to generalize for other
   organisms."
-  (:import [org.broadinstitute.variant.variantcontext VariantContextBuilder GenotypeBuilder]
-           [org.broadinstitute.variant.vcf VCFHeader]
+  (:import [htsjdk.variant.variantcontext VariantContextBuilder GenotypeBuilder]
+           [htsjdk.variant.vcf VCFHeader]
            [org.apache.commons.lang CharUtils])
   (:use [clojure.java.io]
         [bcbio.align.ref :only [get-seq-dict get-seq-name-map extract-sequence]]

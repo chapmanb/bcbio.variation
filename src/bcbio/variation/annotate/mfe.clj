@@ -3,13 +3,13 @@
    Extracts regions surrounding variants and identifies the free energy
    of the most problematic secondary structures. Larger negative free energy
    values are especially stable and problematic."
-  (:import [org.broadinstitute.sting.gatk.walkers.annotator.interfaces.InfoFieldAnnotation]
-           [org.broadinstitute.variant.vcf VCFInfoHeaderLine VCFHeaderLineType])
+  (:import [org.broadinstitute.gatk.tools.walkers.annotator.interfaces.InfoFieldAnnotation]
+           [htsjdk.variant.vcf VCFInfoHeaderLine VCFHeaderLineType])
   (:use [circdesigna.core :only [min-free-energy]]
         [bcbio.variation.annotate.entropy :only [get-flank-seq]])
   (:gen-class
    :name bcbio.variation.annotate.entropy.MinFreeEnergy
-   :extends org.broadinstitute.sting.gatk.walkers.annotator.interfaces.InfoFieldAnnotation))
+   :extends org.broadinstitute.gatk.tools.walkers.annotator.interfaces.InfoFieldAnnotation))
 
 (def flank-bp 15)
 

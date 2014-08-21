@@ -1,8 +1,8 @@
 (ns bcbio.run.broad
   "High level functions to run software from Broad: GATK, Picard"
-  (:import [org.broadinstitute.sting.gatk CommandLineGATK]
-           [net.sf.samtools SAMFileReader SAMFileReader$ValidationStringency]
-           [net.sf.picard.sam BuildBamIndex])
+  (:import [org.broadinstitute.gatk.engine CommandLineGATK]
+           [htsjdk.samtools SAMFileReader SAMFileReader$ValidationStringency]
+           [htsjdk.samtools BAMIndexer])
   (:use [clojure.java.io]
         [bcbio.align.ref :only [sort-bed-file create-ref-dict]])
   (:require [me.raynes.fs :as fs]
@@ -43,7 +43,7 @@
   (let [index-file (str in-bam ".bai")]
     (when (itx/needs-run? index-file)
       (SAMFileReader/setDefaultValidationStringency SAMFileReader$ValidationStringency/LENIENT)
-      (BuildBamIndex/createIndex (SAMFileReader. (file in-bam)) (file index-file)))
+      (BAMIndexer/createIndex (SAMFileReader. (file in-bam)) (file index-file)))
     index-file))
 
 (defn gatk-cl-intersect-intervals

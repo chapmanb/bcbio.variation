@@ -3,13 +3,13 @@
 
 package bcbio.variation;
 
-import org.broadinstitute.sting.commandline.*;
-import org.broadinstitute.sting.gatk.arguments.StandardVariantContextInputArgumentCollection;
-import org.broadinstitute.sting.gatk.walkers.RodWalker;
-//import org.broadinstitute.sting.gatk.contexts.AlignmentContext;
-//import org.broadinstitute.sting.gatk.contexts.ReferenceContext;
-//import org.broadinstitute.sting.gatk.refdata.RefMetaDataTracker;
-//import org.broadinstitute.variant.variantcontext.VariantContext;
+import org.broadinstitute.gatk.utils.commandline.*;
+import org.broadinstitute.gatk.engine.arguments.StandardVariantContextInputArgumentCollection;
+import org.broadinstitute.gatk.engine.walkers.RodWalker;
+//import org.broadinstitute.gatk.engine.contexts.AlignmentContext;
+//import org.broadinstitute.gatk.engine.contexts.ReferenceContext;
+//import org.broadinstitute.gatk.engine.refdata.RefMetaDataTracker;
+//import htsjdk.variant.variantcontext.VariantContext;
 
 import java.util.*;
 import java.io.PrintStream;

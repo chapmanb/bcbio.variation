@@ -1,7 +1,7 @@
 (ns bcbio.variation.recall
   "Recall batched sets of variants using consensus from multiple inputs."
-  (:import [org.broadinstitute.variant.variantcontext VariantContextBuilder]
-           [org.broadinstitute.variant.vcf VCFHeader])
+  (:import [htsjdk.variant.variantcontext VariantContextBuilder]
+           [htsjdk.variant.vcf VCFHeader])
   (:use [clojure.java.io]
         [ordered.map :only [ordered-map]]
         [ordered.set :only [ordered-set]]

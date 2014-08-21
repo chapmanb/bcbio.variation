@@ -1,5 +1,5 @@
 (ns bcbio.variation.core
-  (:import [org.broadinstitute.sting.gatk CommandLineGATK])
+  (:import [org.broadinstitute.gatk.engine CommandLineGATK])
   (:require [clojure.string :as string]
             [bcbio.align.reorder]
             [bcbio.variation.combine]

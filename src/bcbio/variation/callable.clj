@@ -1,9 +1,9 @@
 (ns bcbio.variation.callable
   "Identify callable bases from a BAM alignment file.
   Help differentiate positions where we can not assess variation"
-  (:import [org.broad.tribble.bed BEDCodec]
-           [org.broad.tribble.index IndexFactory]
-           [org.broad.tribble AbstractFeatureReader])
+  (:import [htsjdk.tribble.bed BEDCodec]
+           [htsjdk.tribble.index IndexFactory]
+           [htsjdk.tribble AbstractFeatureReader])
   (:use [clojure.java.io]
         [bcbio.align.ref :only [sort-bed-file]]
         [bcbio.variation.variantcontext :only [get-vcf-source]])

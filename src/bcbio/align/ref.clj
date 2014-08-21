@@ -1,8 +1,8 @@
 (ns bcbio.align.ref
   "Deal with reference sequences for alignment and variant calling."
-  (:import [org.broadinstitute.sting.gatk.datasources.reference ReferenceDataSource]
-           [net.sf.picard.reference ReferenceSequenceFileFactory]
-           [net.sf.picard.sam CreateSequenceDictionary])
+  (:import [org.broadinstitute.gatk.engine.datasources.reference ReferenceDataSource]
+           [htsjdk.samtools.reference ReferenceSequenceFileFactory]
+           [picard.sam CreateSequenceDictionary])
   (:use [clojure.java.io]
         [ordered.map :only [ordered-map]])
   (:require [clojure.string :as string]

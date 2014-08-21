@@ -26,30 +26,30 @@
  * THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package bcbio.gatk.walkers;
+package bcbio.gatk.tools.walkers;
 
-import net.sf.samtools.Cigar;
-import net.sf.samtools.CigarElement;
-import net.sf.samtools.CigarOperator;
-import org.broadinstitute.sting.commandline.ArgumentCollection;
-import org.broadinstitute.sting.commandline.Output;
-import org.broadinstitute.sting.gatk.CommandLineGATK;
-import org.broadinstitute.sting.gatk.arguments.StandardVariantContextInputArgumentCollection;
-import org.broadinstitute.sting.gatk.contexts.AlignmentContext;
-import org.broadinstitute.sting.gatk.contexts.ReferenceContext;
-import org.broadinstitute.sting.gatk.refdata.RefMetaDataTracker;
-import org.broadinstitute.sting.gatk.walkers.Reference;
-import org.broadinstitute.sting.gatk.walkers.RodWalker;
-import org.broadinstitute.sting.gatk.walkers.Window;
-import org.broadinstitute.sting.utils.SampleUtils;
-import org.broadinstitute.variant.vcf.VCFHeader;
-import org.broadinstitute.variant.vcf.VCFHeaderLine;
-import org.broadinstitute.sting.utils.variant.GATKVCFUtils;
-import org.broadinstitute.sting.utils.help.DocumentedGATKFeature;
-import org.broadinstitute.sting.utils.sam.AlignmentUtils;
-import org.broadinstitute.variant.variantcontext.*;
-import org.broadinstitute.variant.variantcontext.writer.VariantContextWriter;
-import org.broadinstitute.variant.variantcontext.writer.VariantContextWriterFactory;
+import htsjdk.samtools.Cigar;
+import htsjdk.samtools.CigarElement;
+import htsjdk.samtools.CigarOperator;
+import org.broadinstitute.gatk.utils.commandline.ArgumentCollection;
+import org.broadinstitute.gatk.utils.commandline.Output;
+import org.broadinstitute.gatk.engine.CommandLineGATK;
+import org.broadinstitute.gatk.engine.arguments.StandardVariantContextInputArgumentCollection;
+import org.broadinstitute.gatk.engine.contexts.AlignmentContext;
+import org.broadinstitute.gatk.engine.contexts.ReferenceContext;
+import org.broadinstitute.gatk.engine.refdata.RefMetaDataTracker;
+import org.broadinstitute.gatk.engine.walkers.Reference;
+import org.broadinstitute.gatk.engine.walkers.RodWalker;
+import org.broadinstitute.gatk.engine.walkers.Window;
+import org.broadinstitute.gatk.utils.SampleUtils;
+import htsjdk.variant.vcf.VCFHeader;
+import htsjdk.variant.vcf.VCFHeaderLine;
+import org.broadinstitute.gatk.utils.variant.GATKVCFUtils;
+import org.broadinstitute.gatk.utils.help.DocumentedGATKFeature;
+import org.broadinstitute.gatk.utils.sam.AlignmentUtils;
+import htsjdk.variant.variantcontext.*;
+import htsjdk.variant.variantcontext.writer.VariantContextWriter;
+import htsjdk.variant.variantcontext.writer.VariantContextWriterFactory;
 
 import java.util.*;
 

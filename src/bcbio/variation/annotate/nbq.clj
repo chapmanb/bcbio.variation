@@ -6,13 +6,13 @@
 
   http://www.biomedcentral.com/1471-2105/13/8/abstract
   "
-  (:import [org.broadinstitute.sting.gatk.walkers.annotator.interfaces.InfoFieldAnnotation]
-           [org.broadinstitute.variant.vcf VCFInfoHeaderLine VCFHeaderLineType]
-           [org.broadinstitute.sting.utils BaseUtils])
+  (:import [org.broadinstitute.gatk.tools.walkers.annotator.interfaces.InfoFieldAnnotation]
+           [htsjdk.variant.vcf VCFInfoHeaderLine VCFHeaderLineType]
+           [org.broadinstitute.gatk.utils BaseUtils])
   (:require [criterium.stats :as stats])
   (:gen-class
    :name bcbio.variation.annotate.nbq.MeanNeighboringBaseQuality
-   :extends org.broadinstitute.sting.gatk.walkers.annotator.interfaces.InfoFieldAnnotation))
+   :extends org.broadinstitute.gatk.tools.walkers.annotator.interfaces.InfoFieldAnnotation))
 
 (def flank-bp 5)
 

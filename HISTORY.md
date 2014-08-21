@@ -1,3 +1,8 @@
+## 0.1.8 (in progress)
+
+- Move to latest MIT licensed GATK release: 3.2
+- Library updates and fixes to work with java 1.8
+
 ## 0.1.7 (23 July 2014)
 
 - Support multi-sample inputs for variant-prep, by avoiding subset to the

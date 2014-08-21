@@ -1,11 +1,11 @@
 (ns bcbio.variation.utils.sanger
   "Parse and organize results from Sanger validation into VCF"
-  (:import [org.broadinstitute.variant.variantcontext Allele
+  (:import [htsjdk.variant.variantcontext Allele
             VariantContextBuilder GenotypeBuilder GenotypesContext]
-           [org.broadinstitute.variant.vcf
+           [htsjdk.variant.vcf
             VCFHeader VCFInfoHeaderLine VCFHeaderLineCount VCFHeaderLineType
             VCFFormatHeaderLine]
-           [org.broadinstitute.variant.variantcontext.writer
+           [htsjdk.variant.variantcontext.writer
             VariantContextWriterFactory])
   (:require [clojure.string :as string]
             [clojure.set :as set]

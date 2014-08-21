@@ -1,4 +1,4 @@
-(defproject bcbio.variation "0.1.7"
+(defproject bcbio.variation "0.1.8-SNAPSHOT"
   :description "Toolkit to analyze genomic variation data, built on the GATK with Clojure"
   :license {:name "MIT" :url "http://www.opensource.org/licenses/mit-license.html"}
   :dependencies [[org.clojure/clojure "1.5.1"]
@@ -8,21 +8,22 @@
                  [clj-stacktrace "0.2.5"]
                  [bcbio.run "0.0.1-SNAPSHOT"]
                  ;; GATK requirements
-                 [org.clojars.chapmanb/gatk-framework "3.0"]
-                 [org.clojars.chapmanb/picard "1.107"]
-                 [org.clojars.chapmanb/sam "1.107"]
-                 [org.clojars.chapmanb/tribble "1.107"]
-                 [org.clojars.chapmanb/variant "1.107"]
+                 [org.clojars.chapmanb/gatk-engine "3.2"]
+                 [org.clojars.chapmanb/gatk-tools-public "3.2"]
+                 [org.clojars.chapmanb/gatk-utils "3.2"]
+                 [org.clojars.chapmanb/picard "1.112"]
+                 [org.clojars.chapmanb/htsjdk "1.112"]
                  [colt/colt "1.2.0"]
                  [commons-lang "2.5"]
                  [log4j "1.2.17"]
+                 [org.slf4j/slf4j-log4j12 "1.7.7"]
                  [org.apache.commons/commons-jexl "2.1.1"]
-                 [org.reflections/reflections "0.9.8"]
+                 [org.reflections/reflections "0.9.9-RC1"]
                  [org.simpleframework/simple-xml "2.0.4"]
                  [org.apache.servicemix.bundles/org.apache.servicemix.bundles.jets3t "0.8.1_1"]
                  ;;
-                 [org.biojava/biojava3-core "3.0.8"]
-                 [org.biojava/biojava3-alignment "3.0.8"]
+                 [org.biojava/biojava3-core "4.0.0-SNAPSHOT"]
+                 [org.biojava/biojava3-alignment "4.0.0-SNAPSHOT"]
                  [org.clojars.chapmanb/circdesigna "0.0.2" :exclusions [net.sf.beaver/beaver-ant]]
                  [nz.ac.waikato.cms.weka/weka-stable "3.6.6"]
                  [org.clojars.chapmanb/fast-random-forest "0.98"]
@@ -61,8 +62,8 @@
                     [clj-blend "0.1.1-SNAPSHOT"]
                     [clj-aws-s3 "0.3.1" :exclusions [org.codehaus.jackson/jackson-mapper-asl
                                                      org.codehaus.jackson/jackson-core-asl]]]}}
-  :repositories {"biojava" {:url "http://www.biojava.org/download/maven/"
-                            :snapshots false}}
+  :repositories {"sonatype-snapshots" {:url "http://oss.sonatype.org/content/repositories/snapshots"
+                                       :snapshots true}}
   :java-source-paths ["src/java"]
   :javac-options ["-nowarn" "-target" "1.6" "-source" "1.6"]
   ;;:jvm-opts ["-Xms750m" "-Xmx2g"]

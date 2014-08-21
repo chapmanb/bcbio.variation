@@ -1,10 +1,10 @@
 (ns bcbio.variation.structural
   "Handle structural variations for larger insertions, deletions and
   genome rearrangements."
-  (:import [org.broadinstitute.variant.vcf VCFCodec]
-           [org.broadinstitute.variant.variantcontext VariantContextBuilder
+  (:import [htsjdk.variant.vcf VCFCodec]
+           [htsjdk.variant.variantcontext VariantContextBuilder
             Allele]
-           [net.sf.picard.util IntervalTree])
+           [htsjdk.samtools.util IntervalTree])
   (:use [clojure.set :only [intersection]]
         [ordered.map :only [ordered-map]]
         [bcbio.variation.variantcontext :only [get-vcf-iterator parse-vcf merge-headers

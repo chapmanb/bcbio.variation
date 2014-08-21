@@ -1,14 +1,14 @@
 (ns bcbio.variation.variantcontext
   "Helper functions to retrieve information from Picard/GATK VariantContext
    objects, which represent variant data stored in VCF files."
-  (:import [org.broad.tribble.index IndexFactory]
-           [org.broad.tribble AbstractFeatureReader]
-           [org.broad.tribble.util LittleEndianOutputStream]
-           [org.broadinstitute.variant.vcf
+  (:import [htsjdk.tribble.index IndexFactory]
+           [htsjdk.tribble AbstractFeatureReader]
+           [htsjdk.tribble.util LittleEndianOutputStream]
+           [htsjdk.variant.vcf
             VCFCodec VCFUtils VCFHeader VCFFilterHeaderLine]
-           [org.broadinstitute.variant.variantcontext VariantContextBuilder
+           [htsjdk.variant.variantcontext VariantContextBuilder
             GenotypeBuilder GenotypesContext]
-           [org.broadinstitute.variant.variantcontext.writer VariantContextWriterFactory
+           [htsjdk.variant.variantcontext.writer VariantContextWriterFactory
             Options]
            [java.util EnumSet])
   (:use [clojure.java.io]

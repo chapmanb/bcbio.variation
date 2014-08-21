@@ -1,21 +1,21 @@
 /* Annotators from GATK-lite 2.3 tree, ported to current GATK base library.
 */
 
-package bcbio.gatk.walkers.annotator;
+package bcbio.gatk.tools.walkers.annotator;
 
-import org.broadinstitute.sting.gatk.CommandLineGATK;
-import org.broadinstitute.sting.gatk.contexts.AlignmentContext;
-import org.broadinstitute.sting.gatk.contexts.ReferenceContext;
-import org.broadinstitute.sting.gatk.refdata.RefMetaDataTracker;
-import org.broadinstitute.sting.gatk.walkers.annotator.interfaces.AnnotatorCompatible;
-import org.broadinstitute.sting.gatk.walkers.annotator.interfaces.ExperimentalAnnotation;
-import org.broadinstitute.sting.gatk.walkers.annotator.interfaces.InfoFieldAnnotation;
-import org.broadinstitute.sting.utils.genotyper.PerReadAlleleLikelihoodMap;
-import org.broadinstitute.sting.utils.BaseUtils;
-import org.broadinstitute.variant.vcf.VCFHeaderLineType;
-import org.broadinstitute.variant.vcf.VCFInfoHeaderLine;
-import org.broadinstitute.sting.utils.help.DocumentedGATKFeature;
-import org.broadinstitute.variant.variantcontext.VariantContext;
+import org.broadinstitute.gatk.engine.CommandLineGATK;
+import org.broadinstitute.gatk.engine.contexts.AlignmentContext;
+import org.broadinstitute.gatk.engine.contexts.ReferenceContext;
+import org.broadinstitute.gatk.engine.refdata.RefMetaDataTracker;
+import org.broadinstitute.gatk.tools.walkers.annotator.interfaces.AnnotatorCompatible;
+import org.broadinstitute.gatk.tools.walkers.annotator.interfaces.ExperimentalAnnotation;
+import org.broadinstitute.gatk.tools.walkers.annotator.interfaces.InfoFieldAnnotation;
+import org.broadinstitute.gatk.utils.genotyper.PerReadAlleleLikelihoodMap;
+import org.broadinstitute.gatk.utils.BaseUtils;
+import htsjdk.variant.vcf.VCFHeaderLineType;
+import htsjdk.variant.vcf.VCFInfoHeaderLine;
+import org.broadinstitute.gatk.utils.help.DocumentedGATKFeature;
+import htsjdk.variant.variantcontext.VariantContext;
 
 import java.util.Arrays;
 import java.util.HashMap;

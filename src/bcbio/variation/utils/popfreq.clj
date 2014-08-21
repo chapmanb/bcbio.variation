@@ -8,8 +8,8 @@
     - population VCF file
     - attribute ID to use for frequencies from population file (ie. AF)
     - reference genome FASTA file"
-  (:import [org.broadinstitute.variant.variantcontext VariantContextBuilder]
-           [org.broadinstitute.variant.vcf VCFHeader VCFInfoHeaderLine
+  (:import [htsjdk.variant.variantcontext VariantContextBuilder]
+           [htsjdk.variant.vcf VCFHeader VCFInfoHeaderLine
             VCFHeaderLineCount VCFHeaderLineType])
   (:use [ordered.set :only [ordered-set]]
         [bcbio.variation.config :only [load-config]]

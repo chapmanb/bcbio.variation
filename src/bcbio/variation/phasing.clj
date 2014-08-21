@@ -11,8 +11,8 @@
        - Compare to reference allele
        - If mismatch and alternate allele matches reference, then phasing error
        - If mismatch and neither allele matches, then calling error"
-  (:import [org.broadinstitute.sting.utils.interval IntervalUtils IntervalSetRule]
-           [org.broadinstitute.sting.utils GenomeLocParser GenomeLoc])
+  (:import [org.broadinstitute.gatk.utils.interval IntervalUtils IntervalSetRule]
+           [org.broadinstitute.gatk.utils GenomeLocParser GenomeLoc])
   (:use [bcbio.variation.callable :only [get-bed-source features-in-region
                                          limit-bed-intervals get-bed-iterator]]
         [bcbio.variation.filter.intervals :only [intersection-of-bed-files

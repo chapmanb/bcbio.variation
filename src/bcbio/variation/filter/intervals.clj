@@ -2,11 +2,11 @@
   "Combined interval lists from filtered variants prepared via multiple calls.
   Multiple call approaches and technologies result in reduced call regions due
   to coverage. These functions manage creation of reduced BED files."
-  (:import [org.broadinstitute.sting.utils.interval IntervalUtils
+  (:import [org.broadinstitute.gatk.utils.interval IntervalUtils
             IntervalMergingRule IntervalSetRule]
-           [org.broadinstitute.sting.utils GenomeLocParser
+           [org.broadinstitute.gatk.utils GenomeLocParser
             GenomeLocSortedSet]
-           [org.broadinstitute.sting.utils.exceptions UserException$BadInput])
+           [org.broadinstitute.gatk.utils.exceptions UserException$BadInput])
   (:use [clojure.java.io]
         [clojure.set :only [intersection]]
         [bcbio.align.ref :only [get-seq-dict]]

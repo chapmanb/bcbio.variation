@@ -4,7 +4,7 @@
   PLs are likely to be true and included. The GATK documentation contains a detailed example
   of the format and interpretation:
   http://gatkforums.broadinstitute.org/discussion/1268/how-should-i-interpret-vcf-files-produced-by-the-gatk"
-  (:import [org.broadinstitute.variant.variantcontext 
+  (:import [htsjdk.variant.variantcontext 
             VariantContextBuilder GenotypesContext GenotypeBuilder Allele])
   (:use [clojure.java.io]
         [bcbio.variation.variantcontext :only [parse-vcf get-vcf-iterator write-vcf-w-template]])

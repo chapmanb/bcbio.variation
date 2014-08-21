@@ -1,9 +1,9 @@
 (ns bcbio.variation.grade
   "Support comparisons of variant calls to reference call sets, providing
    detailed metrics about problematic discordant calls."
-  (:import [org.broadinstitute.variant.vcf
+  (:import [htsjdk.variant.vcf
             VCFInfoHeaderLine VCFHeaderLineType]
-           [org.broadinstitute.variant.variantcontext VariantContextBuilder])
+           [htsjdk.variant.variantcontext VariantContextBuilder])
   (:require [clojure.set :refer [intersection]]
             [clojure.string :as string]
             [clojure.math.combinatorics :as combo]

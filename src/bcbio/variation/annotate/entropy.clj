@@ -3,11 +3,11 @@
    Used to identify low-complexity repeat regions in variants.
    Based on 'vcfentropy' from Erik Garrison's vcflib:
    https://github.com/ekg/vcflib"
-  (:import [org.broadinstitute.sting.gatk.walkers.annotator.interfaces.InfoFieldAnnotation]
-           [org.broadinstitute.variant.vcf VCFInfoHeaderLine VCFHeaderLineType])
+  (:import [org.broadinstitute.gatk.tools.walkers.annotator.interfaces.InfoFieldAnnotation]
+           [htsjdk.variant.vcf VCFInfoHeaderLine VCFHeaderLineType])
   (:gen-class
    :name bcbio.variation.annotate.entropy.ShannonEntropy
-   :extends org.broadinstitute.sting.gatk.walkers.annotator.interfaces.InfoFieldAnnotation))
+   :extends org.broadinstitute.gatk.tools.walkers.annotator.interfaces.InfoFieldAnnotation))
 
 
 ;; ## Shannon entropy

@@ -1,7 +1,7 @@
 (ns bcbio.variation.filter.classify
   "Provide classification based filtering for variants."
-  (:import [org.broadinstitute.variant.variantcontext VariantContextBuilder]
-           [org.broadinstitute.variant.vcf VCFHeader VCFInfoHeaderLine
+  (:import [htsjdk.variant.variantcontext VariantContextBuilder]
+           [htsjdk.variant.vcf VCFHeader VCFInfoHeaderLine
             VCFHeaderLineType VCFFilterHeaderLine VCFHeaderLineCount])
   (:use [ordered.set :only [ordered-set]]
         [clojure.math.combinatorics :only [cartesian-product]]

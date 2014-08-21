@@ -1,5 +1,5 @@
 (ns bcbio.variation.test.compare
-  (:import [org.broadinstitute.sting.utils.exceptions UserException$BadInput])
+  (:import [org.broadinstitute.gatk.utils.exceptions UserException$BadInput])
   (:use [midje.sweet]
         [bcbio.variation.annotation]
         [bcbio.variation.callable]

@@ -1,6 +1,6 @@
 (ns bcbio.variation.filter.util
   "Provide useful utilities dealing with filtering of variants"
-  (:import [org.broadinstitute.variant.variantcontext
+  (:import [htsjdk.variant.variantcontext
             VariantContextBuilder])
 (:require [bcbio.run.fsp :as fsp]
           [bcbio.run.itx :as itx]

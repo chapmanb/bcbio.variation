@@ -1,6 +1,6 @@
 (ns bcbio.variation.evaluate
   "Provide high level summary evaluation of variant results, building off GATK VariantEval."
-  (:import [org.broadinstitute.sting.gatk.report GATKReport])
+  (:import [org.broadinstitute.gatk.engine.report GATKReport])
   (:use [clojure.java.io]
         [ordered.map :only [ordered-map]])
   (:require [clojure.string :as string]

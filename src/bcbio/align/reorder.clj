@@ -1,7 +1,7 @@
 (ns bcbio.align.reorder
   "Reorder BAM alignment files to a reference dictionary, potentially swapping naming.
   Handles Human hg19 to GRCh37 naming conversions."
-  (:import [net.sf.samtools SAMFileReader SAMFileWriterFactory SAMReadGroupRecord
+  (:import [htsjdk.samtools SAMFileReader SAMFileWriterFactory SAMReadGroupRecord
             SAMTag SAMFileReader$ValidationStringency])
   (:use [clojure.java.io]
         [bcbio.align.ref :only [get-seq-dict]]
