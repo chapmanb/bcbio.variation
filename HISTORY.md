@@ -2,6 +2,7 @@
 
 - Move to latest MIT licensed GATK release: 3.2
 - Library updates and fixes to work with java 1.8
+- Improve debugging output for failed lines during pre-clean step.
 
 ## 0.1.7 (23 July 2014)
 

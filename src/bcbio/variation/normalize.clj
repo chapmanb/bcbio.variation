@@ -18,7 +18,8 @@
             [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]
             [bcbio.variation.structural :as structural]
-            [bcbio.variation.variantcontext :as gvc]))
+            [bcbio.variation.variantcontext :as gvc]
+            [taoensso.timbre :as timbre]))
 
 ;; ## Chromosome name remapping
 
@@ -589,12 +590,18 @@
                      remove-incorrect-qual
                      (remove-bad-ref get-ref-base)
                      (maybe-add-indel-pad-base ref-file get-ref-base)
-                     (string/join "\t"))))]
+                     (string/join "\t"))))
+            (debug-clean-line [line]
+              (try
+                (clean-line line)
+                (catch Exception e
+                  (timbre/error e (str "Problem cleaning line: " line))
+                  (System/exit 1))))]
       (when (itx/needs-run? out-file)
         (itx/with-tx-file [tx-out-file out-file]
           (with-open [rdr (zipsafe-reader in-vcf-file)
                       wtr (writer tx-out-file)]
             (doall
              (map #(.write wtr (str % "\n"))
-                  (remove empty? (map clean-line (line-seq rdr))))))))
+                  (remove empty? (map debug-clean-line (line-seq rdr))))))))
       out-file)))
