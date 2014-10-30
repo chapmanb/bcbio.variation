@@ -1,5 +1,9 @@
-## 0.1.8 (in progress)
+## 0.1.8 (29 October 2014)
 
+- Fix variant-prep problem for multiple sample input where headers would get out
+  of sync with samples. Does not effect files previously run through GATK but
+  would cause problems with multiple sample inputs not sorted in standard GATK
+  sample manner.
 - Move to latest MIT licensed GATK release: 3.2
 - Library updates and fixes to work with java 1.8
 - Improve debugging output for failed lines during pre-clean step.

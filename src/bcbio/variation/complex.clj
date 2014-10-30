@@ -414,7 +414,7 @@
            (fs/delete out-pre-file))
          (let [la-file (left-align-variants in-file ref :out-dir out-dir :rerun? true)]
            (with-open [vcf-iter (get-vcf-iterator la-file ref)]
-             (write-vcf-w-template in-file {:out out-pre-file}
+             (write-vcf-w-template la-file {:out out-pre-file}
                                    (get-normalized-vcs (parse-vcf vcf-iter) ref)
                                    ref))
            (fs/rename (left-align-variants out-pre-file ref :out-dir out-dir :rerun? true)
