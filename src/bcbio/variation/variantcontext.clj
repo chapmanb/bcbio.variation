@@ -147,7 +147,7 @@
 (defn get-samples
   "Retrieve samples from VCF header"
   [vcf-file]
-  (.getGenotypeSamples (get-vcf-header vcf-file)))
+  (map str (.getGenotypeSamples (get-vcf-header vcf-file))))
 
 ;; ## Writing VCF files
 

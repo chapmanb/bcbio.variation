@@ -27,6 +27,7 @@ test/data/*-filter*vcf
 test/data/*-nomnp*vcf
 test/data/*-prep*vcf
 test/data/*-preclean*vcf
+test/data/*-evalsafe*vcf
 test/data/*-nofilter*vcf
 test/data/*-*subset*vcf
 test/data/*-*haploid.vcf

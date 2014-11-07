@@ -177,7 +177,7 @@
           out-fname (str (get-out-basename exp call in-files) ".vcf")
           _ (transition :clean (str "Cleaning input VCF: " (:name call)))
           clean-files (vec (map #(if-not (:preclean call) %
-                                         (clean-problem-vcf % (:ref exp) (:sample exp) call :out-dir out-dir))
+                                         (clean-problem-vcf % (:ref exp) (:sample exp) call exp :out-dir out-dir))
                                 in-files))
           _ (transition :merge (str "Merging multiple input files: " (:name call)))
           merge-file (if (> (count clean-files) 1)

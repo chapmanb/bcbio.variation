@@ -1,4 +1,4 @@
-(defproject bcbio.variation "0.1.8"
+(defproject bcbio.variation "0.1.9"
   :description "Toolkit to analyze genomic variation data, built on the GATK with Clojure"
   :license {:name "MIT" :url "http://www.opensource.org/licenses/mit-license.html"}
   :dependencies [[org.clojure/clojure "1.5.1"]
@@ -6,7 +6,7 @@
                  [org.clojure/data.csv "0.1.2" :exclusions [org.clojure/clojure]]
                  [org.clojure/tools.cli "0.2.2"]
                  [clj-stacktrace "0.2.5"]
-                 [bcbio.run "0.0.1-SNAPSHOT"]
+                 [bcbio.run "0.0.1"]
                  ;; GATK requirements
                  [org.clojars.chapmanb/gatk-engine "3.2"]
                  [org.clojars.chapmanb/gatk-tools-public "3.2"]

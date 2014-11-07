@@ -17,6 +17,7 @@
             [lonocloud.synthread :as ->]
             [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]
+            [bcbio.variation.multisample :as multisample]
             [bcbio.variation.structural :as structural]
             [bcbio.variation.variantcontext :as gvc]
             [taoensso.timbre :as timbre]))
@@ -566,9 +567,10 @@
     - Gap characters (-) found in REF or ALT indels.
     - Fixes indels without reference padding or N padding.
     - Removes spaces in INFO fields."
-  [in-vcf-file ref-file sample call & {:keys [out-dir]}]
+  [in-vcf-file ref-file sample call exp & {:keys [out-dir]}]
   (let [get-ref-base (ref-base-getter ref-file)
-        out-file (string/replace (fsp/add-file-part in-vcf-file "preclean" out-dir) ".vcf.gz" ".vcf")]
+        out-file (str (file out-dir
+                       (str (multisample/get-out-basename exp call [in-vcf-file]) "-preclean.vcf")))]
     (letfn [(remove-gap [n xs]
               (assoc xs n
                      (-> (nth xs n)

@@ -177,13 +177,14 @@
       vcf (str (fs/file data-dir "cg-normalize.vcf"))
       out-vcf (fsp/add-file-part vcf "prep")
       prevcf (str (fs/file data-dir "illumina-needclean.vcf"))
-      out-prevcf (fsp/add-file-part prevcf "preclean")]
+      out-prevcf (str (fs/file data-dir "NA12878-tester-preclean.vcf"))]
   (against-background [(before :facts (vec (map fsp/remove-path [out-vcf out-prevcf
                                                              (str vcf ".idx")])))]
     (facts "Normalize variant representation of chromosomes, order, genotypes and samples."
       (prep-vcf vcf ref "Test1" :config {:prep-sort-pos true}) => out-vcf)
     (facts "Pre-cleaning of problematic VCF input files"
-      (clean-problem-vcf prevcf ref "NA12878" {}) => out-prevcf)))
+      (clean-problem-vcf prevcf ref "NA12878" {:name "tester"} {:sample "NA12878"}
+                         :out-dir data-dir) => out-prevcf)))
 
 (facts "Choose a reference genome based on VCF contig"
   (pick-best-ref vcf1 [ref]) => ref)

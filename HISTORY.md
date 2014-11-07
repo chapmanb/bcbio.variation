@@ -1,3 +1,10 @@
+## 0.1.9 (6 November 2014)
+
+- Handle file inputs with identical final file names (but in different
+  directories) by uniquifying the names. Thanks to Severine Catreux.
+- Resort multisample inputs to ensemble calling with inconsistent sample orders.
+  Thanks to Shangqian.
+
 ## 0.1.8 (29 October 2014)
 
 - Fix variant-prep problem for multiple sample input where headers would get out

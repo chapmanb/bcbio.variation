@@ -12,6 +12,7 @@
             [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]
             [bcbio.variation.compare :as compare]
+            [bcbio.variation.vcfsample :as vcfsample]
             [bcbio.variation.variantcontext :as gvc]))
 
 (defn- setup-work-dir
@@ -102,10 +103,11 @@
    Handles cleaning up and normalizing input files, generating consensus
    calls and returns ensemble output."
   [vrn-files ref-file out-file in-config]
-  (let [vrn-files (map fsp/abspath vrn-files)
-        out-file (fsp/abspath out-file)
+  (let [out-file (fsp/abspath out-file)
         ref-file (fsp/abspath ref-file)
         dirs (setup-work-dir out-file)
+        vrn-files (vcfsample/consistent-order (map fsp/abspath vrn-files)
+                                              (str (fs/file (:prep dirs) "sort")))
         config-file (create-ready-config vrn-files ref-file in-config dirs)]
     (check-vcf-headers vrn-files)
     (compare/variant-comparison-from-config config-file)
