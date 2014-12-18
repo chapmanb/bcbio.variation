@@ -160,7 +160,7 @@ provide example starting points and details on available options are below:
                       [full,quick] (default:full)
        params: # Processing parameters associated with this experiment
          max-indel: Maximum indel size to include in non-structural variant
-                    comparisons (default: 30)
+                    comparisons (default: 5000)
          multiple-thresh: Threshold for percentage of comparisons to match
                           to consider two multiple sample variants the same.
                           (default: 1.0)

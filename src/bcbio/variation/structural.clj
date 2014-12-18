@@ -18,8 +18,9 @@
 (def ^{:private true
        :doc "Default maximum indel size for exact comparisons.
              Initially based on assessment by Gavin Oliver: http://f1000r.es/MsY1QZ
-             Increased to work with longer default read sizes where we expect exact matches"}
-  max-indel 100)
+             Increased to work with longer default read sizes where we expect exact matches
+             and avoid switching into SV calling."}
+  max-indel 5000)
 
 ;; ## Interval tree lookup
 

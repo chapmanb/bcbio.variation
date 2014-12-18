@@ -1,3 +1,9 @@
+## 0.2.0 (17 December 2014)
+
+- Avoid putting fully specified indels into structural variant comparison, which
+  can lead to masked smaller calls on heterozygous deletions. Now do exact
+  comparisons via standard methods. Thanks to Severine Catreux.
+
 ## 0.1.9 (6 November 2014)
 
 - Handle file inputs with identical final file names (but in different
