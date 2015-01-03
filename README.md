@@ -33,7 +33,7 @@ associated with different variant representations.
 
 ### Download
 
-The latest release is 0.1.9 (6 November 2014): [bcbio.variation-0.1.9-standalone.jar][dl].
+The latest release is 0.2.1 (3 January 2015): [bcbio.variation-0.2.1-standalone.jar][dl].
 Run from the command line:
 
     $ java -jar bcbio.variation-VERSION-standalone.jar [arguments]
@@ -44,7 +44,7 @@ the library for variant comparison, normalization and ensemble calling.  Note
 that bcbio.variation requires Java 1.7 since the underlying GATK libraries are
 not compatible with earlier versions.
 
-[dl]: https://github.com/chapmanb/bcbio.variation/releases/download/v0.1.9/bcbio.variation-0.1.9-standalone.jar
+[dl]: https://github.com/chapmanb/bcbio.variation/releases/download/v0.2.1/bcbio.variation-0.2.1-standalone.jar
  
 ### As a library
 
@@ -131,13 +131,13 @@ metrics associated with variants, reactive filtering and automated scoring.
 ### Run GATK walker for variant statistics
 
     $ lein uberjar
-    $ java -jar target/bcbio.variation-0.0.1-SNAPSHOT-standalone.jar -T VcfSimpleStatsWalker
+    $ java -jar target/bcbio.variation-RELEASE-standalone.jar -T VcfSimpleStatsWalker
       -R test/data/GRCh37.fa --variant test/data/gatk-calls.vcf --out test.png
 
 ### Run custom GATK annotator
 
     $ lein uberjar
-    $ java -jar target/bcbio.variation-0.0.1-SNAPSHOT-standalone.jar -T VariantAnnotator
+    $ java -jar target/bcbio.variation-RELEASE-standalone.jar -T VariantAnnotator
        -A MeanNeighboringBaseQuality -R test/data/GRCh37.fa -I test/data/aligned-reads.bam
        --variant test/data/gatk-calls.vcf -o annotated-file.vcf
 

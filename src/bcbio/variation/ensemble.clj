@@ -34,7 +34,7 @@
                  (or (get (vec (:names config)) i)
                      (str "v" i)))
        :file vrn-file
-       :normalize true}
+       :normalize false}
       (->/when (get config :prep-inputs true)
         (merge {:preclean true :prep true}))))
 

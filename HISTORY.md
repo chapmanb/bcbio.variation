@@ -1,3 +1,8 @@
+## 0.2.1 (3 January 2015)
+
+- Do not normalize by default as part of ensemble combining. Prefer that to be
+  done upstream by other software.
+
 ## 0.2.0 (17 December 2014)
 
 - Avoid putting fully specified indels into structural variant comparison, which
