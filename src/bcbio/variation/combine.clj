@@ -21,6 +21,8 @@
                                                get-vcf-retriever variants-in-region]])
   (:require [me.raynes.fs :as fs]
             [clojure.string :as string]
+            [clojure.java.io :as io]
+            [clojure.java.shell :as shell]
             [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]
             [bcbio.run.broad :as broad]))
@@ -174,7 +176,7 @@
                                 :check-ploidy? false
                                 :unsafe true)))]
     (let [in-files (if (coll? (:file call)) (:file call) [(:file call)])
-          out-fname (str (get-out-basename exp call in-files) ".vcf")
+          out-fname (str (io/file out-dir (get-out-basename exp call in-files))".vcf")
           _ (transition :clean (str "Cleaning input VCF: " (:name call)))
           clean-files (vec (map #(if-not (:preclean call) %
                                          (clean-problem-vcf % (:ref exp) (:sample exp) call exp :out-dir out-dir))
@@ -186,10 +188,14 @@
           _ (transition :prep (str "Prepare VCF, resorting to genome build: " (:name call)))
           prep-file (dirty-prep-work merge-file call exp intervals out-dir out-fname)]
       (transition :normalize (str "Normalize MNP and indel variants: " (:name call)))
-      (assoc call :file (if (true? (get call :normalize true))
-                          (normalize-variants prep-file (:ref exp) out-dir
-                                              :out-fname out-fname)
-                          prep-file)))))
+      (assoc call :file (cond (true? (get call :normalize true))
+                               (normalize-variants prep-file (:ref exp) out-dir
+                                                   :out-fname out-fname)
+                              (.endsWith prep-file ".vcf.gz")
+                              (do (shell/sh "sh" "-c" (str "gunzip -c " prep-file " > " out-fname))
+                                   out-fname)
+                              :else
+                               (fs/copy prep-file out-fname))))))
 
 ;; ## Top-level entry points
 

@@ -1,3 +1,8 @@
+## 0.2.2 (9 January 2015)
+
+- Ensemble calling: correctly handle inputs with same base filename in different
+  directories. Thanks to Nancy Hansen.
+
 ## 0.2.1 (3 January 2015)
 
 - Do not normalize by default as part of ensemble combining. Prefer that to be
