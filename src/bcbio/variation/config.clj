@@ -161,12 +161,15 @@
                  (string? val) (make-absolute val)
                  :else val)
                 val))
+            (sample? [path k]
+              (or (= k :sample) (= (last path) :sample)))
             (update-tree [config path]
               (cond (map? config)
                     (reduce (fn [item [k v]]
                               (assoc item k (cond
                                              (map? v) (update-tree v (conj path k))
                                              (seq? v) (map #(update-tree % (conj path k)) v)
+                                             (sample? path k) (str v)
                                              :else (maybe-process v (conj path k)))))
                             config
                             (vec config))
