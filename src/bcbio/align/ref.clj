@@ -76,9 +76,10 @@
   (let [ref-map (get-seq-name-map ref-file)
         is-tab? (with-open [rdr (reader bed-file)]
                   (.contains (first (drop-while #(.startsWith % "track") (line-seq rdr))) "\t"))]
-    (fn [line]
+    (fn [raw-line]
       (when-not (.startsWith line "track")
-        (let [parts (if is-tab?
+        (let [line (string/trimr raw-line)
+              parts (if is-tab?
                       (string/split line #"\t")
                       (string/split line #" "))]
           (let [[chr start end] (take 3 parts)]
