@@ -77,7 +77,7 @@
         is-tab? (with-open [rdr (reader bed-file)]
                   (.contains (first (drop-while #(.startsWith % "track") (line-seq rdr))) "\t"))]
     (fn [raw-line]
-      (when-not (.startsWith line "track")
+      (when-not (.startsWith raw-line "track")
         (let [line (string/trimr raw-line)
               parts (if is-tab?
                       (string/split line #"\t")
