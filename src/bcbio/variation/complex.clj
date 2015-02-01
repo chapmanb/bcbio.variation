@@ -3,8 +3,8 @@
    polymorphisms and indels."
   (:import [htsjdk.variant.variantcontext Allele
             VariantContextBuilder GenotypesContext GenotypeBuilder]
-           [org.biojava3.core.sequence DNASequence]
-           [org.biojava3.alignment Alignments SimpleGapPenalty
+           [org.biojava.nbio.core.sequence DNASequence]
+           [org.biojava.nbio.alignment Alignments SimpleGapPenalty
             Alignments$PairwiseSequenceScorerType])
   (:use [clojure.java.io]
         [clojure.set :only [union]]

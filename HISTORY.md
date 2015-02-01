@@ -1,3 +1,9 @@
+## 0.2.3 (1 February 2015)
+
+- Correctly handle sample names with all numbers -- parse as strings.
+- Handle BED inputs with non-system line breaks.
+- Update to BioJava 4.
+
 ## 0.2.2 (9 January 2015)
 
 - Ensemble calling: correctly handle inputs with same base filename in different
