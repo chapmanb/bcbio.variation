@@ -53,3 +53,13 @@
     (fsp/remove-path work-dir)
     (fsp/remove-path out-file)
     (ensemble/consensus-calls [vcf-m1 vcf-m2] ref-file out-file config) => out-file))
+
+(facts "Ensemble consensus calls with different numbers of alternative alleles" :work
+  (let [ensemble-dir (fs/file data-dir "ensemble")
+        input-files (map #(str (fs/file ensemble-dir (str % ".vcf.gz"))) ["fb" "hc" "ug"])
+        out-file (str (fs/file ensemble-dir "ens.vcf"))
+        work-dir (str (fsp/file-root out-file) "-work")
+        config {:ensemble {:classifiers {:base ["DP"]}}}]
+    (fsp/remove-path work-dir)
+    (fsp/remove-path out-file)
+    (ensemble/consensus-calls input-files ref-file out-file config) => out-file))

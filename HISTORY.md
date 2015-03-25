@@ -1,3 +1,8 @@
+## 0.2.4 (25 March 2015)
+
+- De-prioritize multi-allele calls where PL and AD values do not match a final,
+  non-multiallelic ensemble call. Thanks to Shalabh Suman.
+
 ## 0.2.3 (1 February 2015)
 
 - Correctly handle sample names with all numbers -- parse as strings.

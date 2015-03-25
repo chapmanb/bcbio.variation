@@ -79,3 +79,4 @@ test/data/web-test/
 test/data/single/
 test/data/tmp*
 test/data/txtmp*
+test/data/ensemble/ens*

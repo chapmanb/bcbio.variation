@@ -13,7 +13,8 @@
             [bcbio.run.fsp :as fsp]
             [bcbio.run.itx :as itx]
             [bcbio.variation.filter.attr :as attr]
-            [bcbio.variation.variantcontext :as gvc]))
+            [bcbio.variation.variantcontext :as gvc]
+            [clojure.math.combinatorics :as combo]))
 
 ;; ## Utilities
 
@@ -38,6 +39,19 @@
 
 ;; ## Pick consensus variants
 
+(defn- matches-alleles
+  "Ensure that an attribute matches the output alleles.
+   Avoid issues when dealing with collapsing multiple variant with different numbers
+   of alternative alleles"
+  [g vc attr-str]
+  (when-let [attr (get-in g [:attributes attr-str])]
+    (let [ploidy (count (:alleles g))
+          all-alleles (set (conj (:alleles g) (:ref-allele vc)))
+          exp-count (if (= attr-str "PL")
+                      (count (distinct (combo/combinations (flatten (map #(repeat ploidy %) all-alleles)) ploidy)))
+                      (count (:alleles g)))]
+      (= exp-count (count attr)))))
+
 (defn- get-sample-call
   "Retrieve variant alleles for the sample, sorted in a stable order."
   [sample vc]
@@ -59,10 +73,10 @@
        :ref-allele (:ref-allele vc)
        :alleles (sort-by allele-order (:alleles g))
        :attributes (select-keys (:attributes g) ["PL" "DP" "AD" "PVAL" "GQ"])
-       :has-likelihood (if (seq (get-in g [:attributes "PL"])) 1 0)
-       :attr-count (+ (if (seq (get-in g [:attributes "PL"])) 1 0)
+       :has-likelihood (if (matches-alleles g vc "PL") 1 0)
+       :attr-count (+ (if (matches-alleles g vc "PL") 1 0)
                       (if (seq (get-in g [:attributes "PVAL"])) 1 0)
-                      (if (seq (get-in g [:attributes "AD"])) 1 0)
+                      (if (matches-alleles g vc "AD") 1 0)
                       (if (get-in g [:attributes "GQ"]) 1 0)
                       (if (pos? (get-in g [:attributes "DP"] -1)) 1 0))
        :pl (attr/get-pl g)
