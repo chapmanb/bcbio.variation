@@ -128,6 +128,10 @@
                   (assoc coll x x))))
             rename-map vcf-chrs)))
 
+(defmethod chr-name-remap :default
+  [map-key ref-file orig-ref-file]
+  {})
+
 ;; ## Resort and normalize variants
 
 (defn- fix-vc
@@ -328,16 +332,17 @@
 
 (defn fix-vcf-sample
   "Update a VCF file with one item to have the given sample name."
-  [in-file sample ref]
-  (let [out-file (fsp/add-file-part in-file "samplefix")]
+  [in-file sample ref & {:keys [out-dir ext]}]
+  (let [out-file (fsp/add-file-part in-file "samplefix" out-dir ext)]
     (when (itx/needs-run? out-file)
       (with-open [vcf-iter (gvc/get-vcf-iterator in-file ref)]
         (gvc/write-vcf-w-template in-file {:out out-file}
                                   (map #(:vc (fix-vc sample {} %)) (gvc/parse-vcf vcf-iter))
-                                  ref :header-update-fn (update-header sample {}))))
+                                  ref :header-update-fn (update-header sample {:fix-sample-header true}))))
     out-file))
 
 (defn- write-prepped-vcf
+
   "Write VCF file with correctly ordered and cleaned variants."
   [vcf-file out-info ref-file orig-ref-file sample config]
   (itx/with-temp-dir [tmp-dir (fs/parent (:out out-info))]
@@ -395,18 +400,21 @@
 (defn- ref-base-getter
   "Given a VCF line, retrieve the reference base. Second optional
    function allows you adjust which base is retrieved to get previous
-   bases for indels missing reference padding."
+   bases for indels missing reference padding.
+   Skips getting a reference getter for large numbers of contigs (GRCh38)
+   which are crazy slow."
   [ref-file]
-  (let [chr-map (prep-rename-map :GRCh37 ref-file)
-        get-ref-chrom (fn [chrom]
-                        (get chr-map chrom chrom))]
-    (fn [xs adjust-fn extra-bases]
-      (let [i (adjust-fn (Integer/parseInt (second xs)))]
-        (string/upper-case
-         (str
-          (or (extract-sequence ref-file (get-ref-chrom (first xs)) i (+ i extra-bases))
-              (extract-sequence ref-file (first xs) i (+ i extra-bases))
-              "N")))))))
+  (when (< (count (get-seq-name-map ref-file)) 1000)
+    (let [chr-map (prep-rename-map :GRCh37 ref-file)
+          get-ref-chrom (fn [chrom]
+                          (get chr-map chrom chrom))]
+      (fn [xs adjust-fn extra-bases]
+        (let [i (adjust-fn (Integer/parseInt (second xs)))]
+          (string/upper-case
+           (str
+            (or (extract-sequence ref-file (get-ref-chrom (first xs)) i (+ i extra-bases))
+                (extract-sequence ref-file (first xs) i (+ i extra-bases))
+                "N"))))))))
 
 (defn- maybe-add-indel-pad-base
   "Check reference and alt alleles for lack of a padding base on indels.
@@ -432,9 +440,9 @@
                   (assoc 4 (string/join ","
                                         (map #(str base (subs % 1)) (:alts a)))))))
           (no-pad? [a]
-            (some #(and (not (is-alt-sv? %))
-                        (not= (first (:ref a)) (first %)))
-                  (:alts a)))
+            (every? #(and (not (is-alt-sv? %))
+                          (not= (first (:ref a)) (first %)))
+                    (:alts a)))
           (fix-nopad [xs a]
             (let [base (ref-base-get xs dec 0)]
               (-> xs
@@ -445,6 +453,7 @@
     (if (empty? xs) []
         (let [alleles (get-ref-alts xs)]
           (cond
+           (nil? ref-base-get) xs
            (and (indel? alleles) (is-5pad-n? alleles)) (fix-5pad-n xs alleles)
            (and (indel? alleles) (no-pad? alleles)) (fix-nopad xs alleles)
            :else xs)))))
@@ -461,6 +470,7 @@
                    (every? check-bases (string/upper-case real-ref))
                    (not= (string/upper-case vc-ref) (string/upper-case real-ref)))))]
     (cond
+     (nil? ref-base-get) xs
      (empty? xs) []
      (is-bad-ref? xs) []
      :else xs)))

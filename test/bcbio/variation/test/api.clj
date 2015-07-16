@@ -62,7 +62,7 @@
 
 (facts "Index and retrieve metrics using Gemini."
   (set-config-from-file! web-yaml)
-  (let [raw-out {"in_public" #{"dbSNP"}, "zygosity" #{"homozygous"},
+  (let [raw-out {"zygosity" #{"homozygous"},
                  "type" #{"transition" "snp"}, :id ["MT" 73 "G"]}
         raw-ids [:id]]
     (when-let [idx (gemini/index-variant-file vcf1 ref)]

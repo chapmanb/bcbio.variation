@@ -13,7 +13,7 @@
         [bcbio.variation.filter.intervals :only [vcf-sample-name select-by-sample]]
         [bcbio.variation.haploid :only [diploid-calls-to-haploid]]
         [bcbio.variation.multisample :only [get-out-basename multiple-samples?]]
-        [bcbio.variation.normalize :only [prep-vcf clean-problem-vcf]]
+        [bcbio.variation.normalize :only [prep-vcf clean-problem-vcf fix-vcf-sample]]
         [bcbio.variation.phasing :only [is-haploid?]]
         [bcbio.variation.structural :only [write-non-svs]]
         [bcbio.variation.variantcontext :only [get-vcf-header write-vcf-w-template
@@ -143,12 +143,14 @@
     (let [sample-file (if (and (multiple-samples? in-file) (:sample exp))
                         (run-sample-select in-file (get call :ref (:ref exp)) "")
                         in-file)
-          prep-file (if (and (true? (:prep call))
-                             (not= (:ref exp) (:ref call)))
-                      (prep-vcf sample-file (:ref exp) (:sample exp) :out-dir out-dir
-                                :out-fname out-fname :orig-ref-file (:ref call)
-                                :config call)
-                      sample-file)
+          prep-file (cond (and (true? (:prep call))
+                               (not= (:ref exp) (:ref call)))
+                          (prep-vcf sample-file (:ref exp) (:sample exp) :out-dir out-dir
+                                    :out-fname out-fname :orig-ref-file (:ref call)
+                                    :config call)
+                          (true? (:fix-sample-header call)) (fix-vcf-sample sample-file (:sample exp) (:ref exp)
+                                                                            :out-dir out-dir :ext ".vcf")
+                          :else sample-file)
           hap-file (if (true? (:make-haploid call))
                      (diploid-calls-to-haploid prep-file (:ref exp) :out-dir out-dir)
                      prep-file)

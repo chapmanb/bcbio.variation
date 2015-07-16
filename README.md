@@ -33,7 +33,7 @@ associated with different variant representations.
 
 ### Download
 
-The latest release is 0.2.4 (25 March 2015): [bcbio.variation-0.2.4-standalone.jar][dl].
+The latest release is 0.2.5 (16 July 2015): [bcbio.variation-0.2.5-standalone.jar][dl].
 Run from the command line:
 
     $ java -jar bcbio.variation-VERSION-standalone.jar [arguments]

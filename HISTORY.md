@@ -1,3 +1,10 @@
+## 0.2.5 (16 July 2015)
+
+- Do not remove reference calls or do any chromosome renaming when sorting
+  by position with `variant-utils sort-vcf`.
+- Add support for GRCh38 by avoiding issues with large numbers of contigs.
+- Add ability to only fix sample name in input VCF without doing a full prep.
+
 ## 0.2.4 (25 March 2015)
 
 - De-prioritize multi-allele calls where PL and AD values do not match a final,

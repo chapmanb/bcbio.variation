@@ -17,7 +17,9 @@
         (cli args
              ["-s" "--sortpos" "Sort by position" :flag true])]
     (normalize/prep-vcf vcf-file ref-file nil
-                        :config {:prep-sort-pos (:sortpos options)})))
+                        :config {:prep-sort-pos (:sortpos options)
+                                 :remove-refcalls false
+                                 :prep-org nil})))
 
 (def ^{:private true} progs
   {:callsummary callsummary/annotate-with-callsummary
