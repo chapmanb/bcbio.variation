@@ -1,12 +1,12 @@
-(defproject bcbio.variation "0.2.5"
+(defproject bcbio.variation "0.2.6"
   :description "Toolkit to analyze genomic variation data, built on the GATK with Clojure"
   :license {:name "MIT" :url "http://www.opensource.org/licenses/mit-license.html"}
-  :dependencies [[org.clojure/clojure "1.5.1"]
+  :dependencies [[org.clojure/clojure "1.7.0"]
                  [org.clojure/math.combinatorics "0.1.1" :exclusions [org.clojure/clojure]]
                  [org.clojure/data.csv "0.1.2" :exclusions [org.clojure/clojure]]
                  [org.clojure/tools.cli "0.2.2"]
                  [clj-stacktrace "0.2.5"]
-                 [bcbio.run "0.0.1"]
+                 [bcbio.run "0.0.5"]
                  ;; GATK requirements
                  [org.clojars.chapmanb/gatk-engine "3.2"]
                  [org.clojars.chapmanb/gatk-tools-public "3.2"]
@@ -48,10 +48,10 @@
                  [enlive "1.0.1" :exclusions [org.clojure/clojure]]]
   :min-lein-version "2.0.0"
   :plugins [[lein-marginalia "0.7.1"]
-            [lein-midje "3.0.1"]]
+            [lein-midje "3.1.3"]]
   :profiles {:dev {:dependencies
                    ;; Testing dependencies
-                   [[midje "1.5.1" :exclusions [org.clojure/clojure ordered]]
+                   [[midje "1.7.0" :exclusions [org.clojure/clojure ordered]]
                     ;; Non-uberjar dependencies we should extract into separate functionality
                     [incanter/incanter-core "1.5.1" :exclusions [org.clojure/clojure junit]]
                     [incanter/incanter-charts "1.5.1" :exclusions [org.clojure/clojure junit]]
@@ -60,8 +60,8 @@
                                                                     junit]]
                     [clj-genomespace "0.1.3"]
                     [clj-blend "0.1.1-SNAPSHOT"]
-                    [clj-aws-s3 "0.3.1" :exclusions [org.codehaus.jackson/jackson-mapper-asl
-                                                     org.codehaus.jackson/jackson-core-asl]]]}}
+                    [clj-aws-s3 "0.3.10" :exclusions [org.codehaus.jackson/jackson-mapper-asl
+                                                      org.codehaus.jackson/jackson-core-asl]]]}}
   :repositories {"sonatype-snapshots" {:url "http://oss.sonatype.org/content/repositories/snapshots"
                                        :snapshots true}}
   :java-source-paths ["src/java"]

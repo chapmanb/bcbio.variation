@@ -1,3 +1,9 @@
+## 0.2.6 (17 July 2015)
+
+- Really fix issues with removing reference calls when using `sort-vcf` on
+  structural variant calls.
+- Update clojure and associated libraries.
+
 ## 0.2.5 (16 July 2015)
 
 - Do not remove reference calls or do any chromosome renaming when sorting

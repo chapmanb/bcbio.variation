@@ -18,8 +18,9 @@
              ["-s" "--sortpos" "Sort by position" :flag true])]
     (normalize/prep-vcf vcf-file ref-file nil
                         :config {:prep-sort-pos (:sortpos options)
+                                 :prep-sv-genotype true
                                  :remove-refcalls false
-                                 :prep-org nil})))
+                                 :prep-org :default})))
 
 (def ^{:private true} progs
   {:callsummary callsummary/annotate-with-callsummary
