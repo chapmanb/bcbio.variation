@@ -44,7 +44,7 @@ the library for variant comparison, normalization and ensemble calling.  Note
 that bcbio.variation requires Java 1.7 since the underlying GATK libraries are
 not compatible with earlier versions.
 
-[dl]: https://github.com/chapmanb/bcbio.variation/releases/download/v0.2.4/bcbio.variation-0.2.4-standalone.jar
+[dl]: https://github.com/chapmanb/bcbio.variation/releases/download/v0.2.6/bcbio.variation-0.2.6-standalone.jar
  
 ### As a library
 
